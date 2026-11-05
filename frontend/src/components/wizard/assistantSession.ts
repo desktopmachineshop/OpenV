@@ -10,6 +10,7 @@
 // Which session: the newest, matching what the wizard itself resumes into, so
 // a member reading notes sees the transcript the wizard is showing.
 import { GuidedSession, guidedAPI } from '../../api/client';
+import { isPlanReadOnlyError } from '../../api/errors';
 
 /**
  * A session started only to host the assistant's chat, never opened in the
@@ -52,5 +53,41 @@ export const resolveAssistantSessionId = async (projectId: string): Promise<stri
     return created.data?.id || '';
   } catch {
     return '';
+  }
+};
+
+const UNREACHABLE = 'The assistant conversation could not be opened. Try again in a moment.';
+
+/** The conversation, or why the assistant cannot hold one here. */
+export type AssistantSessionResult = { id: string } | { reason: string };
+
+/**
+ * Like resolveAssistantSessionId, but saying why when the conversation
+ * cannot be opened (#726), so the floating panel explains rather than
+ * fails. Starting a conversation needs editor access to the project, and a
+ * workspace its plan has made read-only refuses it.
+ */
+export const openAssistantSession = async (projectId: string): Promise<AssistantSessionResult> => {
+  try {
+    const res = await guidedAPI.list(projectId);
+    const existing = pickAssistantSession(res.data || []);
+    if (existing) return { id: existing.id };
+    const created = await guidedAPI.start(projectId);
+    return created.data?.id ? { id: created.data.id } : { reason: UNREACHABLE };
+  } catch (err) {
+    if (isPlanReadOnlyError(err)) {
+      return {
+        reason:
+          'This workspace is read-only on its current plan, so the V&V Assistant cannot start a conversation. A workspace admin can change the plan under Workspace Settings → Billing.',
+      };
+    }
+    const status = (err as { response?: { status?: number } } | null)?.response?.status;
+    if (status === 403 || status === 404) {
+      return {
+        reason:
+          'The V&V Assistant needs editor access to this project. Ask a project owner to make you an editor in the project’s Settings → Members.',
+      };
+    }
+    return { reason: UNREACHABLE };
   }
 };

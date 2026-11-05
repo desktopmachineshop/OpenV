@@ -10,6 +10,7 @@ import { sectionHeadingStyle } from './artifactCells';
 import { useViewport } from '../hooks/useViewport';
 import { apiErrorMessage } from '../api/errors';
 import { getLinkTypeLabel } from '../config/linkTypeRules';
+import { ArtifactHistory } from './ArtifactHistory';
 import ReactMarkdown from 'react-markdown';
 
 import remarkGfm from 'remark-gfm';
@@ -90,6 +91,14 @@ interface ArtifactDetailsProps {
    * backend auto-versions both linked artifacts on every link change.
    */
   onLinksChanged?: () => void;
+  /**
+   * Show the artifact's History (changes and comments, with the comment
+   * box) as the pane's last section (#725). The requirements page sets it
+   * once the floating assistant has taken the Notes panel's place.
+   */
+  showHistory?: boolean;
+  /** The project, for the History's mentions and to-dos. */
+  projectId?: string;
 }
 
 export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({ 
@@ -105,6 +114,8 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   allowLinkDelete = false,
   liveLinks = true,
   onLinksChanged,
+  showHistory = false,
+  projectId,
 }) => {
   const { isPhone } = useViewport();
   const confirm = useConfirm();
@@ -669,6 +680,15 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
         <p>Created: {new Date(artifact.created_at).toLocaleString()}</p>
         <p>Updated: {new Date(artifact.updated_at).toLocaleString()}</p>
       </div>
+      {showHistory && (
+        <ArtifactHistory
+          variant="section"
+          artifactId={artifact.id}
+          artifactVersion={artifact.version}
+          projectId={projectId}
+          onReferenceClick={onReferenceClick}
+        />
+      )}
         </>
       )}
     </div>

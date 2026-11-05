@@ -76,16 +76,43 @@ everything you've entered so far.
 - The assistant is nudged automatically when you advance or skip a step, so it
   follows along with context.
 
-The same assistant is also in the **Notes** panel on the Requirements page,
-under its own tab beside History. It is one conversation per project, so what
-you asked in the wizard is there in the notes and the other way round. With an
-artifact selected the assistant is told which one you are reading and answers
-about it; with nothing selected it answers for the project as a whole. An
-artifact's history stays where it was — it belongs to that artifact, the
-conversation does not.
+### The V&V Assistant on every page
 
-Suggestion cards appear in the notes chat too, but they can only be added from
-the wizard, which is where the entry sections they fill in live.
+The same assistant is on every project page and on the workspace Home, behind
+the **✦ Assistant** button in the bottom corner. It opens a chat panel over the
+page:
+
+- **One conversation per project.** What you asked in the wizard is there on
+  every page and the other way round, and the panel keeps the conversation
+  open while you move between pages. On the workspace Home, choose the
+  project at the top of the panel.
+- **Looking at:** under the title says what the assistant is told you are
+  reading: the requirement open in the Requirements page (it reads the whole
+  artifact), or the page you are on. **✕** stops sending it, until you open
+  something else.
+- **⤢** expands the panel, **⇆** moves it to the other corner when it covers
+  something you need, and dragging its top corner resizes it. **—** or
+  **Esc** minimises it back to the button, and the conversation is still
+  there when you open it again.
+- **Alt+A** (Option+A on a Mac) opens the panel and puts the cursor in the
+  message box.
+- On a phone it opens as a sheet from the bottom of the screen.
+- The quick actions fit where you are: *Review this* and *How would I verify
+  it?* beside a requirement, *Gap analysis* and *Draft tests* for the project
+  as a whole.
+
+Suggestion cards beside the project add a draft artifact, or make the change
+they describe, when you press their button, and only then. Other pages can
+start a turn for you: **Draft tests** on the V&V dashboard's *Top gaps* card
+opens the panel and asks for test cases for those gaps (see *V&V* → *Gaps*).
+
+Starting a conversation needs editor access to the project, and a workspace
+its plan has made read-only cannot start one. In either case the panel says so
+and what to do instead of a chat.
+
+On a workspace still on an earlier release, the assistant is a tab of the
+**Notes** panel on the Requirements page instead, beside the artifact's
+History.
 
 Assistant turns execute on an agent runner like any other agent work. If no
 runner is online the panel says so and pauses replies — messages you send are

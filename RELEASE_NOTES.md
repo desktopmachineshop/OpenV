@@ -9,6 +9,27 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **The V&V Assistant on every page.** An **✦ Assistant** button sits in the
+  bottom corner of every project page and the workspace Home. It opens a chat
+  panel over the page that you can resize, expand, move to the other corner
+  and minimise again, and the conversation stays with you as you move between
+  pages. A *Looking at:* line shows what the assistant is told you are
+  reading (the open requirement, or the page), and **✕** stops sending it.
+  **Alt+A** (Option+A on a Mac) opens it, and **Esc** minimises it. On a
+  phone it opens as a sheet from the bottom. If the assistant can't run for
+  you, the panel says why and how to fix it.
+- **Draft tests from the V&V dashboard.** The *Top gaps* card's **Draft
+  tests** opens the assistant and starts drafting test cases straight away
+  for the gaps the card shows. Each gap row also has a **✦** that does the
+  same for that one gap. What the assistant drafts arrives as suggestions for
+  you to review and add.
+- **History in the requirement pane.** A requirement's comments and recorded
+  changes now sit in a **History** section at the foot of its pane, with the
+  box for adding a comment. The separate Notes panel and its mode button are
+  gone, so the requirement gets the width back.
+
 ## 0.27.5 — 2026-11-05
 
 ### Maintenance updates

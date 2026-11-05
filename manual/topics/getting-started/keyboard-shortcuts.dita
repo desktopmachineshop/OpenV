@@ -11,6 +11,8 @@
       <strow><stentry><b>?</b> or <b>F1</b></stentry><stentry>Opens or closes the help panel for the page you are on</stentry></strow>
       <strow><stentry><b>Esc</b></stentry><stentry>Closes the open project menu or group of pages</stentry></strow>
       <strow><stentry><b>J</b> / <b>K</b></stentry><stentry>Next / previous artifact in the Requirements document</stentry></strow>
+      <strow><stentry><b>Alt + A</b> (Option + A on a Mac)</stentry><stentry>Opens the V&amp;V Assistant and puts the cursor in its message box</stentry></strow>
+      <strow><stentry><b>Esc</b> in the V&amp;V Assistant</stentry><stentry>Minimises it back to its button</stentry></strow>
       <strow><stentry><b>Ctrl + Enter</b></stentry><stentry>Sends your message to the V&amp;V Assistant</stentry></strow>
     </simpletable>
     <p><b>?</b> is ignored while you are typing in a field, so it can still be typed; <b>F1</b> works everywhere.</p>

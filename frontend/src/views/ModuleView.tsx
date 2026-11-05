@@ -11,6 +11,8 @@ import { ArtifactEditor } from '../components/ArtifactEditor';
 import { ArtifactHeader } from '../components/ArtifactHeader';
 import { ArtifactDetails } from '../components/ArtifactDetails';
 import { ChatterPanel } from '../components/ChatterPanel';
+import { FLOATING_ASSISTANT_FEATURE } from '../components/wizard/assistantStore';
+import { revealHistory, useRequirementsAssistant } from './moduleView/assistantPane';
 import { DownloadWizard } from '../components/DownloadWizard';
 import { buttonStyle, useAlert, useConfirm } from '../components/ui';
 import { ArtifactTraceSummary } from '../components/ArtifactTraceSummary';
@@ -46,6 +48,8 @@ export const ModuleView: React.FC = () => {
   const [error, setError] = useState<string>('');
   const ownersOn = useFeature(ARTIFACT_OWNERS_FEATURE);
   const steppingOn = useFeature(ARTIFACT_STEPPING_FEATURE);
+  // #725, #726: History in the artifact's pane, the assistant floating; no Notes column.
+  const historyInPane = useFeature(FLOATING_ASSISTANT_FEATURE);
   const [searchText, setSearchText] = useState<string>('');
   const [searchExact, setSearchExact] = useState<boolean>(false);
   const [filterLogic, setFilterLogic] = useState<'and' | 'or'>('and');
@@ -169,7 +173,7 @@ export const ModuleView: React.FC = () => {
   // the drag effect stood, ahead of the project loads.
   const { rightColumnWidth, isResizing, leftColumnDrawn: detailWidth, startResize } = useColumnResize({
     viewportWidth: viewport.width,
-    notesTakesSpace: notesPinned,
+    notesTakesSpace: notesPinned && !historyInPane,
   });
 
   const {
@@ -814,6 +818,11 @@ export const ModuleView: React.FC = () => {
     }
   };
 
+  useRequirementsAssistant(activeArtifacts.find((a) => a.id === selectedArtifactId), isBaselineView, () => {
+    loadArtifacts();
+    loadLinks();
+  });
+
   if (!projectId) {
     return (
       <div className="card">
@@ -824,6 +833,8 @@ export const ModuleView: React.FC = () => {
   }
 
   const selectedArtifact = activeArtifacts.find((a) => a.id === selectedArtifactId);
+  // With History in the pane, a request for the Notes pane (?notes=1) shows the document.
+  const shownPane = historyInPane && stackedPane === 'notes' ? 'document' : stackedPane;
   const detailAttachments = isBaselineView ? [] : attachments;
 
   // Requirements the "Draft test cases" action will cover: the selected
@@ -922,8 +933,8 @@ export const ModuleView: React.FC = () => {
           data-help-key="requirements.layout"
           style={{ display: 'flex', margin: '0 12px 8px', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}
         >
-          {(['tree', 'document', 'notes'] as const).map((pane) => {
-            const active = stackedPane === pane;
+          {(historyInPane ? (['tree', 'document'] as const) : (['tree', 'document', 'notes'] as const)).map((pane) => {
+            const active = shownPane === pane;
             const label = pane === 'tree' ? 'Tree' : pane === 'document' ? 'Document' : 'Notes';
             return (
               <button
@@ -959,7 +970,7 @@ export const ModuleView: React.FC = () => {
       <TreePane
         stacked={stacked}
         phone={viewport.isPhone}
-        stackedPane={stackedPane}
+        stackedPane={shownPane}
         view={view}
         setView={setView}
         error={error}
@@ -1059,7 +1070,7 @@ export const ModuleView: React.FC = () => {
       />
       )}
 
-      <div style={{ display: stacked && stackedPane === 'tree' ? 'none' : 'flex', flex: stacked ? 1 : 'none', gap: '0', minWidth: 0, overflow: 'hidden' }}>
+      <div style={{ display: stacked && shownPane === 'tree' ? 'none' : 'flex', flex: stacked ? 1 : 'none', gap: '0', minWidth: 0, overflow: 'hidden' }}>
         <div
           ref={documentPaneRef}
           role="region"
@@ -1070,7 +1081,7 @@ export const ModuleView: React.FC = () => {
             ...(stacked ? { flex: 1 } : { width: detailWidth, flex: 'none' }),
             minWidth: 0,
             overflow: 'auto',
-            display: stacked && stackedPane !== 'document' ? 'none' : 'flex',
+            display: stacked && shownPane !== 'document' ? 'none' : 'flex',
             flexDirection: 'column',
             padding: stacked ? '0 12px' : '12px 12px 0',
             background: stacked ? undefined : 'var(--surface-alt)',
@@ -1167,6 +1178,8 @@ export const ModuleView: React.FC = () => {
               onClosePreview={() => setPreviewVersion(null)}
               allowLinkDelete={!isBaselineView}
               liveLinks={!isBaselineView}
+              showHistory={historyInPane}
+              projectId={projectId || undefined}
               onLinksChanged={() => {
                 // Link writes auto-version both artifacts server-side;
                 // refetch so displayed versions and link lists stay current.
@@ -1187,7 +1200,7 @@ export const ModuleView: React.FC = () => {
         {viewport.isPhone && selectedArtifact && !isEditing && !isBaselineView && (
           <PhoneActionBar
             artifact={selectedArtifact}
-            onComment={() => setStackedPane('notes')}
+            onComment={() => (historyInPane ? revealHistory(documentPaneRef.current) : setStackedPane('notes'))}
             onStatusChange={(changed) => {
               updateArtifact(changed);
               loadCoverage();
@@ -1200,7 +1213,7 @@ export const ModuleView: React.FC = () => {
             comments tab needs one, its assistant tab does not. Its width is
             only spent when pinned — auto-hide floats it over the document on
             hover, and hidden leaves just the strip that brings it back. */}
-        {!stacked && !notesPinned && (
+        {!historyInPane && !stacked && !notesPinned && (
           <button
             type="button"
             className="panel-edge-strip"
@@ -1236,7 +1249,7 @@ export const ModuleView: React.FC = () => {
           </button>
         )}
             {/* Resize handle — only a pinned column has a width to drag. */}
-            {!stacked && notesPinned && (
+            {!historyInPane && !stacked && notesPinned && (
             <div
               onMouseDown={startResize('right')}
               style={{
@@ -1262,13 +1275,13 @@ export const ModuleView: React.FC = () => {
             )}
             {/* Clicking away closes a panel that was revealed on purpose: an
                 overlay with no way out but the edge strip is a trap. */}
-            {!stacked && notesRevealed && !notesPinned && (
+            {!historyInPane && !stacked && notesRevealed && !notesPinned && (
               <div
                 onClick={() => setNotesRevealed(false)}
                 style={{ position: 'fixed', inset: 0, zIndex: 899 }}
               />
             )}
-            {(stacked ? stackedPane === 'notes' : notesOpen) && (
+            {!historyInPane && (stacked ? stackedPane === 'notes' : notesOpen) && (
             <div
               onMouseEnter={() => !stacked && notesMode === 'autohide' && setNotesHovered(true)}
               onMouseLeave={() => !stacked && notesMode === 'autohide' && setNotesHovered(false)}
