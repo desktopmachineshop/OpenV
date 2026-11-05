@@ -12,6 +12,6 @@
       <li><b>Verification</b> shows how many of the tests verifying it pass, a pass / fail / blocked bar, each test with its latest result, and the requirement's rollup.</li>
       <li>Below them are the <b>description</b> (with <b>Show impact →</b>), the attributes, the figures and the full list of <b>traceability links</b>, where a link can be deleted.</li>
     </ul>
-    <p>On a phone the artifact ends in a bar under your thumb: <b>Comment</b> opens the Notes pane, and the review step forward (<b>Submit for review</b>, <b>Approve</b>) is the blue button beside it.</p>
+    <p>On a phone the artifact ends in a bar under your thumb: <b>Comment</b> scrolls to its History, where the comment box is, and the review step forward (<b>Submit for review</b>, <b>Approve</b>) is the blue button beside it.</p>
   </conbody>
 </concept>

@@ -68,6 +68,7 @@ var Registry = []Feature{
 	{Key: FeatureCompactLayout, ShippedIn: "0.26.0", Summary: "A more compact project layout: a narrow icon rail and one top bar on a computer, tabs along the bottom on a phone, and ? or F1 for help on any page"},
 	{Key: FeatureRedesignPages, ShippedIn: "0.27.0", Summary: "Four new project pages: Home with what needs you, Design with the design items as a tree, Tests with the runs and test cases, and Baselines with a timeline and a word-by-word comparison"},
 	{Key: FeatureRequirementsTree, ShippedIn: "0.28.0", Summary: "The requirements Table folds under its headings, and a new Tree view draws the project as connected boxes coloured by type or status"},
+	{Key: FeatureFloatingAssistant, ShippedIn: "0.28.0", Summary: "The V&V Assistant floats over every project page and the workspace Home, keeps one conversation as you move around, and starts drafting tests for the V&V dashboard's gaps; an artifact's history and comments sit in its own pane"},
 	{Key: FeatureChipSearch, ShippedIn: "0.28.0", Summary: "One search bar with a chip for each filter: filter, group and save searches on the requirements list, and filter the top-bar search by project, type, status and owner"},
 	{Key: FeatureImpactPicker, ShippedIn: "0.28.0", Summary: "Impact analysis picks the requirement from a searchable table of the document, re-centres on any artifact in the tree, and shows the result as a table too"},
 }
@@ -240,6 +241,13 @@ const (
 	// fold-all / unfold-all button, and the Tree diagram. Without it the
 	// page keeps Table, Tree and Layers. Frontend only.
 	FeatureRequirementsTree = "requirements-tree"
+	// FeatureFloatingAssistant is the V&V Assistant as a floating chat on
+	// every project page and the workspace Home, one conversation across
+	// pages, with the V&V dashboard's gaps starting a turn in it; and the
+	// requirements page's History as a section of the artifact's pane, which
+	// retires the Notes side panel. Frontend only; without it the page keeps
+	// its Notes panel with the History and V&V Assistant tabs.
+	FeatureFloatingAssistant = "floating-assistant"
 	// FeatureImpactPicker is the Impact Analysis page's picker pane and
 	// result table (issue #730): the requirements as the document's folding
 	// table, Ref and Title, under a chip search bar, in place of the

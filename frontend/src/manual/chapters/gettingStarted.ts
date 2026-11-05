@@ -258,6 +258,8 @@ under **You** your account menu and the bell.
 | **?** or **F1** | Opens or closes the help panel for the page you are on |
 | **Esc** | Closes the open project menu or group of pages |
 | **J** / **K** | Next / previous artifact in the Requirements document |
+| **Alt + A** (Option + A on a Mac) | Opens the V&V Assistant and puts the cursor in its message box |
+| **Esc** in the V&V Assistant | Minimises it back to its button |
 | **Ctrl + Enter** | Sends your message to the V&V Assistant |
 
 **?** is ignored while you are typing in a field, so it can still be typed;
