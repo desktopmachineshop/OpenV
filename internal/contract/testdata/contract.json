@@ -33,6 +33,7 @@
     "target-releases",
     "compact-layout",
     "redesign-pages",
+    "requirements-tree",
     "chip-search"
   ],
   "event_types": [

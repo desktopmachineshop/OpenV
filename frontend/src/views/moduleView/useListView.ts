@@ -21,6 +21,8 @@ export interface ListViewOptions {
   coverage: CoverageEntry[];
   searchParams: URLSearchParams;
   setSearchParams: SetURLSearchParams;
+  /** The Table and Tree views are on: ?view=layers opens the Tree. */
+  treeViews?: boolean;
 }
 
 /**
@@ -30,7 +32,7 @@ export interface ListViewOptions {
  * and the filters leave, and the facts every row and the figures above them
  * read.
  */
-export function useListView({ searched, artifacts, links, quality, coverage, searchParams, setSearchParams }: ListViewOptions) {
+export function useListView({ searched, artifacts, links, quality, coverage, searchParams, setSearchParams, treeViews }: ListViewOptions) {
   // The chip search bar (issue #722): its chips, in the URL, narrow and
   // group what the search leaves, in place of the phone's quick filter. The
   // Mine chip matches owners against the member's name and email.
@@ -40,7 +42,7 @@ export function useListView({ searched, artifacts, links, quality, coverage, sea
   const [typeTab, setTypeTab] = useState<string>('');
   const [quick, setQuick] = useState<QuickFilter>('');
 
-  const view: RequirementsView = viewFromParam(searchParams.get('view'));
+  const view: RequirementsView = viewFromParam(searchParams.get('view'), treeViews);
   const setView = (next: RequirementsView) => {
     setSearchParams(
       (prev) => {

@@ -2,13 +2,11 @@ import React from 'react';
 import { buttonStyle } from '../../components/ui';
 import { typeLabel } from '../../utils/artifactFacts';
 import type { Setter } from './shared';
+import type { RequirementsView } from './requirementsViews';
 
-export type RequirementsView = 'table' | 'tree' | 'layers';
+export { viewFromParam } from './requirementsViews';
+export type { RequirementsView } from './requirementsViews';
 export type QuickFilter = '' | 'in_review' | 'failing' | 'suspect';
-
-/** The view a ?view= value names; the table when it names none. */
-export const viewFromParam = (raw: string | null): RequirementsView =>
-  raw === 'tree' || raw === 'layers' ? raw : 'table';
 
 interface ListToolbarProps {
   phone: boolean;
@@ -30,6 +28,11 @@ interface ListToolbarProps {
   showFilterPanel: boolean;
   setShowFilterPanel: Setter<boolean>;
   pickDepth: (depth: number) => void;
+  /** The Table and Tree views (REQUIREMENTS_TREE_FEATURE): Table | Tree, and fold all for the depth picker. */
+  treeViews?: boolean;
+  /** Whether the view in front is folded, which the fold-all button turns the other way. */
+  folded?: boolean;
+  toggleFold?: () => void;
   /** The create button, which a phone shows beside the search box. */
   newButton?: React.ReactNode;
   /**
@@ -71,9 +74,32 @@ const VIEWS: Array<{ view: RequirementsView; label: string; phoneLabel: string }
   { view: 'tree', label: 'Tree', phoneLabel: 'Outline' },
   { view: 'layers', label: 'Layers', phoneLabel: 'By level' },
 ];
+// With the Table and Tree views: the table holds the hierarchy, the tree is
+// the diagram, and a phone keeps its list and its outline.
+const TREE_VIEWS = VIEWS.slice(0, 2);
+
+/** Fold all / unfold all: one icon button that turns the view in front the other way. */
+const FoldAllButton: React.FC<{ folded: boolean; onClick: () => void; phone: boolean }> = ({ folded, onClick, phone }) => {
+  const label = folded ? 'Unfold all' : 'Fold all';
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      title={folded ? 'Unfold all: open every level' : 'Fold all: show the top level only'}
+      data-help-key="requirements.navigate"
+      style={{ ...buttonStyle('secondary', { compact: !phone }), minHeight: phone ? 36 : 26, padding: phone ? '0 10px' : '0 7px', flex: 'none' }}
+    >
+      <svg width="14" height="14" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        {folded ? <path d="M6 7l4-4 4 4M6 13l4 4 4-4" /> : <path d="M6 3l4 4 4-4M6 17l4-4 4 4" />}
+      </svg>
+    </button>
+  );
+};
 
 // The bar over the list: the type tabs, the project search and its filters,
-// the tree's depth, and the Table / Tree / Layers switch. A phone gets the
+// the tree's depth, and the Table / Tree / Layers switch (with the Table and
+// Tree views, Table / Tree and a fold-all button in place of the depth). A phone gets the
 // search with the create button, then one scrolling row of chips: the views
 // (List, Outline, By level) and the quick filters. The phone calls the tree
 // its outline: its Tree pane holds every view of the list.
@@ -149,7 +175,13 @@ export const ListToolbar: React.FC<ListToolbarProps> = (p) => {
     </button>
   ) : null;
 
-  const depth = p.view === 'tree' && (
+  const views = p.treeViews ? TREE_VIEWS : VIEWS;
+  // A phone's table is a flat list, so only its outline folds.
+  const foldAll =
+    p.treeViews && p.toggleFold && (p.phone ? p.view === 'tree' : true) ? (
+      <FoldAllButton folded={!!p.folded} onClick={p.toggleFold} phone={p.phone} />
+    ) : null;
+  const depth = p.treeViews ? foldAll : p.view === 'tree' && (
     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }} data-help-key="requirements.navigate">
       <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>Depth</span>
       <span role="group" aria-label="Show down to level" style={{ display: 'flex', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }}>
@@ -190,7 +222,7 @@ export const ListToolbar: React.FC<ListToolbarProps> = (p) => {
           {p.newButton}
         </div>
         <div role="group" aria-label="Views and quick filters" style={{ display: 'flex', gap: 6, padding: '8px 12px', overflowX: 'auto' }} data-help-key="requirements.views">
-          {VIEWS.map(({ view, phoneLabel }) => (
+          {views.map(({ view, phoneLabel }) => (
             <button key={view} type="button" aria-pressed={p.view === view} onClick={() => p.setView(view)} style={pill(p.view === view)}>
               {phoneLabel}
               {view === 'table' ? ` ${p.total}` : ''}
@@ -274,7 +306,7 @@ export const ListToolbar: React.FC<ListToolbarProps> = (p) => {
         {depth}
         <span aria-hidden="true" style={{ width: 1, height: 18, background: 'var(--border)', margin: '0 4px' }} />
         <div role="group" aria-label="View" style={{ display: 'flex', flex: 'none', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }} data-help-key="requirements.views">
-          {VIEWS.map(({ view, label }, i) => (
+          {views.map(({ view, label }, i) => (
             <button key={view} type="button" aria-pressed={p.view === view} onClick={() => p.setView(view)} style={segment(p.view === view, i === 0, false)}>
               {label}
             </button>

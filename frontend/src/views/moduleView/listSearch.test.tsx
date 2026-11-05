@@ -6,9 +6,13 @@ import { useAppStore } from '../../state/store';
 import { buildListSchema, listAccessors } from './listSearch';
 import { useListView } from './useListView';
 import { TableView } from './TableView';
+import { ArtifactList } from '../../components/ArtifactList';
 
 let chipSearchOn = true;
 vi.mock('../../hooks/useFeature', () => ({ useFeature: () => chipSearchOn }));
+vi.mock('../../hooks/useViewport', () => ({
+  useViewport: () => ({ width: 1280, cls: 'desktop', isPhone: false, isCompact: false, coarsePointer: false }),
+}));
 
 (globalThis as any).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -147,5 +151,29 @@ describe('useListView with the chip search', () => {
     const headers = Array.from(container.querySelectorAll('[role="rowgroup"] > button')).map((b) => b.textContent);
     expect(headers).toEqual(['Draft2', 'In review1']);
     expect(container.textContent).toContain('grouped by status');
+  });
+
+  it('draws the hierarchical table under the chosen groups, each folding on its own', () => {
+    act(() => root.render(<Probe params="g=status" />));
+    act(() =>
+      root.render(
+        <ArtifactList
+          artifacts={out.filteredArtifacts}
+          allArtifacts={ARTS}
+          onSelect={() => {}}
+          onReorder={() => {}}
+          readOnly
+          hideHeading
+          facts={facts}
+          groups={out.tableGroups}
+        />
+      )
+    );
+    const groups = () => Array.from(container.querySelectorAll('[role="tree"] > [role="group"]'));
+    expect(groups().map((g) => g.getAttribute('aria-label'))).toEqual(['Draft', 'In review']);
+    expect(groups()[0].querySelectorAll('[role="treeitem"]')).toHaveLength(2);
+    act(() => (groups()[0].querySelector('button[aria-expanded]') as HTMLElement).click());
+    expect(groups()[0].querySelectorAll('[role="treeitem"]')).toHaveLength(0);
+    expect(groups()[1].querySelectorAll('[role="treeitem"]')).toHaveLength(1);
   });
 });

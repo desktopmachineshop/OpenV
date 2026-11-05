@@ -164,6 +164,7 @@
         "frontend/src/components/Quality*",
         "frontend/src/components/artifact*",
         "frontend/src/components/kanban/**",
+        "frontend/src/components/treeDiagram/**",
         "frontend/src/components/note*",
         "frontend/src/components/search/**",
         "frontend/src/config/**",

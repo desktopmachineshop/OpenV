@@ -29,6 +29,8 @@ import { FilterPanel } from './moduleView/FilterPanel';
 import { TreePane } from './moduleView/TreePane';
 import { ListToolbar } from './moduleView/ListToolbar';
 import { useListView } from './moduleView/useListView';
+import { useFoldAll } from './moduleView/useFoldAll';
+import { REQUIREMENTS_TREE_FEATURE } from './moduleView/requirementsViews';
 import { ListChipSearch } from './moduleView/ListChipSearch';
 import { PhoneActionBar } from './moduleView/PhoneActionBar';
 import { useCoverage } from './moduleView/useCoverage';
@@ -47,6 +49,7 @@ export const ModuleView: React.FC = () => {
   const [error, setError] = useState<string>('');
   const ownersOn = useFeature(ARTIFACT_OWNERS_FEATURE);
   const steppingOn = useFeature(ARTIFACT_STEPPING_FEATURE);
+  const treeViews = useFeature(REQUIREMENTS_TREE_FEATURE);
   const [searchText, setSearchText] = useState<string>('');
   const [searchExact, setSearchExact] = useState<boolean>(false);
   const [filterLogic, setFilterLogic] = useState<'and' | 'or'>('and');
@@ -683,7 +686,9 @@ export const ModuleView: React.FC = () => {
       coverage,
       searchParams,
       setSearchParams,
+      treeViews,
     });
+  const fold = useFoldAll(view);
 
   // Reading order for ‹ ›, J / K and the swipe: the tree's own order, over what
   // the search and the filters have left in view, so a narrowed tree reads as
@@ -971,8 +976,7 @@ export const ModuleView: React.FC = () => {
         setPendingCreateContext={setPendingCreateContext}
         setPendingCreatePlacement={setPendingCreatePlacement}
         showFilterPanel={!chips.chipSearch && showFilterPanel}
-        tableGroups={chips.tableGroups}
-        groupedBy={chips.groupedBy}
+        tableGroups={chips.tableGroups} groupedBy={chips.groupedBy}
         toolbar={
           <ListToolbar
             phone={stacked}
@@ -993,6 +997,9 @@ export const ModuleView: React.FC = () => {
             showFilterPanel={showFilterPanel}
             setShowFilterPanel={setShowFilterPanel}
             pickDepth={(depth) => setDepthTrigger((prev) => ({ depth, token: prev.token + 1 }))}
+            treeViews={treeViews}
+            folded={fold.folded}
+            toggleFold={fold.toggleFold}
             newButton={stacked ? newButton : undefined}
             chipSearch={chips.chipSearch ? <ListChipSearch {...chips} phone={stacked} canSave={!isBaselineView} /> : undefined}
           />
@@ -1022,6 +1029,8 @@ export const ModuleView: React.FC = () => {
         figures={figures}
         facts={facts}
         depthTrigger={depthTrigger}
+        treeViews={treeViews}
+        foldTrigger={fold.trigger}
         artifacts={artifacts}
         projectId={projectId}
         pendingCreateContext={pendingCreateContext}

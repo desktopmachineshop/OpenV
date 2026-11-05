@@ -21,8 +21,8 @@ an editor, version history, image attachments, comments, and baselines.
 
 The view has two parts side by side, and a third you can call up:
 
-- **The list** — every artifact in the project, as a **table**, a **tree** or
-  **layers** (see below). Above it sit the type tabs, the project search and
+- **The list** — every artifact in the project, as a **table** or a **tree**
+  diagram (see below). Above it sit the type tabs, the project search and
   its filters, and a line of figures for what is in view.
 - **The detail panel** — on the right, the selected artifact: its status,
   quality and priority, its text, its place in the trace and its tests (see
@@ -38,30 +38,30 @@ button, **+ New Artifact**, at its end.
 **Help** in the top bar (or **?** on the keyboard) opens the help panel for
 this page, with the artifact and link types.
 
-## Table, tree and layers
+## Table and tree
 
-The **Table / Tree / Layers** switch above the list changes how the project
-is drawn; the choice stays in the page's address (\`?view=\`), so a link or a
-reload keeps it. The **type tabs** (*All*, *Requirement*, *Test Case*, …) show
-one type at a time in any of them, with a count beside each.
+The **Table / Tree** switch above the list changes how the project is drawn;
+the choice stays in the page's address (\`?view=\`), so a link or a reload
+keeps it. The **type tabs** (*All*, *Requirement*, *Test Case*, …) show one
+type at a time in either, with a count beside each.
 
-- **Table** — one dense row per artifact, grouped under the heading it sits
-  in (click a heading to fold it). The columns are the **ref**, the **title**,
-  the review **status**, the **priority** attribute, the **quality** score,
-  **trace** (↑ how many artifacts this one answers to, ↓ how many answer to it,
-  and ⚠ when one of those links is suspect), **V&V** (the verification
-  rollup: a green dot passes, red fails, orange is blocked, grey is not run or
-  not covered) and how long ago it was **updated**.
-- **Tree** — the document's hierarchy with the same columns: guide lines
-  show where each artifact sits, the caret opens and shuts a branch, and
-  **Depth L1–L4** opens the whole tree to that level (**L1** collapses all,
-  **All** expands all). For a heading or a parent, *V&V below* rolls up the
-  requirements under it, as *passing/total*.
-- **Layers** — one column per level of the hierarchy. Pick an artifact and
-  the next column shows what sits under it, so a whole chain — need,
-  requirement, sub-requirement, design — reads left to right, each card with
-  a bar of how much below it is verified. The last column lists the tests
-  that verify any artifact of the chain, with their latest result.
+- **Table** — the document's hierarchy, one dense row per artifact, every
+  artifact nested under the heading or parent it sits in, with guide lines
+  showing where it sits. The caret beside a heading or a parent folds and
+  unfolds what is under it. Headings carry the same columns as every other
+  row: the **ref** and **title**, the review **status**, the **priority**
+  attribute, the **quality** score, **trace** (↑ how many artifacts this one
+  answers to, ↓ how many answer to it, and ⚠ when one of those links is
+  suspect), **V&V below** (the verification rollup: a green dot passes, red
+  fails, orange is blocked, grey is not run or not covered; for a heading or a
+  parent it rolls up the requirements under it, as *passing/total*) and how
+  long ago it was **updated**.
+- **Tree** — the project drawn as a diagram of connected boxes (see *The tree
+  diagram*).
+
+The **fold all / unfold all** button beside the search folds every branch of
+the view in front, so only the top level shows, or opens every level; it turns
+to the other one each time you press it. Hover over it to see which it will do.
 
 The figures above the list count what is in view: artifacts, the share
 **traced** (with at least one link), the share **verified** (requirements
@@ -69,11 +69,42 @@ whose verification passes), **suspect links** and **quality findings**.
 
 On a phone the list's views are chips under the search box: **List** (two
 lines per artifact: ref, status and age, then the title, then quality, trace
-and verification), **Outline** (the tree) and **By level**, which walks the
-hierarchy one level at a time — the artifact you are on, what it traces up
-to, what it decomposes into and the tests that verify it; tap a child to go
-down, **‹** to come back up, **Open full artifact** to read it. The chips
-**In review**, **Failing** and **Suspect** narrow the list to what needs you.
+and verification) and **Outline** (the hierarchy, one line per artifact, with
+the fold all / unfold all button beside the chips). The chips **In review**,
+**Failing** and **Suspect** narrow the list to what needs you.
+
+Older links to the **Layers** view open the tree diagram, which shows the same
+levels and their verification at a glance.
+
+## The tree diagram
+
+**Tree** draws the project's hierarchy as an org chart that flows left to
+right: one box per artifact, with its type, **ref**, **status** and title, and
+elbow connectors from each parent to its children, which are stacked in the
+next column.
+
+- **Folding** — the diagram opens with the first two levels showing. The small
+  **⊖** on a parent's connector folds what is under it, and **⊕** (with the
+  number of artifacts hidden beside it) unfolds it again. The fold all /
+  unfold all button above the list does the same for every branch.
+- **Colour by Type | Status** — colours each box by its artifact type (need,
+  requirement, design item, test case, hazard, …) or by its review status
+  (draft, in review, approved, superseded), with a key beside the switch. The
+  type tag and the status stay written on every box, so the colours are a
+  second cue, never the only one.
+- **Opening an artifact** — click a box to select it and open it in the detail
+  panel, as in the table. An artifact selected anywhere else, by a link or by
+  **‹ / ›**, unfolds the branch it sits in and comes into view.
+- **Moving around** — drag the background to pan, and use the mouse wheel or a
+  pinch to zoom; **−**, **+** and **Fit** above the diagram zoom out, zoom in
+  and fit the whole diagram on screen.
+- **Keyboard** — **Tab** reaches the diagram; **↑** and **↓** move between the
+  boxes in reading order, **→** unfolds a box or goes to its first child,
+  **←** folds it or goes to its parent, **Home** and **End** go to the first
+  and the last, and **Enter** opens the artifact. A screen reader announces the
+  diagram as a tree, with each box's level and position.
+
+On a phone, **Tree** shows the outline instead.
 
 ## The detail panel
 
@@ -124,8 +155,8 @@ is the blue button beside it.
   one beside it; on the keyboard, focus a row in the tree and press
   **Alt+↑** or **Alt+↓**. The arrow keys move between rows, **→** and **←**
   open and shut a branch, and **Enter** opens the artifact.
-- **Depth L1–L4** above the tree opens it to a level at once: **L1**
-  collapses all, **All** expands all.
+- **Fold all / unfold all** above the table folds every branch at once, or
+  opens them all.
 
 ## Moving through the document
 
@@ -246,7 +277,8 @@ arrow keys and **Enter**, or click it, and it becomes a chip.
   any field or attribute: *contains* or *is* a value.
 - **Group by** — **Status**, **Type**, **Priority**, **Owner** or **Heading**,
   and **Custom group** for any attribute. The table then lists its rows under
-  one heading per value, instead of by section. Two groupings combine
+  one heading per value; within a group, the rows keep their place in the
+  hierarchy, and each group folds on its own. Two groupings combine
   ("Draft · Requirement"). Each grouping is a chip too.
 - **Favourites** — your saved searches. **Save current search** names the
   chips and text in the bar; tick **Share with the workspace** to list it for
