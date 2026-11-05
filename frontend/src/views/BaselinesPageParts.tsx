@@ -193,29 +193,65 @@ const ChangeList: React.FC<{
   </section>
 );
 
-export const ChangeTable: React.FC<{
+/**
+ * The change list's height on a computer: a long comparison scrolls inside
+ * it, so the selected change's text below stays on screen (issue #729). A
+ * short one is only as tall as its rows.
+ */
+export const CHANGE_LIST_MAX_HEIGHT = '42vh';
+
+/** The text panel's height under the list; a long text scrolls inside it. */
+export const TEXT_CHANGE_MAX_HEIGHT = '42vh';
+
+/** A computer's change table: a sticky header, its own scroll, and ↑ / ↓ to walk it. */
+const ChangeGrid: React.FC<{
   rows: ChangeRow[];
   selected: string;
   onSelect: (key: string) => void;
-  phone?: boolean;
-}> = ({ rows, selected, onSelect, phone }) =>
-  phone ? (
-    <ChangeList rows={rows} selected={selected} onSelect={onSelect} />
-  ) : (
-    <section aria-label="Changes" data-help-key="baselines.changes" style={{ ...panelStyle, overflowX: 'auto' }}>
+}> = ({ rows, selected, onSelect }) => {
+  const refs = React.useRef(new Map<string, HTMLDivElement>());
+  // A selection made anywhere (a click, a key) keeps its row in view.
+  React.useEffect(() => {
+    refs.current.get(selected)?.scrollIntoView?.({ block: 'nearest' });
+  }, [selected]);
+  const step = (from: string, delta: number) => {
+    const at = rows.findIndex((r) => r.key === from);
+    const next = rows[Math.min(rows.length - 1, Math.max(0, (at < 0 ? -1 : at) + delta))];
+    if (!next) return;
+    onSelect(next.key);
+    refs.current.get(next.key)?.focus({ preventScroll: true });
+  };
+  return (
+    <section
+      aria-label="Changes"
+      data-help-key="baselines.changes"
+      style={{ ...panelStyle, overflow: 'auto', maxHeight: CHANGE_LIST_MAX_HEIGHT, flex: 'none' }}
+    >
       <div role="table" aria-label="Changes" style={{ minWidth: 620 }}>
-        <GridHead columns={COLUMNS} names={['Change', 'Ref', 'Title', 'Fields']} />
+        <div style={{ position: 'sticky', top: 0, zIndex: 1 }}>
+          <GridHead columns={COLUMNS} names={['Change', 'Ref', 'Title', 'Fields']} />
+        </div>
         {rows.map((r) => (
           <div
             role="row"
             key={r.key}
+            ref={(el) => {
+              if (el) refs.current.set(r.key, el);
+              else refs.current.delete(r.key);
+            }}
             aria-selected={r.key === selected}
-            tabIndex={0}
+            tabIndex={r.key === selected || (!selected && r === rows[0]) ? 0 : -1}
             onClick={() => onSelect(r.key)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 onSelect(r.key);
+              } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                step(r.key, e.key === 'ArrowDown' ? 1 : -1);
+              } else if (e.key === 'Home' || e.key === 'End') {
+                e.preventDefault();
+                step(r.key, e.key === 'Home' ? -rows.length : rows.length);
               }
             }}
             style={{
@@ -241,6 +277,19 @@ export const ChangeTable: React.FC<{
       </div>
     </section>
   );
+};
+
+export const ChangeTable: React.FC<{
+  rows: ChangeRow[];
+  selected: string;
+  onSelect: (key: string) => void;
+  phone?: boolean;
+}> = ({ rows, selected, onSelect, phone }) =>
+  phone ? (
+    <ChangeList rows={rows} selected={selected} onSelect={onSelect} />
+  ) : (
+    <ChangeGrid rows={rows} selected={selected} onSelect={onSelect} />
+  );
 
 const Diff = WordDiff;
 
@@ -250,7 +299,9 @@ export const TextChange: React.FC<{
   before?: Artifact;
   after?: Artifact;
   suspect: string[];
-}> = ({ row, before, after, suspect }) => {
+  /** On a computer, under the change list: at most TEXT_CHANGE_MAX_HEIGHT, scrolling inside. */
+  bounded?: boolean;
+}> = ({ row, before, after, suspect, bounded }) => {
   const m = row.modified;
   const textual = row.kind === 'added' || row.kind === 'removed' || (m && (m.title_changed || m.body_changed));
   return (
@@ -263,6 +314,7 @@ export const TextChange: React.FC<{
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
+        ...(bounded ? { maxHeight: TEXT_CHANGE_MAX_HEIGHT, overflowY: 'auto', flex: 'none' } : {}),
       }}
     >
       <div

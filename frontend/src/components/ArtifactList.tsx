@@ -51,6 +51,8 @@ interface ArtifactListProps {
   compact?: boolean;
   /** The chip search bar's group-by: the rows under a heading per group, each its own hierarchy. */
   groups?: ArtifactRowGroup[];
+  /** The tree's accessible name; "Requirements tree" by default. */
+  ariaLabel?: string;
 }
 
 const parentIdsOf = (nodes: ArtifactTreeNode[], maxDepth = Infinity, depth = 0, ids: string[] = []): string[] => {
@@ -81,6 +83,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
   facts,
   compact = false,
   groups,
+  ariaLabel = 'Requirements tree',
 }) => {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
@@ -297,7 +300,7 @@ export const ArtifactList: React.FC<ArtifactListProps> = ({
           }}
           data-help-key="requirements.navigate"
         >
-          <div role="tree" aria-label="Requirements tree" style={{ minWidth: columns ? 820 : undefined }}>
+          <div role="tree" aria-label={ariaLabel} style={{ minWidth: columns ? 820 : undefined }}>
             {columns && (
               <div
                 aria-hidden="true"

@@ -31,6 +31,7 @@ vi.mock('../api/client', async (orig) => {
           removed: [{ id: 'old', type: 'requirement', title: 'Manual bleed' }],
           modified: [
             { id: 'req1', type: 'requirement', old_title: 'Detect wheel slip', new_title: 'Detect wheel slip', title_changed: false, body_changed: true, type_changed: false, status_changed: true, parent_changed: false },
+            { id: 'req2', type: 'requirement', old_title: 'Warn the driver', new_title: 'Warn the driver', title_changed: false, body_changed: false, type_changed: false, status_changed: true, parent_changed: false },
           ],
           links_added: [{ from_id: 'tc2', to_id: 'req1', type: 'verifies', from_title: 'Detection latency', to_title: 'Detect wheel slip' }],
           links_removed: [],
@@ -93,6 +94,7 @@ describe('Baselines page', () => {
       .map((r) => Array.from(r.querySelectorAll('[role="cell"]')).map((c) => c.textContent));
     expect(rows).toEqual([
       ['changed', 'REQ-1', 'Detect wheel slip', 'text, status'],
+      ['changed', 'REQ-2', 'Warn the driver', 'status'],
       ['added', 'TC-2', 'Detection latency', 'new'],
       ['removed', 'REQ-0', 'Manual bleed', '—'],
       ['link added', 'TC-2', 'verifies REQ-1', 'links'],
@@ -105,6 +107,36 @@ describe('Baselines page', () => {
     expect(panel?.querySelector('del')?.textContent?.trim()).toBe('20%');
     expect(panel?.querySelector('ins')?.textContent?.trim()).toBe('15%');
     expect(panel?.textContent).toContain('1 link is suspect now: TC-2.');
+  });
+
+  it('hides the changes that only moved a status', async () => {
+    await render(true);
+    const toggle = Array.from(container.querySelectorAll('label')).find((l) => l.textContent?.includes('Hide status-only'));
+    expect(toggle?.textContent).toBe('Hide status-only 1');
+    await act(async () => (toggle!.querySelector('input') as HTMLInputElement).click());
+    const refs = Array.from(container.querySelectorAll('[role="table"][aria-label="Changes"] [role="row"]'))
+      .slice(1)
+      .map((r) => r.querySelectorAll('[role="cell"]')[1]?.textContent);
+    expect(refs).toEqual(['REQ-1', 'TC-2', 'REQ-0', 'TC-2']);
+  });
+
+  it('walks the change list with the arrow keys, the text following', async () => {
+    await render(true);
+    const list = container.querySelector('section[aria-label="Changes"]') as HTMLElement;
+    expect(list.style.maxHeight).toBe('42vh');
+    expect(list.style.overflow).toBe('auto');
+    const rows = () => Array.from(list.querySelectorAll<HTMLElement>('[role="row"]')).slice(1);
+    expect(rows()[0].getAttribute('aria-selected')).toBe('true');
+    await act(async () => {
+      rows()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+    });
+    expect(rows()[1].getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(rows()[1]);
+    expect(container.querySelector('[aria-label="Text change in REQ-2"]')?.textContent).toContain('Its status changed; the text is the same.');
+    await act(async () => {
+      rows()[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowUp', bubbles: true }));
+    });
+    expect(rows()[0].getAttribute('aria-selected')).toBe('true');
   });
 
   it('compares from another baseline when it is picked', async () => {

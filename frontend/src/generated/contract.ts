@@ -51,6 +51,7 @@ export const FEATURE_KEYS = [
   'floating-assistant',
   'chip-search',
   'agent-hierarchy',
+  'impact-picker',
   'todos',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
