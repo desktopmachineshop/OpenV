@@ -69,6 +69,7 @@ var Registry = []Feature{
 	{Key: FeatureRedesignPages, ShippedIn: "0.27.0", Summary: "Four new project pages: Home with what needs you, Design with the design items as a tree, Tests with the runs and test cases, and Baselines with a timeline and a word-by-word comparison"},
 	{Key: FeatureRequirementsTree, ShippedIn: "0.28.0", Summary: "The requirements Table folds under its headings, and a new Tree view draws the project as connected boxes coloured by type or status"},
 	{Key: FeatureChipSearch, ShippedIn: "0.28.0", Summary: "One search bar with a chip for each filter: filter, group and save searches on the requirements list, and filter the top-bar search by project, type, status and owner"},
+	{Key: FeatureImpactPicker, ShippedIn: "0.28.0", Summary: "Impact analysis picks the requirement from a searchable table of the document, re-centres on any artifact in the tree, and shows the result as a table too"},
 }
 
 // Feature keys the code gates on.
@@ -239,6 +240,13 @@ const (
 	// fold-all / unfold-all button, and the Tree diagram. Without it the
 	// page keeps Table, Tree and Layers. Frontend only.
 	FeatureRequirementsTree = "requirements-tree"
+	// FeatureImpactPicker is the Impact Analysis page's picker pane and
+	// result table (issue #730): the requirements as the document's folding
+	// table, Ref and Title, under a chip search bar, in place of the
+	// dropdown; the result as a table beside the tree; and re-centring the
+	// impact on an artifact in it. Without it the page keeps the dropdown
+	// and the tree. Frontend only: the impact endpoint is unchanged.
+	FeatureImpactPicker = "impact-picker"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

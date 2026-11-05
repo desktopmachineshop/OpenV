@@ -211,7 +211,8 @@
     "compact-layout",
     "redesign-pages",
     "requirements-tree",
-    "chip-search"
+    "chip-search",
+    "impact-picker"
   ],
   "event_types": [
     "artifact.created",

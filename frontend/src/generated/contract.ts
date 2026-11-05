@@ -49,6 +49,7 @@ export const FEATURE_KEYS = [
   'redesign-pages',
   'requirements-tree',
   'chip-search',
+  'impact-picker',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
