@@ -7,7 +7,9 @@ import { searchAPI } from '../api/client';
 vi.mock('../api/client', async (orig) => mockApi(await orig()));
 
 let refSearchOn = true;
-vi.mock('../hooks/useFeature', () => ({ useFeature: () => refSearchOn }));
+// The chip search bar has its own tests (GlobalSearch.chips.test.tsx); these
+// cover the plain box.
+vi.mock('../hooks/useFeature', () => ({ useFeature: (key: string) => (key === 'chip-search' ? false : refSearchOn) }));
 
 const navigate = vi.fn();
 vi.mock('react-router-dom', () => ({

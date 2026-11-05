@@ -9,7 +9,7 @@ import { KpiStrip } from './KpiStrip';
 import { LayersView } from './LayersView';
 import { LevelDrill } from './LevelDrill';
 import type { RequirementsView } from './ListToolbar';
-import { TableView } from './TableView';
+import { TableGroup, TableView } from './TableView';
 import type { Artifact, Setter } from './shared';
 
 // The list pane: the main area on a wide screen, the Tree pane stacked. It
@@ -51,6 +51,9 @@ interface TreePaneProps {
   handleArtifactContextMenu: (action: ArtifactContextAction, artifact: Artifact) => void;
   clipboard: Artifact | null;
   qualityScores: Record<string, QualityRowInfo>;
+  /** The chip search bar's group-by, which the table draws its rows under (issue #722). */
+  tableGroups?: TableGroup[];
+  groupedBy?: string;
 }
 
 export const TreePane: React.FC<TreePaneProps> = (p) => {
@@ -99,6 +102,8 @@ export const TreePane: React.FC<TreePaneProps> = (p) => {
           onReorder={p.handleReorderArtifact}
           onContextMenuAction={p.handleArtifactContextMenu}
           phone={p.phone}
+          groups={p.tableGroups}
+          groupedBy={p.groupedBy}
         />
       );
     }

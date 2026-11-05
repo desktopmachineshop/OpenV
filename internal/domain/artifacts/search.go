@@ -38,9 +38,9 @@ type SearchOptions struct {
 	// gets exactly the title/body search it had before.
 	MatchRefs bool
 	// Types, Statuses and Owners narrow the hits to those whose type, review
-	// status or owner attribute is one of the values given (each matched
-	// exactly, an owner without regard to case). An empty list does not
-	// narrow.
+	// status or owner attribute is one of the values given: a type and a
+	// status exactly, an owner as a substring without regard to case ("dav"
+	// finds "Dave Smith"). An empty list does not narrow.
 	Types    []string
 	Statuses []string
 	Owners   []string

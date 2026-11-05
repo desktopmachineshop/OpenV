@@ -29,6 +29,7 @@ import { FilterPanel } from './moduleView/FilterPanel';
 import { TreePane } from './moduleView/TreePane';
 import { ListToolbar } from './moduleView/ListToolbar';
 import { useListView } from './moduleView/useListView';
+import { ListChipSearch } from './moduleView/ListChipSearch';
 import { PhoneActionBar } from './moduleView/PhoneActionBar';
 import { useCoverage } from './moduleView/useCoverage';
 import { useBaselineView } from './moduleView/useBaselineView';
@@ -673,7 +674,7 @@ export const ModuleView: React.FC = () => {
   const searched = activeArtifacts.filter(
     (artifact) => matchesSearch(artifact, searchText, searchExact) && matchesFieldFilters(artifact, filterRows, filterLogic, getFieldValue)
   );
-  const { view, setView, typeTab, setTypeTab, quick, setQuick, facts, filteredArtifacts, typeCounts, figures, quickCounts } =
+  const { view, setView, typeTab, setTypeTab, quick, setQuick, facts, filteredArtifacts, typeCounts, figures, quickCounts, ...chips } =
     useListView({
       searched,
       artifacts: activeArtifacts,
@@ -969,14 +970,16 @@ export const ModuleView: React.FC = () => {
         setIsCreating={setIsCreating}
         setPendingCreateContext={setPendingCreateContext}
         setPendingCreatePlacement={setPendingCreatePlacement}
-        showFilterPanel={showFilterPanel}
+        showFilterPanel={!chips.chipSearch && showFilterPanel}
+        tableGroups={chips.tableGroups}
+        groupedBy={chips.groupedBy}
         toolbar={
           <ListToolbar
             phone={stacked}
             view={view}
             setView={setView}
             typeCounts={typeCounts}
-            total={searched.length}
+            total={chips.chipSearched.length}
             typeTab={typeTab}
             setTypeTab={setTypeTab}
             quick={quick}
@@ -991,6 +994,7 @@ export const ModuleView: React.FC = () => {
             setShowFilterPanel={setShowFilterPanel}
             pickDepth={(depth) => setDepthTrigger((prev) => ({ depth, token: prev.token + 1 }))}
             newButton={stacked ? newButton : undefined}
+            chipSearch={chips.chipSearch ? <ListChipSearch {...chips} phone={stacked} canSave={!isBaselineView} /> : undefined}
           />
         }
         filterPanel={

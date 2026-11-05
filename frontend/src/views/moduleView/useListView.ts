@@ -1,8 +1,14 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { SetURLSearchParams } from 'react-router-dom';
 import type { CoverageEntry, Link } from '../../api/client';
 import { QualityFacts, buildFacts, moduleFigures, statusOf } from '../../utils/artifactFacts';
+import { documentOrder } from '../../utils/artifactSequence';
+import { useFeature } from '../../hooks/useFeature';
+import { useAppStore } from '../../state/store';
+import { CHIP_SEARCH_FEATURE, SearchValue, filterItems, groupItems, groupKeys, readSearchParams, writeSearchParams } from '../../components/search/searchValue';
 import { QuickFilter, RequirementsView, viewFromParam } from './ListToolbar';
+import { buildListSchema, listAccessors } from './listSearch';
+import type { TableGroup } from './TableView';
 import type { Artifact } from './shared';
 
 export interface ListViewOptions {
@@ -19,11 +25,18 @@ export interface ListViewOptions {
 
 /**
  * How the list pane shows the project: Table, Tree or Layers (?view=, so a
- * link and a reload keep it), the type tab and a phone's quick filter, which
- * narrow what the search and the filters leave, and the facts every row and
- * the figures above them read.
+ * link and a reload keep it), the type tab and a phone's quick filter, or
+ * the chip search bar's chips (also in the URL), which narrow what the search
+ * and the filters leave, and the facts every row and the figures above them
+ * read.
  */
 export function useListView({ searched, artifacts, links, quality, coverage, searchParams, setSearchParams }: ListViewOptions) {
+  // The chip search bar (issue #722): its chips, in the URL, narrow and
+  // group what the search leaves, in place of the phone's quick filter. The
+  // Mine chip matches owners against the member's name and email.
+  const chipSearch = useFeature(CHIP_SEARCH_FEATURE);
+  const currentUser = useAppStore((s) => s.currentUser);
+  const me = [currentUser?.name ?? '', currentUser?.email ?? ''];
   const [typeTab, setTypeTab] = useState<string>('');
   const [quick, setQuick] = useState<QuickFilter>('');
 
@@ -41,6 +54,21 @@ export function useListView({ searched, artifacts, links, quality, coverage, sea
   };
 
   const facts = buildFacts(artifacts, links, quality, coverage);
+
+  // The chip search: its schema over the project's artifacts, its value read
+  // from the URL (so a filtered view can be shared or bookmarked), and what
+  // it leaves of the searched rows.
+  const searchSchema = useMemo(() => buildListSchema(artifacts), [artifacts]);
+  const searchKey = searchParams.toString();
+  const searchValue: SearchValue = useMemo(
+    () => readSearchParams(new URLSearchParams(searchKey), searchSchema),
+    [searchKey, searchSchema]
+  );
+  const setSearchValue = (next: SearchValue) =>
+    setSearchParams((prev) => writeSearchParams(new URLSearchParams(prev), next), { replace: true });
+  const accessors = listAccessors(artifacts, facts, me);
+  const chipSearched = chipSearch ? filterItems(searched, searchValue, searchSchema, accessors) : searched;
+
   const quickMatch = (artifact: Artifact, which: QuickFilter): boolean =>
     which === ''
       ? true
@@ -49,11 +77,11 @@ export function useListView({ searched, artifacts, links, quality, coverage, sea
         : which === 'failing'
           ? facts.get(artifact.id).vv.status === 'fail'
           : facts.get(artifact.id).suspect > 0;
-  const filteredArtifacts = searched.filter(
-    (artifact) => (!typeTab || artifact.type === typeTab) && quickMatch(artifact, quick)
+  const filteredArtifacts = chipSearched.filter(
+    (artifact) => (!typeTab || artifact.type === typeTab) && (chipSearch || quickMatch(artifact, quick))
   );
   const typeCounts = Array.from(
-    searched.reduce((m, a) => m.set(a.type, (m.get(a.type) || 0) + 1), new Map<string, number>())
+    chipSearched.reduce((m, a) => m.set(a.type, (m.get(a.type) || 0) + 1), new Map<string, number>())
   )
     .map(([type, count]) => ({ type, count }))
     .sort((a, b) => b.count - a.count);
@@ -69,6 +97,52 @@ export function useListView({ searched, artifacts, links, quality, coverage, sea
     failing: searched.filter((a) => quickMatch(a, 'failing')).length,
     suspect: searched.filter((a) => quickMatch(a, 'suspect')).length,
   };
+  const chipQuickCounts: Record<string, number> = chipSearch
+    ? { ...quickCounts, mine: searched.filter((a) => accessors.quickMatch!(a, 'mine')).length }
+    : quickCounts;
 
-  return { view, setView, typeTab, setTypeTab, quick, setQuick, facts, filteredArtifacts, typeCounts, figures, quickCounts };
+  // Group by: the rows in document order under one heading per value of the
+  // group chips. Undefined with no group chip, and the table then groups by
+  // section as it always has.
+  // Headings are the document's structure, not rows, as in the section
+  // grouping; a list of nothing but headings shows them.
+  const keys = chipSearch ? groupKeys(searchValue) : [];
+  const ordered = keys.length ? documentOrder(filteredArtifacts).map((e) => e.artifact) : [];
+  const content = ordered.some((a) => a.type !== 'heading') ? ordered.filter((a) => a.type !== 'heading') : ordered;
+  const tableGroups: TableGroup[] | undefined =
+    keys.length > 0
+      ? groupItems(
+          content,
+          keys,
+          searchSchema,
+          accessors.groupValue
+        )
+      : undefined;
+  const groupedBy = keys.length
+    ? keys.map((k) => [...(searchSchema.groupBy ?? []), ...(searchSchema.customGroups ?? [])].find((g) => g.key === k)?.label ?? k).join(' · ')
+    : '';
+
+  return {
+    view,
+    setView,
+    typeTab,
+    setTypeTab,
+    quick,
+    setQuick,
+    facts,
+    filteredArtifacts,
+    typeCounts,
+    figures,
+    quickCounts,
+    chipSearch,
+    userId: currentUser?.id,
+    /** The rows the chip search leaves, before the type tab: the tabs' "All". */
+    chipSearched,
+    searchSchema,
+    searchValue,
+    setSearchValue,
+    chipQuickCounts,
+    tableGroups,
+    groupedBy,
+  };
 }

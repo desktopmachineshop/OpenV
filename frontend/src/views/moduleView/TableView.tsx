@@ -70,6 +70,12 @@ interface TableViewProps {
   onContextMenuAction: (action: ArtifactContextAction, artifact: Artifact) => void;
   /** A phone: two-line rows instead of columns. */
   phone: boolean;
+  /**
+   * The chip search bar's group-by (issue #722): the rows under these groups
+   * instead of by section, and what they are grouped by, for the footer.
+   */
+  groups?: TableGroup[];
+  groupedBy?: string;
 }
 
 const headerCell: React.CSSProperties = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
@@ -90,8 +96,11 @@ export const TableView: React.FC<TableViewProps> = ({
   onReorder,
   onContextMenuAction,
   phone,
+  groups: chosenGroups,
+  groupedBy,
 }) => {
-  const groups = useMemo(() => groupBySection(artifacts), [artifacts]);
+  const sections = useMemo(() => groupBySection(artifacts), [artifacts]);
+  const groups = chosenGroups ?? sections;
   const [closed, setClosed] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<ArtifactMenuAnchor | null>(null);
   const shown = groups.reduce((n, g) => n + g.rows.length, 0);
@@ -290,7 +299,11 @@ export const TableView: React.FC<TableViewProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', minHeight: 32, padding: '0 12px', color: 'var(--text-muted)', fontSize: 12 }}>
           <span>
             {`${shown} of ${total} shown`}
-            {groups.some((g) => g.label) ? ' · grouped by section' : ''}
+            {chosenGroups
+              ? ` · grouped by ${(groupedBy || 'your choice').toLowerCase()}`
+              : groups.some((g) => g.label)
+                ? ' · grouped by section'
+                : ''}
           </span>
         </div>
       </div>

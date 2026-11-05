@@ -508,20 +508,23 @@ const searchStatusExpr = `COALESCE(NULLIF(status, ''), attributes->>'status', 'd
 // status and owner back. Without facets both are empty, so a search without
 // them is the statement it always was.
 func searchFacetSQL(opts artifacts.SearchOptions, args []interface{}) (predicate, columns string, out []interface{}) {
-	facet := func(expr string, values []string) {
+	facet := func(expr, op string, values []string) {
 		if len(values) == 0 {
 			return
 		}
 		args = append(args, pq.Array(values))
-		predicate += fmt.Sprintf("\n\t\tAND %s = ANY($%d)", expr, len(args))
+		predicate += fmt.Sprintf("\n\t\tAND %s %s ANY($%d)", expr, op, len(args))
 	}
-	facet("type", opts.Types)
-	facet(searchStatusExpr, opts.Statuses)
+	facet("type", "=", opts.Types)
+	facet(searchStatusExpr, "=", opts.Statuses)
+	// An owner matches as a substring without regard to case: "dav" finds
+	// "Dave Smith" and "dave@example.com", as the owner field holds a name or
+	// an address, whichever the editor offered.
 	owners := make([]string, 0, len(opts.Owners))
 	for _, o := range opts.Owners {
-		owners = append(owners, strings.ToLower(strings.TrimSpace(o)))
+		owners = append(owners, artifacts.LikePattern(strings.ToLower(strings.TrimSpace(o))))
 	}
-	facet("LOWER(COALESCE(attributes->>'owner', ''))", owners)
+	facet("LOWER(COALESCE(attributes->>'owner', ''))", "LIKE", owners)
 	if opts.Facets {
 		columns = ", " + searchStatusExpr + ", COALESCE(attributes->>'owner', '')"
 	}
