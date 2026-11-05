@@ -11,6 +11,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## 0.28.0 — 2026-11-05
 
+Stable channel release since 2026-11-05.
+
 ### New features
 
 - **A Table with the document's structure, and a Tree you can see.** On the requirements page, **Table** now nests every artifact under its heading or parent, with a caret to fold each branch and every column, status and priority included, on the headings too. A single **fold all / unfold all** button replaces the **Depth** picker. **Tree** is now a diagram: the project drawn left to right as connected boxes, coloured by type or by status with a key, that you can fold, pan, zoom and walk with the keyboard; click a box to open the artifact. The **Layers** view is gone, and links to it open the Tree.
