@@ -15,24 +15,53 @@ artifacts it holds, the share of requirements that are **traced** (a test
 case verifies them) and **verified**, and how many fail their tests. Beside
 the project's name are its last baseline and the number of members.
 
-**Needs you** lists what waits on the team, each with a link to deal with it:
+**Needs you** lists what waits on the team. Click a line to open the
+artifact it names; the button on the right says what it does. **Review
+all** in its header opens the **Review Queue**.
 
-- **approve**: an artifact in review.
-- **suspect**: a link whose ends changed after it was made; confirm it or
-  remove it on the **Review Queue** page.
+- **approve**: an artifact in review; **Review** opens it.
+- **suspect**: a link whose ends changed after it was made. **✓** confirms
+  the link still holds and **✗** removes it, after you confirm, right there
+  on Home; the line leaves the list.
 - **test run**: a run still in progress, with how many test cases are left.
 - **failing**: a test case whose last result is a fail, and the
   requirements it verifies.
-- **comment**: a recent comment on an artifact.
+- **comment**: a recent comment on an artifact; **Open** opens the artifact
+  with its notes showing.
 
 The **Audit trail** shows the newest events of the project, who did what to
-which artifact; **Full history** opens the **Activity** page. **Projects**
+which artifact; click one to open what it is about. **Full history** opens
+the **Activity** page. **Projects**
 lists your workspace's projects with how far each is traced and verified,
 and when agents have proposed changes, a card counts the proposals waiting
 and opens the agent runs to review them.
 
 On a phone, Home shows the figures as four tiles, then **Needs you**, the
 proposals and the recent activity.
+
+## Activity log
+
+**Activity**, beside **Settings** in the project's rail, is the project's
+whole history, newest first, under a header for each day (**Today**,
+**Yesterday**, then the date). Each event reads as a sentence in the words
+Home uses: who did it, with their picture or a mark for an agent, a runner
+or the system; what they did, coloured like its dot on Home; and the thing
+they did it to, by its reference and title, as a link that opens it.
+**Type** narrows the log to one kind of event.
+
+Click **▸** at the end of an event for its detail:
+
+- a status change shows the old and new status as chips, with the version;
+- an edit shows what changed: the title and the text word by word, struck
+  out in red and added in green, and each attribute before and after;
+- a link shows both ends and its type, such as TC-177 —verifies→ REQ-229;
+- a board move shows the column the card moved to;
+- a test result shows pass or fail, the test case and a link to the run;
+- an agent run shows its status, how long it took, what it cost and a link
+  to the run;
+- anything else lists what was recorded with it.
+
+**Show raw event** shows the event exactly as it is stored, for debugging.
 
 ## Design
 

@@ -6,7 +6,6 @@ import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiErrorMessage } from '../api/errors';
 import {
-  Chip,
   ErrorBanner,
   FeatureGate,
   Meter,
@@ -17,32 +16,12 @@ import {
   plainLink,
   tapTarget,
   panelStyle,
-  refStyle,
-  type ChipTone,
 } from '../components/ui';
 import { REDESIGN_PAGES_FEATURE } from '../features';
 import { useViewport } from '../hooks/useViewport';
 import { baselineDate } from '../utils/baselines';
-import { loadHome, proposalLabel, type ActivityItem, type ActivityTone, type HomeData, type TodoItem, type TodoKind } from './ProjectHomeData';
-
-const KIND_TONE: Record<TodoKind, ChipTone> = {
-  approve: 'info',
-  suspect: 'warning',
-  'test run': 'neutral',
-  failing: 'danger',
-  comment: 'neutral',
-};
-
-const DOT: Record<ActivityTone, string> = {
-  ok: 'var(--success)',
-  bad: 'var(--danger)',
-  warn: 'var(--warning)',
-  agent: 'var(--purple)',
-  info: 'var(--accent)',
-};
-
-/** An artifact reference (REQ-12), drawn in monospace; a name is not. */
-const REF = /^[A-Z][A-Z0-9]*-\d+$/;
+import { ActivityRows, NeedsPanel } from '../components/ProjectListHomePanels';
+import { loadHome, proposalLabel, type ActivityItem, type HomeData, type TodoItem } from './ProjectHomeData';
 
 const figure = (value: number | null, suffix = '') => (value === null ? '–' : `${value}${suffix}`);
 
@@ -72,64 +51,21 @@ const PhoneFigure: React.FC<{ value: string; label: string; to: string; danger?:
   </Link>
 );
 
-const TodoRow: React.FC<{ t: TodoItem }> = ({ t }) => (
-  <li
-    style={{
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10,
-      minHeight: 40,
-      padding: '4px 12px',
-      borderBottom: '1px solid var(--border-soft)',
-    }}
-  >
-    <span style={{ flex: 'none', width: 76 }}>
-      <Chip tone={KIND_TONE[t.kind]}>{t.kind}</Chip>
-    </span>
-    <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-      <span style={ellipsis}>
-        {t.ref && <span style={refStyle}>{t.ref}</span>} {t.title}
-      </span>
-      <span style={{ ...mutedStyle, ...ellipsis }}>{t.meta}</span>
-    </span>
-    <Link to={t.to} style={{ ...plainLink, ...tapTarget, flex: 'none', fontSize: 12, fontWeight: 600 }}>
-      {t.action}
-    </Link>
-  </li>
-);
-
 const NeedsYou: React.FC<{ items: TodoItem[]; projectId: string; limit: number; flex?: string }> = ({ items, projectId, limit, flex = '1.3 1 420px' }) => (
-  <section aria-labelledby="home-needs" data-help-key="home.needs" style={{ ...panelStyle, flex }}>
-    <PanelHeader id="home-needs" title="Needs you" count={items.length} action={<Link to={`/projects/${projectId}/review`} style={plainLink}>All reviews</Link>} />
-    {items.length === 0 ? (
-      <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>Nothing is waiting: no reviews, suspect links, open runs, failing tests or new comments.</p>
-    ) : (
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-        {items.slice(0, limit).map((t) => (
-          <TodoRow key={t.key} t={t} />
-        ))}
-      </ul>
-    )}
-  </section>
+  <NeedsPanel
+    items={items}
+    limit={limit}
+    action={<Link to={`/projects/${projectId}/review`} style={{ ...plainLink, fontWeight: 600 }}>Review all</Link>}
+    emptyText="Nothing is waiting: no reviews, suspect links, open runs, failing tests or new comments."
+    style={{ flex }}
+  />
 );
 
 const AuditTrail: React.FC<{ items: ActivityItem[]; projectId: string; title: string; flex?: string }> = ({ items, projectId, title, flex = '1 1 340px' }) => (
   <section aria-labelledby="home-activity" data-help-key="home.activity" style={{ ...panelStyle, flex }}>
     <PanelHeader id="home-activity" title={title} action={<Link to={`/projects/${projectId}/activity`} style={plainLink}>Full history</Link>} />
     {items.length === 0 && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>No activity yet.</p>}
-    <ol style={{ listStyle: 'none', margin: 0, padding: '6px 12px 10px' }}>
-      {items.map((a) => (
-        <li key={a.id} style={{ display: 'flex', gap: 10, padding: '6px 0' }}>
-          <span style={{ flex: 'none', width: 8, height: 8, marginTop: 6, borderRadius: '50%', background: DOT[a.tone] }} />
-          <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-            <span>
-              <b style={{ fontWeight: 600 }}>{a.who}</b> {a.what} {a.ref && <span style={REF.test(a.ref) ? refStyle : { fontWeight: 600 }}>{a.ref}</span>}
-            </span>
-            <span style={mutedStyle}>{a.when}</span>
-          </span>
-        </li>
-      ))}
-    </ol>
+    <ActivityRows items={items} />
   </section>
 );
 

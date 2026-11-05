@@ -17,6 +17,20 @@ export interface ProjectFigures {
 export const ProjectCount: React.FC<{ figures?: ProjectFigures }> = ({ figures }) =>
   figures && figures.count !== null ? <span className="project-count">{figures.count} artifacts</span> : null;
 
+/** The Projects panel's header action (#720): opens the new-project form below the list and brings it into view. */
+export const NewProjectAction: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <button
+    type="button"
+    className="project-panel-new"
+    onClick={() => {
+      onClick();
+      requestAnimationFrame(() => document.querySelector('.create-project-form')?.scrollIntoView?.({ behavior: 'smooth', block: 'start' }));
+    }}
+  >
+    + New project
+  </button>
+);
+
 export const ProjectMeters: React.FC<{ figures?: ProjectFigures }> = ({ figures }) => {
   if (!figures) return <span style={mutedStyle} aria-busy="true">Loading figures…</span>;
   if (figures.traced === null) return <span style={mutedStyle}>No requirements to trace yet</span>;

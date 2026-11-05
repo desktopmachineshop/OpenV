@@ -738,9 +738,16 @@ textarea {
   color: var(--text);
 }
 .ov-topbar-org {
+  /* The workspace name takes the room it needs and gives it up, with an
+     ellipsis, only when the bar runs out (#727); the search keeps its
+     minimum. A narrow window keeps the old cap for the account controls. */
   min-width: 0;
-  max-width: 220px;
   flex: 0 1 auto;
+}
+@media (max-width: 640px) {
+  .ov-topbar-org {
+    max-width: 42vw;
+  }
 }
 .ov-topbar-sep {
   color: var(--neutral-mid);
