@@ -80,6 +80,7 @@ target_releases scope project_id cascade from projects
 templates scope org_id deleted
 test_results scope - cascade from test_runs
 test_runs scope project_id deleted
+todos scope org_id,project_id cascade from organizations
 user_activity_days scope - not reached
 user_identities scope - not reached
 user_provider_tokens scope - not reached

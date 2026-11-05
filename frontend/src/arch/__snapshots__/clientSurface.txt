@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 235; members of exported objects: 307
+exports: 238; members of exported objects: 316
 
 interface AdminUser
 interface AdminWorkspace
@@ -162,6 +162,8 @@ interface TeamGrant
 interface Template
 interface TestResult
 interface TestRun
+interface Todo
+interface TodoInput
 type      UploadProgressHandler
 interface User
 interface UserDashboard
@@ -517,6 +519,16 @@ const     templateAPI
             .create
             .createProject
             .list
+const     todosAPI
+            .createPersonal
+            .createProject
+            .get
+            .listMine
+            .listProject
+            .promote
+            .remove
+            .setDone
+            .update
 const     vvAPI
             .coverage
             .createRun

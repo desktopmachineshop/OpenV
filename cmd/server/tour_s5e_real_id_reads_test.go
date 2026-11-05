@@ -141,12 +141,12 @@ var realIdReadsSends = []string{
 		"for /interviews, <link> for /links, <login> for /provider-logins, <invite.token> for /public/interviews, " +
 		"<share.token> for /public/share, <result> for /test-results, <test.run> for /test-runs, <owner> for " +
 		"/users, <release> for a second {releaseId}" +
-		" and <card> for /work-items; /baselines/{id}/diff takes ?against=live (against <b1> itself is a " +
+		", <todo> for /todos and <card> for /work-items; /baselines/{id}/diff takes ?against=live (against <b1> itself is a " +
 		"400) and /projects/{id}/impact ?artifact=<a> (the row shows them); an answer that is a JSON array or null " +
 		"is counted",
 	"the fixtures, made as setup by the owner in W and P before the matrix: requirement A (<a>), user need N (<n>) " +
 		"and test case TC (<tc>); the link A derives-from N (<link>); a PNG attachment on A (<attachment>); baseline " +
-		"B1 (<b1>); a work item (<card>); test run <test.run> with TC's pass (<result>); evidence bundle <bundle> " +
+		"B1 (<b1>); a work item (<card>); a to-do (<todo>); test run <test.run> with TC's pass (<result>); evidence bundle <bundle> " +
 		"with a CSV (<file>) that <result> cites; interview <interview> and its invite (<invite.token>); target " +
 		"release MVP of P (<release>); guided session <guided>; a manual automation of tour-matrix pinned to P (<automation>); " +
 		"a sign-in of claude-code on W's shared workers (<login>); a public share link of P " +
@@ -385,6 +385,7 @@ var realIdReadsIDs = map[string]string{
 	"test-runs":          "{{test.run}}",
 	"users":              "{{owner}}",
 	"work-items":         "{{card}}",
+	"todos":              "{{todo}}",
 	"public/interviews":  "{{invite.token}}",
 	"public/share":       "{{share.token}}",
 	"public/open-source": "{{p}}",
@@ -533,6 +534,8 @@ func realIdReadsFixtures(tr *tour) {
 		jsonBody(`{"name":"B1"}`)).capture("b1", "/id")
 	tr.setup("a work item", o, "POST /api/v1/projects/{id}/work-items", at("id", "{{p}}"),
 		jsonBody(`{"title":"Tour Matrix card"}`)).capture("card", "/id")
+	tr.setup("a to-do", o, "POST /api/v1/projects/{id}/todos", at("id", "{{p}}"),
+		jsonBody(`{"text":"Tour Matrix to-do"}`), expect(http.StatusCreated)).capture("todo", "/id")
 	tr.setup("a test run", o, "POST /api/v1/projects/{id}/test-runs", at("id", "{{p}}"),
 		jsonBody(`{"name":"Tour Matrix run"}`)).capture("test.run", "/id")
 	tr.setup("TC passes", o, "POST /api/v1/test-runs/{id}/results", at("id", "{{test.run}}"),

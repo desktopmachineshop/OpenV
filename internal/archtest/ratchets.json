@@ -54,6 +54,7 @@
       "internal/domain/sharelinks",
       "internal/domain/targetreleases",
       "internal/domain/templates",
+      "internal/domain/todos",
       "internal/domain/usermetrics",
       "internal/domain/users",
       "internal/domain/vv",
@@ -118,6 +119,7 @@
       "internal/domain/snapshot",
       "internal/domain/targetreleases",
       "internal/domain/templates",
+      "internal/domain/todos",
       "internal/domain/traceability",
       "internal/domain/usermetrics",
       "internal/domain/users",
@@ -255,6 +257,9 @@
       "internal/domain/links",
       "internal/domain/snapshot"
     ],
+    "internal/domain/todos": [
+      "internal/domain/workitems"
+    ],
     "internal/domain/traceability": [
       "internal/domain/artifacts",
       "internal/domain/chatter",
@@ -344,6 +349,7 @@
       "internal/domain/sharelinks",
       "internal/domain/targetreleases",
       "internal/domain/templates",
+      "internal/domain/todos",
       "internal/domain/usermetrics",
       "internal/domain/users",
       "internal/domain/vv",

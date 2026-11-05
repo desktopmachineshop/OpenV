@@ -14,7 +14,7 @@ Each package belongs to one area of `docs/areas.json` through its
 
 | Area | Packages |
 |---|---|
-| requirements-core | `artifacts/`, `attributes/`, `chatter/`, `embeddings/`, `links/`, `mentions/`, `products/`, `projects/`, `quality/`, `savedsearches/`, `settings/`, `traceability/`, `workitems/` |
+| requirements-core | `artifacts/`, `attributes/`, `chatter/`, `embeddings/`, `links/`, `mentions/`, `products/`, `projects/`, `quality/`, `savedsearches/`, `settings/`, `todos/`, `traceability/`, `workitems/` |
 | verification | `evidence/`, `vv/` |
 | documents | `attachments/`, `baselines/`, `downloads/`, `exports/`, `reports/`, `snapshot/`, `templates/` |
 | tenancy-identity | `invitations/`, `members/`, `orgs/`, `tokens/`, `users/` |

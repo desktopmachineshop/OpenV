@@ -351,3 +351,12 @@ GET /api/v1/projects/{id}/vv/releases/{releaseId} -> GetReleaseProgress
 GET /api/v1/me/saved-searches -> ListSavedSearches
 POST /api/v1/me/saved-searches -> CreateSavedSearch
 DELETE /api/v1/me/saved-searches/{id} -> DeleteSavedSearch [alwaysWritable]
+GET /api/v1/projects/{id}/todos -> ListProjectTodos
+POST /api/v1/projects/{id}/todos -> CreateProjectTodo
+GET /api/v1/todos -> ListMyTodos
+POST /api/v1/todos -> CreatePersonalTodo
+GET /api/v1/todos/{id} -> GetTodo
+PUT /api/v1/todos/{id} -> UpdateTodo
+DELETE /api/v1/todos/{id} -> DeleteTodo
+POST /api/v1/todos/{id}/done -> SetTodoDone
+POST /api/v1/todos/{id}/promote -> PromoteTodo

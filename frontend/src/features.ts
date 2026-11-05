@@ -66,3 +66,11 @@ export const REDESIGN_PAGES_FEATURE: FeatureKey = 'redesign-pages';
  * keeps its list; an agent's place is kept either way.
  */
 export const AGENT_HIERARCHY_FEATURE: FeatureKey = 'agent-hierarchy';
+
+/**
+ * To-dos of their own (issue #731): one paragraph to tick off, kept off the
+ * board. A note raises one, the project's To-dos page lists them, and My
+ * to-dos gathers a person's across the workspace. Without it a note raises a
+ * board card, as before.
+ */
+export const TODOS_FEATURE: FeatureKey = 'todos';

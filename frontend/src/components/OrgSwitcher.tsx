@@ -6,6 +6,8 @@ import { useViewport } from '../hooks/useViewport';
 import { useFeature } from '../hooks/useFeature';
 import { CreateOrgModal } from './CreateOrgModal';
 import { WORKSPACE_RUNS_FEATURE, WORKSPACE_RUNS_PATH } from './agents/workspaceRuns';
+import { TODOS_FEATURE } from '../features';
+import { MY_TODOS_PATH } from './todos/todoText';
 
 interface OrgSwitcherProps {
   /** 'dark' fits the sidebar (var(--text)); 'light' fits white page headers. */
@@ -32,6 +34,7 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
     setTruncated(!!name && name.scrollWidth > name.clientWidth);
   };
   const workspaceRuns = useFeature(WORKSPACE_RUNS_FEATURE);
+  const myTodos = useFeature(TODOS_FEATURE);
   // Where the trigger sits when the menu opens: on a phone the menu is
   // fixed to the screen (full width) instead of hanging off the trigger,
   // so a long workspace name can never push it past the right edge.
@@ -190,6 +193,18 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
             </button>
           ))}
           <div style={{ borderTop: '1px solid var(--border-soft)', margin: '4px 0' }} />
+          {myTodos && (
+            <button
+              style={menuItemStyle}
+              onClick={() => {
+                setOpen(false);
+                navigate(MY_TODOS_PATH);
+              }}
+            >
+              <span style={{ width: 14 }} />
+              My to-dos
+            </button>
+          )}
           {workspaceRuns && (
             <button
               style={menuItemStyle}

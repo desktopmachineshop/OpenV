@@ -256,6 +256,7 @@ export const PAGES: readonly Page[] = [
   { scope: 'site', path: 'projects', load: 'eager', public: false, help: { topic: 'projects' } },
   { scope: 'site', path: 'org/settings', load: 'eager', public: false, help: { topic: 'org/settings' } },
   { scope: 'site', path: 'org/runs', load: 'lazy', public: false, help: { topic: 'org/runs' } },
+  { scope: 'site', path: 'org/todos', load: 'lazy', public: false, help: { topic: 'org/todos' } },
   { scope: 'site', path: 'manual', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'manual/:chapterSlug', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'whats-new', load: 'lazy', public: false, help: { topic: 'whats-new' } },

@@ -34,6 +34,7 @@ DELETE /api/v1/shared-products/{id}
 DELETE /api/v1/shared-products/{id}/vote
 DELETE /api/v1/test-results/{id}/citations/{bundleId}
 DELETE /api/v1/test-runs/{id}
+DELETE /api/v1/todos/{id}
 DELETE /api/v1/work-items/{id}
 DELETE /mcp
 GET /.well-known/oauth-authorization-server
@@ -151,6 +152,7 @@ GET /api/v1/projects/{id}/review-queue
 GET /api/v1/projects/{id}/share-links
 GET /api/v1/projects/{id}/team-access
 GET /api/v1/projects/{id}/test-runs
+GET /api/v1/projects/{id}/todos
 GET /api/v1/projects/{id}/vv/coverage
 GET /api/v1/projects/{id}/vv/gaps
 GET /api/v1/projects/{id}/vv/matrix
@@ -185,6 +187,8 @@ GET /api/v1/test-results/{id}/citations
 GET /api/v1/test-runs/{id}
 GET /api/v1/test-runs/{id}/citations
 GET /api/v1/test-runs/{id}/results
+GET /api/v1/todos
+GET /api/v1/todos/{id}
 GET /api/v1/users
 GET /api/v1/users/{id}/avatar
 GET /api/v1/work-items/{id}
@@ -277,6 +281,7 @@ POST /api/v1/projects/{id}/repo-connections
 POST /api/v1/projects/{id}/review-round
 POST /api/v1/projects/{id}/share-links
 POST /api/v1/projects/{id}/test-runs
+POST /api/v1/projects/{id}/todos
 POST /api/v1/projects/{id}/work-items
 POST /api/v1/proposals/bulk
 POST /api/v1/proposals/{id}/approve
@@ -302,6 +307,9 @@ POST /api/v1/templates/{id}/projects
 POST /api/v1/test-results/{id}/citations
 POST /api/v1/test-runs/{id}/agent-run
 POST /api/v1/test-runs/{id}/results
+POST /api/v1/todos
+POST /api/v1/todos/{id}/done
+POST /api/v1/todos/{id}/promote
 POST /api/v1/work-items/{id}/comments
 POST /api/v1/work-items/{id}/move
 POST /mcp
@@ -348,4 +356,5 @@ PUT /api/v1/repo-connections/{id}
 PUT /api/v1/repo-connections/{id}/my-path
 PUT /api/v1/shared-products/{id}/vote
 PUT /api/v1/test-runs/{id}
+PUT /api/v1/todos/{id}
 PUT /api/v1/work-items/{id}

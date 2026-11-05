@@ -47,6 +47,7 @@ DELETE /api/v1/shared-products/{id}: 401, 403, 404; phantom_matrix (errors only)
 DELETE /api/v1/shared-products/{id}/vote: 401, 403, 404; phantom_matrix (errors only)
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/test-runs/{id}: 401, 404; phantom_matrix (errors only)
+DELETE /api/v1/todos/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/work-items/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /mcp: 405; phantom_matrix (errors only)
 GET /.well-known/oauth-authorization-server: 200; phantom_matrix
@@ -164,6 +165,7 @@ GET /api/v1/projects/{id}/review-queue: 200, 401, 404; phantom_matrix, real_id_r
 GET /api/v1/projects/{id}/share-links: 200, 401, 403, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/team-access: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/test-runs: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/projects/{id}/todos: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/vv/coverage: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/vv/gaps: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/vv/matrix: 200, 401, 404; phantom_matrix, real_id_reads
@@ -198,6 +200,8 @@ GET /api/v1/test-results/{id}/citations: 200, 401, 404; phantom_matrix, real_id_
 GET /api/v1/test-runs/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/test-runs/{id}/citations: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/test-runs/{id}/results: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/todos: 200, 401; phantom_matrix
+GET /api/v1/todos/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/users: 200, 401; phantom_matrix, real_id_reads
 GET /api/v1/users/{id}/avatar: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/work-items/{id}: 200, 401, 404; phantom_matrix, real_id_reads
@@ -290,6 +294,7 @@ POST /api/v1/projects/{id}/repo-connections: 400, 401, 403, 404; phantom_matrix,
 POST /api/v1/projects/{id}/review-round: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/share-links: 400, 401, 403, 404; over_plan_tiers_on, phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/test-runs: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+POST /api/v1/projects/{id}/todos: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/work-items: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/proposals/bulk: 200, 400, 401; phantom_matrix
 POST /api/v1/proposals/{id}/approve: 401, 403, 404; phantom_matrix (errors only)
@@ -315,6 +320,9 @@ POST /api/v1/templates/{id}/projects: 201, 400, 401, 403, 404; over_plan_self_ho
 POST /api/v1/test-results/{id}/citations: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/test-runs/{id}/agent-run: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/test-runs/{id}/results: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+POST /api/v1/todos: 400, 401; phantom_matrix (errors only)
+POST /api/v1/todos/{id}/done: 401, 404; phantom_matrix (errors only)
+POST /api/v1/todos/{id}/promote: 401, 404; phantom_matrix (errors only)
 POST /api/v1/work-items/{id}/comments: 400, 401, 403, 404; over_plan_tiers_on, phantom_matrix, real_id_reads (errors only)
 POST /api/v1/work-items/{id}/move: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /mcp: 401; phantom_matrix (not counted)
@@ -361,6 +369,7 @@ PUT /api/v1/repo-connections/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/repo-connections/{id}/my-path: 401, 403, 404; over_plan_tiers_on, phantom_matrix (errors only)
 PUT /api/v1/shared-products/{id}/vote: 401, 403, 404; phantom_matrix (errors only)
 PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+PUT /api/v1/todos/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 
-s5e: 350 of 351 routes reached (99.7%), 164 with a 2xx or 3xx answer (46.7%)
+s5e: 359 of 360 routes reached (99.7%), 167 with a 2xx or 3xx answer (46.4%)

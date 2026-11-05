@@ -125,4 +125,5 @@ var migrations = []Migration{
 	{Version: 68, Name: "saved_searches", Run: m0068SavedSearches},
 	{Version: 69, Name: "retarget_crew_automations", Run: m0069RetargetCrewAutomations},
 	{Version: 70, Name: "agent_hierarchy", Run: m0070AgentHierarchy},
+	{Version: 71, Name: "todos", Run: m0071Todos},
 }

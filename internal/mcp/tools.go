@@ -167,5 +167,6 @@ func Tools() []Tool {
 		workItemListTools(),
 		workItemTools(),
 		interviewTools(),
+		todoTools(),
 	)
 }

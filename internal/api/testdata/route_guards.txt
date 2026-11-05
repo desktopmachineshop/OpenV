@@ -40,6 +40,7 @@ DELETE /api/v1/shared-products/{id}: platform-admin
 DELETE /api/v1/shared-products/{id}/vote: session
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: project:editor
 DELETE /api/v1/test-runs/{id}: project:editor
+DELETE /api/v1/todos/{id}: project:editor
 DELETE /api/v1/work-items/{id}: project:editor
 DELETE /mcp: -
 GET /.well-known/oauth-authorization-server: -
@@ -157,6 +158,7 @@ GET /api/v1/projects/{id}/review-queue: project:viewer
 GET /api/v1/projects/{id}/share-links: project:owner
 GET /api/v1/projects/{id}/team-access: project:viewer
 GET /api/v1/projects/{id}/test-runs: project:viewer
+GET /api/v1/projects/{id}/todos: project:viewer
 GET /api/v1/projects/{id}/vv/coverage: project:viewer
 GET /api/v1/projects/{id}/vv/gaps: project:viewer
 GET /api/v1/projects/{id}/vv/matrix: project:viewer
@@ -191,6 +193,8 @@ GET /api/v1/test-results/{id}/citations: project:viewer
 GET /api/v1/test-runs/{id}: project:viewer
 GET /api/v1/test-runs/{id}/citations: project:viewer
 GET /api/v1/test-runs/{id}/results: project:viewer
+GET /api/v1/todos: project-visible
+GET /api/v1/todos/{id}: project:viewer
 GET /api/v1/users: session
 GET /api/v1/users/{id}/avatar: user-visible
 GET /api/v1/work-items/{id}: project:viewer
@@ -283,6 +287,7 @@ POST /api/v1/projects/{id}/repo-connections: project:owner
 POST /api/v1/projects/{id}/review-round: project:editor
 POST /api/v1/projects/{id}/share-links: project:owner
 POST /api/v1/projects/{id}/test-runs: project:editor
+POST /api/v1/projects/{id}/todos: project:editor
 POST /api/v1/projects/{id}/work-items: project:editor
 POST /api/v1/proposals/bulk: session, project:editor, project-visible
 POST /api/v1/proposals/{id}/approve: project:editor
@@ -308,6 +313,9 @@ POST /api/v1/templates/{id}/projects: project-create
 POST /api/v1/test-results/{id}/citations: project:editor, project:viewer
 POST /api/v1/test-runs/{id}/agent-run: no-proposal-run, project:editor
 POST /api/v1/test-runs/{id}/results: project:editor
+POST /api/v1/todos: plan-writable
+POST /api/v1/todos/{id}/done: project:editor
+POST /api/v1/todos/{id}/promote: project:editor
 POST /api/v1/work-items/{id}/comments: project:viewer
 POST /api/v1/work-items/{id}/move: project:editor
 POST /mcp: -
@@ -354,4 +362,5 @@ PUT /api/v1/repo-connections/{id}: project:owner
 PUT /api/v1/repo-connections/{id}/my-path: session, project:viewer
 PUT /api/v1/shared-products/{id}/vote: session
 PUT /api/v1/test-runs/{id}: project:editor
+PUT /api/v1/todos/{id}: project:editor
 PUT /api/v1/work-items/{id}: project:editor

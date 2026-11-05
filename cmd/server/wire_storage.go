@@ -54,6 +54,7 @@ func (a *app) storage() {
 	a.vvRepo = postgres.NewVVRepository(a.db)
 	a.evidenceRepo = postgres.NewEvidenceRepository(a.db)
 	a.workItemRepo = postgres.NewWorkItemRepository(a.db)
+	a.todoRepo = postgres.NewTodoRepository(a.db)
 	a.guidedRepo = postgres.NewGuidedRepository(a.db)
 	a.interviewRepo = postgres.NewInterviewRepository(a.db)
 	a.agentRepo = postgres.NewAgentRepository(a.db)

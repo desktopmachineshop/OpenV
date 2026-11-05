@@ -18,13 +18,14 @@ DELETE /api/v1/shared-products/{id}: 204, 403, 404; shared_products
 DELETE /api/v1/shared-products/{id}/vote: 200, 403, 404; shared_products
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: 204, 403, 404; evidence
 DELETE /api/v1/test-runs/{id}: 204, 403, 409; test_runs_results
+DELETE /api/v1/todos/{id}: 204, 403; todos
 DELETE /api/v1/work-items/{id}: 204, 403, 404; work_items
 GET /api/v1/agent-runs/{id}: 200; guided_sessions, interviews
 GET /api/v1/artifacts: 200; guided_sessions
 GET /api/v1/artifacts/{id}: 200; guided_sessions
 GET /api/v1/artifacts/{id}/links: 200; guided_sessions
 GET /api/v1/artifacts/{id}/quality: 200, 400, 404; quality_profile_parties
-GET /api/v1/chatter: 200; guided_sessions, test_runs_results, work_items
+GET /api/v1/chatter: 200; guided_sessions, test_runs_results, todos, work_items
 GET /api/v1/events: 200; work_items
 GET /api/v1/evidence-bundles/{id}: 200, 404; evidence
 GET /api/v1/evidence-files/{id}/download: 200, 206, 304, 401, 404, 416; evidence
@@ -50,6 +51,7 @@ GET /api/v1/projects/{id}/quality: 200, 404; quality_profile_parties
 GET /api/v1/projects/{id}/quality-rules: 200, 404; quality_profile_parties
 GET /api/v1/projects/{id}/releases: 200; target_releases
 GET /api/v1/projects/{id}/test-runs: 200, 404; test_runs_results
+GET /api/v1/projects/{id}/todos: 200; todos
 GET /api/v1/projects/{id}/vv/coverage: 200, 404; vv_coverage_report
 GET /api/v1/projects/{id}/vv/gaps: 200, 404; vv_coverage_report
 GET /api/v1/projects/{id}/vv/matrix: 200, 404; vv_coverage_report
@@ -64,6 +66,8 @@ GET /api/v1/test-results/{id}/citations: 200, 404; evidence
 GET /api/v1/test-runs/{id}: 200, 404; test_runs_results
 GET /api/v1/test-runs/{id}/citations: 200, 404; evidence
 GET /api/v1/test-runs/{id}/results: 200, 404; test_runs_results
+GET /api/v1/todos: 200; todos
+GET /api/v1/todos/{id}: 200, 404; todos
 GET /api/v1/work-items/{id}: 200, 404; work_items
 POST /api/v1/artifacts: 201, 400; target_releases
 POST /api/v1/evidence-bundles/{id}/files: 201, 400, 403, 404, 413; evidence
@@ -81,6 +85,7 @@ POST /api/v1/projects/{id}/evidence-bundles: 201, 400, 403, 404; evidence
 POST /api/v1/projects/{id}/interviews: 201, 400, 403; interviews
 POST /api/v1/projects/{id}/releases: 201, 400, 403, 409; target_releases
 POST /api/v1/projects/{id}/test-runs: 201, 400, 403, 404; test_runs_results
+POST /api/v1/projects/{id}/todos: 201, 400, 403; todos
 POST /api/v1/projects/{id}/work-items: 201, 400, 403, 404; work_items
 POST /api/v1/public/interviews/{token}/finish: 204, 404; interviews
 POST /api/v1/public/interviews/{token}/messages: 200, 400, 404, 409, 429; interviews
@@ -89,6 +94,9 @@ POST /api/v1/shared-products/{id}/report: 204, 403, 404; shared_products
 POST /api/v1/test-results/{id}/citations: 201, 400, 403, 404; evidence
 POST /api/v1/test-runs/{id}/agent-run: 201, 400, 403, 404, 409; test_runs_results
 POST /api/v1/test-runs/{id}/results: 200, 400, 403, 404, 409; test_runs_results
+POST /api/v1/todos: 201; todos
+POST /api/v1/todos/{id}/done: 200, 403; todos
+POST /api/v1/todos/{id}/promote: 200, 400, 409; todos
 POST /api/v1/work-items/{id}/comments: 201, 400, 404; work_items
 POST /api/v1/work-items/{id}/move: 200, 400, 403, 404; work_items
 PUT /api/v1/evidence-bundles/{id}: 200, 400, 403, 404; evidence
@@ -102,6 +110,7 @@ PUT /api/v1/projects/{id}/release-order: 200, 400; target_releases
 PUT /api/v1/projects/{id}/releases/{releaseId}: 200, 404, 409; target_releases
 PUT /api/v1/shared-products/{id}/vote: 200, 403, 404; shared_products
 PUT /api/v1/test-runs/{id}: 200, 400, 403, 404, 409; test_runs_results
+PUT /api/v1/todos/{id}: 200; todos
 PUT /api/v1/work-items/{id}: 200, 400, 403, 404; work_items
 
-s5b: 92 of 351 routes reached (26.2%), 92 with a 2xx or 3xx answer (26.2%)
+s5b: 101 of 360 routes reached (28.1%), 101 with a 2xx or 3xx answer (28.1%)

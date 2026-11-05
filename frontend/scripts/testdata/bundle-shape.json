@@ -40,6 +40,7 @@
     "src/views/Landing.tsx": "dynamic entry",
     "src/views/ManualView.tsx": "dynamic entry",
     "src/views/ModuleView.tsx": "dynamic entry",
+    "src/views/MyTodos.tsx": "dynamic entry",
     "src/views/OAuthConsent.tsx": "dynamic entry",
     "src/views/PlatformAdmin.tsx": "dynamic entry",
     "src/views/ProjectHome.tsx": "dynamic entry",

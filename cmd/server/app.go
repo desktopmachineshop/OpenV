@@ -47,6 +47,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
 	"github.com/openv/requirements-platform/internal/domain/targetreleases"
 	"github.com/openv/requirements-platform/internal/domain/templates"
+	"github.com/openv/requirements-platform/internal/domain/todos"
 	"github.com/openv/requirements-platform/internal/domain/usermetrics"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/vv"
@@ -92,6 +93,7 @@ type app struct {
 	vvRepo               *postgres.VVRepository
 	evidenceRepo         *postgres.EvidenceRepository
 	workItemRepo         *postgres.WorkItemRepository
+	todoRepo             *postgres.TodoRepository
 	guidedRepo           *postgres.GuidedRepository
 	interviewRepo        *postgres.InterviewRepository
 	agentRepo            *postgres.AgentRepository
@@ -144,6 +146,7 @@ type app struct {
 	vvService            *vv.DefaultService
 	evidenceService      *evidence.DefaultService
 	workItemService      *workitems.DefaultService
+	todoService          *todos.DefaultService
 	guidedService        *guided.DefaultService
 	interviewService     *interviews.DefaultService
 	shareLinkService     *sharelinks.DefaultService

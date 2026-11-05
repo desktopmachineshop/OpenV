@@ -214,7 +214,8 @@
     "floating-assistant",
     "chip-search",
     "agent-hierarchy",
-    "impact-picker"
+    "impact-picker",
+    "todos"
   ],
   "event_types": [
     "artifact.created",

@@ -24,6 +24,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
 	"github.com/openv/requirements-platform/internal/domain/targetreleases"
 	"github.com/openv/requirements-platform/internal/domain/templates"
+	"github.com/openv/requirements-platform/internal/domain/todos"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
@@ -95,6 +96,7 @@ type HandlerDeps struct {
 	// (REQ-141).
 	BuildSHA         string
 	WorkItemService  workitems.Service
+	TodoService      todos.Service
 	GuidedService    guided.Service
 	InterviewService interviews.Service
 	// ShareLinkService mints and resolves project share links (REQ-149).

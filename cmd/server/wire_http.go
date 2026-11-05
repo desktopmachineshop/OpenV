@@ -106,6 +106,7 @@ func (a *app) handlers() {
 		DeploymentKind:       a.deploymentKind,
 		BuildSHA:             a.buildSHA,
 		WorkItemService:      a.workItemService,
+		TodoService:          a.todoService,
 		GuidedService:        a.guidedService,
 		InterviewService:     a.interviewService,
 		ShareLinkService:     a.shareLinkService,

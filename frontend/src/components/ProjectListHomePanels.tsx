@@ -17,6 +17,7 @@ const KIND_TONE: Record<TodoKind, ChipTone> = {
   'test run': 'neutral',
   failing: 'danger',
   comment: 'neutral',
+  'to-do': 'info',
 };
 
 /** An artifact reference (REQ-12), drawn in monospace; a name is not. */

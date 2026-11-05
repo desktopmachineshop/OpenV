@@ -89,7 +89,7 @@ SECTION_KEYS = {
     ('artifacts', 'editing-versions-history'): ['requirements.versions'],
     ('links', 'the-traceability-matrix'): ['matrix'],
     ('board', 'creating-a-card'): ['board.add-card'],
-    ('board', 'to-dos-the-same-work-by-person'): ['todos'],
+    ('board', 'to-dos-small-jobs-kept-off-the-board'): ['todos', 'org.todos'],
     ('vv', 'evidence-for-physical-and-manual-tests'): ['evidence'],
     ('vv', 'test-runs'): ['vv.runs'],
     ('vv', 'baselines'): ['vv.baselines'],

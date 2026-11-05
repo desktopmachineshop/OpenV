@@ -6,13 +6,15 @@ import { useViewport } from '../hooks/useViewport';
 import { NavIcon, pageIconPath } from './ProjectLayoutIcons';
 import { TopBar } from './ProjectLayoutRail';
 import { WORKSPACE_RUNS_FEATURE } from './agents/workspaceRuns';
+import { TODOS_FEATURE } from '../features';
+import { MY_TODOS_PATH } from './todos/todoText';
 import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { ProjectSwitcher } from './ProjectLayoutSwitcher';
 import { UserMenu } from './UserMenu';
 
 // The compact layout on the pages that belong to the workspace rather than a
-// project: Projects, workspace settings, workspace runs, What's new and
+// project: Projects, workspace settings, My to-dos, workspace runs, What's new and
 // platform admin. They draw the same frame as a project's pages, so the app
 // has one interface: the rail on the left (here the workspace's own pages,
 // Projects first as it is on a project's rail) and the same top bar, with the
@@ -26,6 +28,7 @@ import { UserMenu } from './UserMenu';
 
 const WORKSPACE_ICONS = {
   runs: pageIconPath('agent-runs'),
+  todos: pageIconPath('todos'),
   settings: pageIconPath('settings'),
   news: 'M4 4h12v12H4zM7 8h6M7 11h6M7 14h3',
   admin: 'M10 2l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V5z',
@@ -33,8 +36,10 @@ const WORKSPACE_ICONS = {
 
 const WorkspaceRail: React.FC = () => {
   const runs = useFeature(WORKSPACE_RUNS_FEATURE);
+  const todos = useFeature(TODOS_FEATURE);
   const isAdmin = useAppStore((s) => Boolean(s.currentUser?.is_admin));
   const items: { to: string; label: string; icon: string }[] = [
+    ...(todos ? [{ to: MY_TODOS_PATH, label: 'My to-dos', icon: WORKSPACE_ICONS.todos }] : []),
     ...(runs ? [{ to: '/org/runs', label: 'Runs', icon: WORKSPACE_ICONS.runs }] : []),
     { to: '/whats-new', label: 'News', icon: WORKSPACE_ICONS.news },
     ...(isAdmin ? [{ to: '/admin', label: 'Admin', icon: WORKSPACE_ICONS.admin }] : []),
