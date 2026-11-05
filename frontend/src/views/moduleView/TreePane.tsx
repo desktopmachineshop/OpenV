@@ -10,13 +10,17 @@ import { LayersView } from './LayersView';
 import { LevelDrill } from './LevelDrill';
 import type { RequirementsView } from './ListToolbar';
 import { TableView } from './TableView';
+import { TreeDiagramView } from './TreeDiagramView';
+import type { FoldTrigger } from './useFoldAll';
 import type { Artifact, Setter } from './shared';
 
 // The list pane: the main area on a wide screen, the Tree pane stacked. It
 // holds the error banner, the create form, the filter panel (passed in, shown
 // while toggled on), the figures, and the artifacts as a table, a tree or
 // layers — or, on a phone, as a list, a tree or a drill-down by level — or a
-// notice while a baseline loads.
+// notice while a baseline loads. With the Table and Tree views on, the table
+// is the tree with its columns and the tree is the diagram; a phone keeps its
+// list and its outline.
 // Props-only (refactor plan F7): the ModuleView shell owns the state, the
 // effects, the loads and the handlers.
 interface TreePaneProps {
@@ -38,6 +42,9 @@ interface TreePaneProps {
   figures: ModuleFigures;
   facts: FactsIndex;
   depthTrigger: { depth: number; token: number };
+  /** The Table and Tree views (REQUIREMENTS_TREE_FEATURE), and their fold-all button. */
+  treeViews: boolean;
+  foldTrigger: FoldTrigger;
   artifacts: Artifact[];
   projectId: string;
   pendingCreateContext: Partial<Artifact> | null;
@@ -64,6 +71,7 @@ export const TreePane: React.FC<TreePaneProps> = (p) => {
         </div>
       );
     }
+    if (p.treeViews && !(p.phone && p.view === 'table')) return treeViewList();
     if (p.view === 'layers' && p.phone) {
       return (
         <LevelDrill
@@ -118,6 +126,42 @@ export const TreePane: React.FC<TreePaneProps> = (p) => {
         hideHeading
         facts={p.facts}
         compact={p.stacked}
+      />
+    );
+  };
+
+  // The Table and Tree views: the hierarchy with every column, the diagram,
+  // or (a phone's Tree) the outline.
+  const treeViewList = () => {
+    if (p.view === 'tree' && !p.phone) {
+      return (
+        <TreeDiagramView
+          artifacts={p.filteredArtifacts}
+          selectedId={p.selectedArtifactId}
+          onSelect={(id) => p.handleSelectArtifact(id)}
+          facts={p.facts}
+          foldTrigger={p.foldTrigger}
+        />
+      );
+    }
+    const outline = p.phone;
+    const trigger = p.foldTrigger.token ? { depth: p.foldTrigger.folded ? 1 : Infinity, token: p.foldTrigger.token } : undefined;
+    return (
+      <ArtifactList
+        artifacts={p.filteredArtifacts}
+        allArtifacts={p.artifacts}
+        selectedId={p.selectedArtifactId || undefined}
+        onSelect={p.handleSelectArtifact}
+        onReorder={p.handleReorderArtifact}
+        onContextMenuAction={p.handleArtifactContextMenu}
+        canPaste={!!p.clipboard}
+        defaultCollapsed={outline}
+        depthTrigger={trigger}
+        readOnly={p.isBaselineView}
+        qualityScores={quality}
+        hideHeading
+        facts={p.facts}
+        compact={outline}
       />
     );
   };
