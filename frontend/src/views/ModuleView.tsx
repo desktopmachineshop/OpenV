@@ -32,6 +32,7 @@ import { useListView } from './moduleView/useListView';
 import { useFoldAll } from './moduleView/useFoldAll';
 import { REQUIREMENTS_TREE_FEATURE } from './moduleView/requirementsViews';
 import { ListChipSearch } from './moduleView/ListChipSearch';
+import { filterSummary } from './moduleView/filterSummary';
 import { PhoneActionBar } from './moduleView/PhoneActionBar';
 import { useCoverage } from './moduleView/useCoverage';
 import { useBaselineView } from './moduleView/useBaselineView';
@@ -764,26 +765,6 @@ export const ModuleView: React.FC = () => {
     (direction) => stepToArtifact(direction === 'next' ? 1 : -1)
   );
 
-  const buildFilterSummary = (): string => {
-    const parts: string[] = [];
-
-    if (searchText.trim()) {
-      parts.push(searchExact ? `Exact search: "${searchText.trim()}"` : `Search: "${searchText.trim()}"`);
-    }
-
-    const activeRows = filterRows.filter((row) => row.value.trim() !== '');
-    if (activeRows.length > 0) {
-      const rowSummaries = activeRows.map((row) => `${row.field} ${row.comparator} "${row.value.trim()}"`);
-      parts.push(`Filters (${filterLogic.toUpperCase()}): ${rowSummaries.join(filterLogic === 'and' ? ' + ' : ' | ')}`);
-    }
-
-    if (parts.length === 0) {
-      return 'No filters applied';
-    }
-
-    return parts.join(' • ');
-  };
-
   useEffect(() => {
     const saved = window.localStorage.getItem('artifactFilterPresets');
     if (!saved) return;
@@ -978,7 +959,8 @@ export const ModuleView: React.FC = () => {
         setPendingCreateContext={setPendingCreateContext}
         setPendingCreatePlacement={setPendingCreatePlacement}
         showFilterPanel={!chips.chipSearch && showFilterPanel}
-        tableGroups={chips.tableGroups} groupedBy={chips.groupedBy}
+        tableGroups={chips.tableGroups}
+        groupedBy={chips.groupedBy}
         toolbar={
           <ListToolbar
             phone={stacked}
@@ -993,7 +975,7 @@ export const ModuleView: React.FC = () => {
             quickCounts={quickCounts}
             searchText={searchText}
             setSearchText={setSearchText}
-            filterSummary={buildFilterSummary()}
+            filterSummary={filterSummary(searchText, searchExact, filterRows, filterLogic)}
             filtersActive={filtersActive}
             clearFilters={clearFilters}
             showFilterPanel={showFilterPanel}
