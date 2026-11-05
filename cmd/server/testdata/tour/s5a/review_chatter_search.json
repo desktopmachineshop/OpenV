@@ -3405,6 +3405,477 @@
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
+    },
+    {
+      "n": 56,
+      "title": "search narrowed to test cases, with each hit's status and owner",
+      "actor": "owner",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=answer&type=test-case&facets=1"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 321,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[{\"artifact_id\":\"<tc>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"test-case\",\"title\":\"Check REQ-1 timing\",\"snippet\":\"Measure the answer time of REQ-1 over a thousand queries.\",\"ref\":\"TC-1\",\"status\":\"in_review\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": [
+          {
+            "artifact_id": "<tc>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "test-case",
+            "title": "Check REQ-1 timing",
+            "snippet": "Measure the answer time of REQ-1 over a thousand queries.",
+            "ref": "TC-1",
+            "status": "in_review"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 57,
+      "title": "search narrowed to P's draft requirements",
+      "actor": "owner",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "q=answer&project=<p>&type=requirement&status=draft&facets=1"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 34,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": []
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 58,
+      "title": "a search of facets alone: P's design items",
+      "actor": "owner",
+      "route": "GET /api/v1/search",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/search",
+        "query": "type=design-item&project=<p>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 403,
+      "kind": "json",
+      "body": [
+        "{\"mode_used\":\"keyword\",\"hits\":[{\"artifact_id\":\"<di>\",\"project_id\":\"<p>\",\"project_name\":\"Review tour\",\"type\":\"design-item\",\"title\":\"Answer cache\",\"snippet\":\"A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure ne…\",\"ref\":\"DES-1\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "mode_used": "keyword",
+        "hits": [
+          {
+            "artifact_id": "<di>",
+            "project_id": "<p>",
+            "project_name": "Review tour",
+            "type": "design-item",
+            "title": "Answer cache",
+            "snippet": "A read-through cache in front of the query engine keeps the last thousand results warm, and it is flushed whenever the plant model changes, so a stale figure ne…",
+            "ref": "DES-1"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 59,
+      "title": "no saved search yet: []",
+      "actor": "owner",
+      "route": "GET /api/v1/me/saved-searches",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/saved-searches",
+        "query": "scope=requirements"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 22,
+      "kind": "json",
+      "body": [
+        "{\"saved_searches\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "saved_searches": []
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 60,
+      "title": "a list with no scope: 400",
+      "actor": "owner",
+      "route": "GET /api/v1/me/saved-searches",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/saved-searches"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 72,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"scope must be 1 to 64 letters, digits, '.', '_', ':' or '-'\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "scope must be 1 to 64 letters, digits, '.', '_', ':' or '-'"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 61,
+      "title": "save a search, shared with the workspace: 201",
+      "actor": "owner",
+      "route": "POST /api/v1/me/saved-searches",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/me/saved-searches",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"scope\":\"requirements\",\"name\":\"In review\",\"value\":{\"chips\":[{\"kind\":\"filter\",\"field\":\"status\",\"values\":[\"in_review\"]}],\"text\":\"\"},\"shared\":true}"
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<saved>\",\"user_id\":\"<owner>\",\"org_id\":\"<owner.workspace>\",\"scope\":\"requirements\",\"name\":\"In review\",\"value\":{\"chips\":[{\"kind\":\"filter\",\"field\":\"status\",\"values\":[\"in_review\"]}],\"text\":\"\"},\"shared\":true,\"created_at\":\"<time@step 61>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<saved>",
+        "user_id": "<owner>",
+        "org_id": "<owner.workspace>",
+        "scope": "requirements",
+        "name": "In review",
+        "value": {
+          "chips": [
+            {
+              "kind": "filter",
+              "field": "status",
+              "values": [
+                "in_review"
+              ]
+            }
+          ],
+          "text": ""
+        },
+        "shared": true,
+        "created_at": "<time@step 61>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 62,
+      "title": "save under the same name again: the value is replaced, the id kept",
+      "actor": "owner",
+      "route": "POST /api/v1/me/saved-searches",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/me/saved-searches",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"scope\":\"requirements\",\"name\":\"In review\",\"value\":{\"chips\":[{\"kind\":\"filter\",\"field\":\"status\",\"values\":[\"in_review\",\"draft\"]}],\"text\":\"answer\"},\"shared\":true}"
+      },
+      "status": 201,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<saved>\",\"user_id\":\"<owner>\",\"org_id\":\"<owner.workspace>\",\"scope\":\"requirements\",\"name\":\"In review\",\"value\":{\"chips\":[{\"kind\":\"filter\",\"field\":\"status\",\"values\":[\"in_review\",\"draft\"]}],\"text\":\"answer\"},\"shared\":true,\"created_at\":\"<time@step 61>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<saved>",
+        "user_id": "<owner>",
+        "org_id": "<owner.workspace>",
+        "scope": "requirements",
+        "name": "In review",
+        "value": {
+          "chips": [
+            {
+              "kind": "filter",
+              "field": "status",
+              "values": [
+                "in_review",
+                "draft"
+              ]
+            }
+          ],
+          "text": "answer"
+        },
+        "shared": true,
+        "created_at": "<time@step 61>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 63,
+      "title": "a scope with a space: 400",
+      "actor": "owner",
+      "route": "POST /api/v1/me/saved-searches",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/me/saved-searches",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"scope\":\"my page\",\"name\":\"x\",\"value\":{}}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 72,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"scope must be 1 to 64 letters, digits, '.', '_', ':' or '-'\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "scope must be 1 to 64 letters, digits, '.', '_', ':' or '-'"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 64,
+      "title": "a blank name: 400",
+      "actor": "owner",
+      "route": "POST /api/v1/me/saved-searches",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/me/saved-searches",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"scope\":\"requirements\",\"name\":\" \",\"value\":{}}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 56,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"name is required and at most 120 characters\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "name is required and at most 120 characters"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 65,
+      "title": "a value that is not an object: 400",
+      "actor": "owner",
+      "route": "POST /api/v1/me/saved-searches",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/me/saved-searches",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"scope\":\"requirements\",\"name\":\"x\",\"value\":[1]}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 57,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"value must be a JSON object of at most 16 KB\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "value must be a JSON object of at most 16 KB"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 66,
+      "title": "the owner's requirements searches: the one",
+      "actor": "owner",
+      "route": "GET /api/v1/me/saved-searches",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/saved-searches",
+        "query": "scope=requirements"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"saved_searches\":[{\"id\":\"<saved>\",\"user_id\":\"<owner>\",\"org_id\":\"<owner.workspace>\",\"scope\":\"requirements\",\"name\":\"In review\",\"value\":{\"text\":\"answer\",\"chips\":[{\"kind\":\"filter\",\"field\":\"status\",\"values\":[\"in_review\",\"draft\"]}]},\"shared\":true,\"created_at\":\"<time@step 61>\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "saved_searches": [
+          {
+            "id": "<saved>",
+            "user_id": "<owner>",
+            "org_id": "<owner.workspace>",
+            "scope": "requirements",
+            "name": "In review",
+            "value": {
+              "text": "answer",
+              "chips": [
+                {
+                  "kind": "filter",
+                  "field": "status",
+                  "values": [
+                    "in_review",
+                    "draft"
+                  ]
+                }
+              ]
+            },
+            "shared": true,
+            "created_at": "<time@step 61>"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 67,
+      "title": "the reviewer, in its own workspace, sees none of the owner's",
+      "actor": "reviewer",
+      "route": "GET /api/v1/me/saved-searches",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/saved-searches",
+        "query": "scope=requirements"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 22,
+      "kind": "json",
+      "body": [
+        "{\"saved_searches\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "saved_searches": []
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 68,
+      "title": "the reviewer may not delete the owner's search: 404",
+      "actor": "reviewer",
+      "route": "DELETE /api/v1/me/saved-searches/{id}",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/me/saved-searches/<saved>"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 35,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"saved search not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "saved search not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 69,
+      "title": "the owner deletes it: 204",
+      "actor": "owner",
+      "route": "DELETE /api/v1/me/saved-searches/{id}",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/me/saved-searches/<saved>"
+      },
+      "status": 204,
+      "content_type": null,
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": null,
+      "kind": "empty",
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 70,
+      "title": "deleted again: 404",
+      "actor": "owner",
+      "route": "DELETE /api/v1/me/saved-searches/{id}",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/me/saved-searches/<saved>"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 35,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"saved search not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "saved search not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
     }
   ],
   "uploads": [],

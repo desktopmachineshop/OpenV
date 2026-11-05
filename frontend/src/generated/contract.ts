@@ -48,6 +48,7 @@ export const FEATURE_KEYS = [
   'compact-layout',
   'redesign-pages',
   'requirements-tree',
+  'chip-search',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

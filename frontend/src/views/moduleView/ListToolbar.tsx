@@ -35,6 +35,12 @@ interface ListToolbarProps {
   toggleFold?: () => void;
   /** The create button, which a phone shows beside the search box. */
   newButton?: React.ReactNode;
+  /**
+   * The chip search bar (issue #722). Given, it takes the place of the
+   * search box, the Filter toggle, the filters-active chip and the phone's
+   * quick filters, which are its chips.
+   */
+  chipSearch?: React.ReactNode;
 }
 
 const segment = (on: boolean, first: boolean, phone: boolean): React.CSSProperties => ({
@@ -207,8 +213,12 @@ export const ListToolbar: React.FC<ListToolbarProps> = (p) => {
     return (
       <div style={{ flexShrink: 0, background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', padding: '8px 12px 0' }}>
-          {search}
-          {filterButton}
+          {p.chipSearch ?? (
+            <>
+              {search}
+              {filterButton}
+            </>
+          )}
           {p.newButton}
         </div>
         <div role="group" aria-label="Views and quick filters" style={{ display: 'flex', gap: 6, padding: '8px 12px', overflowX: 'auto' }} data-help-key="requirements.views">
@@ -218,8 +228,8 @@ export const ListToolbar: React.FC<ListToolbarProps> = (p) => {
               {view === 'table' ? ` ${p.total}` : ''}
             </button>
           ))}
-          <span aria-hidden="true" style={{ flex: 'none', width: 1, background: 'var(--border)', margin: '4px 2px' }} />
-          {quick.map(({ key, label }) => (
+          {!p.chipSearch && <span aria-hidden="true" style={{ flex: 'none', width: 1, background: 'var(--border)', margin: '4px 2px' }} />}
+          {!p.chipSearch && quick.map(({ key, label }) => (
             <button
               key={key}
               type="button"
@@ -231,10 +241,10 @@ export const ListToolbar: React.FC<ListToolbarProps> = (p) => {
             </button>
           ))}
         </div>
-        {(depth || activeChip) && (
+        {(depth || (!p.chipSearch && activeChip)) && (
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '0 12px 8px' }}>
             {depth}
-            {activeChip}
+            {!p.chipSearch && activeChip}
           </div>
         )}
       </div>
@@ -284,9 +294,15 @@ export const ListToolbar: React.FC<ListToolbarProps> = (p) => {
       </div>
       <div style={{ flexGrow: 1 }} />
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 0', flex: '0 1 auto', minWidth: 0 }}>
-        {search}
-        {filterButton}
-        {activeChip}
+        {p.chipSearch ? (
+          <div style={{ flex: '1 1 360px', minWidth: 220, maxWidth: 560, display: 'flex' }}>{p.chipSearch}</div>
+        ) : (
+          <>
+            {search}
+            {filterButton}
+            {activeChip}
+          </>
+        )}
         {depth}
         <span aria-hidden="true" style={{ width: 1, height: 18, background: 'var(--border)', margin: '0 4px' }} />
         <div role="group" aria-label="View" style={{ display: 'flex', flex: 'none', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden' }} data-help-key="requirements.views">

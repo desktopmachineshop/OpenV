@@ -379,3 +379,6 @@ PUT /api/v1/projects/{id}/releases/{releaseId} -> UpdateTargetRelease
 DELETE /api/v1/projects/{id}/releases/{releaseId} -> DeleteTargetRelease
 GET /api/v1/projects/{id}/vv/releases -> GetReleaseOverview
 GET /api/v1/projects/{id}/vv/releases/{releaseId} -> GetReleaseProgress
+GET /api/v1/me/saved-searches -> ListSavedSearches
+POST /api/v1/me/saved-searches -> CreateSavedSearch
+DELETE /api/v1/me/saved-searches/{id} -> DeleteSavedSearch [alwaysWritable]

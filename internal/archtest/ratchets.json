@@ -48,6 +48,7 @@
       "internal/domain/repoconns",
       "internal/domain/reports",
       "internal/domain/runnersessions",
+      "internal/domain/savedsearches",
       "internal/domain/settings",
       "internal/domain/sharedproducts",
       "internal/domain/sharelinks",
@@ -112,6 +113,7 @@
       "internal/domain/repoconns",
       "internal/domain/reports",
       "internal/domain/runnersessions",
+      "internal/domain/savedsearches",
       "internal/domain/settings",
       "internal/domain/sharedproducts",
       "internal/domain/sharelinks",
@@ -346,6 +348,7 @@
       "internal/domain/pushsubs",
       "internal/domain/repoconns",
       "internal/domain/runnersessions",
+      "internal/domain/savedsearches",
       "internal/domain/settings",
       "internal/domain/sharedproducts",
       "internal/domain/sharelinks",
@@ -479,5 +482,5 @@
     "internal/api:uploadIsRasterImage",
     "internal/api:writeAddOrInviteOutcome"
   ],
-  "api_spec_undocumented_routes": 34
+  "api_spec_undocumented_routes": 33
 }

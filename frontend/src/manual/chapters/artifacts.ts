@@ -253,16 +253,63 @@ ref beside the title, which is what tells two similarly named requirements
 apart. A longer ref that contains what you typed still appears below the exact
 match: **REQ-3** finds REQ-3 first and leaves REQ-30 further down.
 
-The list's box matches title, body, type, IDs and attributes. **Filter**
-beside it opens the filter panel, and while a search or a filter is on, a
-blue chip beside it says what it is; click the chip to clear them all:
+### The search bar
 
-- **Filter rows** — combine conditions on any field (Type, Title, Body,
-  Version, dates, …) with comparators like contains, equals, starts with,
-  greater than.
-- **Filter logic** — AND (all rows must match) or OR (any row).
-- **Presets** — name the current search + filters and save it; apply or delete
-  saved presets from the dropdown. Presets are stored in your browser.
+Both boxes are **search bars with chips**. Each filter you add shows as a
+small coloured chip inside the bar, such as **Status In review ×** or
+**Owner Dave ×**, so you can see at a glance what is narrowing the list.
+Click a chip's **×** to remove that filter alone. Whatever you type sits after
+the chips and searches as before; with the box empty, **Backspace** removes
+the last chip. Blue chips filter, purple chips group, and yellow chips are
+saved searches.
+
+**Typing suggests chips.** Type **dav** and the bar offers *Owner: Dave*,
+*Search Owner for: dav*, *Search Title for: dav* and so on. Pick one with the
+arrow keys and **Enter**, or click it, and it becomes a chip.
+
+**The caret** at the right of the bar opens a panel with three columns:
+
+- **Filters** — the quick filters (**Mine**, **In review**, **Failing**,
+  **Suspect**, each with how many it would show), then **Status**, **Type**,
+  **Priority**, **Created** and **Updated**, each opening its values (for the
+  dates: today, this week, this month, this quarter, this year). Ticking two
+  values of one field shows either. **Custom filter…** builds a condition on
+  any field or attribute: *contains* or *is* a value.
+- **Group by** — **Status**, **Type**, **Priority**, **Owner** or **Heading**,
+  and **Custom group** for any attribute. The table then lists its rows under
+  one heading per value; within a group, the rows keep their place in the
+  hierarchy, and each group folds on its own. Two groupings combine
+  ("Draft · Requirement"). Each grouping is a chip too.
+- **Favourites** — your saved searches. **Save current search** names the
+  chips and text in the bar; tick **Share with the workspace** to list it for
+  everyone in the workspace. Saved searches are kept with your account, so
+  they follow you to every device. Choosing one puts it in the bar as a
+  single chip; **×** beside one of your own deletes it.
+
+Different filters all apply together: **Status In review** and **Owner
+Dave** shows Dave's artifacts in review. The arrow keys move through the
+panel and **Escape** closes it. On a phone the chips scroll sideways and the
+panel opens as a sheet from the bottom of the screen.
+
+The chips are part of the page's address, so a filtered list can be
+bookmarked or shared: whoever opens the link sees the same chips, a saved
+search included.
+
+### The list's bar
+
+The list's bar narrows the project you are in. Its text matches the ref,
+title, body, type and attributes. The type tabs beside it still narrow what
+the bar leaves, and count what each type holds.
+
+### The top bar's chips
+
+In the top bar, the chips are **Project**, **Type**, **Status** and
+**Owner** (a part of a name or address is enough). Chips alone are a search:
+**Type Test case** with **Owner dana** lists Dana's test cases without any
+text. Typing a ref such as **REQ-12** still finds it first, and **Enter**
+opens it. The results drop down below the bar, grouped by kind
+(Requirements, Test Cases, …), each with its project, owner and status. The
+chips it offers for what you typed come after the results.
 
 ## Editing, versions & history
 

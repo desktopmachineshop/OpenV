@@ -864,6 +864,22 @@ A push service that answers 404 or 410 deletes the subscription server-side;
 any other failure stamps `failed_at` and keeps the row, which a later
 successful send clears.
 
+### Search and saved searches
+
+The workspace-wide artifact search, and a member's saved searches: the
+named chip sets a page's search bar puts back (issue #722). A saved search
+belongs to the caller, their active workspace and a `scope`, the key a page
+stores them under (1 to 64 of `A-Z a-z 0-9 . _ : -`, such as
+`requirements` or `global-search`). `value` is the bar's state, a JSON
+object the frontend writes and reads back (at most 16 KB).
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/search` | `?q=&limit=&mode=keyword\|semantic\|hybrid` → `{mode_used, hits: [{artifact_id, project_id, project_name, type, title, snippet, ref?, score?}]}` across the projects the caller can read in the active workspace. With the `chip-search` feature, `project`, `type`, `status` and `owner` (each repeated or comma-separated) narrow the hits (an owner as a substring, without regard to case), a search of those alone needs no `q`, and `facets=1` adds each hit's `status` and `owner`; a faceted search runs the keyword path whatever `mode` asks | user |
+| GET | `/api/v1/me/saved-searches` | `?scope=` (required: `400`) → `{saved_searches: [{id, user_id, org_id, scope, name, value, shared, created_at}]}`: the caller's own in the active workspace, then those other members shared, each by name | user |
+| POST | `/api/v1/me/saved-searches` | `{scope, name, value, shared?}` → 201 with the stored row. Saving under a name the caller already used in the scope replaces its value and sharing, keeping its `id`. `400` for a bad scope, a blank or over-120-character name, a value that is not an object or no active workspace; `409` past 100 in a scope; `403` before the workspace has `chip-search` | user |
+| DELETE | `/api/v1/me/saved-searches/{id}` | Delete one of the caller's own → 204; `404` for any other id, another member's shared one included | user |
+
 ### Meta
 
 | Method | Path | Purpose | Auth |

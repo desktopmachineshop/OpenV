@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { searchAPI, SearchHit, SearchMode } from '../api/client';
 import { useFeature } from '../hooks/useFeature';
 import type { FeatureKey } from '../generated/contract';
+import { CHIP_SEARCH_FEATURE } from './search/searchValue';
+import { GlobalSearchChips } from './GlobalSearchChips';
 
 // SEARCH_BY_REF_FEATURE gates matching an artifact by its ref. The server
 // gates the search itself; this gates what the box says it can do, so a
@@ -14,10 +16,13 @@ export const SEARCH_BY_REF_FEATURE: FeatureKey = 'search-by-ref';
 // lives in the project sidebar header, queries GET /api/v1/search (debounced),
 // and shows a dropdown of results grouped by project. Selecting a result deep
 // links into that project's requirements view (?artifact= is the shareable
-// selection param handled by ModuleView).
+// selection param handled by ModuleView). Where the workspace has
+// CHIP_SEARCH_FEATURE it is the chip search bar instead (GlobalSearchChips,
+// issue #722).
 export const GlobalSearch: React.FC = () => {
   const navigate = useNavigate();
   const refSearchOn = useFeature(SEARCH_BY_REF_FEATURE);
+  const chipSearchOn = useFeature(CHIP_SEARCH_FEATURE);
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchHit[]>([]);
   const [mode, setMode] = useState<SearchMode>('keyword');
@@ -124,6 +129,7 @@ export const GlobalSearch: React.FC = () => {
     }
   };
 
+  if (chipSearchOn) return <GlobalSearchChips refSearchOn={refSearchOn} />;
   const showDropdown = open && query.trim() !== '';
   let flatIndex = -1;
 
