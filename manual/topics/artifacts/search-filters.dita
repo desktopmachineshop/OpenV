@@ -9,11 +9,26 @@
   </prolog>
   <conbody>
     <p>The top bar's box matches titles and bodies, and it also matches <b>refs</b>: type <b>REQ-30</b> and REQ-30 comes back first, ahead of anything that merely mentions it. Case does not matter, so <b>req-30</b> works, and a ref pasted out of a report with spaces around it still finds its artifact. Every result shows its ref beside the title, which is what tells two similarly named requirements apart. A longer ref that contains what you typed still appears below the exact match: <b>REQ-3</b> finds REQ-3 first and leaves REQ-30 further down.</p>
-    <p>The list's box matches title, body, type, IDs and attributes. <b>Filter</b> beside it opens the filter panel, and while a search or a filter is on, a blue chip beside it says what it is; click the chip to clear them all:</p>
-    <ul>
-      <li><b>Filter rows</b> — combine conditions on any field (Type, Title, Body, Version, dates, …) with comparators like contains, equals, starts with, greater than.</li>
-      <li><b>Filter logic</b> — AND (all rows must match) or OR (any row).</li>
-      <li><b>Presets</b> — name the current search + filters and save it; apply or delete saved presets from the dropdown. Presets are stored in your browser.</li>
-    </ul>
+    <section id="the-search-bar">
+      <title>The search bar</title>
+      <p>Both boxes are <b>search bars with chips</b>. Each filter you add shows as a small coloured chip inside the bar, such as <b>Status In review ×</b> or <b>Owner Dave ×</b>, so you can see at a glance what is narrowing the list. Click a chip's <b>×</b> to remove that filter alone. Whatever you type sits after the chips and searches as before; with the box empty, <b>Backspace</b> removes the last chip. Blue chips filter, purple chips group, and yellow chips are saved searches.</p>
+      <p><b>Typing suggests chips.</b> Type <b>dav</b> and the bar offers <i>Owner: Dave</i>, <i>Search Owner for: dav</i>, <i>Search Title for: dav</i> and so on. Pick one with the arrow keys and <b>Enter</b>, or click it, and it becomes a chip.</p>
+      <p><b>The caret</b> at the right of the bar opens a panel with three columns:</p>
+      <ul>
+        <li><b>Filters</b> — the quick filters (<b>Mine</b>, <b>In review</b>, <b>Failing</b>, <b>Suspect</b>, each with how many it would show), then <b>Status</b>, <b>Type</b>, <b>Priority</b>, <b>Created</b> and <b>Updated</b>, each opening its values (for the dates: today, this week, this month, this quarter, this year). Ticking two values of one field shows either. <b>Custom filter…</b> builds a condition on any field or attribute: <i>contains</i> or <i>is</i> a value.</li>
+        <li><b>Group by</b> — <b>Status</b>, <b>Type</b>, <b>Priority</b>, <b>Owner</b> or <b>Heading</b>, and <b>Custom group</b> for any attribute. The table then lists its rows under one heading per value, instead of by section. Two groupings combine ("Draft · Requirement"). Each grouping is a chip too.</li>
+        <li><b>Favourites</b> — your saved searches. <b>Save current search</b> names the chips and text in the bar; tick <b>Share with the workspace</b> to list it for everyone in the workspace. Saved searches are kept with your account, so they follow you to every device. Choosing one puts it in the bar as a single chip; <b>×</b> beside one of your own deletes it.</li>
+      </ul>
+      <p>Different filters all apply together: <b>Status In review</b> and <b>Owner Dave</b> shows Dave's artifacts in review. The arrow keys move through the panel and <b>Escape</b> closes it. On a phone the chips scroll sideways and the panel opens as a sheet from the bottom of the screen.</p>
+      <p>The chips are part of the page's address, so a filtered list can be bookmarked or shared: whoever opens the link sees the same chips, a saved search included.</p>
+    </section>
+    <section id="the-lists-bar">
+      <title>The list's bar</title>
+      <p>The list's bar narrows the project you are in. Its text matches the ref, title, body, type and attributes. The type tabs beside it still narrow what the bar leaves, and count what each type holds.</p>
+    </section>
+    <section id="the-top-bars-chips">
+      <title>The top bar's chips</title>
+      <p>In the top bar, the chips are <b>Project</b>, <b>Type</b>, <b>Status</b> and <b>Owner</b> (a part of a name or address is enough). Chips alone are a search: <b>Type Test case</b> with <b>Owner dana</b> lists Dana's test cases without any text. Typing a ref such as <b>REQ-12</b> still finds it first, and <b>Enter</b> opens it. The results drop down below the bar, grouped by kind (Requirements, Test Cases, …), each with its project, owner and status. The chips it offers for what you typed come after the results.</p>
+    </section>
   </conbody>
 </concept>

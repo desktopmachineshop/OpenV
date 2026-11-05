@@ -9,6 +9,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **One search bar, with a chip for each filter.** The requirements list's search box, **Filter** panel and quick filters are now one bar: each filter shows as a chip you can remove on its own, typing offers chips such as *Search Owner for: dav*, and the caret opens filters (Mine, In review, Failing, Suspect, status, type, priority, dates and a custom filter), **Group by** (status, type, priority, owner, heading or any attribute, which groups the table under a heading per value) and your saved searches. Save a search to keep it with your account on every device, or share it with the workspace, and share a filtered list by its link. The top-bar search gets chips for project, type, status and owner, and its results are grouped by kind.
+
 ## 0.27.5 — 2026-11-05
 
 ### Maintenance updates
