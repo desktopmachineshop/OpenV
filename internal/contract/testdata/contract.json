@@ -32,7 +32,8 @@
     "help-activity",
     "target-releases",
     "compact-layout",
-    "redesign-pages"
+    "redesign-pages",
+    "chip-search"
   ],
   "event_types": [
     "artifact.created",

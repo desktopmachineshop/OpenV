@@ -575,7 +575,9 @@ func (s *DefaultService) ListArtifactsPage(projectID string, artifactType string
 
 // SearchArtifacts finds current artifacts matching query in the given projects.
 func (s *DefaultService) SearchArtifacts(projectIDs []string, query string, limit int, opts SearchOptions) ([]*SearchHit, error) {
-	if len(projectIDs) == 0 || strings.TrimSpace(query) == "" {
+	// A query of facets alone ("every failing requirement Dana owns") is a
+	// search too; with neither text nor a facet there is nothing to find.
+	if len(projectIDs) == 0 || (strings.TrimSpace(query) == "" && !opts.Filtered()) {
 		return []*SearchHit{}, nil
 	}
 	return s.repo.SearchInProjects(projectIDs, query, limit, opts)

@@ -391,4 +391,4 @@ PUT /api/v1/teams/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 
-s5e: 378 of 379 routes reached (99.7%), 172 with a 2xx or 3xx answer (45.4%)
+s5e: 378 of 382 routes reached (99.0%), 172 with a 2xx or 3xx answer (45.0%)
