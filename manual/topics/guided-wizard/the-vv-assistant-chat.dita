@@ -13,8 +13,21 @@
       <li><b>Quick actions</b> (like <i>Review step</i>) send canned prompts, e.g. a quality-check of the current step's entries for clarity and testability.</li>
       <li>The assistant is nudged automatically when you advance or skip a step, so it follows along with context.</li>
     </ul>
-    <p>The same assistant is also in the <b>Notes</b> panel on the Requirements page, under its own tab beside History. It is one conversation per project, so what you asked in the wizard is there in the notes and the other way round. With an artifact selected the assistant is told which one you are reading and answers about it; with nothing selected it answers for the project as a whole. An artifact's history stays where it was — it belongs to that artifact, the conversation does not.</p>
-    <p>Suggestion cards appear in the notes chat too, but they can only be added from the wizard, which is where the entry sections they fill in live.</p>
-    <p>Assistant turns execute on an agent runner like any other agent work. If no runner is online the panel says so and pauses replies — messages you send are saved and answered as soon as a runner connects (see <i>Runs &amp; runners</i>).</p>
+    <section id="the-vv-assistant-on-every-page">
+      <title>The V&amp;V Assistant on every page</title>
+      <p>The same assistant is on every project page and on the workspace Home, behind the <b>✦ Assistant</b> button in the bottom corner. It opens a chat panel over the page:</p>
+      <ul>
+        <li><b>One conversation per project.</b> What you asked in the wizard is there on every page and the other way round, and the panel keeps the conversation open while you move between pages. On the workspace Home, choose the project at the top of the panel.</li>
+        <li><b>Looking at:</b> under the title says what the assistant is told you are reading: the requirement open in the Requirements page (it reads the whole artifact), or the page you are on. <b>✕</b> stops sending it, until you open something else.</li>
+        <li><b>⤢</b> expands the panel, <b>⇆</b> moves it to the other corner when it covers something you need, and dragging its top corner resizes it. <b>—</b> or <b>Esc</b> minimises it back to the button, and the conversation is still there when you open it again.</li>
+        <li><b>Alt+A</b> (Option+A on a Mac) opens the panel and puts the cursor in the message box.</li>
+        <li>On a phone it opens as a sheet from the bottom of the screen.</li>
+        <li>The quick actions fit where you are: <i>Review this</i> and <i>How would I verify it?</i> beside a requirement, <i>Gap analysis</i> and <i>Draft tests</i> for the project as a whole.</li>
+      </ul>
+      <p>Suggestion cards beside the project add a draft artifact, or make the change they describe, when you press their button, and only then. Other pages can start a turn for you: <b>Draft tests</b> on the V&amp;V dashboard's <i>Top gaps</i> card opens the panel and asks for test cases for those gaps (see <i>V&amp;V</i> → <i>Gaps</i>).</p>
+      <p>Starting a conversation needs editor access to the project, and a workspace its plan has made read-only cannot start one. In either case the panel says so and what to do instead of a chat.</p>
+      <p>On a workspace still on an earlier release, the assistant is a tab of the <b>Notes</b> panel on the Requirements page instead, beside the artifact's History.</p>
+      <p>Assistant turns execute on an agent runner like any other agent work. If no runner is online the panel says so and pauses replies — messages you send are saved and answered as soon as a runner connects (see <i>Runs &amp; runners</i>).</p>
+    </section>
   </conbody>
 </concept>

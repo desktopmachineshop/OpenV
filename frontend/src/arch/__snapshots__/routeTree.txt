@@ -39,6 +39,7 @@ index routes: 1
   CrewBuilder         ./views/CrewBuilder#CrewBuilder
   TestRunView         ./views/TestRunView#TestRunView
   TraceabilityMatrix  ./views/TraceabilityMatrix#TraceabilityMatrix
+  FloatingAssistant   ./components/wizard/FloatingAssistant#FloatingAssistant
   ImpactView          ./views/ImpactView#ImpactView
   ActivityLog         ./views/ActivityLog#ActivityLog
   BaselineCompare     ./views/BaselineCompare#BaselineCompare

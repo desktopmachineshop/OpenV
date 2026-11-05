@@ -32,7 +32,7 @@
       <p>Two more buttons sit on every card:</p>
       <ul>
         <li><b>Approve</b> signs the artifact off as it stands. Approving also clears the suspect flag on every link that touches it, because you have just vouched for the artifact its links were made from.</li>
-        <li><b>Send back</b> asks what needs to change before it does anything. The comment is required, and it is written in the same composer the notes panel uses — <codeph>@name</codeph> reaches a person, <codeph>@@name</codeph> raises them a to-do, <codeph>#REQ-12</codeph> cites — and it lands on the artifact's feed as an ordinary note. Then the artifact goes back to draft. Nobody gets work returned without being told why.</li>
+        <li><b>Send back</b> asks what needs to change before it does anything. The comment is required, and it is written in the same composer the History uses — <codeph>@name</codeph> reaches a person, <codeph>@@name</codeph> raises them a to-do, <codeph>#REQ-12</codeph> cites — and it lands on the artifact's feed as an ordinary note. Then the artifact goes back to draft. Nobody gets work returned without being told why.</li>
       </ul>
     </section>
     <section id="deciding-several-at-once">

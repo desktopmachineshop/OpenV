@@ -15,6 +15,9 @@ import {
   resultSegments,
 } from './VVDashboardParts';
 import { GapGroup, flattenGaps } from './VVDashboardData';
+import { useFeature } from '../hooks/useFeature';
+import { FLOATING_ASSISTANT_FEATURE, openAssistant } from '../components/wizard/assistantStore';
+import { GapForAssistant, draftTestsMessage } from '../components/wizard/floatingAssistantRoute';
 
 const TOP_GAPS = 5;
 
@@ -65,6 +68,61 @@ export const GapsCard: React.FC<{
 }> = ({ projectId, groups, artifacts, pendingProposals, isPhone, loading }) => {
   const [showAll, setShowAll] = useState(false);
   const items = flattenGaps(groups);
+  // With the floating assistant (#728) the card starts drafting in its chat,
+  // with the gaps it shows, instead of sending the reader to the Agents page.
+  const assistantOn = useFeature(FLOATING_ASSISTANT_FEATURE);
+  const forAssistant = (id: string, why: string): GapForAssistant => ({
+    id,
+    ref: artifacts[id]?.ref,
+    title: artifacts[id]?.title || id,
+    why,
+  });
+  const draftTests = (gaps: GapForAssistant[]) =>
+    openAssistant({
+      message: draftTestsMessage(gaps),
+      context: { label: gaps.length === 1 ? `${gaps[0].ref || gaps[0].title} (V&V gap)` : `${gaps.length} V&V gaps` },
+    });
+  const shownGaps = showAll
+    ? groups.flatMap((g) => g.ids.map((id) => forAssistant(id, g.why)))
+    : items.slice(0, TOP_GAPS).map((g) => forAssistant(g.id, g.why));
+  const askButton = (gap: GapForAssistant) =>
+    assistantOn ? (
+      <button
+        type="button"
+        className="vv-gap-ask"
+        onClick={() => draftTests([gap])}
+        aria-label={`Draft tests for ${gap.ref || gap.title} in the V&V Assistant`}
+        title="Draft tests in the V&V Assistant"
+        style={{
+          flexShrink: 0,
+          width: isPhone ? 44 : 30,
+          minHeight: isPhone ? 44 : 30,
+          border: 'none',
+          background: 'none',
+          borderRadius: 6,
+          color: 'var(--purple-strong)',
+          cursor: 'pointer',
+          fontSize: 14,
+        }}
+      >
+        ✦
+      </button>
+    ) : null;
+  // A row is the link to the artifact, with the ✦ beside it rather than
+  // inside it: a button cannot sit inside a link.
+  const gapRow = (key: string, gap: GapForAssistant, children: React.ReactNode) =>
+    assistantOn ? (
+      <div key={key} className="vv-gap-row" style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid var(--border-soft)' }}>
+        <Link to={link(gap.id)} className="ov-row" style={{ ...row, flex: 1, minWidth: 0, borderBottom: 'none', paddingRight: 4 }}>
+          {children}
+        </Link>
+        {askButton(gap)}
+      </div>
+    ) : (
+      <Link key={key} to={link(gap.id)} className="ov-row" style={row}>
+        {children}
+      </Link>
+    );
   const row: React.CSSProperties = {
     display: 'flex',
     alignItems: 'center',
@@ -97,15 +155,19 @@ export const GapsCard: React.FC<{
         <div style={{ padding: 12, fontSize: 13, color: 'var(--success-text)' }}>No gaps detected — nice work.</div>
       )}
       {!showAll &&
-        items.slice(0, TOP_GAPS).map((g) => (
-          <Link key={g.id} to={link(g.id)} className="ov-row" style={row}>
-            <span style={{ ...refStyle, width: 64, overflow: 'hidden', textOverflow: 'ellipsis' }}>{artifacts[g.id]?.ref || ''}</span>
-            <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {titleOf(g.id)}
-            </span>
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{g.why}</span>
-          </Link>
-        ))}
+        items.slice(0, TOP_GAPS).map((g) =>
+          gapRow(
+            g.id,
+            forAssistant(g.id, g.why),
+            <>
+              <span style={{ ...refStyle, width: 64, overflow: 'hidden', textOverflow: 'ellipsis' }}>{artifacts[g.id]?.ref || ''}</span>
+              <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {titleOf(g.id)}
+              </span>
+              <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>{g.why}</span>
+            </>
+          )
+        )}
       {showAll &&
         groups.map((g) => (
           <div key={g.key}>
@@ -120,12 +182,16 @@ export const GapsCard: React.FC<{
             >
               {g.label} <span style={{ color: 'var(--danger-strong)' }}>({g.ids.length})</span>
             </div>
-            {g.ids.map((id) => (
-              <Link key={id} to={link(id)} className="ov-row" style={row}>
-                <span style={{ ...refStyle, width: 64, overflow: 'hidden', textOverflow: 'ellipsis' }}>{artifacts[id]?.ref || ''}</span>
-                <span style={{ flex: 1, minWidth: 0 }}>{titleOf(id)}</span>
-              </Link>
-            ))}
+            {g.ids.map((id) =>
+              gapRow(
+                id,
+                forAssistant(id, g.why),
+                <>
+                  <span style={{ ...refStyle, width: 64, overflow: 'hidden', textOverflow: 'ellipsis' }}>{artifacts[id]?.ref || ''}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}>{titleOf(id)}</span>
+                </>
+              )
+            )}
           </div>
         ))}
       {pendingProposals > 0 ? (
@@ -150,6 +216,34 @@ export const GapsCard: React.FC<{
           </span>
           <b style={{ fontWeight: 700 }}>Review</b>
         </Link>
+      ) : assistantOn ? (
+        items.length > 0 && (
+          <button
+            type="button"
+            onClick={() => draftTests(shownGaps)}
+            data-help-key="vv.gaps"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              width: '100%',
+              padding: '10px 12px',
+              background: 'var(--tint-purple)',
+              border: 'none',
+              borderRadius: '0 0 6px 6px',
+              color: 'var(--purple-strong)',
+              fontSize: 13,
+              textAlign: 'left',
+              cursor: 'pointer',
+            }}
+          >
+            <span aria-hidden="true">✦</span>
+            <span style={{ flex: 1 }}>
+              The V&amp;V Assistant can draft test cases for {shownGaps.length === 1 ? 'this gap' : `these ${shownGaps.length} gaps`}.
+            </span>
+            <b style={{ fontWeight: 700 }}>Draft tests</b>
+          </button>
+        )
       ) : (
         items.length > 0 && (
           <Link

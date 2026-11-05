@@ -30,6 +30,8 @@ import { registeredSite, registeredStartHooks } from './ext/registry';
 import { SiteHome, SitePages } from './ext/SiteSlot';
 import './index.css';
 import { pendingReturnTo } from './utils/returnTo';
+import { useFeature } from './hooks/useFeature';
+import { FLOATING_ASSISTANT_FEATURE } from './components/wizard/assistantStore';
 
 // Route-level code splitting for the heavyweight views so their large
 // dependencies stay out of the main bundle:
@@ -56,6 +58,12 @@ const TestRunView = lazy(() =>
 );
 const TraceabilityMatrix = lazy(() =>
   import('./views/TraceabilityMatrix').then((m) => ({ default: m.TraceabilityMatrix }))
+);
+// The floating V&V Assistant (#726) sits above the routes, so its
+// conversation survives navigation; it brings the chat (and react-markdown)
+// with it, so it loads only once its gate is open.
+const FloatingAssistant = lazy(() =>
+  import('./components/wizard/FloatingAssistant').then((m) => ({ default: m.FloatingAssistant }))
 );
 // ImpactView traces the affected set from one artifact; a focused analysis
 // view kept out of the main bundle.
@@ -169,6 +177,7 @@ function App() {
   // refuses everything else anyway; skipping the loads below just keeps the
   // console quiet.
   const walled = !!currentUser && emailVerificationRequired && !currentUser.email_verified;
+  const floatingAssistant = useFeature(FLOATING_ASSISTANT_FEATURE);
 
   // Load the user's workspaces once authenticated and resolve the active one.
   useEffect(() => {
@@ -331,6 +340,11 @@ function App() {
         )}
         </Routes>
         </Suspense>
+        {currentUser && !walled && floatingAssistant && (
+          <Suspense fallback={null}>
+            <FloatingAssistant />
+          </Suspense>
+        )}
       </DialogProvider>
     </div>
   );
