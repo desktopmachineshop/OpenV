@@ -1,198 +1,158 @@
-import React, { useEffect, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
 import type { Artifact } from '../api/client';
-import type { ImpactTreeLayout, TreeNode } from './ImpactViewLayout';
+import { TreeDiagram } from '../components/treeDiagram';
+import { refStyle } from '../components/ui';
+import { STATUS_META, statusOf } from '../utils/artifactFacts';
+import { STATUS_COLOURS, TYPE_COLOURS, type ColourBy } from './moduleView/TreeDiagramView';
+import { ImpactBox, ImpactShape, linkColour, usedLinkTypes } from './ImpactViewLayout';
 
-// Box and spacing of the tree, in px.
-const NODE_W = 200;
-const NODE_H = 52;
-const ROW_H = 64;
-const COL_GAP = 64;
-const COL_W = NODE_W + COL_GAP;
-const PAD_Y = 8;
+// The impact drawn with the shared tree diagram (components/treeDiagram):
+// the selected artifact in the middle, upstream to the left and downstream
+// to the right, each connector coloured and labelled by its link type, with
+// a key; the boxes coloured by type or status as the Colour by switch says,
+// as the requirements Tree is. Folds per box, pan, zoom and fit are the
+// diagram's. A click opens the artifact; ⌖ on a box re-centres the impact.
 
-// Each link type has a colour, used for the line that reaches a node and the
-// edge of the node it enters, so a dependency's kind reads at a glance.
-export const LINK_COLOURS: Record<string, string> = {
-  'derives-from': 'var(--purple)',
-  'decomposes-to': 'var(--warning)',
-  refines: 'var(--warning-strong)',
-  satisfies: 'var(--accent)',
-  verifies: 'var(--success)',
-  validates: 'var(--success-strong)',
-  mitigates: 'var(--danger)',
-  impacts: 'var(--danger-strong)',
-  'relates-to': 'var(--neutral)',
-};
-const linkColour = (via: string) => LINK_COLOURS[via] || 'var(--neutral)';
-
-const LINK_ORDER = Object.keys(LINK_COLOURS);
+const METRICS = { boxWidth: 220, boxHeight: 60, gapX: 72 };
 
 interface Props {
-  layout: ImpactTreeLayout;
-  seed: { id: string; title: string; ref?: string };
-  projectId: string;
+  impact: ImpactShape;
   byId: Record<string, Artifact>;
+  colourBy: ColourBy;
   typeLabel: (type: string) => string;
+  onOpen: (id: string) => void;
+  /** Re-centre the impact on an artifact; omitted, the boxes offer no ⌖. */
+  onCentre?: (id: string) => void;
+  controls?: React.ReactNode;
 }
 
-export const ImpactViewTree: React.FC<Props> = ({ layout, seed, projectId, byId, typeLabel }) => {
-  const scroller = useRef<HTMLDivElement>(null);
-  const { upstreamDepth, downstreamDepth, rows, seedRow, nodes } = layout;
+const swatch = (b: ImpactBox, a: Artifact | undefined, by: ColourBy) => {
+  if (by === 'status') return STATUS_COLOURS[a ? statusOf(a) : 'draft'];
+  return TYPE_COLOURS[b.type] ?? { fill: 'var(--surface)', edge: 'var(--neutral)', label: b.type };
+};
 
-  // Column 0 is the furthest upstream; the seed sits at column upstreamDepth.
-  const colX = (side: TreeNode['side'] | 'seed', depth: number) => {
-    const col =
-      side === 'upstream' ? upstreamDepth - depth : side === 'downstream' ? upstreamDepth + depth : upstreamDepth;
-    return col * COL_W;
-  };
-  const rowY = (row: number) => PAD_Y + row * ROW_H;
-  const width = (upstreamDepth + downstreamDepth + 1) * COL_W - COL_GAP;
-  const height = rows * ROW_H + PAD_Y * 2 - (ROW_H - NODE_H);
+export const ImpactViewTree: React.FC<Props> = ({ impact, byId, colourBy, typeLabel, onOpen, onCentre, controls }) => {
+  const [folded, setFolded] = useState<Set<string>>(new Set());
+  const rootKey = impact.shape.kind === 'two-sided' ? impact.shape.root.key : '';
+  // A new centre opens unfolded.
+  useEffect(() => setFolded(new Set()), [rootKey]);
 
-  const pos = useMemo(() => {
-    const m: Record<string, { x: number; y: number }> = {
-      [seed.id]: { x: colX('seed', 0), y: rowY(seedRow) },
-    };
-    nodes.forEach((n) => {
-      // A node can be both up- and downstream (relates-to); key by side.
-      m[`${n.side}:${n.id}`] = { x: colX(n.side, n.depth), y: rowY(n.row) };
+  const toggle = (key: string) =>
+    setFolded((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
     });
-    return m;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout, seed.id]);
 
-  // Open with the selected requirement in view, which on a phone means
-  // scrolling past the upstream columns.
-  useEffect(() => {
-    const el = scroller.current;
-    if (!el) return;
-    el.scrollLeft = Math.max(0, colX('seed', 0) - (el.clientWidth - NODE_W) / 2);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layout]);
-
-  const parentPos = (n: TreeNode) => (n.parentId === seed.id ? pos[seed.id] : pos[`${n.side}:${n.parentId}`]);
-
-  const edges = nodes.map((n) => {
-    const from = parentPos(n);
-    const to = pos[`${n.side}:${n.id}`];
-    if (!from || !to) return null;
-    const down = n.side === 'downstream';
-    const x1 = down ? from.x + NODE_W : from.x;
-    const x2 = down ? to.x : to.x + NODE_W;
-    const y1 = from.y + NODE_H / 2;
-    const y2 = to.y + NODE_H / 2;
-    const mid = (x1 + x2) / 2;
-    return (
-      <path
-        key={`${n.side}:${n.id}`}
-        d={`M ${x1} ${y1} C ${mid} ${y1}, ${mid} ${y2}, ${x2} ${y2}`}
-        fill="none"
-        stroke={linkColour(n.via)}
-        strokeWidth={2}
-      />
-    );
+  const links = usedLinkTypes(impact.boxes);
+  const all = impact.shape.kind === 'two-sided' ? [impact.shape.root.data, ...impact.boxes] : impact.boxes;
+  const colours = new Map<string, { fill: string; edge: string; label: string }>();
+  all.forEach((b) => {
+    const s = swatch(b, byId[b.id], colourBy);
+    if (!colours.has(s.label)) colours.set(s.label, s);
   });
 
-  const usedLinks = LINK_ORDER.filter((t) => nodes.some((n) => n.via === t)).concat(
-    Array.from(new Set(nodes.map((n) => n.via))).filter((t) => t && !LINK_COLOURS[t])
-  );
-
-  const box = (n: TreeNode) => {
-    const p = pos[`${n.side}:${n.id}`];
-    const colour = linkColour(n.via);
-    const ref = byId[n.id]?.ref;
-    return (
-      <Link
-        key={`${n.side}:${n.id}`}
-        to={`/projects/${projectId}/requirements?artifact=${n.id}`}
-        title={`${ref ? ref + ' ' : ''}${n.title} — ${typeLabel(n.type)}, ${n.via}, ${n.depth} hop${n.depth === 1 ? '' : 's'}`}
-        style={{
-          ...nodeStyle,
-          left: p.x,
-          top: p.y,
-          [n.side === 'downstream' ? 'borderLeft' : 'borderRight']: `4px solid ${colour}`,
-        }}
-      >
-        <span style={metaStyle}>
-          {ref && <span style={refStyle}>{ref}</span>}
-          <span>{typeLabel(n.type)}</span>
-        </span>
-        <span style={titleStyle}>{n.title}</span>
-      </Link>
-    );
-  };
-
-  const seedPos = pos[seed.id];
   return (
-    <div>
+    <div style={{ flex: 1, minHeight: 360, display: 'flex', flexDirection: 'column' }} data-testid="impact-tree">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
         <span>← Upstream: what it depends on</span>
         <span style={{ textAlign: 'right' }}>Downstream: what depends on it →</span>
       </div>
-      <div
-        ref={scroller}
-        data-testid="impact-tree"
-        style={{ overflow: 'auto', border: '1px solid var(--border)', borderRadius: 6, background: 'var(--surface-alt)', padding: 12 }}
-      >
-        <div style={{ position: 'relative', width, height, margin: '0 auto' }}>
-          <svg width={width} height={height} style={{ position: 'absolute', inset: 0 }} aria-hidden="true">
-            {edges}
-          </svg>
-          <div
-            style={{
-              ...nodeStyle,
-              left: seedPos.x,
-              top: seedPos.y,
-              background: 'var(--accent)',
-              borderColor: 'var(--accent-strong)',
-              color: 'var(--accent-fg)',
-            }}
-          >
-            <span style={{ ...metaStyle, color: 'var(--accent-fg)' }}>
-              {seed.ref && <span style={{ ...refStyle, color: 'var(--accent-fg)' }}>{seed.ref}</span>}
-              <span>Selected requirement</span>
-            </span>
-            <span style={{ ...titleStyle, fontWeight: 600 }}>{seed.title}</span>
-          </div>
-          {nodes.map(box)}
-        </div>
-      </div>
-      {usedLinks.length > 0 && (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>
-          {usedLinks.map((t) => (
-            <span key={t} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ width: 18, height: 3, borderRadius: 2, background: linkColour(t) }} />
-              {t}
-            </span>
+      <TreeDiagram<ImpactBox>
+        shape={impact.shape}
+        folded={folded}
+        onToggle={toggle}
+        selectedKey={rootKey}
+        onSelect={(node) => onOpen(node.data.id)}
+        ariaLabel="Impact tree"
+        metrics={METRICS}
+        controls={controls}
+        labelOf={(node) => {
+          const b = node.data;
+          const a = byId[b.id];
+          const where = b.side === 'seed' ? 'centre' : `${b.side}, ${b.via}, ${b.depth} hop${b.depth === 1 ? '' : 's'}`;
+          return [a?.ref, b.title, typeLabel(b.type), a ? STATUS_META[statusOf(a)].label : '', where].filter(Boolean).join(', ');
+        }}
+        boxStyle={(node) => {
+          const s = swatch(node.data, byId[node.data.id], colourBy);
+          const seed = node.data.side === 'seed';
+          return {
+            background: s.fill,
+            [node.data.side === 'upstream' ? 'borderRight' : 'borderLeft']: `4px solid ${s.edge}`,
+            ...(seed ? { borderWidth: 2, borderColor: 'var(--accent)' } : {}),
+          };
+        }}
+        renderBox={(node) => <Box box={node.data} artifact={byId[node.data.id]} typeLabel={typeLabel} onCentre={onCentre} />}
+      />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 16px', marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>
+        {links.length > 0 && (
+          <ul aria-label="Link key" style={keyList}>
+            {links.map((t) => (
+              <li key={t} style={keyItem}>
+                <span aria-hidden="true" style={{ width: 18, height: 3, borderRadius: 2, background: linkColour(t) }} />
+                {t}
+              </li>
+            ))}
+          </ul>
+        )}
+        <ul aria-label="Colour key" style={keyList}>
+          {Array.from(colours.values()).map((s) => (
+            <li key={s.label} style={keyItem}>
+              <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 3, background: s.fill, border: '1px solid var(--border)', borderLeft: `3px solid ${s.edge}` }} />
+              {s.label}
+            </li>
           ))}
-        </div>
-      )}
+        </ul>
+      </div>
     </div>
   );
 };
 
-const nodeStyle: React.CSSProperties = {
-  position: 'absolute',
-  width: NODE_W,
-  height: NODE_H,
-  boxSizing: 'border-box',
-  padding: '5px 9px',
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'center',
-  gap: 2,
-  background: 'var(--surface)',
-  border: '1px solid var(--border)',
-  borderRadius: 6,
-  color: 'var(--text)',
-  textDecoration: 'none',
-  fontSize: 13,
-  overflow: 'hidden',
-};
-const metaStyle: React.CSSProperties = { display: 'flex', gap: 6, fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' };
-const refStyle: React.CSSProperties = {
-  fontFamily: 'source-code-pro, Menlo, Monaco, Consolas, monospace',
-  color: 'var(--accent-text)',
-};
-const titleStyle: React.CSSProperties = { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' };
+const Box: React.FC<{ box: ImpactBox; artifact?: Artifact; typeLabel: (t: string) => string; onCentre?: (id: string) => void }> = ({
+  box,
+  artifact,
+  typeLabel,
+  onCentre,
+}) => (
+  <>
+    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
+      {artifact?.ref && <span style={{ ...refStyle, fontWeight: 600 }}>{artifact.ref}</span>}
+      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{box.side === 'seed' ? `Centre · ${typeLabel(box.type)}` : typeLabel(box.type)}</span>
+      <span style={{ flex: 1 }} />
+      {onCentre && box.side !== 'seed' && (
+        <button
+          type="button"
+          tabIndex={-1}
+          title="Centre the impact on this artifact"
+          aria-label={`Centre the impact on ${artifact?.ref || box.title}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onCentre(box.id);
+          }}
+          style={{ padding: '0 5px', minHeight: 20, border: '1px solid var(--border)', borderRadius: 4, background: 'var(--surface)', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}
+        >
+          ⌖
+        </button>
+      )}
+    </span>
+    <span
+      style={{
+        display: '-webkit-box',
+        WebkitLineClamp: 2,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
+        marginTop: 2,
+        fontSize: 12,
+        lineHeight: '15px',
+        color: 'var(--text)',
+        fontWeight: box.side === 'seed' ? 600 : 400,
+      }}
+    >
+      {box.title}
+    </span>
+  </>
+);
+
+const keyList: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: '4px 12px', margin: 0, padding: 0, listStyle: 'none' };
+const keyItem: React.CSSProperties = { display: 'inline-flex', alignItems: 'center', gap: 6 };

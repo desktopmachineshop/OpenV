@@ -71,6 +71,7 @@ var Registry = []Feature{
 	{Key: FeatureFloatingAssistant, ShippedIn: "0.28.0", Summary: "The V&V Assistant floats over every project page and the workspace Home, keeps one conversation as you move around, and starts drafting tests for the V&V dashboard's gaps; an artifact's history and comments sit in its own pane"},
 	{Key: FeatureChipSearch, ShippedIn: "0.28.0", Summary: "One search bar with a chip for each filter: filter, group and save searches on the requirements list, and filter the top-bar search by project, type, status and owner"},
 	{Key: FeatureAgentHierarchy, ShippedIn: "0.28.0", Summary: "The Agents page shows your agents as a hierarchy of cards: a lead at the top, groups of specialists beneath it, and each card's runs, cost and proposals to approve over the last 7 days; Edit arranges who reports to whom"},
+	{Key: FeatureImpactPicker, ShippedIn: "0.28.0", Summary: "Impact analysis picks the requirement from a searchable table of the document, re-centres on any artifact in the tree, and shows the result as a table too"},
 }
 
 // Feature keys the code gates on.
@@ -252,6 +253,13 @@ const (
 	// its Edit mode (PUT /agent-arrangement). Without it the page keeps its
 	// list; the agents' reports_to, group and sort order are kept either way.
 	FeatureAgentHierarchy = "agent-hierarchy"
+	// FeatureImpactPicker is the Impact Analysis page's picker pane and
+	// result table (issue #730): the requirements as the document's folding
+	// table, Ref and Title, under a chip search bar, in place of the
+	// dropdown; the result as a table beside the tree; and re-centring the
+	// impact on an artifact in it. Without it the page keeps the dropdown
+	// and the tree. Frontend only: the impact endpoint is unchanged.
+	FeatureImpactPicker = "impact-picker"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

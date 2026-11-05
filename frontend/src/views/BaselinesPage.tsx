@@ -20,7 +20,7 @@ import { Chip, ErrorBanner, FeatureGate, SegmentedControl, mutedStyle, pageType,
 import { REDESIGN_PAGES_FEATURE } from '../features';
 import { useViewport } from '../hooks/useViewport';
 import { ChangeTable, LIVE, TextChange, Timeline } from './BaselinesPageParts';
-import { changeRows, filterRows, refMap, type ChangeFilter } from './BaselinesPageData';
+import { changeRows, filterRows, isStatusOnly, refMap, type ChangeFilter } from './BaselinesPageData';
 
 interface Base {
   baselines: Baseline[];
@@ -45,6 +45,7 @@ const BaselinesContent: React.FC = () => {
   const [base, setBase] = useState('');
   const [target, setTarget] = useState(LIVE);
   const [filter, setFilter] = useState<ChangeFilter>('all');
+  const [hideStatusOnly, setHideStatusOnly] = useState(false);
   const [selected, setSelected] = useState('');
 
   useEffect(() => {
@@ -83,7 +84,7 @@ const BaselinesContent: React.FC = () => {
   }, [base, target, data]);
 
   const rows = useMemo(() => (cmp ? changeRows(cmp.diff, refMap(cmp.before, cmp.after)) : []), [cmp]);
-  const shown = useMemo(() => filterRows(rows, filter), [rows, filter]);
+  const shown = useMemo(() => filterRows(rows, filter, hideStatusOnly), [rows, filter, hideStatusOnly]);
 
   if (error) return <ErrorBanner message={error} />;
   if (!data) return <div style={{ padding: 16, color: 'var(--text-muted)' }}>Loading…</div>;
@@ -110,6 +111,7 @@ const BaselinesContent: React.FC = () => {
   const counts = cmp ? { added: cmp.diff.added.length, changed: cmp.diff.modified.length, removed: cmp.diff.removed.length } : null;
   const linkCount = cmp ? cmp.diff.links_added.length + cmp.diff.links_removed.length : 0;
   const textCount = filterRows(rows, 'text').length;
+  const statusOnlyCount = rows.filter(isStatusOnly).length;
 
   const timeline = (
     <Timeline baselines={data.baselines} liveCount={data.live.length} base={base} target={target} onPick={pick} phone={isPhone} />
@@ -150,6 +152,20 @@ const BaselinesContent: React.FC = () => {
           { value: 'links', label: `Links ${linkCount}` },
         ]}
       />
+      {statusOnlyCount > 0 && (
+        <label
+          title="Leave out the artifacts whose only change is their review status, such as a bulk approval"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, margin: 0, fontSize: 12, color: 'var(--text-secondary)', cursor: 'pointer' }}
+        >
+          <input
+            type="checkbox"
+            checked={hideStatusOnly}
+            onChange={(e) => setHideStatusOnly(e.target.checked)}
+            style={{ margin: 0, width: 'auto' }}
+          />
+          Hide status-only {statusOnlyCount}
+        </label>
+      )}
     </div>
   );
   const comparison = !base ? null : !cmp ? (
@@ -157,7 +173,7 @@ const BaselinesContent: React.FC = () => {
   ) : (
     <>
       <ChangeTable rows={shown} selected={row?.key || ''} onSelect={setSelected} phone={isPhone} />
-      {row && <TextChange row={row} before={before} after={after} suspect={suspect} />}
+      {row && <TextChange row={row} before={before} after={after} suspect={suspect} bounded={!isPhone} />}
       <Link to={`/projects/${projectId}/baselines/${base}/compare?against=${target}`} style={{ ...plainLink, ...tapTarget, alignSelf: 'flex-start', fontSize: 12 }}>
         Open the full comparison
       </Link>

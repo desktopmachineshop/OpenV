@@ -36,7 +36,8 @@
     "requirements-tree",
     "floating-assistant",
     "chip-search",
-    "agent-hierarchy"
+    "agent-hierarchy",
+    "impact-picker"
   ],
   "event_types": [
     "artifact.created",

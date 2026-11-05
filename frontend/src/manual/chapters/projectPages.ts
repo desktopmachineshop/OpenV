@@ -111,10 +111,16 @@ working copy or another baseline.
 The comparison counts the artifacts **added**, **changed** and **removed**,
 and lists every change with the fields that changed. **Text only** narrows
 the list to changes of title or text, and **Links** to links added or
-removed.
+removed. **Hide status-only** leaves out the artifacts whose only change is
+their review status, such as a whole project approved at once; it shows how
+many there are.
 
 Select a change to read its text word by word: removed words are struck out
-in red and added words underlined in green. When you compare to the working
+in red and added words underlined in green. On a computer a long list of
+changes scrolls on its own, with its column headings kept in view, and the
+selected change's text stays on screen below it. With a change selected,
+**↑** and **↓** move to the previous and next change, **Home** and **End**
+to the first and last, and the text follows. When you compare to the working
 copy, the links of that artifact that are suspect now are named under it.
 **Open the full comparison** opens the comparison page with every link.
 `;
