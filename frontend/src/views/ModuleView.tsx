@@ -37,6 +37,7 @@ import { useCoverage } from './moduleView/useCoverage';
 import { useBaselineView } from './moduleView/useBaselineView';
 import { useModuleData } from './moduleView/useModuleData';
 import { useColumnResize } from './moduleView/useColumnResize';
+import { useNotesParam } from './moduleView/useNotesParam';
 import { usePanelEscape, usePanelMode } from './moduleView/usePanelMode';
 import { useSiblingOrdering } from './moduleView/useSiblingOrdering';
 
@@ -141,6 +142,7 @@ export const ModuleView: React.FC = () => {
   // The ?artifact= search param is the shareable source of truth for the
   // selection (mirrors AgentRunsPage's ?run= pattern).
   const urlArtifactId = searchParams.get('artifact');
+  useNotesParam(searchParams.get('notes') === '1', urlArtifactId, stacked, () => setStackedPane('notes'), () => setNotesRevealed(true));
 
   const {
     baselines,

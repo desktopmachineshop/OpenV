@@ -418,6 +418,32 @@
   display: none;
 }
 
+/* The Projects panel's header action: New project, drawn as a link. */
+.project-panel-new {
+  min-height: 32px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.project-panel-new:hover {
+  text-decoration: underline;
+}
+
+/* A Home row that opens the thing it names (ProjectListHomePanels): the
+   Needs you rows and the Activity rows. */
+.ov-home-row-link:hover {
+  background: var(--surface-hover);
+}
+.ov-home-row-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
 @media (max-width: 768px) {
   .project-list-container {
     padding: 20px 10px;

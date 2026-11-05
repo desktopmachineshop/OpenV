@@ -67,6 +67,9 @@ export interface Refinement {
 export interface CoverageReport {
   project_id: string;
   entries: CoverageEntry[];
+  // Requirements by rollup: rollup -> count (vv/coverage.go). There is no
+  // total, covered or verified key; coverageFigures (components/
+  // ProjectListHomeData) derives those (#720).
   summary: Record<string, number>;
 }
 

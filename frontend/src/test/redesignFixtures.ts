@@ -69,7 +69,9 @@ export const COVERAGE = {
       rollup: 'fail',
     },
   ],
-  summary: { total: 2, covered: 1, uncovered: 1, verified: 1, pass: 0, fail: 1 },
+  // The real shape (vv/coverage.go): rollup -> count. req2 has no entry
+  // here, but the summary counts it, as uncovered.
+  summary: { fail: 1, uncovered: 1 },
 };
 
 export const RUN = {
