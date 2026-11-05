@@ -210,6 +210,7 @@
     "target-releases",
     "compact-layout",
     "redesign-pages",
+    "requirements-tree",
     "floating-assistant"
   ],
   "event_types": [

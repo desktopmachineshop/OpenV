@@ -13,6 +13,7 @@ import { ArtifactDetails } from '../components/ArtifactDetails';
 import { ChatterPanel } from '../components/ChatterPanel';
 import { FLOATING_ASSISTANT_FEATURE } from '../components/wizard/assistantStore';
 import { revealHistory, useRequirementsAssistant } from './moduleView/assistantPane';
+import { StackedPaneTabs } from './moduleView/StackedPaneTabs';
 import { DownloadWizard } from '../components/DownloadWizard';
 import { buttonStyle, useAlert, useConfirm } from '../components/ui';
 import { ArtifactTraceSummary } from '../components/ArtifactTraceSummary';
@@ -31,6 +32,8 @@ import { FilterPanel } from './moduleView/FilterPanel';
 import { TreePane } from './moduleView/TreePane';
 import { ListToolbar } from './moduleView/ListToolbar';
 import { useListView } from './moduleView/useListView';
+import { useFoldAll } from './moduleView/useFoldAll';
+import { REQUIREMENTS_TREE_FEATURE } from './moduleView/requirementsViews';
 import { PhoneActionBar } from './moduleView/PhoneActionBar';
 import { useCoverage } from './moduleView/useCoverage';
 import { useBaselineView } from './moduleView/useBaselineView';
@@ -48,6 +51,7 @@ export const ModuleView: React.FC = () => {
   const [error, setError] = useState<string>('');
   const ownersOn = useFeature(ARTIFACT_OWNERS_FEATURE);
   const steppingOn = useFeature(ARTIFACT_STEPPING_FEATURE);
+  const treeViews = useFeature(REQUIREMENTS_TREE_FEATURE);
   // #725, #726: History in the artifact's pane, the assistant floating; no Notes column.
   const historyInPane = useFeature(FLOATING_ASSISTANT_FEATURE);
   const [searchText, setSearchText] = useState<string>('');
@@ -686,7 +690,9 @@ export const ModuleView: React.FC = () => {
       coverage,
       searchParams,
       setSearchParams,
+      treeViews,
     });
+  const fold = useFoldAll(view);
 
   // Reading order for ‹ ›, J / K and the swipe: the tree's own order, over what
   // the search and the filters have left in view, so a narrowed tree reads as
@@ -927,39 +933,11 @@ export const ModuleView: React.FC = () => {
         <PhoneActionsSheet setToolsOpen={setToolsOpen} toolbarActions={toolbarActions} />
       )}
       {stacked && (
-        <div
-          role="tablist"
-          aria-label="Requirements panes"
-          data-help-key="requirements.layout"
-          style={{ display: 'flex', margin: '0 12px 8px', border: '1px solid var(--border)', borderRadius: 8, overflow: 'hidden', flexShrink: 0 }}
-        >
-          {(historyInPane ? (['tree', 'document'] as const) : (['tree', 'document', 'notes'] as const)).map((pane) => {
-            const active = shownPane === pane;
-            const label = pane === 'tree' ? 'Tree' : pane === 'document' ? 'Document' : 'Notes';
-            return (
-              <button
-                key={pane}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setStackedPane(pane)}
-                style={{
-                  flex: 1,
-                  minHeight: 44,
-                  border: 'none',
-                  borderLeft: pane === 'tree' ? 'none' : '1px solid var(--border)',
-                  background: active ? 'var(--neutral-soft)' : 'var(--surface)',
-                  color: active ? 'var(--text)' : 'var(--text-muted)',
-                  fontSize: 14,
-                  fontWeight: active ? 600 : 400,
-                  cursor: 'pointer',
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+        <StackedPaneTabs
+          panes={historyInPane ? ['tree', 'document'] : ['tree', 'document', 'notes']}
+          shown={shownPane}
+          onShow={setStackedPane}
+        />
       )}
       <div style={{ display: 'flex', gap: '0', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       {/* The column scrolls nothing itself: the artifact tree inside it owns
@@ -1001,6 +979,9 @@ export const ModuleView: React.FC = () => {
             showFilterPanel={showFilterPanel}
             setShowFilterPanel={setShowFilterPanel}
             pickDepth={(depth) => setDepthTrigger((prev) => ({ depth, token: prev.token + 1 }))}
+            treeViews={treeViews}
+            folded={fold.folded}
+            toggleFold={fold.toggleFold}
             newButton={stacked ? newButton : undefined}
           />
         }
@@ -1029,6 +1010,8 @@ export const ModuleView: React.FC = () => {
         figures={figures}
         facts={facts}
         depthTrigger={depthTrigger}
+        treeViews={treeViews}
+        foldTrigger={fold.trigger}
         artifacts={artifacts}
         projectId={projectId}
         pendingCreateContext={pendingCreateContext}
