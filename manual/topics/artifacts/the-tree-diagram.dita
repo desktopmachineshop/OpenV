@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-tree-diagram">
+  <title>The tree diagram</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="requirements.tree"/>
+    <resourceid appname="openv-web" appid="requirements.layers"/>
+  </prolog>
+  <conbody>
+    <p><b>Tree</b> draws the project's hierarchy as an org chart that flows left to right: one box per artifact, with its type, <b>ref</b>, <b>status</b> and title, and elbow connectors from each parent to its children, which are stacked in the next column.</p>
+    <ul>
+      <li><b>Folding</b> — the diagram opens with the first two levels showing. The small <b>⊖</b> on a parent's connector folds what is under it, and <b>⊕</b> (with the number of artifacts hidden beside it) unfolds it again. The fold all / unfold all button above the list does the same for every branch.</li>
+      <li><b>Colour by Type | Status</b> — colours each box by its artifact type (need, requirement, design item, test case, hazard, …) or by its review status (draft, in review, approved, superseded), with a key beside the switch. The type tag and the status stay written on every box, so the colours are a second cue, never the only one.</li>
+      <li><b>Opening an artifact</b> — click a box to select it and open it in the detail panel, as in the table. An artifact selected anywhere else, by a link or by <b>‹ / ›</b>, unfolds the branch it sits in and comes into view.</li>
+      <li><b>Moving around</b> — drag the background to pan, and use the mouse wheel or a pinch to zoom; <b>−</b>, <b>+</b> and <b>Fit</b> above the diagram zoom out, zoom in and fit the whole diagram on screen.</li>
+      <li><b>Keyboard</b> — <b>Tab</b> reaches the diagram; <b>↑</b> and <b>↓</b> move between the boxes in reading order, <b>→</b> unfolds a box or goes to its first child, <b>←</b> folds it or goes to its parent, <b>Home</b> and <b>End</b> go to the first and the last, and <b>Enter</b> opens the artifact. A screen reader announces the diagram as a tree, with each box's level and position.</li>
+    </ul>
+    <p>On a phone, <b>Tree</b> shows the outline instead.</p>
+  </conbody>
+</concept>

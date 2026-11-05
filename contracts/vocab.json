@@ -209,7 +209,8 @@
     "help-activity",
     "target-releases",
     "compact-layout",
-    "redesign-pages"
+    "redesign-pages",
+    "requirements-tree"
   ],
   "event_types": [
     "artifact.created",

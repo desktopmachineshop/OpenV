@@ -118,7 +118,10 @@ SECTION_KEYS = {
     ('artifacts', 'moving-through-the-document'): ['requirements.navigate'],
     ('artifacts', 'referencing-figures-and-linked-artifacts'): ['requirements.references'],
     ('artifacts', 'making-room'): ['requirements.layout'],
-    ('artifacts', 'table-tree-and-layers'): ['requirements.views', 'requirements.layers'],
+    ('artifacts', 'table-and-tree'): ['requirements.views'],
+    # requirements.layers stays: the Layers view is retired, and its key opens
+    # the Tree diagram that replaced it.
+    ('artifacts', 'the-tree-diagram'): ['requirements.tree', 'requirements.layers'],
     ('artifacts', 'the-detail-panel'): ['requirements.detail'],
     ('artifacts', 'search-filters'): ['requirements.search', 'search'],
     ('links', 'creating-links'): ['links.create'],

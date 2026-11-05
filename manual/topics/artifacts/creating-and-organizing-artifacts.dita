@@ -12,7 +12,7 @@
       <li>The same menu offers <b>copy</b>, <b>paste before / paste after</b> and <b>duplicate</b> (a copy placed directly after the original). A copy carries the type, title, body and attributes; links and figures stay with the original, because a copy that inherited "verifies REQ-12" would assert a verification nobody made. Pasted artifacts are titled "… (copy)", and the copy's own history starts with a single note — <i>Copied from REQ-12 (version 3)</i> — so you can always tell where it came from.</li>
       <li><b>Drag an artifact</b> onto another to move it. Where you let go decides what happens: the <b>top half</b> drops it before that artifact, the <b>bottom left</b> after it, and the <b>bottom right</b> makes it a <b>child</b> of it. The row shows which it will be — a line on the edge it will land against, or an outline around the artifact it will go inside — so re-parenting and reordering are the same gesture. Dropping into a collapsed artifact expands it, and an artifact can never be dropped into its own subtree.</li>
       <li><b>Move up</b> and <b>Move down</b> in the same menu swap an artifact with the one beside it; on the keyboard, focus a row in the tree and press <b>Alt+↑</b> or <b>Alt+↓</b>. The arrow keys move between rows, <b>→</b> and <b>←</b> open and shut a branch, and <b>Enter</b> opens the artifact.</li>
-      <li><b>Depth L1–L4</b> above the tree opens it to a level at once: <b>L1</b> collapses all, <b>All</b> expands all.</li>
+      <li><b>Fold all / unfold all</b> above the table folds every branch at once, or opens them all.</li>
     </ul>
   </conbody>
 </concept>
