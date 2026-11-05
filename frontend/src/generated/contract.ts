@@ -48,6 +48,7 @@ export const FEATURE_KEYS = [
   'compact-layout',
   'redesign-pages',
   'requirements-tree',
+  'floating-assistant',
   'chip-search',
   'agent-hierarchy',
 ] as const;

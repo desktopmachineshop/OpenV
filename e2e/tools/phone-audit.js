@@ -520,10 +520,13 @@ const SCREENS = [
   { tag: 'settings', path: '/projects/p1/settings' },
   { tag: 'settings-agents', path: '/projects/p1/settings?tab=agents' },
   { tag: 'settings-access', path: '/projects/p1/settings?tab=access' },
-  // The notes panel's assistant beside the project, showing the three
-  // project-mode cards (edit, move, new artifact) with their buttons. On a
-  // phone the panel is a stacked pane reached from the pane strip.
+  // The assistant beside the project, showing the three project-mode cards
+  // (edit, move, new artifact) with their buttons: the floating panel (a
+  // bottom sheet on a phone) where the floating-assistant gate is on, else
+  // the Notes panel's tab, a stacked pane on a phone.
   { tag: 'notes-assistant', path: '/projects/p1/requirements', open: async (p) => {
+    const floating = p.getByRole('button', { name: 'Open the V&V Assistant' }).first();
+    if (await floating.count()) { await press(floating); await p.waitForTimeout(800); return; }
     const pane = p.getByRole('button', { name: /^Notes$/ }).first();
     if (await pane.count()) { await press(pane); await p.waitForTimeout(300); }
     const tab = p.getByRole('button', { name: 'V&V Assistant' }).first();

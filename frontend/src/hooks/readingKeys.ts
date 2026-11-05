@@ -35,12 +35,12 @@ export const isTypingTarget = (target: EventTarget | null): boolean => {
  * every shell in components/ui plus the attachment viewer; the class is the
  * lightbox, which is the one overlay that renders inside the document pane.
  */
+// A shell that stays mounted while closed (the floating V&V Assistant keeps
+// its conversation that way) is hidden, and a hidden shell floats over nothing.
 export const overlayIsOpen = (doc: Document = document): boolean =>
-  Boolean(
-    doc.querySelector(
-      '[role="dialog"], [role="alertdialog"], [aria-modal="true"], .lightbox-backdrop'
-    )
-  );
+  Array.from(
+    doc.querySelectorAll('[role="dialog"], [role="alertdialog"], [aria-modal="true"], .lightbox-backdrop')
+  ).some((el) => !el.closest('[hidden]'));
 
 export interface KeyEventFacts {
   key: string;

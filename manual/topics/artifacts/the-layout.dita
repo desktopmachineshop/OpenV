@@ -2,13 +2,13 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="the-layout">
   <title>The layout</title>
-  <shortdesc>The view has two parts side by side, and a third you can call up:</shortdesc>
+  <shortdesc>The view has two parts side by side:</shortdesc>
   <conbody>
     <ul>
       <li><b>The list</b> — every artifact in the project, as a <b>table</b> or a <b>tree</b> diagram (see below). Above it sit the type tabs, the project search and its filters, and a line of figures for what is in view.</li>
       <li><b>The detail panel</b> — on the right, the selected artifact: its status, quality and priority, its text, its place in the trace and its tests (see <i>The detail panel</i>). Drag its left edge to make it wider; the width is remembered.</li>
-      <li><b>Notes</b> — the <b>Chatter</b> panel at the far right: comments on the selected artifact and the V&amp;V Assistant (see <i>Making room</i>).</li>
     </ul>
+    <p>The selected artifact's comments and recorded changes are its <b>History</b>, the last section of the detail panel (see <i>History</i>). The V&amp;V Assistant floats over the page from the <b>✦ Assistant</b> button in the bottom corner (see <i>Guided definition &amp; the V&amp;V Assistant</i> → <i>The V&amp;V Assistant on every page</i>).</p>
     <p>The header holds the baseline picker and the project actions — <b>Compare</b>, <b>Capture Baseline</b>, <b>Draft test cases</b>, <b>↓ Download</b> — with one blue button, <b>+ New Artifact</b>, at its end.</p>
     <p><b>Help</b> in the top bar (or <b>?</b> on the keyboard) opens the help panel for this page, with the artifact and link types.</p>
   </conbody>

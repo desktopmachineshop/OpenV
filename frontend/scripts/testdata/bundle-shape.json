@@ -19,6 +19,7 @@
   "lazyPages": {
     "src/components/admin/VisitorDashboard.tsx": "dynamic entry",
     "src/components/org/OrgBillingTab.tsx": "dynamic entry",
+    "src/components/wizard/FloatingAssistant.tsx": "dynamic entry",
     "src/site/Changelog.tsx": "dynamic entry",
     "src/site/CompareHub.tsx": "dynamic entry",
     "src/site/ComparePage.tsx": "dynamic entry",
