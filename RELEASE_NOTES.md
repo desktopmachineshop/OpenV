@@ -11,7 +11,7 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
-- **The top-bar search keeps its chips in its own strip.** Adding several chips to the search in the top bar no longer makes the bar grow over the page's toolbar: the chips stay on one row that scrolls sideways. A custom filter there such as *Status contains review* now finds what it says, instead of nothing.
+- **The top-bar search keeps its chips in its own strip.** Adding several chips to the search in the top bar no longer makes the bar grow over the page's toolbar: the chips stay on one row that scrolls sideways. A custom filter there such as *Status contains review* now finds what it says, instead of nothing. The box also takes the page's light colours in the top bar and the phone's menu, instead of the sidebar's dark ones.
 
 ## 0.28.0 — 2026-11-05
 
