@@ -53,8 +53,6 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 		ProjectID:          req.ProjectID,
 		AutomationID:       req.AutomationID,
 		TriggerEventID:     req.TriggerEventID,
-		TeamID:             req.TeamID,
-		TeamNodeID:         req.TeamNodeID,
 		ParentRunID:        req.ParentRunID,
 		WorkItemID:         req.WorkItemID,
 		InterviewSessionID: req.InterviewSessionID,
@@ -124,7 +122,7 @@ var retryableStatuses = map[string]bool{
 // Retry enqueues a fresh run copying the source run's org, agent, project and
 // prompt. The new run is a plain manual launch: normal priority, launched by
 // the retrying user (so their personal-runner reservation applies), with
-// provenance recorded in RetriedFromRunID. Automation, crew, delegation,
+// provenance recorded in RetriedFromRunID. Automation, delegation,
 // interview and kanban links are NOT copied — those flows own their own
 // retry/follow-up semantics.
 func (s *DefaultService) Retry(sourceRunID string, launchedBy *string) (*Run, error) {
@@ -537,8 +535,8 @@ func (s *DefaultService) FailStale(maxSilence time.Duration) ([]string, error) {
 // produced has been reviewed. It is a no-op unless the run is awaiting approval
 // and no proposal is still pending; otherwise it moves the run to a terminal
 // state — failed if any approved proposal failed to apply, succeeded when they
-// all landed (or were rejected) cleanly — and publishes RunFinished so crew
-// successors, the notifier and automation triggers fire on the real outcome
+// all landed (or were rejected) cleanly — and publishes RunFinished so the
+// notifier and automation triggers fire on the real outcome
 // instead of the run stalling forever in awaiting_approval. Wired to every
 // proposal-resolution path (approve/reject, single or bulk, including the
 // applier path where an approval's write fails).

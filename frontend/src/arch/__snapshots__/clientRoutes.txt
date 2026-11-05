@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 321
-  axios instance calls: 310 (DELETE 38, GET 125, HEAD 1, POST 103, PUT 43)
-  helper calls (a function that passes its argument to the instance): 2
+call sites: 305
+  axios instance calls: 295 (DELETE 35, GET 122, HEAD 1, POST 97, PUT 40)
+  helper calls (a function that passes its argument to the instance): 1
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
-  needing normalisation: 7 (4 of them axios calls)
-distinct METHOD PATH lines below: 320; server routes reached: 320
+  needing normalisation: 6 (3 of them axios calls)
+distinct METHOD PATH lines below: 304; server routes reached: 304
 
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
 GET     /api/v1/admin/metrics/visitors                                    adminAPI.visitorMetrics
@@ -82,22 +82,6 @@ GET     /api/v1/baselines/{id}                                            baseli
 GET     /api/v1/baselines/{id}/diff                                       baselineAPI.diff
 GET     /api/v1/chatter                                                   chatterAPI.list
 POST    /api/v1/chatter                                                   chatterAPI.create
-DELETE  /api/v1/crew-edges/{id}                                           crewsAPI.removeEdge
-PUT     /api/v1/crew-edges/{id}                                           crewsAPI.updateEdge
-DELETE  /api/v1/crew-nodes/{id}                                           crewsAPI.removeNode
-PUT     /api/v1/crew-nodes/{id}                                           crewsAPI.updateNode
-GET     /api/v1/crew-templates                                            crewTemplatesAPI.list
-GET     /api/v1/crews                                                     crewsAPI.list
-POST    /api/v1/crews                                                     crewsAPI.create
-POST    /api/v1/crews/import                                              crewsAPI.import
-DELETE  /api/v1/crews/{id}                                                crewsAPI.remove
-GET     /api/v1/crews/{id}                                                crewsAPI.get
-PUT     /api/v1/crews/{id}                                                crewsAPI.update
-POST    /api/v1/crews/{id}/clone                                          crewsAPI.clone
-POST    /api/v1/crews/{id}/edges                                          crewsAPI.addEdge
-GET     /api/v1/crews/{id}/export                                         crewsAPI.exportDownload (helper)
-POST    /api/v1/crews/{id}/nodes                                          crewsAPI.addNode
-POST    /api/v1/crews/{id}/runs                                           crewsAPI.launchRun
 GET     /api/v1/events                                                    eventsAPI.list
 DELETE  /api/v1/evidence-bundles/{id}                                     evidenceAPI.remove
 GET     /api/v1/evidence-bundles/{id}                                     evidenceAPI.get
@@ -333,7 +317,6 @@ POST    /api/v1/work-items/{id}/move                                      workIt
   attachmentAPI.fetchFile: ${version ? `?version=${version}` : ''} is a query-string suffix
   attachmentAPI.getDownloadUrl (url): ${version ? `?version=${version}` : ''} is a query-string suffix
   authAPI.oidcLoginUrl (url): ${signUp ? '?signup=1' : ''} is a query-string suffix
-  crewsAPI.import: ${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''} is a query-string suffix
   projectAPI.download: ${format} is one of csv|docx|excel|json|pdf|reqif; ${query ? `?${query}` : ''} is a query-string suffix
   projectAPI.downloadOptions: ${params} is a query-string suffix
   vvAPI.report (helper): ${baselineId ? `?baseline_id=${baselineId}` : ''} is a query-string suffix

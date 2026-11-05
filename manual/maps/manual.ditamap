@@ -77,13 +77,6 @@
     <topicref href="../topics/agents/repository-access.dita"/>
     <topicref href="../topics/agents/default-model-providers.dita"/>
   </topicref>
-  <topicref href="../topics/crews/index.dita">
-    <topicref href="../topics/crews/managing-crews.dita"/>
-    <topicref href="../topics/crews/the-canvas.dita"/>
-    <topicref href="../topics/crews/adding-nodes.dita"/>
-    <topicref href="../topics/crews/connecting-nodes.dita"/>
-    <topicref href="../topics/crews/crews-elsewhere-in-the-app.dita"/>
-  </topicref>
   <topicref href="../topics/runs-runners/index.dita">
     <topicref href="../topics/runs-runners/the-runs-page.dita"/>
     <topicref href="../topics/runs-runners/runs-with-no-project-workspace-runs.dita"/>

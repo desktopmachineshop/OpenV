@@ -602,9 +602,6 @@ func TestToolsMapAPIErrors(t *testing.T) {
 	client := NewClient(server.URL, "test-token")
 
 	for _, tool := range Tools() {
-		if tool.Name == "delegate_to_agent" {
-			continue // polling tool, covered separately
-		}
 		t.Run(tool.Name, func(t *testing.T) {
 			_, err := tool.Handler(client, genericArgs)
 			if err == nil {
@@ -639,108 +636,6 @@ func TestGetWorkItemHistoryRejectsMalformedObject(t *testing.T) {
 	_, err := toolByName(t, "get_work_item_history").Handler(client, map[string]interface{}{"id": "w1"})
 	if err == nil || !strings.Contains(err.Error(), "unexpected work item response") {
 		t.Fatalf("err = %v, want unexpected-response error", err)
-	}
-}
-
-// --- delegate_to_agent ---
-
-// delegateServer fakes the delegate launch + status endpoints.
-func delegateServer(t *testing.T, statusResponses ...string) *httptest.Server {
-	t.Helper()
-	var mu sync.Mutex
-	poll := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		switch {
-		case r.Method == "POST" && r.URL.Path == "/api/v1/agent-runs/delegate":
-			var body map[string]interface{}
-			_ = json.NewDecoder(r.Body).Decode(&body)
-			if body["role_label"] != "builder" || body["prompt"] != "do it" {
-				t.Errorf("delegate body = %v", body)
-			}
-			_, _ = w.Write([]byte(`{"run_id":"dr1","status":"queued"}`))
-		case r.Method == "GET" && r.URL.Path == "/api/v1/agent-runs/delegate/dr1":
-			mu.Lock()
-			i := poll
-			if poll < len(statusResponses)-1 {
-				poll++
-			}
-			mu.Unlock()
-			_, _ = w.Write([]byte(statusResponses[i]))
-		default:
-			http.NotFound(w, r)
-		}
-	}))
-	t.Cleanup(server.Close)
-	return server
-}
-
-func TestDelegateToAgentSucceeded(t *testing.T) {
-	t.Parallel() // the poll loop sleeps 5s before its first status check
-	server := delegateServer(t, `{"run_id":"dr1","status":"succeeded","final_text":"built it"}`)
-	out, err := toolByName(t, "delegate_to_agent").Handler(NewClient(server.URL, "test-token"),
-		map[string]interface{}{"role_label": "builder", "prompt": "do it"})
-	if err != nil {
-		t.Fatalf("handler error: %v", err)
-	}
-	if out != "built it" {
-		t.Errorf("out = %q, want the delegate's final text", out)
-	}
-}
-
-func TestDelegateToAgentAwaitingApprovalAddsNote(t *testing.T) {
-	t.Parallel()
-	server := delegateServer(t, `{"run_id":"dr1","status":"awaiting_approval","final_text":"proposed changes"}`)
-	out, err := toolByName(t, "delegate_to_agent").Handler(NewClient(server.URL, "test-token"),
-		map[string]interface{}{"role_label": "builder", "prompt": "do it"})
-	if err != nil {
-		t.Fatalf("handler error: %v", err)
-	}
-	if !strings.HasPrefix(out, "proposed changes") || !strings.Contains(out, "awaiting human approval") {
-		t.Errorf("out = %q, want final text plus approval note", out)
-	}
-}
-
-func TestDelegateToAgentFailure(t *testing.T) {
-	t.Parallel()
-	server := delegateServer(t, `{"run_id":"dr1","status":"failed","error":"crashed hard"}`)
-	_, err := toolByName(t, "delegate_to_agent").Handler(NewClient(server.URL, "test-token"),
-		map[string]interface{}{"role_label": "builder", "prompt": "do it"})
-	if err == nil || !strings.Contains(err.Error(), "crashed hard") || !strings.Contains(err.Error(), "failed") {
-		t.Fatalf("err = %v, want failure with detail", err)
-	}
-}
-
-func TestDelegateToAgentPollsThroughRunningStates(t *testing.T) {
-	t.Parallel()
-	server := delegateServer(t,
-		`{"run_id":"dr1","status":"running"}`,
-		`{"run_id":"dr1","status":"succeeded","final_text":"done after wait"}`,
-	)
-	out, err := toolByName(t, "delegate_to_agent").Handler(NewClient(server.URL, "test-token"),
-		map[string]interface{}{"role_label": "builder", "prompt": "do it"})
-	if err != nil {
-		t.Fatalf("handler error: %v", err)
-	}
-	if out != "done after wait" {
-		t.Errorf("out = %q", out)
-	}
-}
-
-func TestDelegateToAgentBadLaunchResponseFailsFast(t *testing.T) {
-	server, _ := captureServer(t, 200, `not json`)
-	client := NewClient(server.URL, "test-token")
-	_, err := toolByName(t, "delegate_to_agent").Handler(client, map[string]interface{}{"role_label": "builder", "prompt": "do it"})
-	if err == nil || !strings.Contains(err.Error(), "unexpected delegate response") {
-		t.Fatalf("err = %v, want unexpected delegate response", err)
-	}
-}
-
-func TestDelegateToAgentLaunchAPIError(t *testing.T) {
-	server, _ := captureServer(t, 500, `{"error":"boom"}`)
-	client := NewClient(server.URL, "test-token")
-	_, err := toolByName(t, "delegate_to_agent").Handler(client, map[string]interface{}{"role_label": "builder", "prompt": "do it"})
-	if err == nil || !strings.Contains(err.Error(), "API 500") {
-		t.Fatalf("err = %v, want API 500", err)
 	}
 }
 

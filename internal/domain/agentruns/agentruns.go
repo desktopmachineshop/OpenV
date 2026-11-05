@@ -145,8 +145,6 @@ type Run struct {
 	ProjectID          *string `json:"project_id,omitempty"`
 	AutomationID       *string `json:"automation_id,omitempty"`
 	TriggerEventID     *string `json:"trigger_event_id,omitempty"`
-	TeamID             *string `json:"team_id,omitempty"`
-	TeamNodeID         *string `json:"team_node_id,omitempty"`
 	ParentRunID        *string `json:"parent_run_id,omitempty"`
 	WorkItemID         *string `json:"work_item_id,omitempty"`
 	InterviewSessionID *string `json:"interview_session_id,omitempty"`
@@ -251,8 +249,6 @@ type LaunchRequest struct {
 	ProjectID          *string
 	AutomationID       *string
 	TriggerEventID     *string
-	TeamID             *string
-	TeamNodeID         *string
 	ParentRunID        *string
 	WorkItemID         *string
 	InterviewSessionID *string
@@ -499,11 +495,6 @@ type Service interface {
 	// its log, whose payload carries the note's marker, message and detail,
 	// sent to the log's subscribers as a worker's batch is.
 	NoteRun(runID, marker, message string, detail map[string]interface{}) error
-	// SuccessorsSkipped records that a finished crew run's agent successors
-	// were not launched because the workspace's budget refused them: a note
-	// on the run and a RunSuccessorsSkipped event, each naming the skipped
-	// successors and the budget.
-	SuccessorsSkipped(run *Run, skipped []Successor, refusal error) error
 	CountRunsSince(automationID string, since time.Time) (int, error)
 	// QueueStats summarizes the org's queued runs.
 	QueueStats(orgID string) (QueueStats, error)

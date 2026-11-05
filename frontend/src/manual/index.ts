@@ -10,7 +10,6 @@ import links from './chapters/links';
 import guidedWizard from './chapters/guidedWizard';
 import board from './chapters/board';
 import agents from './chapters/agents';
-import crews from './chapters/crews';
 import runsRunners from './chapters/runsRunners';
 import automations from './chapters/automations';
 import interviews from './chapters/interviews';
@@ -39,7 +38,6 @@ export const MANUAL_CHAPTERS: ManualChapter[] = [
   { slug: 'guided-wizard', title: 'Guided definition & the V&V Assistant', content: guidedWizard },
   { slug: 'board', title: 'Kanban board', content: board },
   { slug: 'agents', title: 'Agents', content: agents },
-  { slug: 'crews', title: 'Crews', content: crews },
   { slug: 'runs-runners', title: 'Runs & runners', content: runsRunners },
   { slug: 'automations', title: 'Automations', content: automations },
   { slug: 'interviews', title: 'Interviews', content: interviews },

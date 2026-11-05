@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 240; members of exported objects: 318
+exports: 229; members of exported objects: 302
 
 interface AdminUser
 interface AdminWorkspace
@@ -33,12 +33,6 @@ interface ConnectedAppWorkspace
 interface ConnectorPairing
 interface CoverageEntry
 interface CoverageReport
-interface Crew
-interface CrewEdge
-interface CrewGraph
-interface CrewImportResult
-interface CrewNode
-interface CrewTemplate
 const     DEFAULT_MIN_PASSWORD_LENGTH
 interface DefaultWorkspace
 interface DomainEvent
@@ -100,9 +94,6 @@ interface OrgUsageSummary
 interface OrgUsageTotals
 const     PLANS
 interface Party
-interface PortableCrew
-interface PortableCrewEdge
-interface PortableCrewNode
 interface ProductProfile
 interface Project
 interface ProjectExport
@@ -296,24 +287,6 @@ const     connectorAPI
             .downloadAvailable
             .downloadURL
             .startLink
-const     crewTemplatesAPI
-            .list
-const     crewsAPI
-            .addEdge
-            .addNode
-            .clone
-            .create
-            .exportDownload
-            .get
-            .import
-            .launchRun
-            .list
-            .remove
-            .removeEdge
-            .removeNode
-            .update
-            .updateEdge
-            .updateNode
 const     default
 const     defaultWorkspaceAPI
             .get

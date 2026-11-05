@@ -14,7 +14,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
@@ -169,36 +168,6 @@ func (h *Handler) requireUserVisible(w http.ResponseWriter, r *http.Request, use
 			return false
 		}
 		if role != "" {
-			return true
-		}
-	}
-	absent.write(w)
-	return false
-}
-
-// requireTeamVisible reports whether the request may know of the crew: a
-// member of its workspace, its workspace's worker keys, its workspace's runs
-// (of a pinned crew only a run of the pinned project, the one project a run
-// reaches), or a caller who reaches its pinned project. Otherwise it answers
-// absent, as for a crew no row has (I3), and reports false. A crew with no
-// workspace is anyone's to know of.
-func (h *Handler) requireTeamVisible(w http.ResponseWriter, r *http.Request, team *teams.Team, absent notFound) bool {
-	switch run := CurrentRun(r); {
-	case team.OrgID == "":
-		return true
-	case WorkerOrg(r) != "":
-		if WorkerOrg(r) == team.OrgID {
-			return true
-		}
-	case run != nil:
-		if pin := h.teamPin(team); run.OrgID == team.OrgID && (pin == "" || sameProject(run.ProjectID, &pin)) {
-			return true
-		}
-	default:
-		if pin := h.teamPin(team); pin != "" && h.reachesProject(r, pin) {
-			return true
-		}
-		if h.orgAccess(discardResponse{}, r, team.OrgID, orgs.RoleMember, notFound{}, notFound{}) {
 			return true
 		}
 	}
@@ -456,31 +425,6 @@ func (h *Handler) readableRunTree(r *http.Request, tree []*agentruns.Run) []*age
 		}
 	}
 	return kept
-}
-
-// requireTeamWrite enforces crew mutations: project-pinned crews need project
-// editor rights, workspace-wide crews need workspace admin rights. A caller
-// with no access at all gets absent, the answer to an id no row has of the
-// crew, node or edge the handler looked up.
-func (h *Handler) requireTeamWrite(w http.ResponseWriter, r *http.Request, team *teams.Team, absent notFound) bool {
-	if pin := h.teamPin(team); pin != "" {
-		return h.requireProjectRoleFor(w, r, pin, members.RoleEditor, absent)
-	}
-	return h.requireOrgRoleFor(w, r, team.OrgID, orgs.RoleAdmin, absent)
-}
-
-// teamPin is the crew's pinned project while the pin still names a project of
-// the crew's own workspace. A pin to a deleted project, or to another
-// workspace's, counts as no pin, so the crew stays its workspace admins'.
-func (h *Handler) teamPin(team *teams.Team) string {
-	if team.ProjectID == nil || *team.ProjectID == "" {
-		return ""
-	}
-	project, err := h.ProjectService.GetProject(*team.ProjectID)
-	if err != nil || project == nil || (team.OrgID != "" && project.OrgID != team.OrgID) {
-		return ""
-	}
-	return *team.ProjectID
 }
 
 // requireAutomationWrite enforces automation mutations: project-pinned

@@ -18,7 +18,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/projects"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
@@ -48,23 +47,19 @@ func (f *runNowAutomations) Get(id string) (*automations.Automation, error) {
 }
 
 // runNowFixture is workspace org-1, whose admin is "admin", with project
-// proj-1, which "editor" edits; the crews crew-1 (entry node node-entry,
-// agent-entry's) and crew-headless (no entry node); and these automations,
+// proj-1, which "editor" edits; and these automations,
 // each pinned to proj-1 unless named otherwise:
 //   - au-plain: agent-helper's, "Nightly", no template, manual;
 //   - au-template, au-unknown, au-space: agent-helper's, with a template that
 //     uses automation.name and an event variable, one of only unknown
 //     placeholders, and one of unknown placeholders around a space;
-//   - au-crew, au-headless, au-crewless (crew-gone, which no row has),
-//     au-none (no target);
+//   - au-none (no target);
 //   - au-disabled: a disabled scheduled automation;
 //   - au-guarded: a triggered automation that ran a second ago, with a
 //     cooldown of an hour and a cap of one run an hour;
 //   - au-workspace: agent-helper's, for the whole workspace.
 func runNowFixture() (*Handler, *fakeRunService) {
 	project, helper := "proj-1", "agent-helper"
-	crew1, headless, gone := "crew-1", "crew-headless", "crew-gone"
-	entry := "node-entry"
 	justNow := time.Now().Add(-time.Second)
 	next := time.Now().Add(time.Hour)
 	automation := func(id, name string) *automations.Automation {
@@ -90,9 +85,6 @@ func runNowFixture() (*Handler, *fakeRunService) {
 	add(automation("au-space", "Spaced"), func(a *automations.Automation) {
 		a.PromptTemplate = "{{event.type}} {{project.id}}"
 	})
-	add(automation("au-crew", "Crew"), func(a *automations.Automation) { a.AgentID, a.TeamID = nil, &crew1 })
-	add(automation("au-headless", "Headless"), func(a *automations.Automation) { a.AgentID, a.TeamID = nil, &headless })
-	add(automation("au-crewless", "Crewless"), func(a *automations.Automation) { a.AgentID, a.TeamID = nil, &gone })
 	add(automation("au-none", "Nobody"), func(a *automations.Automation) { a.AgentID = nil })
 	add(automation("au-disabled", "Disabled"), func(a *automations.Automation) {
 		a.Kind, a.Enabled, a.CronExpr, a.NextRunAt = automations.KindScheduled, false, "0 9 * * 1", &next
@@ -111,12 +103,7 @@ func runNowFixture() (*Handler, *fakeRunService) {
 		OrgService: &fakeOrgService{roles: map[string]map[string]string{
 			"org-1": {"admin": orgs.RoleAdmin, "editor": orgs.RoleMember},
 		}},
-		MemberService: &fakeMemberService{roles: map[string]map[string]string{project: {"editor": members.RoleEditor}}},
-		TeamService: &fakeCrewGraphs{graphs: map[string]*teams.TeamGraph{
-			crew1: {Team: &teams.Team{ID: crew1, OrgID: "org-1", Name: "Crew", EntryNodeID: &entry},
-				Nodes: []*teams.Node{{ID: entry, TeamID: crew1, NodeType: teams.NodeAgent, AgentID: "agent-entry"}}},
-			headless: {Team: &teams.Team{ID: headless, OrgID: "org-1", Name: "Headless"}},
-		}},
+		MemberService:     &fakeMemberService{roles: map[string]map[string]string{project: {"editor": members.RoleEditor}}},
 		AutomationService: &runNowAutomations{byID: byID},
 		SSEHub:            NewSSEHub(),
 	})
@@ -167,8 +154,7 @@ func runNowLaunchLine(req agentruns.LaunchRequest) string {
 }
 
 // TestRunNowCopy pins the run run-now launches: the automation's workspace
-// and project, its target (ResolveTarget: a crew's entry node's agent, with
-// the crew and node named), the automation, the caller as launcher, no
+// and project, its agent (ResolveTarget), the automation, the caller as launcher, no
 // trigger event and no parent (a person's request); and its prompt, the
 // template rendered with automation.name as its one variable, or "Manual
 // run of automation: <name>" when that renders to the empty string or only
@@ -182,24 +168,22 @@ func runNowLaunchLine(req agentruns.LaunchRequest) string {
 // run service refuses answers 400 with its error.
 func TestRunNowCopy(t *testing.T) {
 	str := func(s string) *string { return &s }
-	run := func(id, agent, prompt string, project, team, node *string, launcher string) string {
+	run := func(id, agent, prompt string, project *string, launcher string) string {
 		return runNowLaunchLine(agentruns.LaunchRequest{OrgID: "org-1", AgentID: agent, ProjectID: project,
-			AutomationID: str(id), TeamID: team, TeamNodeID: node, Prompt: prompt, LaunchedBy: str(launcher)})
+			AutomationID: str(id), Prompt: prompt, LaunchedBy: str(launcher)})
 	}
 	p := str("proj-1")
 	cases := []struct {
 		id, user string
 		launch   string
 	}{
-		{"au-plain", "editor", run("au-plain", "agent-helper", "Manual run of automation: Nightly", p, nil, nil, "editor")},
-		{"au-template", "editor", run("au-template", "agent-helper", "Run Templated on ", p, nil, nil, "editor")},
-		{"au-unknown", "editor", run("au-unknown", "agent-helper", "Manual run of automation: Unknown", p, nil, nil, "editor")},
-		{"au-space", "editor", run("au-space", "agent-helper", "Manual run of automation: Spaced", p, nil, nil, "editor")},
-		{"au-crew", "editor", run("au-crew", "agent-entry", "Manual run of automation: Crew", p, str("crew-1"),
-			str("node-entry"), "editor")},
-		{"au-disabled", "editor", run("au-disabled", "agent-helper", "Manual run of automation: Disabled", p, nil, nil, "editor")},
-		{"au-guarded", "editor", run("au-guarded", "agent-helper", "Manual run of automation: Guarded", p, nil, nil, "editor")},
-		{"au-workspace", "admin", run("au-workspace", "agent-helper", "Manual run of automation: Workspace", nil, nil, nil, "admin")},
+		{"au-plain", "editor", run("au-plain", "agent-helper", "Manual run of automation: Nightly", p, "editor")},
+		{"au-template", "editor", run("au-template", "agent-helper", "Run Templated on ", p, "editor")},
+		{"au-unknown", "editor", run("au-unknown", "agent-helper", "Manual run of automation: Unknown", p, "editor")},
+		{"au-space", "editor", run("au-space", "agent-helper", "Manual run of automation: Spaced", p, "editor")},
+		{"au-disabled", "editor", run("au-disabled", "agent-helper", "Manual run of automation: Disabled", p, "editor")},
+		{"au-guarded", "editor", run("au-guarded", "agent-helper", "Manual run of automation: Guarded", p, "editor")},
+		{"au-workspace", "admin", run("au-workspace", "agent-helper", "Manual run of automation: Workspace", nil, "admin")},
 	}
 	for _, tc := range cases {
 		t.Run(tc.id, func(t *testing.T) {
@@ -223,9 +207,7 @@ func TestRunNowCopy(t *testing.T) {
 		body      string
 		launches  int
 	}{
-		{name: "a crew with no entry node", id: "au-headless", body: `{"error":"team has no entry node"}`},
-		{name: "a crew no row has", id: "au-crewless", body: `{"error":"team not found"}`},
-		{name: "no target", id: "au-none", body: `{"error":"automation has neither agent nor team target"}`},
+		{name: "no target", id: "au-none", body: `{"error":"automation has no agent target"}`},
 		{name: "a launch refused", id: "au-plain", launchErr: errors.New("this workspace has reached its monthly budget"),
 			body: `{"error":"this workspace has reached its monthly budget"}`, launches: 1},
 	}

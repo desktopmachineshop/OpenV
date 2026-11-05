@@ -17,9 +17,6 @@ DELETE /api/v1/attachments/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/attribute-definitions/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/automations/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/baselines/{id}: 401, 404; phantom_matrix (errors only)
-DELETE /api/v1/crew-edges/{id}: 401, 404; phantom_matrix (errors only)
-DELETE /api/v1/crew-nodes/{id}: 401, 404; phantom_matrix (errors only)
-DELETE /api/v1/crews/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/evidence-bundles/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/evidence-files/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/links/{id}: 401, 404; phantom_matrix (errors only)
@@ -47,9 +44,6 @@ DELETE /api/v1/repo-connections/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/share-links/{id}: 204, 401, 404; over_plan_tiers_on, phantom_matrix
 DELETE /api/v1/shared-products/{id}: 401, 403, 404; phantom_matrix (errors only)
 DELETE /api/v1/shared-products/{id}/vote: 401, 403, 404; phantom_matrix (errors only)
-DELETE /api/v1/team-edges/{id}: 401, 404; phantom_matrix (errors only)
-DELETE /api/v1/team-nodes/{id}: 401, 404; phantom_matrix (errors only)
-DELETE /api/v1/teams/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/test-runs/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/work-items/{id}: 401, 404; phantom_matrix (errors only)
@@ -62,7 +56,6 @@ GET /api/v1/admin/metrics/visitors: 200, 401, 403; phantom_matrix
 GET /api/v1/admin/users: 200, 401, 403; phantom_matrix
 GET /api/v1/admin/workspaces: 200, 401, 403; phantom_matrix
 GET /api/v1/agent-runs: 200, 401, 404; phantom_matrix, real_id_reads
-GET /api/v1/agent-runs/delegate/{id}: 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 GET /api/v1/agent-runs/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/agent-runs/{id}/logs: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/agent-runs/{id}/stream: 200, 401, 404; phantom_matrix, real_id_reads
@@ -93,10 +86,6 @@ GET /api/v1/automations/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/baselines/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/baselines/{id}/diff: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/chatter: 200, 400, 401, 404; phantom_matrix, real_id_reads
-GET /api/v1/crew-templates: 200, 401; phantom_matrix
-GET /api/v1/crews: 200, 401; phantom_matrix, real_id_reads
-GET /api/v1/crews/{id}: 200, 401, 404; phantom_matrix, real_id_reads
-GET /api/v1/crews/{id}/export: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/events: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/evidence-bundles/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/evidence-files/{id}/download: 200, 401, 404; phantom_matrix, real_id_reads
@@ -201,9 +190,6 @@ GET /api/v1/public/share/{token}/preview.png: 200, 404; phantom_matrix, real_id_
 GET /api/v1/release: 200, 401; phantom_matrix
 GET /api/v1/search: 200, 401; phantom_matrix, real_id_reads
 GET /api/v1/shared-products: 200, 401; phantom_matrix
-GET /api/v1/teams: 200, 401; phantom_matrix, real_id_reads
-GET /api/v1/teams/{id}: 200, 401, 404; phantom_matrix, real_id_reads
-GET /api/v1/teams/{id}/export: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/templates: 200, 401; phantom_matrix
 GET /api/v1/test-results/{id}/citations: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/test-runs/{id}: 200, 401, 404; phantom_matrix, real_id_reads
@@ -218,7 +204,6 @@ GET /oauth/authorize: 400; phantom_matrix (errors only)
 HEAD /api/v1/public/connector/download: 404; phantom_matrix (errors only)
 POST /api/v1/admin/users/{id}/password-reset: 401, 403, 404; phantom_matrix (errors only)
 POST /api/v1/agent-runs/claim: 200, 204, 400, 401, 403; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix
-POST /api/v1/agent-runs/delegate: 400, 401, 403; phantom_matrix (errors only)
 POST /api/v1/agent-runs/{id}/cancel: 200, 401, 404; over_plan_tiers_on, phantom_matrix
 POST /api/v1/agent-runs/{id}/finish: 401, 403, 404; phantom_matrix (errors only)
 POST /api/v1/agent-runs/{id}/logs: 200, 401, 403, 404; over_plan_tiers_on, phantom_matrix
@@ -250,12 +235,6 @@ POST /api/v1/auth/verify-email/resend: 400, 401; phantom_matrix (errors only)
 POST /api/v1/automations: 400, 401, 403, 404; over_plan_tiers_on, phantom_matrix (errors only)
 POST /api/v1/automations/{id}/run-now: 201, 401, 403, 404; phantom_matrix, real_id_reads
 POST /api/v1/chatter: 400, 401, 403, 404; over_plan_tiers_on, phantom_matrix (errors only)
-POST /api/v1/crews: 400, 401; phantom_matrix (errors only)
-POST /api/v1/crews/import: 400, 401, 403; over_plan_tiers_on, phantom_matrix (errors only)
-POST /api/v1/crews/{id}/clone: 401, 404; phantom_matrix (errors only)
-POST /api/v1/crews/{id}/edges: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
-POST /api/v1/crews/{id}/nodes: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
-POST /api/v1/crews/{id}/runs: 201, 401, 403, 404; phantom_matrix, real_id_reads
 POST /api/v1/evidence-bundles/{id}/files: 401, 404; phantom_matrix (errors only)
 POST /api/v1/guided-sessions: 400, 401, 404; phantom_matrix (errors only)
 POST /api/v1/guided-sessions/{id}/abandon: 401, 404; phantom_matrix (errors only)
@@ -327,12 +306,6 @@ POST /api/v1/runner-pool/nodes/{id}/heartbeat: 401, 403; phantom_matrix (errors 
 POST /api/v1/runner-pool/nodes/{id}/release: 401, 403; phantom_matrix (errors only)
 POST /api/v1/shared-products: 400, 401, 403; over_plan_tiers_on, phantom_matrix (errors only)
 POST /api/v1/shared-products/{id}/report: 401, 403, 404; phantom_matrix (errors only)
-POST /api/v1/teams: 400, 401; phantom_matrix (errors only)
-POST /api/v1/teams/import: 400, 401, 403; phantom_matrix (errors only)
-POST /api/v1/teams/{id}/clone: 401, 404; phantom_matrix (errors only)
-POST /api/v1/teams/{id}/edges: 401, 404; phantom_matrix (errors only)
-POST /api/v1/teams/{id}/nodes: 401, 404; phantom_matrix (errors only)
-POST /api/v1/teams/{id}/runs: 401, 404; phantom_matrix (errors only)
 POST /api/v1/templates: 400, 401, 404; phantom_matrix (errors only)
 POST /api/v1/templates/{id}/projects: 201, 400, 401, 403, 404; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix, real_id_reads
 POST /api/v1/test-results/{id}/citations: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
@@ -352,9 +325,6 @@ PUT /api/v1/artifacts/{id}/status: 400, 401, 404; phantom_matrix, real_id_reads 
 PUT /api/v1/attachments/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/attribute-definitions/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/automations/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
-PUT /api/v1/crew-edges/{id}: 401, 404; phantom_matrix (errors only)
-PUT /api/v1/crew-nodes/{id}: 401, 404; phantom_matrix (errors only)
-PUT /api/v1/crews/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/evidence-bundles/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/guided-sessions/{id}/step: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/interviews/{id}/persona: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
@@ -385,10 +355,7 @@ PUT /api/v1/provider-settings: 400, 401, 403; phantom_matrix (errors only)
 PUT /api/v1/repo-connections/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/repo-connections/{id}/my-path: 401, 403, 404; over_plan_tiers_on, phantom_matrix (errors only)
 PUT /api/v1/shared-products/{id}/vote: 401, 403, 404; phantom_matrix (errors only)
-PUT /api/v1/team-edges/{id}: 401, 404; phantom_matrix (errors only)
-PUT /api/v1/team-nodes/{id}: 401, 404; phantom_matrix (errors only)
-PUT /api/v1/teams/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 
-s5e: 378 of 379 routes reached (99.7%), 172 with a 2xx or 3xx answer (45.4%)
+s5e: 345 of 346 routes reached (99.7%), 164 with a 2xx or 3xx answer (47.4%)

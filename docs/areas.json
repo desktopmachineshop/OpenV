@@ -24,13 +24,13 @@
     },
     {
       "term": "crew",
-      "aka": ["team (code)", "internal/domain/teams", "TeamRepository", "agent_teams tables", "/api/v1/crews", "/api/v1/teams (deprecated, still served)", "CrewBuilder"],
-      "meaning": "A named graph of agents and people with delegates-to, hands-off-to and reviews edges, used for delegation. The Go package and tables still say team. Area agent-suite."
+      "aka": ["team (code)", "agent_teams tables", "team_id", "team_node_id", "assignee_type team"],
+      "meaning": "Removed (issue 732): a crew was a graph of agents and people with hand-offs and delegation. The Crew Builder, /api/v1/crews, /api/v1/teams and internal/domain/teams are gone; an agent run is a single run and automations target agents only. The agent_teams tables and the team_id columns remain in the database, unread, until a later migration drops them; a team_id there is a crew's, never a people-team's. Agents are arranged instead by reports_to and group (the agent hierarchy)."
     },
     {
       "term": "people-team",
       "aka": ["OrgTeam", "internal/domain/orgs/teams.go", "/api/v1/orgs/{id}/teams", "/api/v1/org-teams", "team access", "OrgTeamsTab"],
-      "meaning": "A named group of people in a workspace, used to grant project access. Unrelated to crews despite the shared word team. Area tenancy-identity."
+      "meaning": "A named group of people in a workspace, used to grant project access. Unrelated to the removed crews despite the shared word team. Area tenancy-identity."
     },
     {
       "term": "runner",
@@ -335,7 +335,7 @@
     },
     {
       "name": "agent-suite",
-      "description": "The AI agents and what they do: agent definitions, runs and their orchestration, crews and crew templates, automations (scheduled and triggered), proposals, AI providers and their sign-ins, repository connections, the guided wizard with its copilot, stakeholder interviews, the AI map, the seeded default agents, and the core of the MCP server with its guide (internal/mcp/CLAUDE.md).",
+      "description": "The AI agents and what they do: agent definitions, runs and their orchestration, automations (scheduled and triggered), proposals, AI providers and their sign-ins, repository connections, the guided wizard with its copilot, stakeholder interviews, the AI map, the seeded default agents, and the core of the MCP server with its guide (internal/mcp/CLAUDE.md).",
       "globs": [
         "cmd/openv-mcp/**",
         "cmd/server/wire_agents.go",
@@ -348,12 +348,10 @@
         "frontend/src/components/ChatMarkdown*",
         "frontend/src/components/ConnectedApps*",
         "frontend/src/components/agents/**",
-        "frontend/src/components/crews/**",
         "frontend/src/components/org/OrgProviders*",
         "frontend/src/components/wizard/**",
         "frontend/src/views/Agent*",
         "frontend/src/views/AutomationsPage*",
-        "frontend/src/views/CrewBuilder*",
         "frontend/src/views/GuidedWizard*",
         "frontend/src/views/Interview*",
         "frontend/src/views/OAuthConsent*",
@@ -363,7 +361,6 @@
         "internal/api/ai_map*.go",
         "internal/api/automation_*.go",
         "internal/api/connected_app_*.go",
-        "internal/api/crew_*.go",
         "internal/api/guided_*.go",
         "internal/api/interview_*.go",
         "internal/api/mcp_*.go",
@@ -377,13 +374,11 @@
         "internal/domain/agents/**",
         "internal/domain/automations/**",
         "internal/domain/connectedapps/**",
-        "internal/domain/crewtemplates/**",
         "internal/domain/guided/**",
         "internal/domain/interviews/**",
         "internal/domain/proposals/**",
         "internal/domain/providers/**",
         "internal/domain/repoconns/**",
-        "internal/domain/teams/**",
         "internal/mcp/*.md",
         "internal/mcp/client*.go",
         "internal/mcp/context_bundle*.go",
@@ -393,7 +388,6 @@
         "internal/mcp/testdata/**",
         "internal/mcp/toolnames/**",
         "internal/mcp/tools.go",
-        "internal/mcp/tools_delegation*.go",
         "internal/mcp/tools_interviews*.go",
         "internal/orchestration/**",
         "internal/persistence/postgres/agent_*.go",
@@ -404,7 +398,6 @@
         "internal/persistence/postgres/proposal_*.go",
         "internal/persistence/postgres/provider_*.go",
         "internal/persistence/postgres/repo_connection_*.go",
-        "internal/persistence/postgres/team_*.go",
         "internal/scheduler/**",
         "internal/seeds/seeds*.go"
       ]

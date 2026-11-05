@@ -134,8 +134,8 @@ access as a unit (Project Settings → Access → team access), with a role per
 grant. Admins create teams, add/remove members, rename, and delete them —
 deleting a team also removes its project access grants.
 
-> Not to be confused with **Crews**, which are graphs of AI agents (and
-> people) that execute work — see the *Crews* chapter.
+> Teams are groups of people. They have nothing to do with agents, which
+> are arranged on the *Agents* page.
 
 ## AI Providers (admin only)
 

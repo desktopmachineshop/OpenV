@@ -267,7 +267,7 @@ export interface WorkItem {
   description: string;
   column: string;
   sort_order: number;
-  assignee_type: 'user' | 'agent' | 'team';
+  assignee_type: 'user' | 'agent';
   assignee_id?: string | null;
   agent_run_id?: string | null;
   artifact_ids: string[];

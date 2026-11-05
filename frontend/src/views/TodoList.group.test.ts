@@ -52,12 +52,12 @@ describe('groupByAssignee', () => {
     expect(groupNamed(groups, 'Priya')!.items).toHaveLength(0);
   });
 
-  it('separates unassigned work from agents and teams', () => {
+  it('separates unassigned work from agents', () => {
     const groups = groupByAssignee(
       [
         item({ id: 'a', assignee_id: null }),
         item({ id: 'b', assignee_type: 'agent', assignee_id: 'agent-1' }),
-        item({ id: 'c', assignee_type: 'team', assignee_id: 'team-1' }),
+        item({ id: 'c', assignee_type: 'agent', assignee_id: 'agent-2' }),
       ],
       []
     );

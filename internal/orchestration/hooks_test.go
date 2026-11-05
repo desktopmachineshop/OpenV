@@ -12,7 +12,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 	"github.com/openv/requirements-platform/internal/domain/projects"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 )
 
@@ -28,29 +27,6 @@ type fakeRunService struct {
 	listErr   error
 	listCalls int
 	attached  map[string]string // runID -> workItemID
-	notes     []noteCall
-	skips     []skipCall
-}
-
-type noteCall struct {
-	runID, marker, message string
-	detail                 map[string]interface{}
-}
-
-type skipCall struct {
-	runID   string
-	skipped []agentruns.Successor
-	refusal error
-}
-
-func (f *fakeRunService) NoteRun(runID, marker, message string, detail map[string]interface{}) error {
-	f.notes = append(f.notes, noteCall{runID: runID, marker: marker, message: message, detail: detail})
-	return nil
-}
-
-func (f *fakeRunService) SuccessorsSkipped(run *agentruns.Run, skipped []agentruns.Successor, refusal error) error {
-	f.skips = append(f.skips, skipCall{runID: run.ID, skipped: skipped, refusal: refusal})
-	return nil
 }
 
 func (f *fakeRunService) Launch(req agentruns.LaunchRequest) (*agentruns.Run, string, error) {
@@ -140,28 +116,6 @@ func (f *fakeWorkItemService) Move(id string, req workitems.MoveRequest, actor s
 func (f *fakeWorkItemService) RecordRunActivity(workItemID, kind, content, actor string, payload map[string]interface{}) error {
 	f.activities = append(f.activities, activityCall{workItemID: workItemID, kind: kind, content: content, actor: actor, payload: payload})
 	return nil
-}
-
-type fakeTeamService struct {
-	teams.Service
-	edges    map[string][]*teams.Edge // "<nodeID>|<edgeType>"
-	edgesErr error
-	graph    *teams.TeamGraph
-	graphErr error
-}
-
-func (f *fakeTeamService) SuccessorEdges(nodeID string, edgeType string) ([]*teams.Edge, error) {
-	if f.edgesErr != nil {
-		return nil, f.edgesErr
-	}
-	return f.edges[nodeID+"|"+edgeType], nil
-}
-
-func (f *fakeTeamService) GetTeam(id string) (*teams.TeamGraph, error) {
-	if f.graphErr != nil {
-		return nil, f.graphErr
-	}
-	return f.graph, nil
 }
 
 type appendCall struct {
@@ -284,43 +238,24 @@ func (f *fakeBroadcaster) BroadcastSession(key string, event string, data interf
 type fixture struct {
 	hooks       *Hooks
 	runs        *fakeRunService
-	teams       *fakeTeamService
 	workItems   *fakeWorkItemService
 	interviews  *fakeInterviewService
 	guided      *fakeGuidedService
 	projects    *fakeProjectService
 	broadcaster *fakeBroadcaster
-	// reaches holds what the ProjectReach answers for "<project>|<user>";
-	// anyone else has no role in the project. reachErr fails every check.
-	reaches  map[string]Reach
-	reachErr error
 }
 
 func newFixture() *fixture {
 	f := &fixture{
 		runs:        &fakeRunService{},
-		teams:       &fakeTeamService{},
 		workItems:   &fakeWorkItemService{items: map[string]*workitems.WorkItem{}},
 		interviews:  &fakeInterviewService{},
 		guided:      &fakeGuidedService{},
 		projects:    &fakeProjectService{projects: map[string]*projects.Project{}},
 		broadcaster: &fakeBroadcaster{},
-		// user-7, the human node of the hand-off tests, has a role in p1,
-		// the project of teamRun.
-		reaches: map[string]Reach{"p1|user-7": ReachAllowed},
 	}
-	f.hooks = NewHooks(f.runs, f.teams, f.workItems, f.interviews, f.guided, f.projects, f.broadcaster, f.reach)
+	f.hooks = NewHooks(f.runs, f.workItems, f.interviews, f.guided, f.projects, f.broadcaster)
 	return f
-}
-
-func (f *fixture) reach(projectID, userID string) (Reach, error) {
-	if f.reachErr != nil {
-		return ReachNoRole, f.reachErr
-	}
-	if reach, ok := f.reaches[projectID+"|"+userID]; ok {
-		return reach, nil
-	}
-	return ReachNoRole, nil
 }
 
 func strptr(s string) *string { return &s }
@@ -484,106 +419,25 @@ func TestCardCreateFailureSkipsAttach(t *testing.T) {
 	}
 }
 
-// --- Successor / handoff launches ---
+// --- A finished run is a single run ---
 
-func agentNode(id, agentID, label string) *teams.Node {
-	return &teams.Node{ID: id, NodeType: teams.NodeAgent, AgentID: agentID, Label: label}
-}
-
-func humanNode(id, userID, label string) *teams.Node {
-	n := &teams.Node{ID: id, NodeType: teams.NodeHuman, Label: label}
-	if userID != "" {
-		n.UserID = &userID
-	}
-	return n
-}
-
-func teamRun(status string) *agentruns.Run {
-	return &agentruns.Run{
-		ID:         "r1",
-		OrgID:      "org-1",
-		AgentName:  "Planner",
-		Status:     status,
-		TeamID:     strptr("t1"),
-		TeamNodeID: strptr("n1"),
-		ProjectID:  strptr("p1"),
-		WorkItemID: strptr("wi-1"),
-		FinalText:  "the plan is done",
-	}
-}
-
-func TestSucceededRunLaunchesHandsOffAndReviewSuccessors(t *testing.T) {
-	f := newFixture()
-	f.teams.graph = &teams.TeamGraph{Nodes: []*teams.Node{
-		agentNode("n1", "agent-1", "Planner"),
-		agentNode("n2", "agent-2", "Builder"),
-		agentNode("n3", "agent-3", "Reviewer"),
-	}}
-	f.teams.edges = map[string][]*teams.Edge{
-		"n1|" + teams.EdgeHandsOff: {{ID: "e1", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n2", EdgeType: teams.EdgeHandsOff, Config: map[string]interface{}{}}},
-		"n1|" + teams.EdgeReviews:  {{ID: "e2", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n3", EdgeType: teams.EdgeReviews, Config: map[string]interface{}{}}},
-	}
-
-	f.hooks.RunStatusChanged(teamRun(agentruns.StatusSucceeded))
-
-	if len(f.runs.launches) != 2 {
-		t.Fatalf("launches = %d, want 2 (hands-off + review)", len(f.runs.launches))
-	}
-
-	handoff := f.runs.launches[0]
-	if handoff.AgentID != "agent-2" {
-		t.Errorf("hands-off target agent = %q, want agent-2", handoff.AgentID)
-	}
-	if handoff.OrgID != "org-1" {
-		t.Errorf("successor OrgID = %q, want the parent run's org", handoff.OrgID)
-	}
-	if handoff.ParentRunID == nil || *handoff.ParentRunID != "r1" {
-		t.Errorf("ParentRunID = %v, want r1", handoff.ParentRunID)
-	}
-	if handoff.TeamNodeID == nil || *handoff.TeamNodeID != "n2" {
-		t.Errorf("TeamNodeID = %v, want n2", handoff.TeamNodeID)
-	}
-	if handoff.Priority != agentruns.PriorityChild {
-		t.Errorf("Priority = %d, want PriorityChild", handoff.Priority)
-	}
-	if handoff.WorkItemID == nil || *handoff.WorkItemID != "wi-1" {
-		t.Errorf("WorkItemID = %v, want carried over", handoff.WorkItemID)
-	}
-	if !strings.Contains(handoff.Prompt, "the plan is done") || !strings.Contains(handoff.Prompt, "r1") {
-		t.Errorf("hands-off prompt missing output or run id: %q", handoff.Prompt)
-	}
-	if !strings.Contains(handoff.Prompt, "teammate finished") {
-		t.Errorf("hands-off prompt should use the continuation wording: %q", handoff.Prompt)
-	}
-
-	review := f.runs.launches[1]
-	if review.AgentID != "agent-3" {
-		t.Errorf("review target agent = %q, want agent-3", review.AgentID)
-	}
-	if !strings.Contains(review.Prompt, "reviewing the output") {
-		t.Errorf("review prompt should use the review wording: %q", review.Prompt)
-	}
-}
-
-// TestAwaitingApprovalHoldsSuccessors locks in the approval gate: a run whose
-// writes are still pending review must NOT launch crew successors/handoffs —
-// a teammate would otherwise build on writes that may yet be rejected. The
-// successors fire later, when the resolved run transitions to succeeded.
-func TestAwaitingApprovalHoldsSuccessors(t *testing.T) {
-	f := newFixture()
-	f.teams.graph = &teams.TeamGraph{Nodes: []*teams.Node{agentNode("n1", "agent-1", "Planner"), agentNode("n2", "agent-2", "Builder")}}
-	f.teams.edges = map[string][]*teams.Edge{
-		"n1|" + teams.EdgeHandsOff: {{ID: "e1", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n2", EdgeType: teams.EdgeHandsOff, Config: map[string]interface{}{}}},
-	}
-	f.hooks.RunStatusChanged(teamRun(agentruns.StatusAwaitingApproval))
-	if len(f.runs.launches) != 0 {
-		t.Fatalf("launches = %d, want 0 while proposals are unapproved", len(f.runs.launches))
-	}
-
-	// Once approval resolves the run to succeeded, the successor launches.
-	f.hooks.RunStatusChanged(teamRun(agentruns.StatusSucceeded))
-	if len(f.runs.launches) != 1 {
-		t.Fatalf("launches after approval = %d, want 1", len(f.runs.launches))
+// TestAFinishedRunLaunchesNoFollowUp: an agent run is a single run. Crews,
+// whose successors and hand-offs once followed a run that finished, are gone
+// (issue 732), so a finished run, whatever its status and even one an older
+// install recorded as a crew's, launches no other run and makes no card but
+// its own tracking card's move.
+func TestAFinishedRunLaunchesNoFollowUp(t *testing.T) {
+	for _, status := range []string{agentruns.StatusSucceeded, agentruns.StatusAwaitingApproval, agentruns.StatusFailed,
+		agentruns.StatusTimedOut, agentruns.StatusCancelled} {
+		f := newFixture()
+		f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", OrgID: "org-1", AgentName: "Planner", Status: status,
+			ProjectID: strptr("p1"), WorkItemID: strptr("wi-1"), FinalText: "the plan is done"})
+		if len(f.runs.launches) != 0 || len(f.workItems.creates) != 0 {
+			t.Errorf("%s: launches %d, cards made %d; want none", status, len(f.runs.launches), len(f.workItems.creates))
+		}
+		if len(f.workItems.moves) != 1 {
+			t.Errorf("%s: moves %+v, want the run's own card moved", status, f.workItems.moves)
+		}
 	}
 }
 
@@ -596,306 +450,6 @@ func TestAwaitingApprovalStillDeliversConversationalReply(t *testing.T) {
 	f.hooks.RunStatusChanged(run)
 	if len(f.guided.appends) != 1 || f.guided.appends[0].content != "here is the draft" {
 		t.Fatalf("guided reply not delivered on awaiting_approval: %+v", f.guided.appends)
-	}
-}
-
-func TestFailedRunLaunchesNoSuccessors(t *testing.T) {
-	f := newFixture()
-	f.teams.graph = &teams.TeamGraph{Nodes: []*teams.Node{agentNode("n1", "agent-1", "Planner"), agentNode("n2", "agent-2", "Builder")}}
-	f.teams.edges = map[string][]*teams.Edge{
-		"n1|" + teams.EdgeHandsOff: {{ID: "e1", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n2", EdgeType: teams.EdgeHandsOff, Config: map[string]interface{}{}}},
-	}
-	for _, status := range []string{agentruns.StatusFailed, agentruns.StatusTimedOut, agentruns.StatusCancelled} {
-		f.hooks.RunStatusChanged(teamRun(status))
-	}
-	if len(f.runs.launches) != 0 {
-		t.Fatalf("launches = %d, want 0 for failed/timed-out/cancelled runs", len(f.runs.launches))
-	}
-}
-
-func TestRunWithoutTeamNodeLaunchesNothing(t *testing.T) {
-	f := newFixture()
-	run := teamRun(agentruns.StatusSucceeded)
-	run.TeamNodeID = nil
-	f.hooks.RunStatusChanged(run)
-	if len(f.runs.launches) != 0 {
-		t.Fatalf("launches = %d, want 0 without a team node", len(f.runs.launches))
-	}
-}
-
-func TestSuccessorPromptTemplateOverridesDefault(t *testing.T) {
-	f := newFixture()
-	f.teams.graph = &teams.TeamGraph{Nodes: []*teams.Node{agentNode("n1", "agent-1", "Planner"), agentNode("n2", "agent-2", "Builder")}}
-	f.teams.edges = map[string][]*teams.Edge{
-		"n1|" + teams.EdgeHandsOff: {{
-			ID: "e1", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n2", EdgeType: teams.EdgeHandsOff,
-			Config: map[string]interface{}{"prompt_template": "Ship {{handoff.output}} from {{handoff.run_id}}"},
-		}},
-	}
-	f.hooks.RunStatusChanged(teamRun(agentruns.StatusSucceeded))
-	if len(f.runs.launches) != 1 {
-		t.Fatalf("launches = %d, want 1", len(f.runs.launches))
-	}
-	if got := f.runs.launches[0].Prompt; got != "Ship the plan is done from r1" {
-		t.Errorf("templated prompt = %q", got)
-	}
-}
-
-func TestSuccessorEdgeToMissingNodeIsSkipped(t *testing.T) {
-	f := newFixture()
-	f.teams.graph = &teams.TeamGraph{Nodes: []*teams.Node{agentNode("n1", "agent-1", "Planner")}}
-	f.teams.edges = map[string][]*teams.Edge{
-		"n1|" + teams.EdgeHandsOff: {{ID: "e1", TeamID: "t1", FromNodeID: "n1", ToNodeID: "gone", EdgeType: teams.EdgeHandsOff, Config: map[string]interface{}{}}},
-	}
-	f.hooks.RunStatusChanged(teamRun(agentruns.StatusSucceeded))
-	if len(f.runs.launches) != 0 {
-		t.Fatalf("launches = %d, want 0 when the target node is gone", len(f.runs.launches))
-	}
-}
-
-// --- Human handoff cards ---
-
-func TestHandoffToHumanCreatesCardInsteadOfRun(t *testing.T) {
-	f := newFixture()
-	f.teams.graph = &teams.TeamGraph{Nodes: []*teams.Node{
-		agentNode("n1", "agent-1", "Planner"),
-		humanNode("n2", "user-7", "Dana"),
-	}}
-	f.teams.edges = map[string][]*teams.Edge{
-		"n1|" + teams.EdgeHandsOff: {{ID: "e1", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n2", EdgeType: teams.EdgeHandsOff, Config: map[string]interface{}{}}},
-	}
-
-	f.hooks.RunStatusChanged(teamRun(agentruns.StatusSucceeded))
-
-	if len(f.runs.launches) != 0 {
-		t.Fatalf("human targets must never get agent runs, got %d launches", len(f.runs.launches))
-	}
-	if len(f.workItems.creates) != 1 {
-		t.Fatalf("creates = %d, want 1 handoff card", len(f.workItems.creates))
-	}
-	c := f.workItems.creates[0]
-	if c.req.Title != "Handoff from Planner" {
-		t.Errorf("title = %q, want 'Handoff from Planner' (source node label)", c.req.Title)
-	}
-	if c.req.ProjectID != "p1" || c.req.Column != workitems.ColumnTodo {
-		t.Errorf("card = %+v, want p1/todo", c.req)
-	}
-	if c.req.AssigneeType != workitems.AssigneeUser || c.req.AssigneeID == nil || *c.req.AssigneeID != "user-7" {
-		t.Errorf("assignee = %s/%v, want user/user-7", c.req.AssigneeType, c.req.AssigneeID)
-	}
-	if !strings.Contains(c.req.Description, "the plan is done") || !strings.Contains(c.req.Description, "(from agent run r1)") {
-		t.Errorf("description = %q, want run output plus provenance", c.req.Description)
-	}
-	// The source run's own card gets a finished note pointing at the new card
-	// (alongside the regular status-sync activity).
-	var handoffNotes []activityCall
-	for _, act := range f.workItems.activities {
-		if act.payload["work_item_id"] != nil {
-			handoffNotes = append(handoffNotes, act)
-		}
-	}
-	if len(handoffNotes) != 1 {
-		t.Fatalf("handoff notes = %d, want 1; all activities: %+v", len(handoffNotes), f.workItems.activities)
-	}
-	act := handoffNotes[0]
-	if act.workItemID != "wi-1" || act.kind != workitems.KindRunFinished || !strings.Contains(act.content, "Dana") {
-		t.Errorf("activity = %+v, want run-finished 'Handed off to Dana' on wi-1", act)
-	}
-	if act.payload["work_item_id"] != "created-1" {
-		t.Errorf("activity payload should link the handoff card: %+v", act.payload)
-	}
-}
-
-func TestReviewHandoffToHumanTitlesAsReviewRequest(t *testing.T) {
-	f := newFixture()
-	f.teams.graph = &teams.TeamGraph{Nodes: []*teams.Node{
-		agentNode("n1", "agent-1", "Planner"),
-		humanNode("n2", "user-7", "Dana"),
-	}}
-	f.teams.edges = map[string][]*teams.Edge{
-		"n1|" + teams.EdgeReviews: {{ID: "e1", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n2", EdgeType: teams.EdgeReviews, Config: map[string]interface{}{}}},
-	}
-	f.hooks.RunStatusChanged(teamRun(agentruns.StatusSucceeded))
-	if len(f.workItems.creates) != 1 || f.workItems.creates[0].req.Title != "Review request: Planner" {
-		t.Fatalf("creates = %+v, want one 'Review request: Planner' card", f.workItems.creates)
-	}
-}
-
-func TestHandoffToHumanSkippedWithoutProjectOrUser(t *testing.T) {
-	cases := []struct {
-		name   string
-		mutate func(*fixture, *agentruns.Run)
-	}{
-		{"run without project", func(f *fixture, r *agentruns.Run) { r.ProjectID = nil }},
-		{"human node without user", func(f *fixture, r *agentruns.Run) {
-			f.teams.graph.Nodes[1] = humanNode("n2", "", "Dana")
-		}},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			f := newFixture()
-			f.teams.graph = &teams.TeamGraph{Nodes: []*teams.Node{
-				agentNode("n1", "agent-1", "Planner"),
-				humanNode("n2", "user-7", "Dana"),
-			}}
-			f.teams.edges = map[string][]*teams.Edge{
-				"n1|" + teams.EdgeHandsOff: {{ID: "e1", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n2", EdgeType: teams.EdgeHandsOff, Config: map[string]interface{}{}}},
-			}
-			run := teamRun(agentruns.StatusSucceeded)
-			tc.mutate(f, run)
-			f.hooks.RunStatusChanged(run)
-			if len(f.workItems.creates) != 0 || len(f.runs.launches) != 0 {
-				t.Errorf("nothing should happen: creates=%+v launches=%+v", f.workItems.creates, f.runs.launches)
-			}
-		})
-	}
-}
-
-// TestHandoffToAPersonWhoCannotOpenTheProjectIsRefused: a crew's hand-off
-// card goes only to someone the ProjectReach allows (OpenV REQ-23, REQ-81).
-// A person with no role there gets no card, and the reason is kept on the
-// run, as a note at the end of its log, and on the run's card, where a
-// hand-off made is recorded; nothing grants the person access. The reason
-// names the rule that refused: a former member of the workspace is told
-// apart from a member with no role, since a role in the project would not
-// let them in. An access that cannot be checked, or an answer the hooks do
-// not know, refuses too.
-func TestHandoffToAPersonWhoCannotOpenTheProjectIsRefused(t *testing.T) {
-	cases := []struct {
-		name     string
-		edgeType string
-		mutate   func(*fixture)
-		want     string
-	}{
-		{"no role in the project", teams.EdgeHandsOff, func(f *fixture) { delete(f.reaches, "p1|user-7") },
-			"Hand-off to Dana refused: Dana has no role in this project and could not open the card. " +
-				"Give them a role in the project to hand work to them."},
-		{"a role in another project only", teams.EdgeReviews, func(f *fixture) {
-			delete(f.reaches, "p1|user-7")
-			f.reaches["p2|user-7"] = ReachAllowed
-		}, "Review request to Dana refused: Dana has no role in this project and could not open the card. " +
-			"Give them a role in the project to hand work to them."},
-		{"a former member of the workspace", teams.EdgeHandsOff, func(f *fixture) { f.reaches["p1|user-7"] = ReachNotInWorkspace },
-			"Hand-off to Dana refused: Dana is no longer a member of this workspace and could not open the card. " +
-				"Add them back to the workspace, with a role in the project, to hand work to them."},
-		{"access that cannot be checked", teams.EdgeHandsOff, func(f *fixture) { f.reachErr = errors.New("db down") },
-			"Hand-off to Dana refused: Dana's access to this project could not be checked."},
-		{"an answer the hooks do not know", teams.EdgeHandsOff, func(f *fixture) { f.reaches["p1|user-7"] = "" },
-			"Hand-off to Dana refused: Dana's access to this project could not be checked."},
-		{"no access check wired", teams.EdgeHandsOff, func(f *fixture) {
-			f.hooks = NewHooks(f.runs, f.teams, f.workItems, f.interviews, f.guided, f.projects, f.broadcaster, nil)
-		}, "Hand-off to Dana refused: Dana's access to this project could not be checked."},
-	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			f := newFixture()
-			f.teams.graph = &teams.TeamGraph{Nodes: []*teams.Node{
-				agentNode("n1", "agent-1", "Planner"),
-				humanNode("n2", "user-7", "Dana"),
-			}}
-			f.teams.edges = map[string][]*teams.Edge{
-				"n1|" + tc.edgeType: {{ID: "e1", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n2", EdgeType: tc.edgeType, Config: map[string]interface{}{}}},
-			}
-			tc.mutate(f)
-
-			f.hooks.RunStatusChanged(teamRun(agentruns.StatusSucceeded))
-
-			if len(f.workItems.creates) != 0 || len(f.runs.launches) != 0 {
-				t.Fatalf("a refused hand-off makes no card and launches nothing: creates=%+v launches=%+v", f.workItems.creates, f.runs.launches)
-			}
-			if len(f.runs.notes) != 1 {
-				t.Fatalf("notes on the run = %+v, want the refusal", f.runs.notes)
-			}
-			note := f.runs.notes[0]
-			if note.runID != "r1" || note.marker != agentruns.NoteHandOffRefused || note.message != tc.want {
-				t.Errorf("note = %+v, want %s on r1 saying %q", note, agentruns.NoteHandOffRefused, tc.want)
-			}
-			if note.detail["team_node_id"] != "n2" || note.detail["user_id"] != "user-7" || note.detail["edge_type"] != tc.edgeType {
-				t.Errorf("note detail = %+v, want the node, its person and the edge", note.detail)
-			}
-			var refused []activityCall
-			for _, act := range f.workItems.activities {
-				if act.kind == workitems.KindRunFailed {
-					refused = append(refused, act)
-				}
-			}
-			if len(refused) != 1 || refused[0].workItemID != "wi-1" || refused[0].content != tc.want || refused[0].actor != "agent:r1" {
-				t.Errorf("run-failed activity = %+v, want the refusal on the run's card wi-1 as agent:r1", refused)
-			}
-		})
-	}
-}
-
-// TestHandoffGoesToAPersonWhoCanOpenTheProject: the check is of the card's
-// project and the node's person, and one who can open it gets the card with
-// no note.
-func TestHandoffGoesToAPersonWhoCanOpenTheProject(t *testing.T) {
-	f := newFixture()
-	var asked []string
-	f.hooks = NewHooks(f.runs, f.teams, f.workItems, f.interviews, f.guided, f.projects, f.broadcaster,
-		func(projectID, userID string) (Reach, error) {
-			asked = append(asked, projectID+"|"+userID)
-			return ReachAllowed, nil
-		})
-	f.teams.graph = &teams.TeamGraph{Nodes: []*teams.Node{agentNode("n1", "agent-1", "Planner"), humanNode("n2", "user-7", "Dana")}}
-	f.teams.edges = map[string][]*teams.Edge{
-		"n1|" + teams.EdgeHandsOff: {{ID: "e1", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n2", EdgeType: teams.EdgeHandsOff, Config: map[string]interface{}{}}},
-	}
-	f.hooks.RunStatusChanged(teamRun(agentruns.StatusSucceeded))
-	if len(asked) != 1 || asked[0] != "p1|user-7" {
-		t.Errorf("reach asked %v, want p1|user-7", asked)
-	}
-	if len(f.workItems.creates) != 1 || len(f.runs.notes) != 0 {
-		t.Errorf("creates = %+v, notes = %+v, want the card and no note", f.workItems.creates, f.runs.notes)
-	}
-}
-
-// TestSuccessorsTheBudgetRefusesAreRecorded: a crew run that finishes over
-// its workspace's budget launches none of its agent successors, and records
-// which were skipped and why, together, once every edge was tried (OpenV
-// REQ-76), where it only logged each refusal. A person's hand-off is no run,
-// so it is still made; another launch failure is only logged.
-func TestSuccessorsTheBudgetRefusesAreRecorded(t *testing.T) {
-	f := newFixture()
-	f.runs.launchErr = fmt.Errorf("%w: this workspace has reached its $1.00 monthly budget ($5.00 spent)", agentruns.ErrBudgetExceeded)
-	f.teams.graph = &teams.TeamGraph{Nodes: []*teams.Node{
-		agentNode("n1", "agent-1", "Planner"),
-		agentNode("n2", "agent-2", "Builder"),
-		humanNode("n3", "user-7", "Dana"),
-		agentNode("n4", "agent-4", "Reviewer"),
-	}}
-	f.teams.edges = map[string][]*teams.Edge{
-		"n1|" + teams.EdgeHandsOff: {
-			{ID: "e1", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n2", EdgeType: teams.EdgeHandsOff, Config: map[string]interface{}{}},
-			{ID: "e2", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n3", EdgeType: teams.EdgeHandsOff, Config: map[string]interface{}{}},
-		},
-		"n1|" + teams.EdgeReviews: {{ID: "e3", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n4", EdgeType: teams.EdgeReviews, Config: map[string]interface{}{}}},
-	}
-
-	f.hooks.RunStatusChanged(teamRun(agentruns.StatusSucceeded))
-
-	if len(f.runs.skips) != 1 {
-		t.Fatalf("recorded skips = %+v, want one for the run", f.runs.skips)
-	}
-	skip := f.runs.skips[0]
-	want := []agentruns.Successor{{NodeID: "n2", Label: "Builder"}, {NodeID: "n4", Label: "Reviewer"}}
-	if skip.runID != "r1" || fmt.Sprint(skip.skipped) != fmt.Sprint(want) || !errors.Is(skip.refusal, agentruns.ErrBudgetExceeded) {
-		t.Errorf("skip = %+v, want r1 skipping %v for the budget", skip, want)
-	}
-	if len(f.workItems.creates) != 1 || f.workItems.creates[0].req.AssigneeID == nil || *f.workItems.creates[0].req.AssigneeID != "user-7" {
-		t.Errorf("creates = %+v, want Dana's hand-off card all the same", f.workItems.creates)
-	}
-
-	// Any other refusal is logged as before, and records nothing.
-	f = newFixture()
-	f.runs.launchErr = errors.New("agent not found")
-	f.teams.graph = &teams.TeamGraph{Nodes: []*teams.Node{agentNode("n1", "agent-1", "Planner"), agentNode("n2", "agent-2", "Builder")}}
-	f.teams.edges = map[string][]*teams.Edge{
-		"n1|" + teams.EdgeHandsOff: {{ID: "e1", TeamID: "t1", FromNodeID: "n1", ToNodeID: "n2", EdgeType: teams.EdgeHandsOff, Config: map[string]interface{}{}}},
-	}
-	f.hooks.RunStatusChanged(teamRun(agentruns.StatusSucceeded))
-	if len(f.runs.skips) != 0 {
-		t.Errorf("a launch that fails for another reason records no skip: %+v", f.runs.skips)
 	}
 }
 
@@ -985,7 +539,7 @@ func TestGuidedFailureDeliversSystemMessage(t *testing.T) {
 
 func TestNilBroadcasterDoesNotPanic(t *testing.T) {
 	f := newFixture()
-	f.hooks = NewHooks(f.runs, f.teams, f.workItems, f.interviews, f.guided, f.projects, nil, f.reach)
+	f.hooks = NewHooks(f.runs, f.workItems, f.interviews, f.guided, f.projects, nil)
 	f.hooks.RunStatusChanged(&agentruns.Run{ID: "r1", Status: agentruns.StatusSucceeded, InterviewSessionID: strptr("iv-1"), FinalText: "x"})
 	f.hooks.RunStatusChanged(&agentruns.Run{ID: "r2", Status: agentruns.StatusFailed, GuidedSessionID: strptr("gs-1")})
 	if len(f.interviews.appends) != 1 || len(f.guided.appends) != 1 {

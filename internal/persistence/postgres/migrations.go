@@ -122,4 +122,5 @@ var migrations = []Migration{
 	{Version: 65, Name: "connected_app_workspaces", Run: m0065ConnectedAppWorkspaces},
 	{Version: 66, Name: "user_identities", Run: m0066UserIdentities},
 	{Version: 67, Name: "target_releases", Run: m0067TargetReleases},
+	{Version: 68, Name: "retarget_crew_automations", Run: m0068RetargetCrewAutomations},
 }

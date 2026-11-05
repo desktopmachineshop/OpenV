@@ -113,8 +113,6 @@ export interface WireRun {
   project_id?: string;
   automation_id?: string;
   trigger_event_id?: string;
-  team_id?: string;
-  team_node_id?: string;
   parent_run_id?: string;
   work_item_id?: string;
   interview_session_id?: string;

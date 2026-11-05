@@ -56,7 +56,7 @@ type toolGolden struct {
 // and every call has to be a route in the API's inventory. A renamed or reordered tool, a changed schema or
 // description, a moved read-only flag or a retargeted path fails here.
 func TestMCPToolsGolden(t *testing.T) {
-	t.Parallel() // delegate_to_agent sleeps 5s before its first status poll
+	t.Parallel()
 	doc := buildToolsGolden(t)
 	// The recording also settles what TestReadOnlyToolsExcludeWriters can
 	// only infer from names: a tool granted to least-privilege agents
@@ -145,7 +145,6 @@ func toolGoldenArgs() map[string]map[string]interface{} {
 		"get_work_item_history":   {"id": goldenWorkItemID},
 		"update_work_item":        {"id": goldenWorkItemID, "comment": "Started."},
 		"record_candidate_need":   {"project_id": goldenProjectID, "need": "Operators see seal wear early", "rationale": "Downtime", "quote": "We only find out when it leaks."},
-		"delegate_to_agent":       {"role_label": "builder", "prompt": "Draft the test cases."},
 	}
 }
 
@@ -166,8 +165,6 @@ func toolStubBodies() map[string]string {
 			`","attributes":{"priority":"must","target_release":"old"}}`,
 		"GET /api/v1/work-items/{id}":             `{"id":"` + goldenWorkItemID + `","activity":[]}`,
 		"GET /api/v1/projects/{id}/quality-rules": `{"effective":{},"summary":"shall"}`,
-		"POST /api/v1/agent-runs/delegate":        `{"run_id":"` + goldenDelegateRunID + `","status":"queued"}`,
-		"GET /api/v1/agent-runs/delegate/{id}":    `{"run_id":"` + goldenDelegateRunID + `","status":"succeeded","final_text":"done"}`,
 	}
 }
 

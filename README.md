@@ -274,7 +274,7 @@ Every variable the backend reads, with its default, is in
 - [x] V&V dashboard, coverage, gaps and test runs
 - [x] Import/export: JSON, CSV, Excel, ReqIF, PDF, Word
 - [x] Workspaces, teams, per-project access, Google and OIDC sign-in
-- [x] Multi-agent suite: runners, proposals, crews, automations, interviews
+- [x] Multi-agent suite: runners, proposals, automations, interviews
 - [x] Phone-friendly shell
 - [x] Web Push notifications
 - [ ] Runner control from a phone

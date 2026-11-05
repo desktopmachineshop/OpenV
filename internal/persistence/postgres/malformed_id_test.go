@@ -28,8 +28,8 @@ const malformed = "not-a-uuid"
 // JSON body's \u0000), both SQLSTATE 22021.
 var malformedIDs = []string{malformed, "\xff", "a\x00b", "a\xc3"}
 
-// isUUID must read text as Postgres's own uuid input does: uuidsOnly and the
-// crew list's filter decide with it which ids can match a row.
+// isUUID must read text as Postgres's own uuid input does: uuidsOnly decides
+// with it which ids can match a row.
 func TestIsUUIDReadsTextAsPostgresDoes(t *testing.T) {
 	db := testDB(t)
 	for _, s := range append([]string{
@@ -159,20 +159,18 @@ func sameError(a, b error) bool {
 
 // The writes and lists where a malformed id sits beside real rows: a
 // project role for an account no row has is members.ErrUnknownUser (it was
-// the foreign key's refusal, a 500), a crew list filtered by a project no row
-// has keeps the workspace-wide crews, and a mark-read keeps the ids that can
+// the foreign key's refusal, a 500), and a mark-read keeps the ids that can
 // match.
 func TestAMalformedIDBesideRealRows(t *testing.T) {
 	db := testDB(t)
 	initTestSchema(t, db)
-	orgID, projectID, crewID, userID := uuid.New().String(), uuid.New().String(), uuid.New().String(), uuid.New().String()
+	orgID, projectID, userID := uuid.New().String(), uuid.New().String(), uuid.New().String()
 	for _, q := range []struct {
 		sql  string
 		args []interface{}
 	}{
 		{`INSERT INTO organizations (id, name, slug) VALUES ($1, 'Malformed', $2)`, []interface{}{orgID, "malformed-" + orgID[:8]}},
 		{`INSERT INTO projects (id, org_id, name) VALUES ($1, $2, 'P')`, []interface{}{projectID, orgID}},
-		{`INSERT INTO agent_teams (id, org_id, name) VALUES ($1, $2, 'Workspace-wide')`, []interface{}{crewID, orgID}},
 		{`INSERT INTO users (id, email, name, auth_provider, created_at, updated_at)
 			VALUES ($1, $2, 'Reader', 'password', NOW(), NOW())`, []interface{}{userID, userID + "@example.com"}},
 	} {
@@ -186,17 +184,6 @@ func TestAMalformedIDBesideRealRows(t *testing.T) {
 		err := memberRepo.Upsert(&members.Member{ProjectID: projectID, UserID: id, Role: members.RoleViewer, CreatedAt: time.Now()})
 		if !errors.Is(err, members.ErrUnknownUser) {
 			t.Errorf("a project role for %q: %v, want members.ErrUnknownUser", id, err)
-		}
-	}
-
-	teamRepo := NewTeamRepository(db)
-	want, err := teamRepo.ListTeams(orgID, uuid.New().String())
-	if err != nil || len(want) != 1 || want[0].ID != crewID {
-		t.Fatalf("crews for a project no row has: %v, %v; want the workspace-wide crew", want, err)
-	}
-	for _, id := range malformedIDs {
-		if got, err := teamRepo.ListTeams(orgID, id); err != nil || !reflect.DeepEqual(got, want) {
-			t.Fatalf("crews for the malformed project id %q: %v, %v; want %v", id, got, err, want)
 		}
 	}
 

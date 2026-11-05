@@ -21,6 +21,5 @@ func (h *Handler) registerAgentRoutes(router *mux.Router) {
 	h.registerRepoConnectionRoutes(router)
 	h.registerProviderSettingsRoutes(router)
 	h.registerProviderLoginRoutes(router)
-	h.registerCrewRoutes(router)
 	h.registerDomainEventRoutes(router)
 }

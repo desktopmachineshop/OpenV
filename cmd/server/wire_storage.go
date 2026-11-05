@@ -62,7 +62,6 @@ func (a *app) storage() {
 	a.proposalRepo = postgres.NewProposalRepository(a.db)
 	a.repoConnRepo = postgres.NewRepoConnectionRepository(a.db)
 	a.providerRepo = postgres.NewProviderSettingRepository(a.db)
-	a.teamRepo = postgres.NewTeamRepository(a.db)
 	a.orgRepo = postgres.NewOrgRepository(a.db)
 	a.invitationRepo = postgres.NewInvitationRepository(a.db)
 	a.workerKeyRepo = postgres.NewWorkerKeyRepository(a.db)

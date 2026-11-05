@@ -333,7 +333,7 @@ func TestLaunchCapturesReproducibilitySnapshot(t *testing.T) {
 // TestRetryEnqueuesFreshRunWithProvenance locks in the retry contract: a NEW
 // queued run copying org/agent/project/prompt, launched by the retrying user
 // (not the original launcher), with retried_from_run_id set — and none of the
-// source's automation/crew/delegation/kanban links or terminal state.
+// source's automation/delegation/kanban links or terminal state.
 func TestRetryEnqueuesFreshRunWithProvenance(t *testing.T) {
 	project := "proj-1"
 	source := &Run{
@@ -342,7 +342,6 @@ func TestRetryEnqueuesFreshRunWithProvenance(t *testing.T) {
 		AgentID:      "agent-1",
 		ProjectID:    &project,
 		AutomationID: strptr("auto-1"),
-		TeamID:       strptr("team-1"),
 		ParentRunID:  strptr("parent-1"),
 		WorkItemID:   strptr("card-1"),
 		Status:       StatusFailed,
@@ -375,8 +374,8 @@ func TestRetryEnqueuesFreshRunWithProvenance(t *testing.T) {
 	if run.LaunchedBy == nil || *run.LaunchedBy != "retrying-user" {
 		t.Errorf("launched_by = %v, want the retrying user", run.LaunchedBy)
 	}
-	if run.AutomationID != nil || run.TeamID != nil || run.ParentRunID != nil || run.WorkItemID != nil {
-		t.Errorf("automation/crew/delegation/kanban links must not be copied: %+v", run)
+	if run.AutomationID != nil || run.ParentRunID != nil || run.WorkItemID != nil {
+		t.Errorf("automation/delegation/kanban links must not be copied: %+v", run)
 	}
 	if run.Priority != PriorityNormal {
 		t.Errorf("priority = %d, want normal for a manual retry", run.Priority)

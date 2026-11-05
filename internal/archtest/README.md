@@ -645,9 +645,10 @@ method, alone or with others (`GET/HEAD`), and whose second cell is a code
 span holding its path exactly, variable names included (`/api/v1/orgs/{id}`);
 a brace group with a comma stands for each of its alternatives
 (`/download/{json,csv}`). Prose does not count. The ceiling was 36 of 341
-when D1 added the rule, and is still 36 of 342: the 15 deprecated `/api/v1/teams*` and
-`/api/v1/team-*` aliases of the crew routes, the four attribute-definition
-routes, the OIDC sign-in pair and 15 others.
+when D1 added the rule; it fell to 16 when crews were removed (issue 732),
+taking the 15 deprecated `/api/v1/teams*` and `/api/v1/team-*` aliases of the
+crew routes with them, which leaves the four attribute-definition routes, the
+OIDC sign-in pair and others.
 `TestAPISpecRule` proves the parse on a fixture.
 
 **Why.** tooling-8 and api-core-14: the spec is written by hand, and the

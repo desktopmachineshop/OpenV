@@ -42,7 +42,7 @@ Open http://localhost:3000 and register with email + password.
 - With no SMTP configured (the default) the account is ready at once; a server
   with `OPENV_SMTP_*` set emails a verification link first.
 - A **personal workspace** (organization) is created for you automatically,
-  seeded with default agents and a starter crew.
+  seeded with default agents.
 - Optional: enable **Sign in with Google** by setting `GOOGLE_CLIENT_ID` and
   `GOOGLE_CLIENT_SECRET` (e.g. in a `.env` file next to
   `docker-compose.yml`); the authorized redirect URI is
@@ -147,5 +147,5 @@ docker compose down -v     # stop and DELETE all data (database, uploads)
 - `docs/architecture.md` — system design and the multi-agent topology
 - `docs/api-spec.md` — auth model and full route inventory
 - `docs/data-model.md` — database schema overview
-- `docs/agents.md` — runners, crews, automations, interviews
+- `docs/agents.md` — runners, automations, interviews
 - `docs/DEVELOPMENT.md` — Docker-based development workflow

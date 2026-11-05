@@ -156,7 +156,6 @@ const FULL_MENU: Group[] = [
     expanded: true,
     links: [
       'Agents -> /projects/p1/agents',
-      'Crew -> /projects/p1/crew',
       'Automations -> /projects/p1/automations',
       'Runs -> /projects/p1/agent-runs',
     ],
@@ -284,8 +283,6 @@ describe('the project menu: which group is open', () => {
     ['/projects/p1/review', 'Verify'],
     ['/projects/p1/board', 'Plan'],
     ['/projects/p1/agents', 'Agents'],
-    ['/projects/p1/crew', 'Agents'],
-    ['/projects/p1/crew/network', 'Agents'],
     ['/projects/p1/automations', 'Agents'],
     ['/projects/p1/agent-runs', 'Agents'],
   ])('opens %s in the %s group alone', async (path, open) => {
@@ -343,7 +340,6 @@ describe('the project menu: the page being viewed', () => {
     ['/projects/p1/requirements/REQ-1', 'Requirements'],
     ['/projects/p1/vv', 'V&V'],
     ['/projects/p1/vv/runs/r1', 'V&V'],
-    ['/projects/p1/crew/network', 'Crew'],
     ['/projects/p1/agent-runs', 'Runs'],
     ['/projects/p1/settings', 'Settings'],
   ])('marks only the entry for %s as current', async (path, label) => {

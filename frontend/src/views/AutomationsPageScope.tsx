@@ -30,8 +30,7 @@ const SCOPE_HINTS: Record<AutomationScope, string> = {
   project: 'Runs for this project alone: on its events, and in it.',
   workspace:
     'Runs for every project of the workspace, in the project of the event that fires it, and on ' +
-    'workspace membership and invitation events. A crew made in one project cannot run it; the ' +
-    "workspace's own crews, such as its default crew, can.",
+    'workspace membership and invitation events.',
 };
 
 interface ScopeFieldProps {

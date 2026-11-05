@@ -118,16 +118,9 @@ var (
 		{agentruns.ErrBudgetExceeded, http.StatusPaymentRequired, ""},
 		{nil, http.StatusBadRequest, ""},
 	}
-	// launchErrs400 answers RunAutomationNow, LaunchTeamRun and
-	// LaunchTestRunAgent: every refusal, an over-budget one included.
+	// launchErrs400 answers RunAutomationNow and LaunchTestRunAgent: every refusal, an over-budget one included.
 	launchErrs400 = []launchErr{
 		{nil, http.StatusBadRequest, ""},
-	}
-	// launchErrsDelegate answers DelegateRun: an over-budget refusal is
-	// among the 500s.
-	launchErrsDelegate = []launchErr{
-		{agentruns.ErrInvalidTransition, http.StatusConflict, ""},
-		{nil, http.StatusInternalServerError, "failed to launch delegated run"},
 	}
 )
 

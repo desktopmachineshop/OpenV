@@ -37,13 +37,12 @@ const (
 	WorkItemMoved      = "workitem.moved"
 	WorkItemUpdated    = "workitem.updated"
 	RunFinished        = "agentrun.finished"
-	// RunSuccessorsSkipped fires when a finished crew run's agent successors
-	// are not launched because its workspace is over its monthly budget.
-	// Payload: {agent_id, team_id, successors, team_node_ids, reason}: the
-	// run's agent and crew, the skipped nodes' labels and ids ([]string, in
-	// edge order), and the budget refusal's own words, which name the budget
-	// and the month's spend. The run keeps a note saying the same
-	// (agentruns.SuccessorsSkipped).
+	// RunSuccessorsSkipped fired when a finished crew run's agent successors
+	// were not launched because its workspace was over its monthly budget.
+	// Crews are gone (#732) and nothing emits it any more; the type stays so
+	// the events already stored keep their name in the activity log and an
+	// automation that matched it still loads. Payload was {agent_id, team_id,
+	// successors, team_node_ids, reason}.
 	RunSuccessorsSkipped = "agentrun.successors_skipped"
 	// ProposalCreated fires when a proposal-mode agent write is diverted
 	// into the review queue; payload carries {op, run_id}.

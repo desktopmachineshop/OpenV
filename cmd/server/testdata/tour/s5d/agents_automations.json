@@ -1478,41 +1478,6 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 37,
-      "title": "the crew D: tour-doomed's node is gone (ON DELETE CASCADE), nodes and edges null (Q14), and entry_node_id with it (ON DELETE SET NULL)",
-      "actor": "owner",
-      "acting_in": "<w>",
-      "route": "GET /api/v1/crews/{id}",
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/crews/<crew.d>"
-      },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": "<varies>",
-      "kind": "json",
-      "body": [
-        "{\"team\":{\"id\":\"<crew.d>\",\"org_id\":\"<w>\",\"name\":\"Tour Doomed Crew\",\"description\":\"\",\"is_default\":false,\"created_at\":\"<time@before step 32>\",\"updated_at\":\"<time@before step 32>\"},\"nodes\":null,\"edges\":null}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "team": {
-          "id": "<crew.d>",
-          "org_id": "<w>",
-          "name": "Tour Doomed Crew",
-          "description": "",
-          "is_default": false,
-          "created_at": "<time@before step 32>",
-          "updated_at": "<time@before step 32>"
-        },
-        "nodes": null,
-        "edges": null
-      },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
-    },
-    {
       "n": 38,
       "title": "run D's automation now: 400, the entry node is gone",
       "actor": "owner",

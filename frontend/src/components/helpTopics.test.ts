@@ -35,7 +35,6 @@ describe('helpTopicForPath', () => {
       'guided-wizard',
       'board',
       'agents',
-      'crews',
       'runs-runners',
       'automations',
       'interviews',

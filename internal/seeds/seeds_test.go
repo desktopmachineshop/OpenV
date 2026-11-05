@@ -21,10 +21,6 @@ func TestDefaultAgentsSeedsTestCaseAuthor(t *testing.T) {
 		if seed.def.Slug == TestCaseAuthorSlug {
 			def := seed.def
 			found = &def
-			// It is a standalone specialist, not a node on the default team.
-			if seed.label != "" {
-				t.Errorf("test-case-author should not be on the default team, got label %q", seed.label)
-			}
 			break
 		}
 	}

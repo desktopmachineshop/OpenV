@@ -8,22 +8,20 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/automations"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 )
 
 // Scheduler enqueues runs for scheduled automations. It runs inside the API
 // process so scheduling never depends on a worker being up; the run simply
 // waits in the queue.
 type Scheduler struct {
-	repo        automations.Repository
-	runService  agentruns.Service
-	teamService teams.Service
-	interval    time.Duration
+	repo       automations.Repository
+	runService agentruns.Service
+	interval   time.Duration
 }
 
 // New creates a scheduler.
-func New(repo automations.Repository, runService agentruns.Service, teamService teams.Service) *Scheduler {
-	return &Scheduler{repo: repo, runService: runService, teamService: teamService, interval: 30 * time.Second}
+func New(repo automations.Repository, runService agentruns.Service) *Scheduler {
+	return &Scheduler{repo: repo, runService: runService, interval: 30 * time.Second}
 }
 
 // Start begins the polling loop and performs startup catch-up.
@@ -87,7 +85,7 @@ func (s *Scheduler) fire(a *automations.Automation) {
 		return
 	}
 
-	agentID, teamID, teamNodeID, err := ResolveTarget(a, s.teamService)
+	agentID, err := ResolveTarget(a)
 	if err != nil {
 		// Already advanced by the claim; just skip this occurrence.
 		log.Printf("scheduler: automation %s (%s) target unresolvable: %v", a.Name, a.ID, err)
@@ -107,8 +105,6 @@ func (s *Scheduler) fire(a *automations.Automation) {
 		AgentID:      agentID,
 		ProjectID:    a.ProjectID,
 		AutomationID: &automationID,
-		TeamID:       teamID,
-		TeamNodeID:   teamNodeID,
 		Prompt:       prompt,
 	}
 	if _, _, err := s.runService.Launch(req); err != nil {
@@ -166,35 +162,19 @@ func (s *Scheduler) switchOff(a *automations.Automation, now time.Time, why erro
 	}
 }
 
-// ResolveTarget resolves an automation's agent target. Team automations
-// resolve to the team's entry node's agent.
-func ResolveTarget(a *automations.Automation, teamService teams.Service) (agentID string, teamID, teamNodeID *string, err error) {
+// ResolveTarget resolves an automation's agent target. An automation
+// targets an agent only: crews, which an automation could once target, are
+// gone (issue 732), and migration 0068 moved their automations onto the
+// crew's entry agent or switched them off.
+func ResolveTarget(a *automations.Automation) (agentID string, err error) {
 	if a.AgentID != nil && *a.AgentID != "" {
-		return *a.AgentID, nil, nil, nil
+		return *a.AgentID, nil
 	}
-	if a.TeamID == nil || *a.TeamID == "" {
-		return "", nil, nil, ErrNoTarget
-	}
-	graph, err := teamService.GetTeam(*a.TeamID)
-	if err != nil {
-		return "", nil, nil, err
-	}
-	if graph.Team.EntryNodeID == nil {
-		return "", nil, nil, ErrNoEntryNode
-	}
-	for _, node := range graph.Nodes {
-		if node.ID == *graph.Team.EntryNodeID {
-			return node.AgentID, a.TeamID, graph.Team.EntryNodeID, nil
-		}
-	}
-	return "", nil, nil, ErrNoEntryNode
+	return "", ErrNoTarget
 }
 
-// Sentinel errors for target resolution.
-var (
-	ErrNoTarget    = errString("automation has neither agent nor team target")
-	ErrNoEntryNode = errString("team has no entry node")
-)
+// ErrNoTarget is target resolution's error for an automation naming no agent.
+var ErrNoTarget = errString("automation has no agent target")
 
 type errString string
 

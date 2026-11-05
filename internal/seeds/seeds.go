@@ -7,15 +7,12 @@ import (
 	"slices"
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/mcp"
 	"github.com/openv/requirements-platform/internal/mcp/toolnames"
 )
 
 type seedAgent struct {
-	def        agents.Definition
-	label      string // role label on the default team ("" = not on the team)
-	department string // org-chart department group for the default team
+	def agents.Definition
 }
 
 // TestCaseAuthorSlug is the slug of the seeded proposal-mode agent that drafts
@@ -43,20 +40,16 @@ func interviewerTools() []string {
 func defaultAgents() []seedAgent {
 	return []seedAgent{
 		{
-			label:      "Chief of Staff",
-			department: "Leadership",
 			def: agents.Definition{
 				Slug:         "chief-of-staff",
 				Name:         "Chief of Staff",
 				Provider:     "claude-code",
-				Description:  "Orchestrator: breaks work down and delegates to specialists.",
+				Description:  "Lead: plans the work and says which specialist each part is for.",
 				AllowedTools: []string{"mcp__openv__*"},
-				SystemPrompt: `You are the Chief of Staff for a solo founder's product team. You break work into clear sub-tasks and delegate each one to the right specialist with the delegate_to_agent tool (Requirements Analyst for elicitation and drafting, V&V Engineer for test coverage, Developer for implementation). You never do specialist work yourself. Synthesize your delegates' results into one concise report for the founder.` + leanContextRule,
+				SystemPrompt: `You are the Chief of Staff for a solo founder's product team. You plan the work: break the founder's request into clear sub-tasks and say which specialist each one is for (Requirements Analyst for elicitation and drafting, V&V Engineer for test coverage, Developer for implementation), with the requirement IDs and cards each needs. You never do specialist work yourself, and you do not start other agents: the founder sets each specialist going. Give the plan as one concise report.` + leanContextRule,
 			},
 		},
 		{
-			label:      "Requirements Analyst",
-			department: "Product",
 			def: agents.Definition{
 				Slug:         "requirements-analyst",
 				Name:         "Requirements Analyst",
@@ -67,8 +60,6 @@ func defaultAgents() []seedAgent {
 			},
 		},
 		{
-			label:      "V&V Engineer",
-			department: "Quality",
 			def: agents.Definition{
 				Slug:         "vv-engineer",
 				Name:         "V&V Engineer",
@@ -79,8 +70,6 @@ func defaultAgents() []seedAgent {
 			},
 		},
 		{
-			label:      "Developer",
-			department: "Engineering",
 			def: agents.Definition{
 				Slug:         "developer",
 				Name:         "Developer",
@@ -92,8 +81,6 @@ func defaultAgents() []seedAgent {
 			},
 		},
 		{
-			label:      "Reviewer",
-			department: "Engineering",
 			def: agents.Definition{
 				Slug:         "reviewer",
 				Name:         "Reviewer",
@@ -173,8 +160,7 @@ You can search the web and read pages you find. Use it when a claim has an autho
 }
 
 // EnsureOrgDefaults seeds an organization's default agent definitions (as
-// editable markdown files) and its "Founder's Dev Team" if they don't
-// exist yet.
+// editable markdown files) if they don't exist yet.
 // previousSeedIdentity records what a seeded agent's identity fields used to
 // say, for seeds that were renamed after workspaces had already been
 // provisioned. EnsureOrgDefaults only ever creates missing agents, because a
@@ -218,6 +204,16 @@ var previousSeedVersions = map[string][]agents.Definition{
 			Description:  "Chats alongside the guided definition wizard and the notes panel: asks probing questions and surfaces gaps in personas, needs, requirements, NFRs, hazards and verification.",
 			SystemPrompt: `You are the V&V Assistant sitting beside a founder working through a guided product-definition wizard. Your job each turn: (1) ask one or two sharp questions grounded in what they have entered so far, and (2) surface what they are missing — unstated hazards and failure modes, missing non-functional requirements, ambiguous or untestable statements, personas or needs with no requirements behind them. You may read existing project artifacts through your OpenV tools for context, but never create or modify artifacts yourself — the wizard materializes entries the user accepts. Keep replies short and conversational; follow the suggestion-format instructions in each turn's prompt exactly so your proposals can be added with one click.`,
 			AllowedTools: []string{"mcp__openv__*"},
+		},
+	},
+	// The Chief of Staff delegated to its crew's specialists with
+	// delegate_to_agent, which went with crews (issue 732): it now plans the
+	// work and the founder sets each specialist going.
+	"chief-of-staff": {
+		{
+			Name:         "Chief of Staff",
+			Description:  "Orchestrator: breaks work down and delegates to specialists.",
+			SystemPrompt: `You are the Chief of Staff for a solo founder's product team. You break work into clear sub-tasks and delegate each one to the right specialist with the delegate_to_agent tool (Requirements Analyst for elicitation and drafting, V&V Engineer for test coverage, Developer for implementation). You never do specialist work yourself. Synthesize your delegates' results into one concise report for the founder.` + leanContextRule,
 		},
 	},
 	// The interviewer used to hold the whole OpenV tool surface by wildcard.
@@ -420,7 +416,7 @@ func BackfillOrgAllowedTools(orgID string, agentService agents.Service) error {
 	return nil
 }
 
-func EnsureOrgDefaults(orgID string, agentService agents.Service, crewService teams.Service) error {
+func EnsureOrgDefaults(orgID string, agentService agents.Service) error {
 	if orgID == "" {
 		return fmt.Errorf("seeds: organization id is required")
 	}
@@ -431,11 +427,6 @@ func EnsureOrgDefaults(orgID string, agentService agents.Service, crewService te
 	if err := BackfillOrgAllowedTools(orgID, agentService); err != nil {
 		return err
 	}
-	type teamRole struct {
-		label      string
-		department string
-	}
-	roles := map[string]teamRole{} // slug -> role on the default team
 	for _, seed := range defaultAgents() {
 		existing, err := agentService.GetBySlug(orgID, seed.def.Slug)
 		if errors.Is(err, agents.ErrNotFound) {
@@ -464,69 +455,6 @@ func EnsureOrgDefaults(orgID string, agentService agents.Service, crewService te
 				log.Printf("seeds: brought agent %q up to the current seed in org %s", seed.def.Slug, orgID)
 			}
 		}
-		if seed.label != "" {
-			roles[seed.def.Slug] = teamRole{label: seed.label, department: seed.department}
-		}
 	}
-
-	// Default team. A same-named crew without the flag (from an install that
-	// seeded before MarkDefault existed) is adopted rather than duplicated.
-	existingTeams, err := crewService.ListTeams(orgID, "")
-	if err != nil {
-		return err
-	}
-	for _, t := range existingTeams {
-		if t.IsDefault {
-			return nil // already seeded
-		}
-	}
-	for _, t := range existingTeams {
-		if t.Name == "Founder's Dev Team" {
-			return crewService.MarkDefault(t.ID)
-		}
-	}
-
-	team, err := crewService.CreateTeam(orgID, "Founder's Dev Team", "Default multi-agent team: an orchestrator delegating to specialists, with a reviewer watching the developer.", nil)
-	if err != nil {
-		return err
-	}
-	if err := crewService.MarkDefault(team.ID); err != nil {
-		return fmt.Errorf("failed to mark default crew: %w", err)
-	}
-
-	nodes := map[string]string{} // slug -> node id
-	for slug, role := range roles {
-		agent, err := agentService.GetBySlug(orgID, slug)
-		if err != nil || agent == nil {
-			return fmt.Errorf("seeded agent %s missing", slug)
-		}
-		node, err := crewService.AddNode(team.ID, teams.NodeSpec{
-			NodeType:   teams.NodeAgent,
-			AgentID:    agent.ID,
-			Label:      role.label,
-			Department: role.department,
-		})
-		if err != nil {
-			return fmt.Errorf("failed to add team node %s: %w", role.label, err)
-		}
-		nodes[slug] = node.ID
-	}
-
-	chief := nodes["chief-of-staff"]
-	name := team.Name
-	if _, err := crewService.UpdateTeam(team.ID, &name, nil, &chief); err != nil {
-		log.Printf("seeds: failed to set entry node: %v", err)
-	}
-
-	for _, child := range []string{"requirements-analyst", "vv-engineer", "developer"} {
-		if _, err := crewService.AddEdge(team.ID, chief, nodes[child], teams.EdgeDelegates, nil); err != nil {
-			return fmt.Errorf("failed to add delegates edge to %s: %w", child, err)
-		}
-	}
-	if _, err := crewService.AddEdge(team.ID, nodes["developer"], nodes["reviewer"], teams.EdgeReviews, nil); err != nil {
-		return fmt.Errorf("failed to add reviews edge: %w", err)
-	}
-
-	log.Printf("seeds: created default team %q for org %s", team.Name, orgID)
 	return nil
 }

@@ -163,7 +163,6 @@ const FORMER_NAV_SECTIONS: NavSection[] = [
     label: 'Agents',
     items: [
       { to: 'agents', label: 'Agents' },
-      { to: 'crew', label: 'Crew' },
       { to: 'automations', label: 'Automations' },
       { to: 'agent-runs', label: 'Runs' },
     ],

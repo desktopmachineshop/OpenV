@@ -9,6 +9,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Crews and the Crew Builder are gone.** The **Crew** page has left the project menu, and its old links open the **Agents** page. An agent run is now a single run: nothing hands work on to another agent or a person when it finishes, and agents can no longer delegate to a crew's specialists. An automation that ran a crew now runs the crew's first agent; one whose crew had no first agent is switched off and says **No agent: choose one** until you pick one. A board card assigned to a crew is now assigned to the crew's first agent, or left unassigned. Past crew runs stay in the run history as ordinary runs.
+
 ## 0.27.5 — 2026-11-05
 
 ### Maintenance updates

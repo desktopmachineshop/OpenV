@@ -843,41 +843,6 @@
       "events": []
     },
     {
-      "n": 16,
-      "title": "403 plan_read_only: org:admin, import a workspace-wide crew (no project_id: the workspace admin's guard, before the body is read)",
-      "actor": "owner",
-      "acting_in": "<w>",
-      "route": "POST /api/v1/crews/import",
-      "request": {
-        "method": "POST",
-        "path": "/api/v1/crews/import",
-        "headers": [
-          "Content-Type: application/json"
-        ],
-        "body": "{\"name\":\"Tour Over crew\"}"
-      },
-      "status": 403,
-      "content_type": "application/json",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": 745,
-      "kind": "json",
-      "body": [
-        "{\"code\":\"plan_read_only\",\"error\":\"This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\",\"over\":[\"max_members\"],\"remedy\":\"This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.\"}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "code": "plan_read_only",
-        "error": "This workspace is read-only: it is over its plan's limit on Workspace members. This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects.",
-        "over": [
-          "max_members"
-        ],
-        "remedy": "This workspace has more than its plan allows, so it is read-only until it is brought under the plan's limits or moved to a plan that fits. Everything in it stays readable and exportable. A workspace admin can subscribe from the Billing tab in workspace settings, remove members or delete projects."
-      },
-      "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
-    },
-    {
       "n": 17,
       "title": "always writable, beside the gate's refusals: org:member, m1 makes W its session's active workspace",
       "actor": "m1",

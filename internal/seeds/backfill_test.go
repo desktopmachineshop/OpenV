@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/domain/agents"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 )
 
 // registryAgentService is a fake agents.Service backed by a map, with enough
@@ -77,14 +76,6 @@ func (f *registryAgentService) Delete(orgID, slug string) error { return nil }
 func (f *registryAgentService) SyncFromDisk(orgID string) error { return nil }
 func (f *registryAgentService) SyncAllFromDisk() error          { return nil }
 
-// seededTeamService reports the org as already having its default team, so
-// EnsureOrgDefaults stops after the agent reconcile — the part under test.
-type seededTeamService struct{ teams.Service }
-
-func (s *seededTeamService) ListTeams(orgID, projectID string) ([]*teams.Team, error) {
-	return []*teams.Team{{ID: "t1", OrgID: orgID, Name: "Default", IsDefault: true}}, nil
-}
-
 func seedDef(t *testing.T, slug string) agents.Definition {
 	t.Helper()
 	for _, seed := range defaultAgents() {
@@ -125,7 +116,7 @@ func TestEnsureOrgDefaultsBackfillsSeededAgentsWithTheirOwnTools(t *testing.T) {
 	}
 	svc := newRegistry(legacy)
 
-	if err := EnsureOrgDefaults("org-1", svc, &seededTeamService{}); err != nil {
+	if err := EnsureOrgDefaults("org-1", svc); err != nil {
 		t.Fatalf("EnsureOrgDefaults: %v", err)
 	}
 
@@ -140,7 +131,7 @@ func TestEnsureOrgDefaultsBackfillsSeededAgentsWithTheirOwnTools(t *testing.T) {
 	// An agent nobody seeded still gets the generic OpenV fallback.
 	custom := &agents.Agent{Slug: "house-style", Name: "House Style", Provider: "claude-code"}
 	svc2 := newRegistry(custom)
-	if err := EnsureOrgDefaults("org-1", svc2, &seededTeamService{}); err != nil {
+	if err := EnsureOrgDefaults("org-1", svc2); err != nil {
 		t.Fatalf("EnsureOrgDefaults: %v", err)
 	}
 	got, _ = svc2.GetBySlug("org-1", "house-style")
@@ -158,7 +149,7 @@ func TestEnsureOrgDefaultsLeavesALockedAgentWithoutTools(t *testing.T) {
 		Locked: true, AllowedTools: nil,
 	}
 	svc := newRegistry(locked)
-	if err := EnsureOrgDefaults("org-1", svc, &seededTeamService{}); err != nil {
+	if err := EnsureOrgDefaults("org-1", svc); err != nil {
 		t.Fatalf("EnsureOrgDefaults: %v", err)
 	}
 	got, _ := svc.GetBySlug("org-1", "developer")
