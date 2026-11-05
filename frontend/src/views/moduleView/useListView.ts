@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SetURLSearchParams } from 'react-router-dom';
 import type { CoverageEntry, Link } from '../../api/client';
 import { QualityFacts, buildFacts, moduleFigures, statusOf } from '../../utils/artifactFacts';
@@ -55,17 +55,27 @@ export function useListView({ searched, artifacts, links, quality, coverage, sea
 
   const facts = buildFacts(artifacts, links, quality, coverage);
 
-  // The chip search: its schema over the project's artifacts, its value read
-  // from the URL (so a filtered view can be shared or bookmarked), and what
-  // it leaves of the searched rows.
+  // The chip search: its schema over the project's artifacts, its value (held
+  // here, so typing never waits on a navigation, and mirrored into the URL so
+  // a filtered view can be shared or bookmarked), and what it leaves of the
+  // searched rows. The URL is read without the schema: a custom attribute's
+  // chip must survive a load that has not brought the artifacts yet.
   const searchSchema = useMemo(() => buildListSchema(artifacts), [artifacts]);
-  const searchKey = searchParams.toString();
-  const searchValue: SearchValue = useMemo(
-    () => readSearchParams(new URLSearchParams(searchKey), searchSchema),
-    [searchKey, searchSchema]
-  );
-  const setSearchValue = (next: SearchValue) =>
+  const fromUrl = writeSearchParams(new URLSearchParams(), readSearchParams(searchParams)).toString();
+  const [searchValue, setSearchValueState] = useState<SearchValue>(() => readSearchParams(searchParams));
+  const written = useRef(fromUrl);
+  useEffect(() => {
+    // Back, forward or a link changed the chips: follow the URL.
+    if (fromUrl !== written.current) {
+      written.current = fromUrl;
+      setSearchValueState(readSearchParams(new URLSearchParams(fromUrl)));
+    }
+  }, [fromUrl]);
+  const setSearchValue = (next: SearchValue) => {
+    setSearchValueState(next);
+    written.current = writeSearchParams(new URLSearchParams(), next).toString();
     setSearchParams((prev) => writeSearchParams(new URLSearchParams(prev), next), { replace: true });
+  };
   const accessors = listAccessors(artifacts, facts, me);
   const chipSearched = chipSearch ? filterItems(searched, searchValue, searchSchema, accessors) : searched;
 
