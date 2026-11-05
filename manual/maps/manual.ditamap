@@ -34,7 +34,8 @@
   <topicref href="../topics/artifacts/index.dita">
     <topicref href="../topics/artifacts/artifact-types.dita"/>
     <topicref href="../topics/artifacts/the-layout.dita"/>
-    <topicref href="../topics/artifacts/table-tree-and-layers.dita"/>
+    <topicref href="../topics/artifacts/table-and-tree.dita"/>
+    <topicref href="../topics/artifacts/the-tree-diagram.dita"/>
     <topicref href="../topics/artifacts/the-detail-panel.dita"/>
     <topicref href="../topics/artifacts/creating-and-organizing-artifacts.dita"/>
     <topicref href="../topics/artifacts/moving-through-the-document.dita"/>
