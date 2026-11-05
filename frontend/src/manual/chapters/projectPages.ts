@@ -36,6 +36,11 @@ lists your workspace's projects with how far each is traced and verified,
 and when agents have proposed changes, a card counts the proposals waiting
 and opens the agent runs to review them.
 
+On a computer or tablet, Home fits the window: **Needs you**, the
+**Audit trail** and **Projects** share the height below the figures, and
+each scrolls on its own when it has more than fits, so **Needs you** lists
+everything waiting.
+
 On a phone, Home shows the figures as four tiles, then **Needs you**, the
 proposals and the recent activity.
 

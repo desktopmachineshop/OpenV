@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { PanelHeader, mutedStyle, panelStyle, plainLink, tapTarget } from './ui';
-import { ActivityRows, NeedsPanel } from './ProjectListHomePanels';
+import { ActivityRows, NeedsPanel, fitPanel, panelScroll } from './ProjectListHomePanels';
 import type { WorkspaceHomeData, WorkspaceTodo } from './ProjectListHomeLoad';
 
 // The workspace Home's upper half on the Projects page (the Home design):
@@ -40,16 +40,22 @@ interface Props {
   projects: number;
   data: WorkspaceHomeData | null;
   phone: boolean;
+  /**
+   * The panels fill the height they are given (the page fits the window on a
+   * wider screen) and each scrolls on its own, showing every row rather than
+   * the first few.
+   */
+  fit?: boolean;
 }
 
-export const ProjectListHome: React.FC<Props> = ({ workspace, projects, data, phone }) => {
+export const ProjectListHome: React.FC<Props> = ({ workspace, projects, data, phone, fit = false }) => {
   const todo = data?.todo || [];
   const activity = data?.activity || [];
   const proposals = data?.proposals || [];
   const reviewAll = reviewAllTarget(todo);
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px 20px', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12, ...(fit ? { height: '100%', minHeight: 0 } : {}) }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px 20px', flexWrap: 'wrap', flex: 'none' }}>
         <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{workspace}</h1>
         <span style={mutedStyle}>
           {projects} project{projects === 1 ? '' : 's'} in this workspace
@@ -64,25 +70,37 @@ export const ProjectListHome: React.FC<Props> = ({ workspace, projects, data, ph
           </>
         )}
       </div>
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+      <div
+        style={
+          fit
+            ? { display: 'flex', gap: 12, flex: '1 1 0', minHeight: 0, alignItems: 'stretch' }
+            : { display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }
+        }
+      >
         <NeedsPanel
           items={data ? todo : null}
-          limit={LIMIT}
+          limit={fit ? Infinity : LIMIT}
           action={reviewAll && <Link to={reviewAll} style={{ ...plainLink, fontWeight: 600 }}>Review all</Link>}
           emptyText="Nothing is waiting in any project: no reviews, suspect links, open runs, failing tests or new comments."
           more={(n) => `And ${n} more in the projects below.`}
-          style={{ flex: '1.3 1 420px', minWidth: 0 }}
+          style={{ flex: '1.3 1 420px', minWidth: 0, ...(fit ? fitPanel : {}) }}
         />
-        <div style={{ flex: '1 1 340px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <section aria-labelledby="home-activity" data-help-key="home.activity" style={panelStyle}>
+        <div style={{ flex: '1 1 340px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12, ...(fit ? { minHeight: 0 } : {}) }}>
+          <section
+            aria-labelledby="home-activity"
+            data-help-key="home.activity"
+            style={fit ? { ...panelStyle, ...fitPanel, flex: '1 1 0' } : panelStyle}
+          >
             <PanelHeader id="home-activity" title="Activity" />
-            {data && activity.length === 0 && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>No activity yet.</p>}
-            <ActivityRows items={activity} />
+            <div style={panelScroll}>
+              {data && activity.length === 0 && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>No activity yet.</p>}
+              <ActivityRows items={activity} />
+            </div>
           </section>
           {proposals.length > 0 && (
             <section
               aria-label="Agent proposals"
-              style={{ ...panelStyle, background: 'var(--tint-purple)', borderColor: 'var(--tint-purple-border)', padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}
+              style={{ ...panelStyle, flex: 'none', background: 'var(--tint-purple)', borderColor: 'var(--tint-purple-border)', padding: 12, display: 'flex', flexDirection: 'column', gap: 6 }}
             >
               <b style={{ fontSize: 13, color: 'var(--purple-strong)' }}>
                 ✦ {proposals.length} agent proposal{proposals.length === 1 ? '' : 's'} waiting
