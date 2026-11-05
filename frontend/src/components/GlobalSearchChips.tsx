@@ -6,7 +6,7 @@ import { ARTIFACT_TYPE_CATALOG } from '../generated/contract';
 import { STATUS_META, typeLabel } from '../utils/artifactFacts';
 import { Chip } from './ui/Chip';
 import { ChipSearch } from './search/ChipSearch';
-import { ChipSuggestion, EMPTY_SEARCH, SearchSchema, SearchValue, addChip, chipValues, effectiveValue, suggestChips } from './search/searchValue';
+import { ChipSuggestion, EMPTY_SEARCH, SearchSchema, SearchValue, addChip, chipValues, effectiveValue, fieldOf, suggestChips } from './search/searchValue';
 import { useSavedSearches } from './search/useSavedSearches';
 
 // The top-bar search on the chip search bar (issue #722): chips for project,
@@ -14,6 +14,32 @@ import { useSavedSearches } from './search/useSavedSearches';
 // typing a ref such as REQ-12 still finds it first, and Enter opens the top
 // hit. The results drop down below the bar, grouped by kind, with the chips
 // typing offers after them.
+
+// The server matches project, type and status exactly, by their stored
+// values. A chip on one of them that says "contains" or names a label
+// (Custom filter…: "Status contains review") becomes the values whose label
+// or value holds that text, so it narrows as it reads; one that matches no
+// value is sent as it is, and finds nothing.
+export function enumFacet(schema: SearchSchema, value: SearchValue, key: string): string[] {
+  const field = fieldOf(schema, key);
+  const options = field?.options ?? [];
+  const out = new Set<string>();
+  for (const chip of effectiveValue(value).chips) {
+    if (chip.kind !== 'filter' || chip.field !== key) continue;
+    for (const raw of chip.values) {
+      const want = raw.trim().toLowerCase();
+      const hit = (o: { value: string; label: string }) => {
+        const v = o.value.toLowerCase();
+        const l = o.label.toLowerCase();
+        return chip.match === 'contains' ? v.includes(want) || l.includes(want) : v === want || l === want;
+      };
+      const matched = options.filter(hit);
+      if (matched.length) matched.forEach((o) => out.add(o.value));
+      else out.add(raw);
+    }
+  }
+  return Array.from(out);
+}
 
 const kindLabel = (type: string) => {
   const label = typeLabel(type);
@@ -68,12 +94,13 @@ export const GlobalSearchChips: React.FC<{ refSearchOn: boolean }> = ({ refSearc
   const q = text.trim();
   const facets = useMemo(
     () => ({
-      projects: chipValues(value, 'project'),
-      types: chipValues(value, 'type'),
-      statuses: chipValues(value, 'status'),
+      projects: enumFacet(schema, value, 'project'),
+      types: enumFacet(schema, value, 'type'),
+      statuses: enumFacet(schema, value, 'status'),
+      // The server matches an owner as a substring already.
       owners: chipValues(value, 'owner'),
     }),
-    [value]
+    [schema, value]
   );
   const filtered = facets.projects.length + facets.types.length + facets.statuses.length + facets.owners.length > 0;
   const facetKey = JSON.stringify(facets);
@@ -180,6 +207,7 @@ export const GlobalSearchChips: React.FC<{ refSearchOn: boolean }> = ({ refSearc
         ariaLabel={refSearchOn ? 'Search artifacts across projects by text or ref' : 'Search artifacts across projects'}
         placeholder={refSearchOn ? 'Search artifacts or REQ-12…' : 'Search artifacts…'}
         variant="sidebar"
+        singleLine
         align="left"
         suggestions={false}
         saved={saved}

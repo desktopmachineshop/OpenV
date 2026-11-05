@@ -29,6 +29,7 @@
     <section id="the-top-bars-chips">
       <title>The top bar's chips</title>
       <p>In the top bar, the chips are <b>Project</b>, <b>Type</b>, <b>Status</b> and <b>Owner</b> (a part of a name or address is enough). Chips alone are a search: <b>Type Test case</b> with <b>Owner dana</b> lists Dana's test cases without any text. Typing a ref such as <b>REQ-12</b> still finds it first, and <b>Enter</b> opens it. The results drop down below the bar, grouped by kind (Requirements, Test Cases, …), each with its project, owner and status. The chips it offers for what you typed come after the results.</p>
+      <p>A custom filter on <b>Project</b>, <b>Type</b> or <b>Status</b> matches their names: <b>Status contains review</b> finds the artifacts in review, and a name no status has finds nothing. The top bar's chips stay on one row that scrolls sideways, so the bar never grows over the page; hover a chip to read it in full.</p>
     </section>
   </conbody>
 </concept>

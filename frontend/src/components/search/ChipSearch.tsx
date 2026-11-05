@@ -41,6 +41,11 @@ export interface ChipSearchProps {
   inputRef?: React.RefObject<HTMLInputElement>;
   /** The top bar's dark surface, or the page's. */
   variant?: 'page' | 'sidebar';
+  /**
+   * Keeps the chips on one row that scrolls sideways, as on a phone, so a
+   * bar in a fixed-height strip (the top bar) never grows over the page.
+   */
+  singleLine?: boolean;
   helpKey?: string;
   /** Drawn under the bar, inside its box (the top-bar search's results). */
   children?: React.ReactNode;
@@ -75,6 +80,7 @@ export const ChipSearch: React.FC<ChipSearchProps> = (p) => {
   const inputRef = p.inputRef ?? ownInput;
   const boxRef = useRef<HTMLDivElement>(null);
   const caretRef = useRef<HTMLButtonElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [focused, setFocused] = useState(false);
   const [active, setActive] = useState(-1);
@@ -85,8 +91,16 @@ export const ChipSearch: React.FC<ChipSearchProps> = (p) => {
   );
   const showOffers = focused && offers.length > 0 && !menuOpen;
   const sidebar = p.variant === 'sidebar';
+  const oneRow = !!p.phone || !!p.singleLine;
 
   useEffect(() => setActive(-1), [p.value.text]);
+
+  // On one row, a chip added or taken off keeps the box in view at the end.
+  const chipCount = p.value.chips.length;
+  useEffect(() => {
+    const row = rowRef.current;
+    if (p.singleLine && row && typeof row.scrollTo === 'function') row.scrollTo({ left: row.scrollWidth });
+  }, [p.singleLine, chipCount]);
 
   // A click outside the bar closes the panel and the offers.
   useEffect(() => {
@@ -132,7 +146,12 @@ export const ChipSearch: React.FC<ChipSearchProps> = (p) => {
     const tone = (c.kind === 'filter' && fieldOf(p.schema, c.field)?.tone) || KIND_TONES[c.kind];
     const kindWord = c.kind === 'group' ? 'grouping' : c.kind === 'saved' ? 'saved search' : 'filter';
     return (
-      <span key={`${c.kind}-${i}`} className="ov-search-chip" style={{ ...chipStyle(tone), flex: 'none', gap: 4, fontWeight: 600, maxWidth: 260 }}>
+      <span
+        key={`${c.kind}-${i}`}
+        className="ov-search-chip"
+        title={`${c.kind === 'saved' ? 'Saved' : facet}: ${label}`}
+        style={{ ...chipStyle(tone), flex: 'none', gap: 4, fontWeight: 600, maxWidth: p.singleLine ? 180 : 260, whiteSpace: 'nowrap' }}
+      >
         <span style={{ opacity: 0.75, fontWeight: 700 }}>{c.kind === 'saved' ? '★' : facet}</span>
         <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{label}</span>
         <button
@@ -153,14 +172,16 @@ export const ChipSearch: React.FC<ChipSearchProps> = (p) => {
   return (
     <div ref={boxRef} style={{ position: 'relative', minWidth: 0, flex: 1 }} data-help-key={p.helpKey}>
       <div
+        ref={rowRef}
         onClick={(e) => {
           if (e.target === e.currentTarget) inputRef.current?.focus();
         }}
         style={{
           display: 'flex',
           alignItems: 'center',
-          flexWrap: p.phone ? 'nowrap' : 'wrap',
-          overflowX: p.phone ? 'auto' : undefined,
+          flexWrap: oneRow ? 'nowrap' : 'wrap',
+          overflowX: oneRow ? 'auto' : undefined,
+          scrollbarWidth: p.singleLine ? 'none' : undefined,
           gap: 4,
           minHeight: p.phone ? 40 : 30,
           padding: '2px 2px 2px 6px',

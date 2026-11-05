@@ -312,6 +312,12 @@ opens it. The results drop down below the bar, grouped by kind
 (Requirements, Test Cases, …), each with its project, owner and status. The
 chips it offers for what you typed come after the results.
 
+A custom filter on **Project**, **Type** or **Status** matches their names:
+**Status contains review** finds the artifacts in review, and a name no
+status has finds nothing. The top bar's chips stay on one row that scrolls
+sideways, so the bar never grows over the page; hover a chip to read it in
+full.
+
 ## Editing, versions & history
 
 Select an artifact to see its details; **Edit** opens the editor.
