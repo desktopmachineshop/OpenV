@@ -507,7 +507,7 @@ func (s *FileService) syncOne(orgID string, def *Definition, path, content strin
 	}
 	// Agents whose files already report to this slug (a parent created
 	// after its children, or recreated) are linked to it now.
-	if err := s.relink(orgID); err != nil {
+	if err := s.linkReports(orgID, def.Slug); err != nil {
 		log.Printf("agents: could not link the agents that report to %q: %v", def.Slug, err)
 	}
 	return agent, nil
@@ -638,6 +638,31 @@ func (s *FileService) relink(orgID string) error {
 		a.ReportsTo = parents[a.Slug]
 		if err := s.repo.Update(a); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// linkReports relinks the org's hierarchy when a file names slug as the
+// agent it reports to, and reads nothing more when none does.
+func (s *FileService) linkReports(orgID, slug string) error {
+	entries, err := os.ReadDir(s.orgDir(orgID))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(s.orgDir(orgID), entry.Name()))
+		if err != nil {
+			continue
+		}
+		if def, _, err := parseSyncedFile(string(data), s.seedTools); err == nil && def.ReportsTo == slug {
+			return s.relink(orgID)
 		}
 	}
 	return nil
