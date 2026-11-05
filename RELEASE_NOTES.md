@@ -11,11 +11,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### New features
 
+- **A Table with the document's structure, and a Tree you can see.** On the requirements page, **Table** now nests every artifact under its heading or parent, with a caret to fold each branch and every column, status and priority included, on the headings too. A single **fold all / unfold all** button replaces the **Depth** picker. **Tree** is now a diagram: the project drawn left to right as connected boxes, coloured by type or by status with a key, that you can fold, pan, zoom and walk with the keyboard; click a box to open the artifact. The **Layers** view is gone, and links to it open the Tree.
 - **The Agents page shows your agents as a hierarchy.** A lead sits at the top and each group of specialists has its own column, with the agents that report to a lead nested beneath it on a line in the group's colour. Every card shows its open and done runs, what they cost and the proposals waiting for approval over the last 7 days, and the group headers add them up. Click a card to see that agent's runs and proposals, or open **Mission and tools** to read what it does. Workspace admins click **Edit** to choose who each agent reports to and its group, and to move it up or down. The default agents arrive already arranged. On a phone the groups stack and fold.
 
 ### Maintenance updates
 
+- **Act on what needs you from Home.** On Home and a project's Summary, a suspect link in **Needs you** now has **✓** to confirm that it still holds and **✗** to remove it (after you confirm), right there; the line leaves the list and the count drops. Clicking any line opens the artifact it names, the button on each line says what it does (**Review**, **Open**, **Continue**), and **Review all** in the panel's header opens the review queue.
+- **Activity opens what it describes.** Each event in Home's **Activity** and a project's audit trail is now a link to its artifact, the link's source artifact, the board, the agent run, the test run, the baseline, or the artifact with its notes open for a comment.
+- **A readable Activity log.** A project's **Activity** page now reads as sentences grouped by day, in the same words as Home: who did it (a person, an agent, a runner or the system, with no IDs), what they did and the artifact by its reference and title, as a link. Opening an event shows its detail: a status change as two status chips, an edit as a word-by-word diff of what changed, a link from one end to the other, a board move, a test result or an agent run's status, time and cost. The raw event is behind **Show raw event**.
+- The **Projects** panel on Home has a **+ New project** button in its header.
 - **Crews and the Crew Builder are gone.** The **Crew** page has left the project menu, and its old links open the **Agents** page. An agent run is now a single run: nothing hands work on to another agent or a person when it finishes, and agents can no longer delegate to a crew's specialists. An automation that ran a crew now runs the crew's first agent; one whose crew had no first agent is switched off and says **No agent: choose one** until you pick one. A board card assigned to a crew is now assigned to the crew's first agent, or left unassigned. Past crew runs stay in the run history as ordinary runs.
+
+### Bug fixes
+
+- The **Projects** list on Home showed "No requirements to trace yet" for every project, and the workspace's traced and verified figures stayed blank. Each project now shows its **Traced** and **Verified** bars, and a project's Summary its traced and verified share.
+- The top bar no longer cuts the workspace name short on a computer when there is room for it ("Desktop Machin…"). The workspace and project names take the room the bar has and shorten, with the full name on hover, only when it runs out; a phone keeps its narrower name.
 
 ## 0.27.5 — 2026-11-05
 

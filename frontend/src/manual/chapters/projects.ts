@@ -16,17 +16,28 @@ of the rail on every page.
   verifies them) and **verified**, and how many test cases fail.
 - **Needs you** lists what waits on you across every project, each line
   naming its project: artifacts in review to approve, suspect links to
-  confirm, test runs in progress, failing test cases and new comments. The
-  link on the right opens each one where it is dealt with.
+  confirm, test runs in progress, failing test cases and new comments.
+  Click a line to open the artifact it names (for a link, the artifact the
+  link starts from). The button on the right says what it does: **Review**
+  and **Open** open the artifact, **Continue** the test run. A suspect link
+  has two buttons instead: **✓** confirms that the link still holds, and
+  **✗** removes the link once you confirm it. Either way the line leaves the
+  list there and then. **Review all**, in the panel's header, opens the
+  review queue of the project with the most waiting.
 - **Activity** shows the newest events across the workspace's projects, who
-  did what to which artifact. When agents have proposed changes, a card
-  below it counts the proposals waiting.
-- **Projects**, below them, is where you pick a project. Each row shows the
-  project's name and how many artifacts it holds, a one-line description,
-  and two bars: the share of its requirements that are traced and the share
-  verified. A project with no requirements yet says so instead. The project
-  you opened last is marked with a blue edge. Each row carries its action
-  buttons:
+  did what to which artifact. Click an event to open what it is about: the
+  artifact, a link's source artifact, the board, the agent run, the test
+  run, the baseline, or a comment with its notes open. A deleted artifact
+  has nowhere to go, so its event is not a link. When agents have proposed
+  changes, a card below it counts the proposals waiting.
+- **Projects**, below them, is where you pick a project, and **+ New
+  project** in its header starts one. Each row shows the project's name and
+  how many artifacts it holds, a one-line description, and two bars: the
+  share of its requirements that are traced (a test case or a manual
+  verification stands behind them) and the share verified (their tests
+  pass, or they are verified by hand). A project with no requirements yet
+  says so instead. The project you opened last is marked with a blue edge.
+  Each row carries its action buttons:
 
 | Icon | Action |
 | --- | --- |

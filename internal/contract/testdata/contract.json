@@ -33,6 +33,7 @@
     "target-releases",
     "compact-layout",
     "redesign-pages",
+    "requirements-tree",
     "agent-hierarchy"
   ],
   "event_types": [

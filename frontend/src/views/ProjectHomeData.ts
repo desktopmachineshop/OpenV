@@ -19,6 +19,7 @@ import {
 } from '../api/client';
 import {
   buildTodo,
+  coverageFigures,
   describeEvent,
   percent,
   type ActivityItem,
@@ -69,13 +70,13 @@ const loadProjects = async (currentId: string, current: ProjectCard): Promise<Pr
   const cards = await Promise.all(
     others.map(async (p): Promise<ProjectCard> => {
       const [cov, page] = await Promise.allSettled([vvAPI.coverage(p.id), artifactAPI.listPage(p.id, { limit: 1 })]);
-      const summary = cov.status === 'fulfilled' ? cov.value.data.summary : undefined;
+      const summary = cov.status === 'fulfilled' ? coverageFigures(cov.value.data) : null;
       const total = page.status === 'fulfilled' ? parseInt(page.value.headers?.['x-total-count'] ?? '', 10) : NaN;
       return {
         id: p.id,
         name: p.name,
         count: Number.isFinite(total) ? total : null,
-        traced: percent(summary?.covered, summary?.total),
+        traced: percent(summary?.traced, summary?.total),
         verified: percent(summary?.verified, summary?.total),
       };
     })
@@ -100,7 +101,7 @@ export const loadHome = async (projectId: string): Promise<HomeData> => {
   const all = settled(artifacts) || [];
   const byId = new Map(all.map((a) => [a.id, a]));
   const cov = settled(coverage);
-  const summary = cov?.summary;
+  const summary = coverageFigures(cov);
   const runList = settled(runs) || [];
   const open = runList.filter((r) => r.status === 'in-progress').slice(0, 3);
   const runResults = await Promise.all(
@@ -115,7 +116,7 @@ export const loadHome = async (projectId: string): Promise<HomeData> => {
     id: projectId,
     name: proj?.name || 'This project',
     count: artifacts.status === 'fulfilled' ? all.length : null,
-    traced: percent(summary?.covered, summary?.total),
+    traced: percent(summary?.traced, summary?.total),
     verified: percent(summary?.verified, summary?.total),
   };
   const commentEvents = (settled(comments) || []).filter((c) => c.payload?.entry_type === 'comment').slice(0, 3);
@@ -124,7 +125,7 @@ export const loadHome = async (projectId: string): Promise<HomeData> => {
     artifacts: current.count,
     traced: current.traced,
     verified: current.verified,
-    failing: summary ? summary.fail || 0 : null,
+    failing: summary ? summary.failing : null,
     suspect: reviewQueue ? reviewQueue.suspect_links.length : null,
     lastBaseline,
     members: settled(members)?.length ?? null,

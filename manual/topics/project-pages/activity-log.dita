@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="activity-log">
+  <title>Activity log</title>
+  <conbody>
+    <p><b>Activity</b>, beside <b>Settings</b> in the project's rail, is the project's whole history, newest first, under a header for each day (<b>Today</b>, <b>Yesterday</b>, then the date). Each event reads as a sentence in the words Home uses: who did it, with their picture or a mark for an agent, a runner or the system; what they did, coloured like its dot on Home; and the thing they did it to, by its reference and title, as a link that opens it. <b>Type</b> narrows the log to one kind of event.</p>
+    <p>Click <b>▸</b> at the end of an event for its detail:</p>
+    <ul>
+      <li>a status change shows the old and new status as chips, with the version;</li>
+      <li>an edit shows what changed: the title and the text word by word, struck out in red and added in green, and each attribute before and after;</li>
+      <li>a link shows both ends and its type, such as TC-177 —verifies→ REQ-229;</li>
+      <li>a board move shows the column the card moved to;</li>
+      <li>a test result shows pass or fail, the test case and a link to the run;</li>
+      <li>an agent run shows its status, how long it took, what it cost and a link to the run;</li>
+      <li>anything else lists what was recorded with it.</li>
+    </ul>
+    <p><b>Show raw event</b> shows the event exactly as it is stored, for debugging.</p>
+  </conbody>
+</concept>

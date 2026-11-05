@@ -1,10 +1,18 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { DomainEvent, eventsAPI } from '../api/client';
+import { DomainEvent, artifactAPI, eventsAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
-import { ErrorBanner, buttonStyle } from '../components/ui';
+import { ErrorBanner, buttonStyle, panelStyle } from '../components/ui';
+import { EVENT_TYPE_LABELS, dayLabel } from '../components/activityEvents';
 import type { DomainEventType } from '../generated/contract';
+import { EventDetail, EventSentence, type ArtifactNames } from './ActivityLogParts';
+
+// A project's Activity log (#734): each event a sentence in the words the
+// Home uses (components/activityEvents), under its day, linking to what it
+// is about; opened, the detail drawn for its kind of event, with the raw
+// event behind a toggle. The type filter below is the log's one filter;
+// eventQuery is where any other filter joins the request.
 
 // Every event type a project's activity can hold: the types the backend
 // emits (internal/domain/events/events.go), in its order, less the
@@ -42,75 +50,27 @@ const EVENT_TYPES: DomainEventType[] = [
 // the log is exhausted).
 const PAGE_SIZE = 100;
 
-// Tint the type badge by entity family so the list scans visually.
-const typeBadgeStyle = (eventType: string): React.CSSProperties => {
-  const family = eventType.split('.')[0];
-  const palette: Record<string, { bg: string; border: string; text: string }> = {
-    artifact: { bg: 'var(--tint-blue)', border: 'var(--tint-blue-border)', text: 'var(--accent-text)' },
-    link: { bg: 'var(--tint-purple)', border: 'var(--tint-purple-border)', text: 'var(--purple)' },
-    baseline: { bg: 'var(--tint-green)', border: 'var(--tint-green-border)', text: 'var(--success-text)' },
-    testrun: { bg: 'var(--tint-green)', border: 'var(--tint-green-border)', text: 'var(--success-text)' },
-    workitem: { bg: 'var(--tint-yellow)', border: 'var(--tint-yellow-border)', text: 'var(--warning-text)' },
-    agentrun: { bg: 'var(--tint-purple)', border: 'var(--tint-purple-border)', text: 'var(--purple)' },
+/** The events request for one page: the project, the filter, and the cursor. */
+const eventQuery = (projectId: string, typeFilter: string, before?: string) => {
+  const query: { project_id: string; event_type?: string; limit: number; before?: string } = {
+    project_id: projectId,
+    limit: PAGE_SIZE,
   };
-  const c = palette[family] || {
-    bg: 'var(--neutral-soft)',
-    border: 'var(--border)',
-    text: 'var(--text-muted)',
-  };
-  return {
-    display: 'inline-block',
-    padding: '2px 10px',
-    borderRadius: 12,
-    background: c.bg,
-    border: `1px solid ${c.border}`,
-    color: c.text,
-    fontSize: 11.5,
-    fontWeight: 600,
-    whiteSpace: 'nowrap',
-  };
+  if (typeFilter !== 'all') query.event_type = typeFilter;
+  if (before) query.before = before;
+  return query;
 };
 
-// What each actor kind is called in the table.
-const ACTOR_KIND_LABELS: Record<string, string> = {
-  user: 'User',
-  agent: 'Agent run',
-  worker: 'Runner',
-  system: 'System',
-};
-
-// The server resolves each event's actor into a kind, the ID inside the actor
-// string and the name behind it. Fall back to parsing "user:<id>" /
-// "agent:<run_id>" / "system" here for responses that carry no names.
-const formatActor = (event: DomainEvent): { label: string; kind?: string; detail?: string } => {
-  const actor = event.actor;
-  const kindLabel = event.actor_kind ? ACTOR_KIND_LABELS[event.actor_kind] || event.actor_kind : undefined;
-  if (event.actor_kind) {
-    return {
-      label: event.actor_name || kindLabel || actor,
-      // The kind is only worth repeating once the name has taken the lead.
-      kind: event.actor_name ? kindLabel : undefined,
-      detail: event.actor_id,
-    };
+/** The events grouped under their day's header, newest first as the server sends them. */
+const byDay = (events: DomainEvent[], now: Date): { day: string; events: DomainEvent[] }[] => {
+  const out: { day: string; events: DomainEvent[] }[] = [];
+  for (const e of events) {
+    const day = dayLabel(e.created_at, now);
+    const last = out[out.length - 1];
+    if (last && last.day === day) last.events.push(e);
+    else out.push({ day, events: [e] });
   }
-  if (actor === 'system' || !actor) return { label: 'System' };
-  const sep = actor.indexOf(':');
-  if (sep > 0) {
-    const kind = actor.slice(0, sep);
-    const id = actor.slice(sep + 1);
-    if (kind === 'user') return { label: 'User', detail: id };
-    if (kind === 'agent') return { label: 'Agent run', detail: id };
-  }
-  return { label: actor };
-};
-
-const shortId = (id?: string) => (id ? `${id.slice(0, 8)}…` : '—');
-
-const cellStyle: React.CSSProperties = {
-  padding: '7px 10px',
-  borderBottom: '1px solid var(--border-soft)',
-  color: 'var(--text-body)',
-  verticalAlign: 'top',
+  return out;
 };
 
 export const ActivityLog: React.FC = () => {
@@ -129,6 +89,21 @@ export const ActivityLog: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // The project's artifacts by id, for the refs and titles the sentences
+  // name; a log whose read fails names them by the event's own title.
+  const [names, setNames] = useState<ArtifactNames>(new Map());
+
+  useEffect(() => {
+    if (!projectId) return;
+    let live = true;
+    artifactAPI
+      .list(projectId)
+      .then((r) => live && setNames(new Map((Array.isArray(r.data) ? r.data : []).map((a) => [a.id, a]))))
+      .catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [projectId, activeOrgId]);
 
   // Fetch one page. Without `before` this (re)loads the newest page and
   // replaces the list; with `before` it appends the older page.
@@ -136,14 +111,8 @@ export const ActivityLog: React.FC = () => {
     (before?: string) => {
       if (!projectId) return;
       setLoading(true);
-      const query: { project_id: string; event_type?: string; limit: number; before?: string } = {
-        project_id: projectId,
-        limit: PAGE_SIZE,
-      };
-      if (typeFilter !== 'all') query.event_type = typeFilter;
-      if (before) query.before = before;
       eventsAPI
-        .list(query)
+        .list(eventQuery(projectId, typeFilter, before))
         .then((res) => {
           const page = res.data || [];
           setEvents((prev) => {
@@ -207,10 +176,10 @@ export const ActivityLog: React.FC = () => {
           aria-label="Filter by event type"
           style={{ width: 200, height: 32, padding: '0 8px', fontSize: 13, borderRadius: 6 }}
         >
-          <option value="all">all</option>
+          <option value="all">All events</option>
           {EVENT_TYPES.map((t) => (
             <option key={t} value={t}>
-              {t}
+              {EVENT_TYPE_LABELS[t] || t}
             </option>
           ))}
         </select>
@@ -219,154 +188,47 @@ export const ActivityLog: React.FC = () => {
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 8 }} />
 
       <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
-        <div className="table-container ov-card" style={{ boxShadow: 'none' }}>
-          <div className="table-scroll">
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr>
-                {['Time', 'Type', 'Actor', 'Entity', ''].map((h, i) => (
-                  <th
-                    key={h || `col-${i}`}
-                    style={{
-                      textAlign: 'left',
-                      borderBottom: '1px solid var(--border)',
-                      padding: '8px 10px',
-                      color: 'var(--text-muted)',
-                      fontSize: 12,
-                      fontWeight: 600,
-                      letterSpacing: '0.04em',
-                      textTransform: 'uppercase',
-                      background: 'var(--surface-alt)',
-                    }}
-                  >
-                    {h}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {events.map((event) => {
-                const actor = formatActor(event);
+        {events.length === 0 && !loading && (
+          <p style={{ ...panelStyle, margin: 0, padding: 16, color: 'var(--text-muted)' }}>
+            {typeFilter === 'all'
+              ? 'No activity yet. Events appear here as artifacts, links, work items, test runs and agent runs change.'
+              : `No ${(EVENT_TYPE_LABELS[typeFilter] || typeFilter).toLowerCase()} events yet.`}
+          </p>
+        )}
+        {byDay(events, new Date()).map((group) => (
+          <section key={group.day} aria-label={group.day} style={{ marginBottom: 12 }}>
+            <h3 style={{ margin: '0 0 6px', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              {group.day}
+            </h3>
+            <ol style={{ ...panelStyle, listStyle: 'none', margin: 0, padding: 0, fontSize: 13 }}>
+              {group.events.map((event) => {
                 const isOpen = expanded.has(event.id);
-                const hasPayload = event.payload && Object.keys(event.payload).length > 0;
                 return (
-                  <React.Fragment key={event.id}>
-                    <tr
-                      onClick={() => toggleExpanded(event.id)}
-                      style={{ cursor: 'pointer', background: isOpen ? 'var(--tint-blue)' : 'var(--surface)' }}
-                    >
-                      <td style={{ ...cellStyle, whiteSpace: 'nowrap' }}>
-                        {new Date(event.created_at).toLocaleString()}
-                      </td>
-                      <td style={cellStyle}>
-                        <span style={typeBadgeStyle(event.event_type)}>{event.event_type}</span>
-                      </td>
-                      <td style={cellStyle}>
-                        <span title={actor.label}>{actor.label}</span>
-                        {actor.kind && (
-                          <span style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6 }}>{actor.kind}</span>
-                        )}
-                        {actor.detail && (
-                          <span
-                            title={actor.detail}
-                            style={{ fontSize: 11, color: 'var(--text-muted)', marginLeft: 6, fontFamily: 'monospace' }}
-                          >
-                            {shortId(actor.detail)}
-                          </span>
-                        )}
-                      </td>
-                      <td style={cellStyle}>
-                        {event.entity_name || event.entity_id ? (
-                          <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, maxWidth: 420 }}>
-                            {event.entity_name && (
-                              <span
-                                title={event.entity_name}
-                                style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
-                              >
-                                {event.entity_name}
-                              </span>
-                            )}
-                            {event.entity_kind && !event.entity_name && (
-                              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{event.entity_kind}</span>
-                            )}
-                            {event.entity_id && (
-                              <span
-                                title={event.entity_id}
-                                style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-muted)' }}
-                              >
-                                {shortId(event.entity_id)}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          '—'
-                        )}
-                      </td>
-                      <td style={{ ...cellStyle, textAlign: 'right', color: 'var(--text-muted)', width: 32 }}>
+                  <li key={event.id} style={{ borderBottom: '1px solid var(--border-soft)', background: isOpen ? 'var(--tint-blue)' : undefined }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '8px 12px' }}>
+                      <EventSentence e={event} names={names} />
+                      <button
+                        type="button"
+                        aria-expanded={isOpen}
+                        aria-label={isOpen ? 'Hide details' : 'Show details'}
+                        title={isOpen ? 'Hide details' : 'Show details'}
+                        onClick={() => toggleExpanded(event.id)}
+                        style={{ flex: 'none', width: 32, height: 28, border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+                      >
                         <span aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
-                      </td>
-                    </tr>
+                      </button>
+                    </div>
                     {isOpen && (
-                      <tr>
-                        <td colSpan={5} style={{ ...cellStyle, background: 'var(--surface)' }}>
-                          <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
-                            Event <span style={{ fontFamily: 'monospace' }}>{event.id}</span>
-                            {event.entity_id && (
-                              <>
-                                {' · '}
-                                {event.entity_kind || 'entity'}{' '}
-                                {event.entity_name && <span style={{ color: 'var(--text-body)' }}>{event.entity_name} </span>}
-                                <span style={{ fontFamily: 'monospace' }}>{event.entity_id}</span>
-                              </>
-                            )}
-                            {actor.detail && (
-                              <>
-                                {' · '}
-                                {actor.kind ? actor.kind.toLowerCase() : 'actor'}{' '}
-                                {actor.label && <span style={{ color: 'var(--text-body)' }}>{actor.label} </span>}
-                                <span style={{ fontFamily: 'monospace' }}>{actor.detail}</span>
-                              </>
-                            )}
-                          </div>
-                          {hasPayload ? (
-                            <pre
-                              style={{
-                                margin: 0,
-                                padding: '8px 10px',
-                                background: 'var(--bg-app)',
-                                border: '1px solid var(--border)',
-                                borderRadius: 4,
-                                fontSize: 12,
-                                overflowX: 'auto',
-                                whiteSpace: 'pre-wrap',
-                                overflowWrap: 'anywhere',
-                                color: 'var(--text-body)',
-                              }}
-                            >
-                              {JSON.stringify(event.payload, null, 2)}
-                            </pre>
-                          ) : (
-                            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>No payload.</span>
-                          )}
-                        </td>
-                      </tr>
+                      <div style={{ padding: '4px 12px 12px 58px', background: 'var(--surface)' }}>
+                        <EventDetail e={event} names={names} />
+                      </div>
                     )}
-                  </React.Fragment>
+                  </li>
                 );
               })}
-              {events.length === 0 && !loading && (
-                <tr>
-                  <td colSpan={5} style={{ padding: 16, color: 'var(--text-muted)', background: 'var(--surface)' }}>
-                    {typeFilter === 'all'
-                      ? 'No activity yet. Events appear here as artifacts, links, work items, test runs and agent runs change.'
-                      : `No ${typeFilter} events yet.`}
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-          </div>
-        </div>
+            </ol>
+          </section>
+        ))}
 
         {maybeMore && (
           <div style={{ padding: '12px 0', textAlign: 'center' }}>

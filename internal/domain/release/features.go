@@ -67,6 +67,7 @@ var Registry = []Feature{
 	{Key: FeatureTargetReleases, ShippedIn: "0.26.0", Summary: "Target releases: plan requirements for MVP, V1.0 and later releases, and follow each release's review, verification and burn-up on its own page"},
 	{Key: FeatureCompactLayout, ShippedIn: "0.26.0", Summary: "A more compact project layout: a narrow icon rail and one top bar on a computer, tabs along the bottom on a phone, and ? or F1 for help on any page"},
 	{Key: FeatureRedesignPages, ShippedIn: "0.27.0", Summary: "Four new project pages: Home with what needs you, Design with the design items as a tree, Tests with the runs and test cases, and Baselines with a timeline and a word-by-word comparison"},
+	{Key: FeatureRequirementsTree, ShippedIn: "0.28.0", Summary: "The requirements Table folds under its headings, and a new Tree view draws the project as connected boxes coloured by type or status"},
 	{Key: FeatureAgentHierarchy, ShippedIn: "0.28.0", Summary: "The Agents page shows your agents as a hierarchy of cards: a lead at the top, groups of specialists beneath it, and each card's runs, cost and proposals to approve over the last 7 days; Edit arranges who reports to whom"},
 }
 
@@ -225,6 +226,11 @@ const (
 	// FeatureRedesignPages gates the project pages of the redesign: Home,
 	// Design, Tests and Baselines. Each reads what the API already serves.
 	FeatureRedesignPages = "redesign-pages"
+	// FeatureRequirementsTree gates the requirements page's two views: the
+	// Table with the document's hierarchy folding under its headings and a
+	// fold-all / unfold-all button, and the Tree diagram. Without it the
+	// page keeps Table, Tree and Layers. Frontend only.
+	FeatureRequirementsTree = "requirements-tree"
 	// FeatureAgentHierarchy gates the Agents page's hierarchy of cards and
 	// its Edit mode (PUT /agent-arrangement). Without it the page keeps its
 	// list; the agents' reports_to, group and sort order are kept either way.
