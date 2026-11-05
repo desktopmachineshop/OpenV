@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.27.5 — 2026-11-05
+
 ### Maintenance updates
 
 - On a phone, the traceability matrix is now a coverage list: a summary of how many requirements are fully traced, filters for what needs attention, failing tests and suspect links, and a square per requirement for its needs, design, tests and hazards. Tap a requirement to see everything linked to it.
