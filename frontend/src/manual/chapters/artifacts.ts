@@ -467,16 +467,17 @@ convention the descriptions use.
   nobody at all, and there is nothing to see when it does. The person is
   notified.
 - **\`@@\`** names someone **and raises a to-do for them** as the comment is
-  posted — the comment becomes the card, assigned to whoever it named, linked
-  to this artifact and carrying the whole note as its description. Use it when
-  you already know you are asking for work rather than talking.
+  posted — the comment's first paragraph becomes the to-do, assigned to
+  whoever it named and linked back to this artifact. Use it when you already
+  know you are asking for something rather than talking. The to-do goes on
+  the project's to-do list, not the board (see *Kanban board*, To-dos).
 - **\`#\`** and **\`##\`** cite a figure or an artifact, exactly as they do in
   a description, and the citation is a link a reader can follow.
 
 Raising a to-do **after** a comment is posted still works and has not changed:
 the **Add to-do** control on a comment that names somebody lets you set the
-title, the person and a due date. \`@@\` is the shortcut, not a replacement —
-it takes the note's first line as the title and no due date.
+text, the person and a due date. \`@@\` is the shortcut, not a replacement —
+it takes the note's first paragraph as the to-do and no due date.
 
 ## Baselines
 

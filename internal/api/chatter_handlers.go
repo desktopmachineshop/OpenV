@@ -131,27 +131,73 @@ func (h *Handler) decorateChatterEntries(projectID string, entries []*chatter.Ch
 		}
 	}
 
-	if h.WorkItemService == nil {
-		return
-	}
 	ids := make([]string, 0, len(entries))
 	for _, e := range entries {
 		ids = append(ids, e.ID)
+	}
+	byChatter := h.workItemTodoRefs(projectID, ids, names)
+	// A to-do of its own (issue #731) is the record of a to-do raised since
+	// the todos feature; a note raised before it keeps showing its board
+	// card, so nothing already written loses its link.
+	for id, ref := range h.todoRefs(projectID, ids, names) {
+		byChatter[id] = ref
+	}
+	for _, e := range entries {
+		if ref, ok := byChatter[e.ID]; ok {
+			e.Todo = ref
+		}
+	}
+}
+
+// todoRefs is each note's to-do from the to-do table, keyed by note id.
+func (h *Handler) todoRefs(projectID string, ids []string, names map[string]string) map[string]*chatter.TodoRef {
+	out := map[string]*chatter.TodoRef{}
+	if h.TodoService == nil {
+		return out
+	}
+	list, err := h.TodoService.ListBySourceChatterIDs(ids)
+	if err != nil {
+		slog.Error("chatter: failed to load to-dos raised from notes",
+			"project_id", projectID, "error", err)
+		return out
+	}
+	for _, t := range list {
+		// As for a work item below: a note shows a to-do of its own
+		// project only.
+		if t.SourceChatterID == nil || t.ProjectID == nil || (projectID != "" && *t.ProjectID != projectID) {
+			continue
+		}
+		ref := &chatter.TodoRef{
+			TodoID:     t.ID,
+			Title:      t.Text,
+			Status:     t.Status(),
+			AssigneeID: t.AssigneeID,
+		}
+		if t.AssigneeID != nil {
+			ref.AssigneeName = names[*t.AssigneeID]
+		}
+		out[*t.SourceChatterID] = ref
+	}
+	return out
+}
+
+// workItemTodoRefs is each note's to-do from the board: the work item a
+// note raised before to-dos had a table of their own, keyed by note id.
+func (h *Handler) workItemTodoRefs(projectID string, ids []string, names map[string]string) map[string]*chatter.TodoRef {
+	byChatter := map[string]*chatter.TodoRef{}
+	if h.WorkItemService == nil {
+		return byChatter
 	}
 	items, err := h.WorkItemService.ListBySourceChatterIDs(ids)
 	if err != nil {
 		slog.Error("chatter: failed to load to-dos raised from notes",
 			"project_id", projectID, "error", err)
-		return
-	}
-	if len(items) == 0 {
-		return
+		return byChatter
 	}
 
 	// An item assigned to an agent or a team, or to someone since removed
 	// from the project, shows its status without a name rather than not
 	// showing at all.
-	byChatter := make(map[string]*chatter.TodoRef, len(items))
 	for _, item := range items {
 		if item.SourceChatterID == nil {
 			continue
@@ -175,11 +221,7 @@ func (h *Handler) decorateChatterEntries(projectID string, entries []*chatter.Ch
 		}
 		byChatter[*item.SourceChatterID] = ref
 	}
-	for _, e := range entries {
-		if ref, ok := byChatter[e.ID]; ok {
-			e.Todo = ref
-		}
-	}
+	return byChatter
 }
 
 // memberDisplayName is the label a person is shown by: their name, or the

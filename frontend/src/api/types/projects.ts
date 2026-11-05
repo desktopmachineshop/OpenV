@@ -287,3 +287,35 @@ export interface WorkItemActivity {
   payload: Record<string, any>;
   created_at: string;
 }
+
+/**
+ * A to-do (issue #731): one paragraph to tick off, kept off the board. A
+ * project's, or a personal one (project_id null) that only its writer sees.
+ */
+export interface Todo {
+  id: string;
+  org_id: string;
+  project_id: string | null;
+  text: string;
+  done: boolean;
+  done_at: string | null;
+  /** Why it was ticked off when not simply done: "promoted" to a board task. */
+  done_note: string;
+  assignee_id: string | null;
+  due_date: string | null;
+  source_artifact_id: string | null;
+  source_chatter_id: string | null;
+  promoted_work_item_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** What a to-do is made from; the route says whose it is. */
+export interface TodoInput {
+  text: string;
+  assignee_id?: string | null;
+  due_date?: string | null;
+  source_chatter_id?: string | null;
+  source_artifact_id?: string | null;
+}

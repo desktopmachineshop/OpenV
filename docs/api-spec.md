@@ -1267,6 +1267,22 @@ conventions.
 | POST | `/api/v1/work-items/{id}/move` | Move card `{column, sort_order}` (agent columns can enqueue runs); `400` for a column the board does not have | editor |
 | POST | `/api/v1/work-items/{id}/comments` | Comment on card `{content}` → `201` with the activity entry | viewer |
 
+### To-dos
+
+A to-do (issue #731) is one paragraph to tick off, kept apart from the board: no column, no discussion, no agent runs. It belongs to a project, or, with no project, to the person who wrote it alone (a personal to-do). `text` is required, at most 1000 characters and one paragraph (no blank line), else `400`. Creating one needs the `todos` feature on for the workspace (`403` otherwise); reading, editing and ticking one off do not. A personal to-do answers `404 to-do not found` to everyone but its writer.
+
+| Method | Path | Description | Role |
+|--------|------|-------------|------|
+| GET | `/api/v1/projects/{id}/todos` | The project's to-dos: open ones first, soonest due first, then the done ones, most recently done first | viewer |
+| POST | `/api/v1/projects/{id}/todos` | Add one `{text, assignee_id?, due_date?, source_chatter_id?, source_artifact_id?}` → `201`. `source_chatter_id` raises it from a note, which must be in this project (`400`), and sets `source_artifact_id` to the note's artifact; an `assignee_id` that is not a project member is `400` | editor |
+| GET | `/api/v1/todos` | My to-dos in the request's workspace: the project to-dos assigned to me in projects I can read, and my personal ones, in the project list's order | signed-in member |
+| POST | `/api/v1/todos` | Add a personal to-do `{text, due_date?}` → `201`, assigned to its writer | signed-in member |
+| GET | `/api/v1/todos/{id}` | One to-do | viewer (personal: its writer) |
+| PUT | `/api/v1/todos/{id}` | Edit `{text, assignee_id?, due_date?}`: each replaced by what is sent; a personal to-do stays its writer's | editor (personal: its writer) |
+| POST | `/api/v1/todos/{id}/done` | Tick off or open again `{done}`; `done_at` is stamped, or cleared with `done_note` | editor (personal: its writer) |
+| POST | `/api/v1/todos/{id}/promote` | Make a board task of it: a work item in `todo` carrying the text (title cut at 120 characters), assignee, due date and source artifact; the to-do is ticked off with `done_note: "promoted"` and `promoted_work_item_id`. Answers `{todo, work_item}`; `400` for a personal to-do, `409` for one already promoted | editor |
+| DELETE | `/api/v1/todos/{id}` | Delete → `204` | editor (personal: its writer) |
+
 ### Guided sessions (requirements wizard + V&V Assistant chat)
 
 The assistant's transcript is stored on a guided session, and one conversation

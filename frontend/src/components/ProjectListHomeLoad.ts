@@ -3,13 +3,14 @@ import {
   eventsAPI,
   proposalsAPI,
   reviewAPI,
+  todosAPI,
   vvAPI,
   type Artifact,
   type DomainEvent,
   type Project,
   type Proposal,
 } from '../api/client';
-import { buildTodo, coverageFigures, describeEvent, percent, type ActivityItem, type TodoItem } from './ProjectListHomeData';
+import { buildTodo, coverageFigures, describeEvent, percent, todoNeeds, type ActivityItem, type TodoItem } from './ProjectListHomeData';
 import type { ProjectFigures } from './ProjectListFigures';
 
 // The workspace Home on the Projects page (the Home design, redesign-pages):
@@ -87,12 +88,18 @@ const loadProject = async (p: Project, comments: DomainEvent[]) => {
   };
 };
 
-export const loadWorkspaceHome = async (projects: Project[]): Promise<WorkspaceHomeData> => {
+export const loadWorkspaceHome = async (
+  projects: Project[],
+  opts: { todos?: boolean } = {},
+): Promise<WorkspaceHomeData> => {
   const names = new Map(projects.map((p) => [p.id, p.name]));
-  const [events, chatter, proposals] = await Promise.allSettled([
+  // The member's own open to-dos are a kind of their own, with the todos
+  // feature (issue #731).
+  const [events, chatter, proposals, mine] = await Promise.allSettled([
     eventsAPI.list({ limit: 12 }),
     eventsAPI.list({ event_type: 'chatter.created', limit: 30 }),
     proposalsAPI.list({ status: 'pending' }),
+    opts.todos ? todosAPI.listMine() : Promise.resolve({ data: [] }),
   ]);
   const comments = list(chatter).filter((c) => c.payload?.entry_type === 'comment');
   const out: WorkspaceHomeData = {
@@ -130,6 +137,7 @@ export const loadWorkspaceHome = async (projects: Project[]): Promise<WorkspaceH
       out.totals.failing += l.figures.failing || 0;
     });
   }
+  out.todo.push(...todoNeeds(list(mine), names));
   out.totals.artifacts = counted ? artifacts : null;
   out.totals.traced = percent(covered, reqs);
   out.totals.verified = percent(verified, reqs);

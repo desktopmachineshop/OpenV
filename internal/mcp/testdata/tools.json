@@ -687,6 +687,64 @@
         "POST /api/v1/agent-runs/delegate {\"prompt\":\"Draft the test cases.\",\"role_label\":\"builder\"}",
         "GET /api/v1/agent-runs/delegate/99999999-9999-4999-8999-999999999999"
       ]
+    },
+    {
+      "name": "list_todos",
+      "read_only": true,
+      "description": "List a project's to-dos: one-paragraph jobs to tick off, separate from the kanban board. Open ones come first, soonest due first, then the done ones. Set include_done to false to leave the done ones out.",
+      "input_schema": {
+        "properties": {
+          "include_done": {
+            "description": "Include to-dos already ticked off (default true)",
+            "type": "boolean"
+          },
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/projects/{id}/todos"],
+      "requests": ["GET /api/v1/projects/11111111-1111-4111-8111-111111111111/todos"]
+    },
+    {
+      "name": "create_todo",
+      "read_only": false,
+      "description": "Add a to-do to a project: one paragraph of text, at most 1000 characters, for a small job someone just does and ticks off. Optionally assign it to a project member and give it a due date (YYYY-MM-DD). Larger work with discussion belongs on the board as a work item.",
+      "input_schema": {
+        "properties": {
+          "assignee_id": {
+            "description": "Optional user ID of the project member who has it",
+            "type": "string"
+          },
+          "due_date": {"description": "Optional due date, YYYY-MM-DD", "type": "string"},
+          "project_id": {"description": "Project ID", "type": "string"},
+          "text": {"description": "The to-do: one paragraph", "type": "string"}
+        },
+        "required": ["project_id", "text"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/projects/{id}/todos"],
+      "requests": [
+        "POST /api/v1/projects/11111111-1111-4111-8111-111111111111/todos {\"assignee_id\":\"dddddddd-dddd-4ddd-8ddd-dddddddddddd\",\"due_date\":\"2027-01-31T00:00:00Z\",\"text\":\"Check the seal wording.\"}"
+      ]
+    },
+    {
+      "name": "tick_todo",
+      "read_only": false,
+      "description": "Tick a to-do off as done, or set done to false to open it again.",
+      "input_schema": {
+        "properties": {
+          "done": {
+            "description": "true to tick it off (the default), false to open it again",
+            "type": "boolean"
+          },
+          "id": {"description": "To-do ID", "type": "string"}
+        },
+        "required": ["id"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/todos/{id}/done"],
+      "requests": ["POST /api/v1/todos/cccccccc-cccc-4ccc-8ccc-cccccccccccc/done {\"done\":true}"]
     }
   ],
   "read_only_tool_names": [
@@ -708,6 +766,7 @@
     "mcp__openv__get_release_progress",
     "mcp__openv__list_work_items",
     "mcp__openv__get_work_item",
-    "mcp__openv__get_work_item_history"
+    "mcp__openv__get_work_item_history",
+    "mcp__openv__list_todos"
   ]
 }

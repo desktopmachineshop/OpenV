@@ -379,3 +379,12 @@ PUT /api/v1/projects/{id}/releases/{releaseId} -> UpdateTargetRelease
 DELETE /api/v1/projects/{id}/releases/{releaseId} -> DeleteTargetRelease
 GET /api/v1/projects/{id}/vv/releases -> GetReleaseOverview
 GET /api/v1/projects/{id}/vv/releases/{releaseId} -> GetReleaseProgress
+GET /api/v1/projects/{id}/todos -> ListProjectTodos
+POST /api/v1/projects/{id}/todos -> CreateProjectTodo
+GET /api/v1/todos -> ListMyTodos
+POST /api/v1/todos -> CreatePersonalTodo
+GET /api/v1/todos/{id} -> GetTodo
+PUT /api/v1/todos/{id} -> UpdateTodo
+DELETE /api/v1/todos/{id} -> DeleteTodo
+POST /api/v1/todos/{id}/done -> SetTodoDone
+POST /api/v1/todos/{id}/promote -> PromoteTodo

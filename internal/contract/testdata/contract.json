@@ -33,7 +33,8 @@
     "target-releases",
     "compact-layout",
     "redesign-pages",
-    "requirements-tree"
+    "requirements-tree",
+    "todos"
   ],
   "event_types": [
     "artifact.created",

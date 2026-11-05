@@ -116,10 +116,17 @@ export interface NoteMention {
   name: string;
 }
 
+/**
+ * The to-do raised from a note. Since to-dos have a table of their own it
+ * names one by todo_id, with status "open" or "done"; a note raised before
+ * names the board card it raised by work_item_id, with its column.
+ */
 export interface NoteTodo {
-  work_item_id: string;
+  todo_id?: string;
+  work_item_id?: string;
+  /** The to-do's text, or the card's title. */
   title: string;
-  /** The board column the to-do sits in. */
+  /** "open" or "done" for a to-do; the board column for a card. */
   status: string;
   assignee_id?: string | null;
   assignee_name?: string;

@@ -219,12 +219,13 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
   todos: {
     title: 'To-dos',
     summary:
-      "The board's work items arranged by person instead of by column, so the page answers who owes what.",
+      "The project's to-dos: one-paragraph jobs to tick off, kept off the board. Bigger work goes on the board as a card.",
     tips: [
-      'Moving a card on the board updates this page, and the other way round — it is the same work.',
-      'Just mine narrows the page to your own list; Show done brings finished work back.',
-      'Raise a to-do from a note with + Add to-do: the person named and the note’s first line are filled in.',
-      'Work for an agent or a team is under Agents and teams; anything with no assignee is under Unassigned.',
+      'Type a to-do in the quick add and press Enter; who has it and a due date are optional.',
+      'Tick a to-do off to complete it: completed ones collapse under Completed, and unticking one opens it again.',
+      'Promote to board task makes a card of a to-do that grew, carrying its text, and ticks the to-do off.',
+      'Raise a to-do from a note with + Add to-do: the person named and the note’s first paragraph are filled in.',
+      'My to-dos, in the workspace rail, gathers yours across every project.',
     ],
     chapter: { slug: 'board', title: 'Kanban board' },
   },
@@ -344,6 +345,17 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'A notification that one of these runs failed opens it here.',
     ],
     chapter: { slug: 'runs-runners', title: 'Runs & runners' },
+  },
+  'org/todos': {
+    title: 'My to-dos',
+    summary:
+      'Your to-dos across the workspace: those assigned to you in its projects, and your personal ones, which nobody else sees.',
+    tips: [
+      'The quick add makes a personal to-do, with no project.',
+      'Each project to-do names its project; click the name to open that project’s list.',
+      'Tick a to-do off to complete it; completed ones collapse under Completed.',
+    ],
+    chapter: { slug: 'board', title: 'Kanban board' },
   },
   admin: {
     title: 'Platform admin',

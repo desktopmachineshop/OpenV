@@ -13,6 +13,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
 	"github.com/openv/requirements-platform/internal/domain/targetreleases"
+	"github.com/openv/requirements-platform/internal/domain/todos"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
@@ -59,6 +60,7 @@ func (a *app) projects() {
 	a.downloadService.SetWorkspaceSource(downloadWorkspaceSource(a.projectService, a.orgService))
 	a.evidenceService = evidence.NewDefaultService(a.evidenceRepo)
 	a.workItemService = workitems.NewDefaultService(a.workItemRepo, a.bus)
+	a.todoService = todos.NewDefaultService(a.todoRepo, a.workItemService)
 	a.guidedService = guided.NewDefaultService(a.guidedRepo, a.artifactService, a.linkService, a.chatterService, a.productService, a.bus)
 	a.interviewService = interviews.NewDefaultService(a.interviewRepo)
 	a.shareLinkService = sharelinks.NewService(postgres.NewShareLinkRepository(a.db))

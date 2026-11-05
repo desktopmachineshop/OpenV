@@ -35,4 +35,5 @@ apps:
       /projects/:projectId/settings: settings
       /org/settings: org.settings
       /org/runs: org.runs
+      /org/todos: org.todos
       /admin: admin

@@ -68,6 +68,7 @@ var Registry = []Feature{
 	{Key: FeatureCompactLayout, ShippedIn: "0.26.0", Summary: "A more compact project layout: a narrow icon rail and one top bar on a computer, tabs along the bottom on a phone, and ? or F1 for help on any page"},
 	{Key: FeatureRedesignPages, ShippedIn: "0.27.0", Summary: "Four new project pages: Home with what needs you, Design with the design items as a tree, Tests with the runs and test cases, and Baselines with a timeline and a word-by-word comparison"},
 	{Key: FeatureRequirementsTree, ShippedIn: "0.28.0", Summary: "The requirements Table folds under its headings, and a new Tree view draws the project as connected boxes coloured by type or status"},
+	{Key: FeatureTodos, ShippedIn: "0.28.0", Summary: "To-dos of their own: one paragraph to tick off, kept off the board, in a project list and in My to-dos, with a promote to board task when one grows"},
 }
 
 // Feature keys the code gates on.
@@ -230,6 +231,13 @@ const (
 	// fold-all / unfold-all button, and the Tree diagram. Without it the
 	// page keeps Table, Tree and Layers. Frontend only.
 	FeatureRequirementsTree = "requirements-tree"
+	// FeatureTodos is the to-do as an entity of its own (issue #731): the
+	// project's to-do list, My to-dos, a note raising a to-do rather than a
+	// board card, and promoting a to-do to a board task. It gates CREATING
+	// one (both create endpoints and the controls); reading, ticking and
+	// editing a to-do are never gated, so one raised on nightly stays
+	// workable everywhere. Without it a note raises a work item as before.
+	FeatureTodos = "todos"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

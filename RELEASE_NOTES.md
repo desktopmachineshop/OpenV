@@ -12,6 +12,7 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 ### New features
 
 - **A Table with the document's structure, and a Tree you can see.** On the requirements page, **Table** now nests every artifact under its heading or parent, with a caret to fold each branch and every column, status and priority included, on the headings too. A single **fold all / unfold all** button replaces the **Depth** picker. **Tree** is now a diagram: the project drawn left to right as connected boxes, coloured by type or by status with a key, that you can fold, pan, zoom and walk with the keyboard; click a box to open the artifact. The **Layers** view is gone, and links to it open the Tree.
+- **To-dos of their own, off the board.** A to-do is now one paragraph to just do and tick off, kept apart from board cards. A project's **To-dos** page is its to-do list: type one and press Enter, choose who has it and a due date if you like, tick it off, and the completed ones fold away under **Completed**. **My to-dos**, in the workspace menu, gathers yours across every project, with personal to-dos only you see, and your open ones also show in Home's **Needs you**. **+ Add to-do** and `@@name` on a note now raise a to-do rather than a card, and the note shows whether it is open or done. When a to-do grows, **Promote to board task** makes a card of it and ticks the to-do off. The board shows only cards; to-dos raised from notes before keep their cards. Agents can list, add and tick to-dos too.
 
 ### Maintenance updates
 

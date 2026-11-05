@@ -4,7 +4,7 @@
 // (views/ProjectHomeData.ts) builds them for one project; the workspace Home
 // on the Projects page (ProjectListHome) builds them for every project the
 // member can see.
-import type { Artifact, CoverageReport, DomainEvent, ReviewQueue, TestResult, TestRun } from '../api/client';
+import type { Artifact, CoverageReport, DomainEvent, ReviewQueue, TestResult, TestRun, Todo } from '../api/client';
 
 // The audit trail's wording lives in activityEvents, shared with the
 // project's Activity log (#734); it is re-exported here for the Homes.
@@ -17,7 +17,7 @@ export {
   type ActivityTone,
 } from './activityEvents';
 
-export type TodoKind = 'approve' | 'suspect' | 'test run' | 'failing' | 'comment';
+export type TodoKind = 'approve' | 'suspect' | 'test run' | 'failing' | 'comment' | 'to-do';
 
 export interface TodoItem {
   key: string;
@@ -183,3 +183,33 @@ export const buildTodo = ({ projectId, review, runs, testCases, coverage, commen
   return items;
 };
 
+
+/**
+ * A member's open to-dos (issue #731) as Needs you rows: each opens the
+ * to-do in its project's list, or My to-dos for a personal one, soonest due
+ * first as the API lists them.
+ */
+export const todoNeeds = (todos: Todo[], projectNames: Map<string, string>, now: Date = new Date()): (TodoItem & { project: string; projectId: string })[] =>
+  todos
+    .filter((t) => !t.done && (!t.project_id || projectNames.has(t.project_id)))
+    .map((t) => {
+      const to = t.project_id ? `/projects/${t.project_id}/todos?todo=${t.id}` : `/org/todos?todo=${t.id}`;
+      const due = t.due_date ? Date.parse(t.due_date) : NaN;
+      const meta = Number.isNaN(due)
+        ? 'To-do'
+        : due < now.getTime()
+          ? `Overdue · due ${t.due_date!.slice(0, 10)}`
+          : `Due ${t.due_date!.slice(0, 10)}`;
+      return {
+        key: `todo-${t.id}`,
+        kind: 'to-do' as const,
+        ref: '',
+        title: t.text,
+        meta,
+        action: 'Open',
+        to,
+        open: to,
+        project: t.project_id ? projectNames.get(t.project_id) || '' : 'Personal',
+        projectId: t.project_id || '',
+      };
+    });

@@ -14,7 +14,7 @@ globs of `docs/areas.json`:
 
 | Area | Globs here |
 |---|---|
-| requirements-core | `artifact_*.go`, `attribute_*.go`, `chatter_*.go`, `embedding_*.go`, `link_*.go`, `managed_link_edits*.go`, `meta_*.go`, `product_profile_*.go`, `project_handlers*.go`, `quality_*.go`, `reference_party_*.go`, `review_*.go`, `search_*.go`, `suite_*.go`, `work_item_*.go` |
+| requirements-core | `artifact_*.go`, `attribute_*.go`, `chatter_*.go`, `embedding_*.go`, `link_*.go`, `managed_link_edits*.go`, `meta_*.go`, `product_profile_*.go`, `project_handlers*.go`, `quality_*.go`, `reference_party_*.go`, `review_*.go`, `search_*.go`, `suite_*.go`, `todo_*.go`, `work_item_*.go` |
 | verification | `evidence_*.go`, `vv_*.go` |
 | documents | `attachment_*.go`, `baseline_*.go`, `download_*.go`, `project_io_*.go`, `project_snapshot*.go`, `template_*.go` |
 | tenancy-identity | `auth*.go`, `avatar_*.go`, `cookies*.go`, `default_workspace_*.go`, `email_verification_*.go`, `invitation_*.go`, `limits*.go`, `oidc_*.go`, `org_*.go`, `password*.go`, `project_team_access_*.go`, `registration_policy*.go` |

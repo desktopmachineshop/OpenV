@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 321
-  axios instance calls: 310 (DELETE 38, GET 125, HEAD 1, POST 103, PUT 43)
+call sites: 330
+  axios instance calls: 319 (DELETE 39, GET 128, HEAD 1, POST 107, PUT 44)
   helper calls (a function that passes its argument to the instance): 2
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 7 (4 of them axios calls)
-distinct METHOD PATH lines below: 320; server routes reached: 320
+distinct METHOD PATH lines below: 329; server routes reached: 329
 
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
 GET     /api/v1/admin/metrics/visitors                                    adminAPI.visitorMetrics
@@ -266,6 +266,8 @@ PUT     /api/v1/projects/{id}/team-access                                 projec
 DELETE  /api/v1/projects/{id}/team-access/{teamId}                        projectTeamAccessAPI.revoke
 GET     /api/v1/projects/{id}/test-runs                                   vvAPI.listRuns
 POST    /api/v1/projects/{id}/test-runs                                   vvAPI.createRun
+GET     /api/v1/projects/{id}/todos                                       todosAPI.listProject
+POST    /api/v1/projects/{id}/todos                                       todosAPI.createProject
 GET     /api/v1/projects/{id}/vv/coverage                                 vvAPI.coverage
 GET     /api/v1/projects/{id}/vv/gaps                                     vvAPI.gaps
 GET     /api/v1/projects/{id}/vv/matrix                                   vvAPI.matrix
@@ -322,6 +324,13 @@ POST    /api/v1/test-runs/{id}/agent-run                                  vvAPI.
 GET     /api/v1/test-runs/{id}/citations                                  evidenceAPI.citationsForRun
 GET     /api/v1/test-runs/{id}/results                                    vvAPI.listResults
 POST    /api/v1/test-runs/{id}/results                                    vvAPI.upsertResult
+GET     /api/v1/todos                                                     todosAPI.listMine
+POST    /api/v1/todos                                                     todosAPI.createPersonal
+DELETE  /api/v1/todos/{id}                                                todosAPI.remove
+GET     /api/v1/todos/{id}                                                todosAPI.get
+PUT     /api/v1/todos/{id}                                                todosAPI.update
+POST    /api/v1/todos/{id}/done                                           todosAPI.setDone
+POST    /api/v1/todos/{id}/promote                                        todosAPI.promote
 GET     /api/v1/users                                                     authAPI.listUsers
 DELETE  /api/v1/work-items/{id}                                           workItemsAPI.remove
 GET     /api/v1/work-items/{id}                                           workItemsAPI.get

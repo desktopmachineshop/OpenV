@@ -1,6 +1,6 @@
 // Projects: their settings, downloads, baselines and baseline diffs,
 // templates, artifact types and link rules, attribute definitions, the
-// product profile, and the work items on a project's board.
+// product profile, the work items on a project's board, and to-dos.
 // Code outside src/api imports these from api/client, which re-exports
 // this module (refactor plan F1, K12).
 
@@ -22,6 +22,8 @@ import type {
   Project,
   ProjectExport,
   Template,
+  Todo,
+  TodoInput,
   WorkItem,
   WorkItemActivity,
 } from './types/projects';
@@ -166,4 +168,23 @@ export const workItemsAPI = {
     client.post<WorkItem>(`/api/v1/work-items/${id}/move`, { column, sort_order: sortOrder }),
   comment: (id: string, content: string) =>
     client.post<WorkItemActivity>(`/api/v1/work-items/${id}/comments`, { content }),
+};
+
+/** To-dos (issue #731): a project's list, My to-dos, and one to-do's edits. */
+export const todosAPI = {
+  listProject: (projectId: string) => client.get<Todo[]>(`/api/v1/projects/${projectId}/todos`),
+  createProject: (projectId: string, payload: TodoInput) =>
+    client.post<Todo>(`/api/v1/projects/${projectId}/todos`, payload),
+  /** The caller's to-dos in the active workspace, across its projects. */
+  listMine: () => client.get<Todo[]>('/api/v1/todos'),
+  /** A personal to-do: no project, assigned to its writer. */
+  createPersonal: (payload: Pick<TodoInput, 'text' | 'due_date'>) =>
+    client.post<Todo>('/api/v1/todos', payload),
+  get: (id: string) => client.get<Todo>(`/api/v1/todos/${id}`),
+  update: (id: string, payload: Pick<TodoInput, 'text' | 'assignee_id' | 'due_date'>) =>
+    client.put<Todo>(`/api/v1/todos/${id}`, payload),
+  setDone: (id: string, done: boolean) => client.post<Todo>(`/api/v1/todos/${id}/done`, { done }),
+  promote: (id: string) =>
+    client.post<{ todo: Todo; work_item: WorkItem }>(`/api/v1/todos/${id}/promote`),
+  remove: (id: string) => client.delete(`/api/v1/todos/${id}`),
 };

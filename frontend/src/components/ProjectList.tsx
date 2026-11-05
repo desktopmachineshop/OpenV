@@ -49,7 +49,7 @@ import { PanelHeader, SegmentedControl, useConfirm, usePrompt } from './ui';
 import { WORKSPACE_RUNS_FEATURE, workspaceRunPath } from './agents/workspaceRuns';
 import { useFeature } from '../hooks/useFeature';
 import { useHelpShortcut } from '../hooks/useHelpShortcut';
-import { COMPACT_LAYOUT_FEATURE, REDESIGN_PAGES_FEATURE } from '../features';
+import { COMPACT_LAYOUT_FEATURE, REDESIGN_PAGES_FEATURE, TODOS_FEATURE } from '../features';
 import { NewProjectAction, ProjectCount, ProjectMeters } from './ProjectListFigures';
 import { ProjectListHome } from './ProjectListHome';
 import { loadWorkspaceHome, type WorkspaceHomeData } from './ProjectListHomeLoad';
@@ -112,6 +112,7 @@ export const ProjectList: React.FC = () => {
   // project picker, the Projects panel's rows with each project's size and
   // traced and verified share (ProjectListHome, ProjectListHomeLoad).
   const homeDesign = useFeature(REDESIGN_PAGES_FEATURE);
+  const todosOn = useFeature(TODOS_FEATURE);
   const location = useLocation();
   const { isPhone } = useViewport();
   const [home, setHome] = useState<WorkspaceHomeData | null>(null);
@@ -120,7 +121,7 @@ export const ProjectList: React.FC = () => {
     if (!homeDesign || loading) return undefined;
     let live = true;
     setHome(null);
-    loadWorkspaceHome(projects)
+    loadWorkspaceHome(projects, { todos: todosOn })
       .then((d) => live && setHome(d))
       // A Home that could not be gathered still draws, empty, rather than
       // saying it is gathering for ever.
@@ -129,7 +130,7 @@ export const ProjectList: React.FC = () => {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [homeDesign, loading, homeKey]);
+  }, [homeDesign, loading, homeKey, todosOn]);
   const figures = home?.figures || {};
   const [inventedByAgent, setInventedByAgent] = useState<boolean>(false);
   // Concepts already shown this session, so each invention asks for something

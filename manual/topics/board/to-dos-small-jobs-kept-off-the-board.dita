@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="to-dos-small-jobs-kept-off-the-board">
+  <title>To-dos: small jobs, kept off the board</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="todos"/>
+    <resourceid appname="openv-web" appid="org.todos"/>
+  </prolog>
+  <conbody>
+    <p>A <b>to-do</b> is one paragraph of text: small enough that you just do it and <b>tick it off</b>, like <i>check the wording of REQ-12</i> or <i>ask Sam about the seal supplier</i>. It has no column, no discussion thread and no agent runs — those are what a board card is for. The board shows only cards, so a list of small asks no longer crowds out the real pieces of work.</p>
+    <p>A to-do has its text, a tick box (and when it was ticked), who has it, an optional due date, and, when it was raised from a note, a link back to the note's artifact.</p>
+    <section id="the-projects-to-do-list">
+      <title>The project's to-do list</title>
+      <p><b>Plan → To-dos</b> is the project's list:</p>
+      <ul>
+        <li><b>Quick add</b> at the top: type the to-do and press <b>Enter</b>. Choose who has it and a due date beside the field if you want to; both are optional.</li>
+        <li>Tick the box to complete a to-do. Completed to-dos collapse into a <b>Completed</b> line under the list; open it to see them, or untick one to open it again.</li>
+        <li><b>Edit</b> changes the text, who has it and the due date. Anything overdue is called out.</li>
+        <li><b>Just mine</b> narrows the list to the to-dos assigned to you.</li>
+        <li>A to-do is one paragraph, at most 1000 characters. Anything longer is a piece of work: put it on the board.</li>
+      </ul>
+    </section>
+    <section id="my-to-dos">
+      <title>My to-dos</title>
+      <p><b>My to-dos</b>, in the workspace's rail beside <i>Runs</i> (and linked from every project's To-dos page), gathers your to-dos across the workspace: every to-do assigned to you in a project you can open, each labelled with its project, and your <b>personal</b> to-dos. A personal to-do belongs to no project and nobody else sees it; the quick add on My to-dos makes one.</p>
+    </section>
+    <section id="promote-to-board-task">
+      <title>Promote to board task</title>
+      <p>When a to-do turns out to be bigger than it looked, <b>Promote to board task</b> on its row makes a card of it: the card lands in <b>To Do</b> carrying the to-do's text, who has it, its due date and the artifact it came from. The to-do is ticked off with the note <i>promoted to a board task</i>, which links to the card.</p>
+    </section>
+    <section id="raising-a-to-do-from-a-note">
+      <title>Raising a to-do from a note</title>
+      <p>Mentioning someone with <b>@name</b> in a note on an artifact tells them about it — it does not create work for them. To turn the ask into something tracked, use <b>+ Add to-do</b> on the note:</p>
+      <ul>
+        <li>Whoever the note names is filled in as the person who has it, and the note's first paragraph as the to-do. Both can be changed, and you can set a due date.</li>
+        <li>The to-do goes on the project's to-do list, and on the My to-dos of the person who has it, straight away. It does not go on the board.</li>
+      </ul>
+      <p>Afterwards the note carries a small link to the to-do showing whether it is <b>open</b> or <b>done</b>, so a thread from three weeks ago tells you whether the thing being discussed ever got done, without going to look. The status is read from the to-do each time, not copied.</p>
+      <p>A note raised before to-dos had a list of their own keeps its link to the board card it raised, and the card stays on the board.</p>
+      <p>A note can raise one to-do. System and agent entries in the feed do not offer the control: those are a record of what happened, not somebody asking for something.</p>
+    </section>
+    <section id="for-agents">
+      <title>For agents</title>
+      <p>Agents reach to-dos through the openv tools <codeph>list_todos</codeph>, <codeph>create_todo</codeph> and <codeph>tick_todo</codeph>, so a run can leave a small follow-up for a person, or tick one off once it is done.</p>
+    </section>
+  </conbody>
+</concept>

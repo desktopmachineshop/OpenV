@@ -12,8 +12,11 @@ import { apiErrorMessage } from '../api/errors';
 import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
 import { attentionRank, columnFor, isOpenColumn } from '../components/kanban/columns';
 import { ErrorBanner, SegmentedControl } from '../components/ui';
+import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
 import { useAppStore } from '../state/store';
+import { TODOS_FEATURE } from '../features';
+import { ProjectTodos } from './TodoListTodos';
 
 // The gate this page and the note's "Add to-do" control sit behind lives in
 // src/features.ts, which the components that read it import; this module
@@ -135,7 +138,19 @@ export const groupByAssignee = (
 };
 
 /**
- * TodoList is the "who owes what" page: every to-do in the project under the
+ * The project's To-dos page. With the todos feature (issue #731) it is the
+ * project's to-do list, to-dos having a table of their own; without it, the
+ * board's work items arranged by person, as before.
+ */
+export const TodoList: React.FC = () => {
+  const { projectId } = useParams<{ projectId: string }>();
+  const todosOn = useFeature(TODOS_FEATURE);
+  if (todosOn && projectId) return <ProjectTodos projectId={projectId} />;
+  return <BoardTodoList />;
+};
+
+/**
+ * BoardTodoList is the "who owes what" page: every to-do in the project under the
  * person it belongs to.
  *
  * It is a view over the board rather than a second list of work — a to-do
@@ -143,7 +158,7 @@ export const groupByAssignee = (
  * page says, and a to-do raised from a note appears here without anyone
  * filing it twice.
  */
-export const TodoList: React.FC = () => {
+const BoardTodoList: React.FC = () => {
   const { projectId } = useParams<{ projectId: string }>();
   const currentUser = useAppStore((s) => s.currentUser);
   const { isPhone } = useViewport();

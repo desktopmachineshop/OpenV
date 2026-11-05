@@ -204,6 +204,7 @@ the area that owns them; the area guide of
 | | `internal/domain/quality` | the rule-based linter over a requirement's wording |
 | | `internal/domain/settings` | workspace and project preferences: the quality rule set, reference parties |
 | | `internal/domain/traceability` | the link write service the four link-write paths share |
+| | `internal/domain/todos` | to-dos: one paragraph to tick off, a project's or a person's own, and promoting one to a board task |
 | | `internal/domain/workitems` | the kanban work items |
 | verification | `internal/domain/evidence` | evidence bundles |
 | | `internal/domain/vv` | verification methods, test runs and results, coverage, gaps, change impact |

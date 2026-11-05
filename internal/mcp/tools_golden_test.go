@@ -86,6 +86,8 @@ const (
 	goldenDelegateRunID   = "99999999-9999-4999-8999-999999999999"
 	goldenAttachmentID    = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 	goldenAgentID         = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+	goldenTodoID          = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+	goldenUserID          = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
 )
 
 // goldenArtifactRef is goldenArtifactID's stable ref. A ref is not an id:
@@ -99,6 +101,7 @@ func toolGoldenIDs() map[string]bool {
 		goldenProjectID, goldenArtifactID, goldenOtherArtifactID,
 		goldenLinkID, goldenBaselineID, goldenTestRunID, goldenTestCaseID,
 		goldenWorkItemID, goldenDelegateRunID, goldenAttachmentID, goldenAgentID, goldenReleaseID,
+		goldenTodoID, goldenUserID,
 	} {
 		ids[id] = true
 	}
@@ -146,6 +149,9 @@ func toolGoldenArgs() map[string]map[string]interface{} {
 		"update_work_item":        {"id": goldenWorkItemID, "comment": "Started."},
 		"record_candidate_need":   {"project_id": goldenProjectID, "need": "Operators see seal wear early", "rationale": "Downtime", "quote": "We only find out when it leaks."},
 		"delegate_to_agent":       {"role_label": "builder", "prompt": "Draft the test cases."},
+		"list_todos":              {"project_id": goldenProjectID, "include_done": false},
+		"create_todo":             {"project_id": goldenProjectID, "text": "Check the seal wording.", "assignee_id": goldenUserID, "due_date": "2027-01-31"},
+		"tick_todo":               {"id": goldenTodoID, "done": true},
 	}
 }
 
@@ -161,7 +167,9 @@ func toolStubBodies() map[string]string {
 		"GET /api/v1/projects/{id}/baselines": `[{"id":"` + goldenBaselineID + `","project_id":"` + goldenProjectID +
 			`","name":"B1","snapshot":null,"created_at":"2026-01-01T09:30:00Z"}]`,
 		"GET /api/v1/projects/{id}/work-items": `[]`,
-		"GET /api/v1/projects/{id}/releases":   `[{"id":"` + goldenReleaseID + `","name":"MVP","position":0}]`,
+		"GET /api/v1/projects/{id}/todos": `[{"id":"` + goldenTodoID + `","text":"Check the seal wording.","done":false},` +
+			`{"id":"` + goldenTodoID + `","text":"Done one","done":true}]`,
+		"GET /api/v1/projects/{id}/releases": `[{"id":"` + goldenReleaseID + `","name":"MVP","position":0}]`,
 		"GET /api/v1/artifacts/{id}": `{"id":"` + goldenArtifactID + `","project_id":"` + goldenProjectID +
 			`","attributes":{"priority":"must","target_release":"old"}}`,
 		"GET /api/v1/work-items/{id}":             `{"id":"` + goldenWorkItemID + `","activity":[]}`,
