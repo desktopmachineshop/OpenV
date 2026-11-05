@@ -84,7 +84,7 @@ beforeEach(() => {
   vi.mocked(templateAPI.list, { partial: true, deep: true }).mockResolvedValue({ data: [] });
   vi.mocked(workerStatusAPI.get, { partial: true, deep: true }).mockResolvedValue({ data: { workers: [] } });
   vi.mocked(vvAPI.coverage, { partial: true, deep: true }).mockImplementation(
-    (id: string) => Promise.resolve({ data: { summary: id === 'p1' ? { total: 10, covered: 9, verified: 8 } : { total: 0 } } }) as any
+    (id: string) => Promise.resolve({ data: { project_id: id, entries: [], summary: id === 'p1' ? { pass: 7, 'verified-manually': 1, fail: 1, uncovered: 1 } : {} } }) as any
   );
   vi.mocked(artifactAPI.listPage, { partial: true, deep: true }).mockImplementation(
     (id: string) => Promise.resolve({ data: [], headers: { 'x-total-count': id === 'p1' ? '248' : '12' } }) as any

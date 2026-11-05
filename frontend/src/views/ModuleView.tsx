@@ -137,6 +137,15 @@ export const ModuleView: React.FC = () => {
   // The ?artifact= search param is the shareable source of truth for the
   // selection (mirrors AgentRunsPage's ?run= pattern).
   const urlArtifactId = searchParams.get('artifact');
+  // ?notes=1 beside ?artifact= opens the notes panel on it: a comment the
+  // Home or the activity log links to opens with its thread showing (#718).
+  const urlNotes = searchParams.get('notes') === '1';
+  useEffect(() => {
+    if (!urlNotes || !urlArtifactId) return;
+    if (stacked) setStackedPane('notes');
+    else setNotesRevealed(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlNotes, urlArtifactId]);
 
   const {
     baselines,

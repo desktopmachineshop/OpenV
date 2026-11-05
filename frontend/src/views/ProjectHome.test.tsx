@@ -7,6 +7,7 @@ import { describeEvent } from './ProjectHomeData';
 import { useAppStore } from '../state/store';
 import { projectAPI } from '../api/client';
 import { features } from '../test/redesignFixtures';
+import { DialogProvider } from '../components/ui';
 
 // The Home page: gated by redesign-pages; its figures, what needs the team,
 // the audit trail, the projects and the agent proposals, from the API alone.
@@ -66,11 +67,13 @@ const render = async (on: boolean) => {
   root = createRoot(container);
   await act(async () => {
     root.render(
+      <DialogProvider>
       <MemoryRouter initialEntries={['/projects/p1/home']}>
         <Routes>
           <Route path="/projects/:projectId/home" element={<ProjectHome />} />
         </Routes>
       </MemoryRouter>
+      </DialogProvider>
     );
   });
   await act(async () => {

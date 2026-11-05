@@ -20,7 +20,7 @@ Every area has files here, matched by these `docs/areas.json` globs
 | tenancy-identity | `components/Avatar*`, `components/CreateOrgModal*`, `components/OrgSwitcher*`, `components/User*`, `components/org/OrgLimits*`, `components/org/OrgMembers*`, `components/org/OrgTeams*`, `components/org/OrgUsage*`, `utils/activeOrg*`, `views/Login*`, `views/OrgSettings*`, `views/ResetPassword*`, `views/VerifyEmail*` |
 | agent-suite | `components/ChatMarkdown*`, `components/agents/**`, `components/crews/**`, `components/org/OrgProviders*`, `components/wizard/**`, `views/Agent*`, `views/AutomationsPage*`, `views/CrewBuilder*`, `views/GuidedWizard*`, `views/guidedWizard/**`, `views/Interview*`, `views/WorkspaceRuns*` |
 | runner-fleet | `components/RunnerConnectPrompt*`, `components/org/*Runner*`, `components/org/WorkerKeys*` |
-| events-notifications | `components/NotificationBell*`, `push/**`, `views/ActivityLog*` |
+| events-notifications | `components/NotificationBell*`, `components/activityEvents*`, `push/**`, `views/ActivityLog*` |
 | community | `components/SharedProductVotes*`, `utils/randomProduct*`, `views/SharedProjectView*` |
 | billing | `components/org/OrgBilling*` |
 | platform-http | `components/ReleaseUpdateBanner*`, `views/PlatformAdmin*`, `views/WhatsNew*` |

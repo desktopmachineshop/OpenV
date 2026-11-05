@@ -50,7 +50,7 @@ import { WORKSPACE_RUNS_FEATURE, workspaceRunPath } from './agents/workspaceRuns
 import { useFeature } from '../hooks/useFeature';
 import { useHelpShortcut } from '../hooks/useHelpShortcut';
 import { COMPACT_LAYOUT_FEATURE, REDESIGN_PAGES_FEATURE } from '../features';
-import { ProjectCount, ProjectMeters } from './ProjectListFigures';
+import { NewProjectAction, ProjectCount, ProjectMeters } from './ProjectListFigures';
 import { ProjectListHome } from './ProjectListHome';
 import { loadWorkspaceHome, type WorkspaceHomeData } from './ProjectListHomeLoad';
 import { useViewport } from '../hooks/useViewport';
@@ -681,7 +681,9 @@ export const ProjectList: React.FC = () => {
       ) : (
         <>
           <div className={homeDesign ? 'projects-grid is-rows' : 'projects-grid'} data-help-key={homeDesign ? 'home.projects' : undefined}>
-            {homeDesign && projects.length > 0 && <PanelHeader title="Projects" count={projects.length} />}
+            {homeDesign && projects.length > 0 && (
+              <PanelHeader title="Projects" count={projects.length} action={<NewProjectAction onClick={() => { setCreateMode('blank'); setIsCreating(true); }} />} />
+            )}
             {projects.length === 0 ? (
               <div className="create-import-placeholder">
                 <h3>Get Started</h3>

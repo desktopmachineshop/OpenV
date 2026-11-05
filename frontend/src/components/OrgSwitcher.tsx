@@ -24,6 +24,13 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
   const [showCreate, setShowCreate] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const { isPhone } = useViewport();
+  // Whether the name is cut short: only then does it carry the full name as
+  // its tooltip (#727). Measured when the pointer or focus arrives.
+  const [truncated, setTruncated] = useState(false);
+  const measure = (e: React.SyntheticEvent<HTMLElement>) => {
+    const name = e.currentTarget.querySelector<HTMLElement>('[data-org-name]');
+    setTruncated(!!name && name.scrollWidth > name.clientWidth);
+  };
   const workspaceRuns = useFeature(WORKSPACE_RUNS_FEATURE);
   // Where the trigger sits when the menu opens: on a phone the menu is
   // fixed to the screen (full width) instead of hanging off the trigger,
@@ -109,6 +116,8 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
           setMenuTop(e.currentTarget.getBoundingClientRect().bottom + 6);
           setOpen(!open);
         }}
+        onMouseEnter={measure}
+        onFocus={measure}
         title="Switch workspace"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -126,14 +135,20 @@ export const OrgSwitcher: React.FC<OrgSwitcherProps> = ({ variant = 'light' }) =
         }}
       >
         <span
+          data-org-name=""
+          title={truncated && activeOrg ? activeOrg.name : undefined}
           style={{
             fontWeight: 700,
             fontSize: 16,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
-            // Narrow enough on a phone to leave room for the account controls.
-            maxWidth: dark ? 110 : 'min(220px, 42vw)',
+            // On a computer the name takes the room the bar has and shrinks
+            // with an ellipsis only when the bar runs out (#727). A phone
+            // keeps a cap, narrow enough to leave room for the account
+            // controls.
+            maxWidth: isPhone ? (dark ? 110 : 'min(220px, 42vw)') : undefined,
+            flex: '0 1 auto',
             minWidth: 0,
           }}
         >
