@@ -22,8 +22,10 @@ an editor, version history, image attachments, comments, and baselines.
 The view has two parts side by side:
 
 - **The list** — every artifact in the project, as a **table** or a **tree**
-  diagram (see below). Above it sit the type tabs, the project search and
-  its filters, and a line of figures for what is in view.
+  diagram (see below). Above it sit the project search and its filters
+  (with the chip search bar, the bar alone, across the list's width; without
+  it, the type tabs and the search box), and a line of figures for what is
+  in view.
 - **The detail panel** — on the right, the selected artifact: its status,
   quality and priority, its text, its place in the trace and its tests (see
   *The detail panel*). Drag its left edge to make it wider; the width is
@@ -45,8 +47,10 @@ this page, with the artifact and link types.
 
 The **Table / Tree** switch above the list changes how the project is drawn;
 the choice stays in the page's address (\`?view=\`), so a link or a reload
-keeps it. The **type tabs** (*All*, *Requirement*, *Test Case*, …) show one
-type at a time in either, with a count beside each.
+keeps it. To show one type at a time in either, open the search bar's
+caret and tick a value under **Filters → Type**, which counts each type
+beside it. (Without the chip search bar, the **type tabs** — *All*,
+*Requirement*, *Test Case*, … — do the same.)
 
 - **Table** — the document's hierarchy, one dense row per artifact, every
   artifact nested under the heading or parent it sits in, with guide lines
@@ -243,10 +247,16 @@ pushing anything off the bottom.
 ## Search & filters
 
 Two boxes search, and they do different jobs. The one in the **top bar**
-searches every project you can see; the one above the **list** narrows the
-project you are in.
+finds an artifact in any project you can see and opens it; it never filters
+the page you are on. The one above the **list** filters the project you are
+in.
 
-The top bar's box matches titles and bodies, and it also matches **refs**: type
+### Finding and opening an artifact
+
+Type in the top bar's box and the matches drop down below it, grouped by
+project; click one, or pick it with the arrow keys and **Enter**, to open it
+in its project. **Keyword** and **Semantic** at the top of the drop-down
+choose how the text is matched. The box matches titles and bodies, and it also matches **refs**: type
 **REQ-30** and REQ-30 comes back first, ahead of anything that merely mentions
 it. Case does not matter, so **req-30** works, and a ref pasted out of a
 report with spaces around it still finds its artifact. Every result shows its
@@ -256,7 +266,7 @@ match: **REQ-3** finds REQ-3 first and leaves REQ-30 further down.
 
 ### The search bar
 
-Both boxes are **search bars with chips**. Each filter you add shows as a
+The list's box is a **search bar with chips**. Each filter you add shows as a
 small coloured chip inside the bar, such as **Status In review ×** or
 **Owner Dave ×**, so you can see at a glance what is narrowing the list.
 Click a chip's **×** to remove that filter alone. Whatever you type sits after
@@ -273,7 +283,9 @@ arrow keys and **Enter**, or click it, and it becomes a chip.
 - **Filters** — the quick filters (**Mine**, **In review**, **Failing**,
   **Suspect**, each with how many it would show), then **Status**, **Type**,
   **Priority**, **Created** and **Updated**, each opening its values (for the
-  dates: today, this week, this month, this quarter, this year). Ticking two
+  dates: today, this week, this month, this quarter, this year). On the
+  requirements list, each **Type** shows how many artifacts of that type the
+  other chips leave. Ticking two
   values of one field shows either. **Custom filter…** builds a condition on
   any field or attribute: *contains* or *is* a value.
 - **Group by** — **Status**, **Type**, **Priority**, **Owner** or **Heading**,
@@ -298,25 +310,11 @@ search included.
 
 ### The list's bar
 
-The list's bar narrows the project you are in. Its text matches the ref,
-title, body, type and attributes. The type tabs beside it still narrow what
-the bar leaves, and count what each type holds.
-
-### The top bar's chips
-
-In the top bar, the chips are **Project**, **Type**, **Status** and
-**Owner** (a part of a name or address is enough). Chips alone are a search:
-**Type Test case** with **Owner dana** lists Dana's test cases without any
-text. Typing a ref such as **REQ-12** still finds it first, and **Enter**
-opens it. The results drop down below the bar, grouped by kind
-(Requirements, Test Cases, …), each with its project, owner and status. The
-chips it offers for what you typed come after the results.
-
-A custom filter on **Project**, **Type** or **Status** matches their names:
-**Status contains review** finds the artifacts in review, and a name no
-status has finds nothing. The top bar's chips stay on one row that scrolls
-sideways, so the bar never grows over the page; hover a chip to read it in
-full.
+The list's bar narrows the project you are in, and spans the width of the
+list. Its text matches the ref, title, body, type and attributes. It takes
+the place of the type tabs: filter by type from **Filters → Type** in the
+panel, where each type shows its count. The panel stays inside the window,
+however narrow the list.
 
 ## Editing, versions & history
 

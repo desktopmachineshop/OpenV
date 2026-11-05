@@ -9,8 +9,9 @@ import type { ChipTone } from '../ui/Chip';
 // groupItems) or as API parameters (chipValues).
 
 /**
- * The chip search bar on the requirements list and the top-bar search, and
- * saving searches. Off, both keep the search box they had.
+ * The chip search bar on the requirements list, and saving searches. Off,
+ * the list keeps the search box it had. The top-bar search is a jump box
+ * either way.
  */
 export const CHIP_SEARCH_FEATURE: FeatureKey = 'chip-search';
 

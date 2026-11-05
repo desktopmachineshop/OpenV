@@ -921,14 +921,6 @@ body.ov-has-rail {
 .ov-topbar-search input[type='search']:focus {
   border-color: var(--accent) !important;
 }
-/* The chip search bar draws with the sidebar's colours; on the light bar it
-   takes the page's, as the plain box above does. */
-.ov-topbar-search,
-.ov-more-search {
-  --sidebar-menu-bg: var(--surface-alt);
-  --sidebar-border: var(--border);
-  --sidebar-text: var(--text);
-}
 .ov-topbar-help {
   display: flex;
   align-items: center;

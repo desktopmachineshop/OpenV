@@ -137,4 +137,10 @@ describe('the tree diagram', () => {
     act(() => container.querySelector<HTMLButtonElement>('button[aria-label="Zoom in"]')!.click());
     expect(container.textContent).toContain('125%');
   });
+
+  it('pans without selecting the boxes\' text', () => {
+    act(() => root.render(<Harness shape={forest} />));
+    const viewport = container.querySelector<HTMLElement>('[role="tree"]')!.closest<HTMLElement>('[style*="grab"]')!;
+    expect(viewport.style.userSelect).toBe('none');
+  });
 });

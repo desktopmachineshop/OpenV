@@ -2,11 +2,11 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="table-and-tree">
   <title>Table and tree</title>
-  <shortdesc>The <b>Table / Tree</b> switch above the list changes how the project is drawn; the choice stays in the page's address (<codeph>?view=</codeph>), so a link or a reload keeps it. The <b>type tabs</b> (<i>All</i>, <i>Requirement</i>, <i>Test Case</i>, …) show one type at a time in either, with a count beside each.</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="requirements.views"/>
   </prolog>
   <conbody>
+    <p>The <b>Table / Tree</b> switch above the list changes how the project is drawn; the choice stays in the page's address (<codeph>?view=</codeph>), so a link or a reload keeps it. To show one type at a time in either, open the search bar's caret and tick a value under <b>Filters → Type</b>, which counts each type beside it. (Without the chip search bar, the <b>type tabs</b> — <i>All</i>, <i>Requirement</i>, <i>Test Case</i>, … — do the same.)</p>
     <ul>
       <li><b>Table</b> — the document's hierarchy, one dense row per artifact, every artifact nested under the heading or parent it sits in, with guide lines showing where it sits. The caret beside a heading or a parent folds and unfolds what is under it. Headings carry the same columns as every other row: the <b>ref</b> and <b>title</b>, the review <b>status</b>, the <b>priority</b> attribute, the <b>quality</b> score, <b>trace</b> (↑ how many artifacts this one answers to, ↓ how many answer to it, and ⚠ when one of those links is suspect), <b>V&amp;V below</b> (the verification rollup: a green dot passes, red fails, orange is blocked, grey is not run or not covered; for a heading or a parent it rolls up the requirements under it, as <i>passing/total</i>) and how long ago it was <b>updated</b>.</li>
       <li><b>Tree</b> — the project drawn as a diagram of connected boxes (see <i>The tree diagram</i>).</li>
