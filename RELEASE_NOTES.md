@@ -9,6 +9,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **New releases reach openv.app more reliably.** A brief network hiccup while a release was being rolled out could leave openv.app on the previous version until someone stepped in; the rollout now retries and carries on.
+
 ## 0.29.0 — 2026-11-06
 
 ### New features
