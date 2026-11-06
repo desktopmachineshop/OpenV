@@ -2,6 +2,19 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.29.1",
+   "date": "2026-11-06",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**New releases reach openv.app more reliably.** A brief network hiccup while a release was being rolled out could leave openv.app on the previous version until someone stepped in; the rollout now retries and carries on."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.29.0",
    "date": "2026-11-06",
    "stableSince": "",
