@@ -48,6 +48,11 @@ export const projectAPI = {
   parties: (id: string) => client.get<{ parties: Party[] }>(`/api/v1/projects/${id}/parties`),
   setParties: (id: string, parties: Party[]) =>
     client.put<{ parties: Party[] }>(`/api/v1/projects/${id}/parties`, { parties }),
+  /** Whether the editor fills a requirement's priority from its shall, should or may. */
+  priorityDetection: (id: string) =>
+    client.get<{ enabled: boolean }>(`/api/v1/projects/${id}/priority-detection`),
+  setPriorityDetection: (id: string, enabled: boolean) =>
+    client.put<{ enabled: boolean }>(`/api/v1/projects/${id}/priority-detection`, { enabled }),
   downloadOptions: (id: string, baselineId?: string) => {
     const params = baselineId && baselineId !== 'live' ? `?baseline_id=${encodeURIComponent(baselineId)}` : '';
     return client.get<DownloadOptions>(`/api/v1/projects/${id}/download/options${params}`);

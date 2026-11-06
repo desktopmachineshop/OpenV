@@ -37,8 +37,9 @@ Set an artifact's releases in its editor, under **Releases**:
   releases. Set the releases on a heading, and every requirement under it
   is planned for them, unless a requirement sets its own.
 
-The editor says where an inherited range comes from. A project with no
-releases shows no **Releases** field.
+The editor says where an inherited range comes from. In a project with no
+releases yet, the **Releases** field says so and links to **Create a
+release** on the Releases page.
 
 Agents set the same thing with the \`set_release_target\` tool, and read
 progress with \`get_release_progress\`.

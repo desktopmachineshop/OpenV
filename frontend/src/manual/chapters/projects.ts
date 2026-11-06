@@ -188,7 +188,10 @@ Zone — with the open one beside them under its own title and a line on what
 it is for (on a phone the sections are a row of tabs along the top). In
 **Quality rules** each wording check has a switch: off silences it, on brings
 it back at the level it would speak at, and the menu beside it sets that
-level — error, warning or info.
+level — error, warning or info. Below the rules, **Priority from the
+requirement text** lets a requirement's Priority follow its *shall*, *should*
+or *may* until someone picks one (see *Editing, versions & history* in the
+Requirements chapter). It is off until an editor turns it on.
 
 **Projects** at the top of the rail takes you back to all projects. The
 account menu at the right end of the top bar (on a phone, your name at the

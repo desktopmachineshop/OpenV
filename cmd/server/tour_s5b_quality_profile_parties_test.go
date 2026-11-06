@@ -322,6 +322,20 @@ func qualityProfilePartiesParties(tr *tour, a qualityProfilePartiesActors) {
 		at("id", "{{phantom}}"))
 	tr.step("an empty list clears P's parties: the workspace's own is left", o, "PUT /api/v1/projects/{id}/parties",
 		at("id", "{{p}}"), jsonBody(`{"parties":[]}`))
+
+	// Priority detection lives in the same settings object; the editor
+	// pickers gate (FeatureEditorPickers) is on for the nightly workspace.
+	tr.step("P's priority detection: off until someone turns it on", o,
+		"GET /api/v1/projects/{id}/priority-detection", at("id", "{{p}}"))
+	tr.step("turn priority detection on", o, "PUT /api/v1/projects/{id}/priority-detection", at("id", "{{p}}"),
+		jsonBody(`{"enabled":true}`))
+	tr.step("the viewer reads it", a.viewer, "GET /api/v1/projects/{id}/priority-detection", at("id", "{{p}}"))
+	tr.step("the viewer turns it off", a.viewer, "PUT /api/v1/projects/{id}/priority-detection", at("id", "{{p}}"),
+		jsonBody(`{"enabled":false}`))
+	tr.step("a malformed body", o, "PUT /api/v1/projects/{id}/priority-detection", at("id", "{{p}}"),
+		jsonBody(`{"enabled":`))
+	tr.step("turn it off again: the key leaves P's settings", o, "PUT /api/v1/projects/{id}/priority-detection",
+		at("id", "{{p}}"), jsonBody(`{"enabled":false}`))
 }
 
 // qualityProfilePartiesMany is a parties body with n distinct parties.

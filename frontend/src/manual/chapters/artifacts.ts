@@ -320,6 +320,31 @@ however narrow the list.
 
 Select an artifact to see its details; **Edit** opens the editor.
 
+- The editor's choice fields — **Parent Artifact**, **Type**, **Priority**,
+  **Owner**, **How is this verified?**, **Releases** and the project's own
+  list attributes — open a list of **every option**, with the current one
+  ticked, whatever the field already holds. Move with **↑ ↓**, choose with
+  **Enter**, close with **Esc**, or type a letter to jump to it. A list of
+  more than eight options has a **search box**: **Parent Artifact** finds an
+  artifact by its title or its ref (*REQ-12*) and shows the document's
+  structure, indented under its headings. **Type** shows each type's colour
+  and what it is for. **Owner** lists the project's **parties** and then its
+  **members**; typing narrows the list, and **Use "…"** sets a name that is
+  on neither, which an owner may be. **×** clears it.
+- A requirement has a **Priority**: **Must**, **Should** or **Could**, the
+  value the table, the detail panel and **Group by Priority** show. A
+  project that defines its own attribute called *priority* keeps that field
+  instead.
+- With **Priority from the requirement text** on (**Project settings →
+  Quality rules**), Priority follows the requirement's own wording while
+  nobody has picked one: *shall* or *must* gives **Must**, *should* gives
+  **Should**, *may* or *could* gives **Could**, and the strongest wins. An
+  **auto** tag and a line under the field say which word it came from. Pick a
+  priority yourself and it stays; if the text later says otherwise, the line
+  offers **Use Must** (or Should, or Could) to follow it again. A requirement
+  that already has a priority keeps it. Leave the setting off in a project
+  that writes every requirement with *shall*, as ISO/IEC/IEEE 29148 does, or
+  every requirement would be a Must.
 - Every save creates a **new version** — the header shows "Version N". Adding
   a figure, uploading a new file for one or renaming one creates a version
   too.

@@ -73,6 +73,7 @@ var Registry = []Feature{
 	{Key: FeatureAgentHierarchy, ShippedIn: "0.28.0", Summary: "The Agents page shows your agents as a hierarchy of cards: a lead at the top, groups of specialists beneath it, and each card's runs, cost and proposals to approve over the last 7 days; Edit arranges who reports to whom"},
 	{Key: FeatureImpactPicker, ShippedIn: "0.28.0", Summary: "Impact analysis picks the requirement from a searchable table of the document, re-centres on any artifact in the tree, and shows the result as a table too"},
 	{Key: FeatureTodos, ShippedIn: "0.28.0", Summary: "To-dos of their own: one paragraph to tick off, kept off the board, in a project list and in My to-dos, with a promote to board task when one grows"},
+	{Key: FeatureEditorPickers, ShippedIn: "0.29.0", Summary: "Searchable dropdowns in the artifact editor that list every option, a Priority field on requirements that can follow the shall, should or may in their text, and Releases shown on every requirement"},
 }
 
 // Feature keys the code gates on.
@@ -268,6 +269,13 @@ const (
 	// editing a to-do are never gated, so one raised on nightly stays
 	// workable everywhere. Without it a note raises a work item as before.
 	FeatureTodos = "todos"
+	// FeatureEditorPickers gates the artifact editor's dropdowns
+	// (components/ui/Picker.tsx in the frontend), its built-in Priority field
+	// on requirements and the Releases field's empty state, and the project
+	// setting that lets Priority follow the requirement's normative keyword
+	// (settings.PriorityDetectionKey). Without it the editor keeps the
+	// browser's own selects. The stored priority attribute is never gated.
+	FeatureEditorPickers = "editor-pickers"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given
