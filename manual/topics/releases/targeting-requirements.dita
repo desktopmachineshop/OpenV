@@ -12,7 +12,7 @@
       <li>With a last release as well, it is in the releases from the first to the last, inclusive. Choose <b>only</b> to plan it for one release alone, or a later release for a capability that is retired after it.</li>
       <li>Leave the first release unset and the artifact takes its parent's releases. Set the releases on a heading, and every requirement under it is planned for them, unless a requirement sets its own.</li>
     </ul>
-    <p>The editor says where an inherited range comes from. A project with no releases shows no <b>Releases</b> field.</p>
+    <p>The editor says where an inherited range comes from. In a project with no releases yet, the <b>Releases</b> field says so and links to <b>Create a release</b> on the Releases page.</p>
     <p>Agents set the same thing with the <codeph>set_release_target</codeph> tool, and read progress with <codeph>get_release_progress</codeph>.</p>
   </conbody>
 </concept>

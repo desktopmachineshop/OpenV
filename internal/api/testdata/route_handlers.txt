@@ -129,6 +129,8 @@ GET /api/v1/projects/{id}/quality-rules -> GetProjectQualityRules
 PUT /api/v1/projects/{id}/quality-rules -> UpdateProjectQualityRules
 GET /api/v1/projects/{id}/parties -> GetProjectParties
 PUT /api/v1/projects/{id}/parties -> UpdateProjectParties
+GET /api/v1/projects/{id}/priority-detection -> GetProjectPriorityDetection
+PUT /api/v1/projects/{id}/priority-detection -> UpdateProjectPriorityDetection
 POST /api/v1/projects/{id}/work-items -> CreateWorkItem
 GET /api/v1/projects/{id}/work-items -> ListWorkItems
 GET /api/v1/work-items/{id} -> GetWorkItem

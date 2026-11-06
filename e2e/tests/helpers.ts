@@ -112,10 +112,26 @@ export async function openRequirements(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Requirements' })).toBeVisible();
 }
 
+/**
+ * Choose an option in one of the editor's choice fields by its value: the
+ * native select where the workspace has not received the editor pickers yet,
+ * else the picker's listbox, whose options carry their value.
+ */
+export async function chooseOption(page: Page, selector: string, value: string): Promise<void> {
+  const field = page.locator(selector);
+  if ((await field.evaluate((el) => el.tagName)) === 'SELECT') {
+    await field.selectOption(value);
+    return;
+  }
+  if ((await field.getAttribute('aria-expanded')) !== 'true') await field.click();
+  await page.locator(`[role="listbox"] [role="option"][data-value="${value}"]`).click();
+  await expect(field).toHaveAttribute('aria-expanded', 'false');
+}
+
 /** Create a requirement artifact via the New Artifact form (Requirements view). */
 export async function createRequirement(page: Page, title: string, body: string): Promise<void> {
   await page.getByRole('button', { name: '+ New Artifact' }).click();
-  await page.locator('#type').selectOption('requirement');
+  await chooseOption(page, '#type', 'requirement');
   await page.locator('#title').fill(title);
   await page.locator('#body').fill(body);
   await page.getByRole('button', { name: 'Create', exact: true }).click();

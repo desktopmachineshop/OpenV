@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { makeRunId, openModule } from './helpers';
+import { chooseOption, makeRunId, openModule } from './helpers';
 
 // OpenV E2E smoke journey (issue #135).
 //
@@ -120,7 +120,7 @@ test('creates a requirement and a user need', async () => {
 
   // Requirement via the New Artifact form (default type is "requirement").
   await page.getByRole('button', { name: '+ New Artifact' }).click();
-  await page.locator('#type').selectOption('requirement');
+  await chooseOption(page, '#type', 'requirement');
   await page.locator('#title').fill(reqTitle);
   await page.locator('#body').fill('The system shall be smoke-testable end to end.');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -131,7 +131,7 @@ test('creates a requirement and a user need', async () => {
   // link rules require the type), so it is created through the UI like the
   // requirement above.
   await page.getByRole('button', { name: '+ New Artifact' }).click();
-  await page.locator('#type').selectOption('user-need');
+  await chooseOption(page, '#type', 'user-need');
   await page.locator('#title').fill(needTitle);
   await page.locator('#body').fill('As a maintainer, I need an E2E smoke pack so that regressions surface early.');
   await page.getByRole('button', { name: 'Create', exact: true }).click();

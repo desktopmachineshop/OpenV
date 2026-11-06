@@ -53,6 +53,7 @@ export const FEATURE_KEYS = [
   'agent-hierarchy',
   'impact-picker',
   'todos',
+  'editor-pickers',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

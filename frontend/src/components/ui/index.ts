@@ -38,3 +38,5 @@ export {
   ResultBar,
   Meter,
 } from './panels';
+export { Picker, EDITOR_PICKERS_FEATURE } from './Picker';
+export type { PickerOption, PickerProps } from './Picker';

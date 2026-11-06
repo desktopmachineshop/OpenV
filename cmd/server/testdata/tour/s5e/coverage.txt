@@ -155,6 +155,7 @@ GET /api/v1/projects/{id}/interviews: 200, 401, 404; phantom_matrix, real_id_rea
 GET /api/v1/projects/{id}/linked-artifacts: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/members: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/parties: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/projects/{id}/priority-detection: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/profile: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/quality: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/quality-rules: 200, 401, 404; phantom_matrix, real_id_reads
@@ -358,6 +359,7 @@ PUT /api/v1/orgs/{id}/quality-rules: 400, 401, 403, 404; phantom_matrix, real_id
 PUT /api/v1/projects/{id}: 400, 401, 403, 404; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/projects/{id}/members/{userId}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/projects/{id}/parties: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+PUT /api/v1/projects/{id}/priority-detection: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/projects/{id}/profile: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/projects/{id}/quality-rules: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/projects/{id}/release-order: 401, 404; phantom_matrix (errors only)
@@ -372,4 +374,4 @@ PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (e
 PUT /api/v1/todos/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 
-s5e: 359 of 360 routes reached (99.7%), 167 with a 2xx or 3xx answer (46.4%)
+s5e: 361 of 362 routes reached (99.7%), 168 with a 2xx or 3xx answer (46.4%)

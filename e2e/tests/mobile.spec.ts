@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import {
+  chooseOption,
   createProject,
   expectNoHorizontalScroll,
   makeRunId,
@@ -81,7 +82,7 @@ test('the requirements module stacks into tree and document panes, with History 
 
   // The tree pane holds the create form.
   await page.getByRole('button', { name: '+ New Artifact' }).click();
-  await page.locator('#type').selectOption('requirement');
+  await chooseOption(page, '#type', 'requirement');
   await page.locator('#title').fill(reqTitle);
   await page.locator('#body').fill('The system shall be usable on a phone.');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -111,7 +112,7 @@ test('stepping between artifacts works by control and by swipe', async () => {
 
   // A second artifact, so there is somewhere to step to.
   await page.getByRole('button', { name: '+ New Artifact' }).click();
-  await page.locator('#type').selectOption('requirement');
+  await chooseOption(page, '#type', 'requirement');
   await page.locator('#title').fill(second);
   await page.locator('#body').fill('The system shall be the artifact after the first.');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
