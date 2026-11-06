@@ -18,5 +18,6 @@
       <strow><stentry>✕</stentry><stentry><b>Delete project</b> — removes the project and all its artifacts</stentry></strow>
     </simpletable>
     <p>Click anywhere else on the row to open the project.</p>
+    <p>On a computer or tablet, Home fits the window: the page itself does not scroll. <b>Needs you</b>, <b>Activity</b> and <b>Projects</b> share the height below the figures, and each scrolls on its own when it has more than fits, so <b>Needs you</b> lists everything waiting rather than the first few. A very short window, or a form open below the list, scrolls the page as before.</p>
   </conbody>
 </concept>

@@ -48,6 +48,12 @@ of the rail on every page.
 
 Click anywhere else on the row to open the project.
 
+On a computer or tablet, Home fits the window: the page itself does not
+scroll. **Needs you**, **Activity** and **Projects** share the height below
+the figures, and each scrolls on its own when it has more than fits, so
+**Needs you** lists everything waiting rather than the first few. A very
+short window, or a form open below the list, scrolls the page as before.
+
 ## Creating a project
 
 Click **+ New Project**. The form offers a **Project Type**:

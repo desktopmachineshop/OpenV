@@ -124,6 +124,16 @@ const TodoRow: React.FC<TodoRowProps> = ({ t, onDone }) => (
   </li>
 );
 
+/**
+ * A panel's body under its header. In a panel laid out as a flex column with
+ * a fixed height (fitPanel), it takes the space left and scrolls on its own;
+ * anywhere else it is a plain block.
+ */
+export const panelScroll: React.CSSProperties = { flex: '1 1 auto', minHeight: 0, overflowY: 'auto' };
+
+/** A panel sized by its place on the page, not its content: its body scrolls (panelScroll). */
+export const fitPanel: React.CSSProperties = { display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' };
+
 type NeedsItem = TodoItem & { project?: string; projectId?: string };
 
 /**
@@ -146,14 +156,16 @@ export const NeedsPanel: React.FC<{
   return (
     <section aria-labelledby="home-needs" data-help-key="home.needs" style={{ ...panelStyle, ...style }}>
       <PanelHeader id="home-needs" title="Needs you" count={items ? left.length : undefined} action={action} />
-      {!items && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>Gathering what waits on you…</p>}
-      {items && left.length === 0 && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>{emptyText}</p>}
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-        {left.slice(0, limit).map((t) => (
-          <TodoRow key={keyOf(t)} t={t} onDone={() => setGone((g) => new Set(g).add(keyOf(t)))} />
-        ))}
-      </ul>
-      {more && left.length > limit && <p style={{ ...mutedStyle, margin: 0, padding: '8px 12px' }}>{more(left.length - limit)}</p>}
+      <div style={panelScroll}>
+        {!items && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>Gathering what waits on you…</p>}
+        {items && left.length === 0 && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>{emptyText}</p>}
+        <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
+          {left.slice(0, limit).map((t) => (
+            <TodoRow key={keyOf(t)} t={t} onDone={() => setGone((g) => new Set(g).add(keyOf(t)))} />
+          ))}
+        </ul>
+        {more && left.length > limit && <p style={{ ...mutedStyle, margin: 0, padding: '8px 12px' }}>{more(left.length - limit)}</p>}
+      </div>
     </section>
   );
 };

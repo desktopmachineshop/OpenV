@@ -21,6 +21,7 @@
       <li><b>comment</b>: a recent comment on an artifact; <b>Open</b> opens the artifact with its notes showing.</li>
     </ul>
     <p>The <b>Audit trail</b> shows the newest events of the project, who did what to which artifact; click one to open what it is about. <b>Full history</b> opens the <b>Activity</b> page. <b>Projects</b> lists your workspace's projects with how far each is traced and verified, and when agents have proposed changes, a card counts the proposals waiting and opens the agent runs to review them.</p>
+    <p>On a computer or tablet, Home fits the window: <b>Needs you</b>, the <b>Audit trail</b> and <b>Projects</b> share the height below the figures, and each scrolls on its own when it has more than fits, so <b>Needs you</b> lists everything waiting.</p>
     <p>On a phone, Home shows the figures as four tiles, then <b>Needs you</b>, the proposals and the recent activity.</p>
   </conbody>
 </concept>
