@@ -9,6 +9,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Home fits the window.** On a computer or tablet, the workspace Home and a project's Summary no longer scroll as one long page: **Needs you**, **Activity** (the **Audit trail** on a project) and **Projects** each take a share of the window and scroll on their own, and **Needs you** now lists everything waiting instead of the first few.
+
 ## 0.28.1 — 2026-11-05
 
 ### Bug fixes

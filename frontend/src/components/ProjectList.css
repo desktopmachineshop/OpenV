@@ -461,3 +461,52 @@
     padding: 20px;
   }
 }
+
+/* The Home fitted to the window (ProjectList's fitHome, a wider screen with
+   no form open): the page stops at the bottom of the window and its blocks
+   share the height, each scrolling on its own. useFitWindow sets --fit-top,
+   where the container starts. A window too short for that keeps a floor,
+   and the page scrolls past it as before. */
+.project-list-container.is-fit {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  height: calc(100vh - var(--fit-top, 0px));
+  height: calc(100dvh - var(--fit-top, 0px));
+  min-height: 520px;
+  padding-bottom: 16px;
+}
+
+.project-list-container.is-fit > * {
+  flex: none;
+}
+
+/* The figures with Needs you and Activity, then the Projects panel: the
+   panels split what is left of the window. */
+.project-list-container.is-fit > .project-list-home {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.project-list-container.is-fit > .projects-grid.is-rows {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-y: auto;
+  margin-bottom: 12px;
+}
+
+/* The Projects panel's header stays put while its rows scroll. */
+.project-list-container.is-fit > .projects-grid.is-rows > :first-child {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+
+.project-list-container.is-fit > .create-button-container {
+  margin: 0;
+}
+
+.project-list-container.is-fit > .projects-grid.is-rows > * {
+  flex: none;
+}

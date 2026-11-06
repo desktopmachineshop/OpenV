@@ -20,7 +20,7 @@ import {
 import { REDESIGN_PAGES_FEATURE } from '../features';
 import { useViewport } from '../hooks/useViewport';
 import { baselineDate } from '../utils/baselines';
-import { ActivityRows, NeedsPanel } from '../components/ProjectListHomePanels';
+import { ActivityRows, NeedsPanel, fitPanel, panelScroll } from '../components/ProjectListHomePanels';
 import { loadHome, proposalLabel, type ActivityItem, type HomeData, type TodoItem } from './ProjectHomeData';
 
 const figure = (value: number | null, suffix = '') => (value === null ? '–' : `${value}${suffix}`);
@@ -51,27 +51,40 @@ const PhoneFigure: React.FC<{ value: string; label: string; to: string; danger?:
   </Link>
 );
 
-const NeedsYou: React.FC<{ items: TodoItem[]; projectId: string; limit: number; flex?: string }> = ({ items, projectId, limit, flex = '1.3 1 420px' }) => (
+// On a wider screen the page fits the window: the figures on top, then the
+// panels share the height left, each scrolling on its own (fit). A phone
+// scrolls the page as a whole.
+
+const NeedsYou: React.FC<{ items: TodoItem[]; projectId: string; limit: number; flex?: string; fit?: boolean }> = ({ items, projectId, limit, flex = '1.3 1 420px', fit = false }) => (
   <NeedsPanel
     items={items}
     limit={limit}
     action={<Link to={`/projects/${projectId}/review`} style={{ ...plainLink, fontWeight: 600 }}>Review all</Link>}
     emptyText="Nothing is waiting: no reviews, suspect links, open runs, failing tests or new comments."
-    style={{ flex }}
+    style={{ flex, ...(fit ? fitPanel : {}) }}
   />
 );
 
-const AuditTrail: React.FC<{ items: ActivityItem[]; projectId: string; title: string; flex?: string }> = ({ items, projectId, title, flex = '1 1 340px' }) => (
-  <section aria-labelledby="home-activity" data-help-key="home.activity" style={{ ...panelStyle, flex }}>
+const AuditTrail: React.FC<{ items: ActivityItem[]; projectId: string; title: string; flex?: string; fit?: boolean }> = ({
+  items,
+  projectId,
+  title,
+  flex = '1 1 340px',
+  fit = false,
+}) => (
+  <section aria-labelledby="home-activity" data-help-key="home.activity" style={{ ...panelStyle, flex, ...(fit ? fitPanel : {}) }}>
     <PanelHeader id="home-activity" title={title} action={<Link to={`/projects/${projectId}/activity`} style={plainLink}>Full history</Link>} />
-    {items.length === 0 && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>No activity yet.</p>}
-    <ActivityRows items={items} />
+    <div style={panelScroll}>
+      {items.length === 0 && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>No activity yet.</p>}
+      <ActivityRows items={items} />
+    </div>
   </section>
 );
 
-const Projects: React.FC<{ data: HomeData; projectId: string }> = ({ data, projectId }) => (
-  <section aria-labelledby="home-projects" data-help-key="home.projects" style={panelStyle}>
+const Projects: React.FC<{ data: HomeData; projectId: string; fit?: boolean }> = ({ data, projectId, fit = false }) => (
+  <section aria-labelledby="home-projects" data-help-key="home.projects" style={fit ? { ...panelStyle, ...fitPanel, flex: '1 1 0' } : panelStyle}>
     <PanelHeader id="home-projects" title="Projects" action={<Link to="/projects" style={plainLink}>All projects</Link>} />
+    <div style={panelScroll}>
     {data.projects.map((p) => (
       <Link
         key={p.id}
@@ -97,6 +110,7 @@ const Projects: React.FC<{ data: HomeData; projectId: string }> = ({ data, proje
         {p.traced === null && <span style={mutedStyle}>No requirements to trace yet</span>}
       </Link>
     ))}
+    </div>
   </section>
 );
 
@@ -115,6 +129,7 @@ const Proposals: React.FC<{ data: HomeData; projectId: string }> = ({ data, proj
         display: 'flex',
         flexDirection: 'column',
         gap: 8,
+        flex: 'none',
       }}
     >
       <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--purple-strong)' }}>
@@ -158,8 +173,8 @@ const HomeBody: React.FC<{ data: HomeData; projectId: string; phone: boolean }> 
     data.members !== null ? `${data.members} ${data.members === 1 ? 'member' : 'members'}` : '',
   ].filter(Boolean);
   return (
-    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '6px 20px' }} data-help-key="home.figures">
+    <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12, boxSizing: 'border-box', height: '100%', minHeight: 520 }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '6px 20px', flex: 'none' }} data-help-key="home.figures">
         <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>{data.project?.name || 'Home'}</h1>
         <span style={mutedStyle}>{sub.join(' · ')}</span>
         <span style={{ flexGrow: 1 }} />
@@ -168,11 +183,11 @@ const HomeBody: React.FC<{ data: HomeData; projectId: string; phone: boolean }> 
         <Figure value={figure(data.verified, '%')} label="verified" />
         <Figure value={figure(data.failing)} label="failing" danger={!!data.failing} />
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' }}>
-        <NeedsYou items={data.todo} projectId={projectId} limit={10} />
-        <AuditTrail items={data.activity} projectId={projectId} title="Audit trail" />
-        <div style={{ flex: '1 1 280px', maxWidth: 360, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <Projects data={data} projectId={projectId} />
+      <div style={{ display: 'flex', gap: 12, alignItems: 'stretch', flex: '1 1 0', minHeight: 0 }}>
+        <NeedsYou items={data.todo} projectId={projectId} limit={Infinity} fit />
+        <AuditTrail items={data.activity} projectId={projectId} title="Audit trail" fit />
+        <div style={{ flex: '1 1 280px', maxWidth: 360, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <Projects data={data} projectId={projectId} fit />
           <Proposals data={data} projectId={projectId} />
         </div>
       </div>
@@ -198,7 +213,7 @@ const HomeContent: React.FC = () => {
   if (error) return <ErrorBanner message={error} />;
   if (!data) return <div style={{ padding: 16, color: 'var(--text-muted)' }}>Loading…</div>;
   return (
-    <div data-help-pane="home" style={pageType(isPhone)}>
+    <div data-help-pane="home" style={{ ...pageType(isPhone), ...(isPhone ? {} : { height: '100%' }) }}>
       <HomeBody data={data} projectId={projectId} phone={isPhone} />
     </div>
   );

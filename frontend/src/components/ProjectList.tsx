@@ -54,6 +54,7 @@ import { NewProjectAction, ProjectCount, ProjectMeters } from './ProjectListFigu
 import { ProjectListHome } from './ProjectListHome';
 import { loadWorkspaceHome, type WorkspaceHomeData } from './ProjectListHomeLoad';
 import { useViewport } from '../hooks/useViewport';
+import { useFitWindow } from '../hooks/useFitWindow';
 import './ProjectList.css';
 
 // What an invention that outlasts its wait says where the workspace has the
@@ -360,6 +361,13 @@ export const ProjectList: React.FC = () => {
   };
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  // On a wider screen the Home fits the window: the figures on top, then the
+  // Needs you and Activity panels and the Projects panel share the height
+  // left, each scrolling on its own. A form open below the list, or a phone,
+  // keeps the page scrolling as a whole.
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const fitHome = homeDesign && !isPhone && !loading && !isCreating && !isEditingProject;
+  useFitWindow(containerRef, fitHome);
 
   // Load projects on mount and whenever the active workspace changes.
   useEffect(() => {
@@ -637,10 +645,10 @@ export const ProjectList: React.FC = () => {
           />
         </div>
       )}
-      <div className="project-list-container">
+      <div ref={containerRef} className={fitHome ? 'project-list-container is-fit' : 'project-list-container'}>
       {homeDesign && !loading ? (
-        <div style={{ marginBottom: 12 }}>
-          <ProjectListHome workspace={activeOrg?.name || 'Your workspace'} projects={projects.length} data={home} phone={isPhone} />
+        <div className="project-list-home" style={{ marginBottom: 12 }}>
+          <ProjectListHome workspace={activeOrg?.name || 'Your workspace'} projects={projects.length} data={home} phone={isPhone} fit={fitHome} />
         </div>
       ) : (
         <div className="project-list-head">
