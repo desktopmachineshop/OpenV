@@ -283,21 +283,49 @@ jobs:
           git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
             commit --quiet -am "Run OpenV ${tag}"
           git push --quiet --force origin "$branch"
-          url=$(gh pr create --repo "$HOSTED_REPO" --base release --head "$branch" \
-            --title "Run OpenV ${tag}" \
-            --body "OpenV's *Promote to release* shipped ${tag}; this points openv.app at it. The promotion merges it once CI passes, and Railway deploys the merge.")
+          # A GitHub call can drop its connection ("EOF") although the work is
+          # fine; 0.28.1's merge did, failing a release whose openv-hosted CI
+          # had passed. Each call below is retried, and the ones that change
+          # something first ask whether an earlier attempt already did.
+          pr_field() { gh pr view "$branch" --repo "$HOSTED_REPO" --json "$1" --jq ".$1" 2>/dev/null; }
+          url=""
+          for attempt in 1 2 3 4 5; do
+            url="$(pr_field url || true)"
+            [ -n "$url" ] && break
+            url="$(gh pr create --repo "$HOSTED_REPO" --base release --head "$branch" \
+              --title "Run OpenV ${tag}" \
+              --body "OpenV's *Promote to release* shipped ${tag}; this points openv.app at it. The promotion merges it once CI passes, and Railway deploys the merge.")" && break
+            url=""
+            echo "Opening the openv-hosted pull request failed (attempt ${attempt}); retrying."
+            sleep $((attempt * 10))
+          done
+          if [ -z "$url" ]; then
+            echo "::error::Could not open a pull request on ${HOSTED_REPO} for ${branch}: openv.app still runs the previous release. Open and merge it by hand."
+            echo "openv-hosted: ${branch} pushed, no pull request" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
           # Wait for openv-hosted's CI on the pull request's commit. It reads
           # the Actions runs (the token needs Actions: read on openv-hosted),
           # not the check results, which need a permission the token lacks.
           sha="$(git rev-parse HEAD)"
           runs="repos/${HOSTED_REPO}/actions/runs?head_sha=${sha}&per_page=50"
           verdict=""
+          misses=0
           for _ in $(seq 100); do
+            # One failed read is a dropped connection; five in a row is the
+            # token lacking Actions: read.
             if ! out="$(gh api "$runs" --jq '[.workflow_runs[] | {status, conclusion}]' 2>&1)"; then
-              echo "::error::Could not read openv-hosted's Actions runs (${out}). Give OPENV_HOSTED_TOKEN Actions: read on ${HOSTED_REPO}, then merge ${url} by hand once its CI is green."
-              echo "openv-hosted: ${url}, CI not readable, not merged" >> "$GITHUB_STEP_SUMMARY"
-              exit 1
+              misses=$((misses + 1))
+              if [ "$misses" -ge 5 ]; then
+                echo "::error::Could not read openv-hosted's Actions runs (${out}). Give OPENV_HOSTED_TOKEN Actions: read on ${HOSTED_REPO}, then merge ${url} by hand once its CI is green."
+                echo "openv-hosted: ${url}, CI not readable, not merged" >> "$GITHUB_STEP_SUMMARY"
+                exit 1
+              fi
+              echo "Reading openv-hosted's Actions runs failed (${out}); retrying."
+              sleep 15
+              continue
             fi
+            misses=0
             verdict="$(jq -r 'if length == 0 then "none"
               elif any(.[]; .status != "completed") then "running"
               elif all(.[]; .conclusion == "success" or .conclusion == "skipped" or .conclusion == "neutral") then "success"
@@ -310,6 +338,17 @@ jobs:
             echo "openv-hosted: ${url}, CI ${verdict:-unknown}, not merged" >> "$GITHUB_STEP_SUMMARY"
             exit 1
           fi
-          gh pr merge --repo "$HOSTED_REPO" --merge "$url"
+          merged=""
+          for attempt in 1 2 3 4 5; do
+            if [ "$(pr_field state || true)" = "MERGED" ]; then merged=1; break; fi
+            if gh pr merge --repo "$HOSTED_REPO" --merge "$url"; then merged=1; break; fi
+            echo "Merging ${url} failed (attempt ${attempt}); retrying."
+            sleep $((attempt * 10))
+          done
+          if [ -z "$merged" ] && [ "$(pr_field state || true)" != "MERGED" ]; then
+            echo "::error::Could not merge ${url}, whose CI passed: openv.app still runs the previous release. Merge it by hand."
+            echo "openv-hosted: ${url}, CI success, not merged" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
           gh api -X DELETE "repos/${HOSTED_REPO}/git/refs/heads/${branch}" >/dev/null || true
           echo "openv-hosted: ${url}, merged; Railway deploys it" >> "$GITHUB_STEP_SUMMARY"
