@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.29.0 — 2026-11-06
+
 ### New features
 
 - **Dropdowns that show every option, and a Priority field.** The artifact editor's choice fields (**Parent artifact**, **Type**, **Owner**, **How is this verified?**, **Releases** and your project's own list attributes) now open a list that always shows every option, with the current one ticked. Before, the **Owner** list showed only the name already in the field. Long lists get a search box, **Type** shows each type's colour and what it is for, **Parent artifact** shows the document's structure and finds an artifact by its ref, and **Owner** splits parties from members and still takes any name you type. Requirements have a **Priority** field (Must, Should or Could), the one the requirements list and table already show. Turn on **Priority from the requirement text** in **Project settings → Quality rules**, and a new requirement's Priority follows its *shall*, *should* or *may* until you pick one yourself. **Releases** now appears on every artifact even before the project has a release, with a link to create one.
