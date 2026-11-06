@@ -247,10 +247,16 @@ pushing anything off the bottom.
 ## Search & filters
 
 Two boxes search, and they do different jobs. The one in the **top bar**
-searches every project you can see; the one above the **list** narrows the
-project you are in.
+finds an artifact in any project you can see and opens it; it never filters
+the page you are on. The one above the **list** filters the project you are
+in.
 
-The top bar's box matches titles and bodies, and it also matches **refs**: type
+### Finding and opening an artifact
+
+Type in the top bar's box and the matches drop down below it, grouped by
+project; click one, or pick it with the arrow keys and **Enter**, to open it
+in its project. **Keyword** and **Semantic** at the top of the drop-down
+choose how the text is matched. The box matches titles and bodies, and it also matches **refs**: type
 **REQ-30** and REQ-30 comes back first, ahead of anything that merely mentions
 it. Case does not matter, so **req-30** works, and a ref pasted out of a
 report with spaces around it still finds its artifact. Every result shows its
@@ -260,7 +266,7 @@ match: **REQ-3** finds REQ-3 first and leaves REQ-30 further down.
 
 ### The search bar
 
-Both boxes are **search bars with chips**. Each filter you add shows as a
+The list's box is a **search bar with chips**. Each filter you add shows as a
 small coloured chip inside the bar, such as **Status In review ×** or
 **Owner Dave ×**, so you can see at a glance what is narrowing the list.
 Click a chip's **×** to remove that filter alone. Whatever you type sits after
@@ -309,16 +315,6 @@ list. Its text matches the ref, title, body, type and attributes. It takes
 the place of the type tabs: filter by type from **Filters → Type** in the
 panel, where each type shows its count. The panel stays inside the window,
 however narrow the list.
-
-### The top bar's chips
-
-In the top bar, the chips are **Project**, **Type**, **Status** and
-**Owner** (a part of a name or address is enough). Chips alone are a search:
-**Type Test case** with **Owner dana** lists Dana's test cases without any
-text. Typing a ref such as **REQ-12** still finds it first, and **Enter**
-opens it. The results drop down below the bar, grouped by kind
-(Requirements, Test Cases, …), each with its project, owner and status. The
-chips it offers for what you typed come after the results.
 
 ## Editing, versions & history
 

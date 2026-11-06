@@ -13,8 +13,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 - **Dropdowns that show every option, and a Priority field.** The artifact editor's choice fields (**Parent artifact**, **Type**, **Owner**, **How is this verified?**, **Releases** and your project's own list attributes) now open a list that always shows every option, with the current one ticked. Before, the **Owner** list showed only the name already in the field. Long lists get a search box, **Type** shows each type's colour and what it is for, **Parent artifact** shows the document's structure and finds an artifact by its ref, and **Owner** splits parties from members and still takes any name you type. Requirements have a **Priority** field (Must, Should or Could), the one the requirements list and table already show. Turn on **Priority from the requirement text** in **Project settings → Quality rules**, and a new requirement's Priority follows its *shall*, *should* or *may* until you pick one yourself. **Releases** now appears on every artifact even before the project has a release, with a link to create one.
 
+## 0.28.1 — 2026-11-05
+
 ### Bug fixes
 
+- **The top-bar search is a box to find and open an artifact.** It no longer carries filter chips, which looked like they would filter the page but only changed its drop-down. Type a title, some text or a ref such as *REQ-12* and pick a result to open it, in any project you can see; to filter the page you are on, use the search bar above the requirements list.
 - **The requirements search bar stays put.** The type tabs beside the chip search bar came and went with the results, so the bar jumped around as you typed; they are gone, and filtering by type is under **Filters → Type** in the bar's panel, with a count beside each type. The bar now spans the width of the list, and its panel no longer opens off the edge of the screen.
 - **Panning the Tree no longer selects text.** Dragging the requirements Tree diagram to pan it used to highlight the text of every box it passed over; it now just moves the diagram.
 

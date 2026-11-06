@@ -2,16 +2,19 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="search-filters">
   <title>Search &amp; filters</title>
-  <shortdesc>Two boxes search, and they do different jobs. The one in the <b>top bar</b> searches every project you can see; the one above the <b>list</b> narrows the project you are in.</shortdesc>
+  <shortdesc>Two boxes search, and they do different jobs. The one in the <b>top bar</b> finds an artifact in any project you can see and opens it; it never filters the page you are on. The one above the <b>list</b> filters the project you are in.</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="requirements.search"/>
     <resourceid appname="openv-web" appid="search"/>
   </prolog>
   <conbody>
-    <p>The top bar's box matches titles and bodies, and it also matches <b>refs</b>: type <b>REQ-30</b> and REQ-30 comes back first, ahead of anything that merely mentions it. Case does not matter, so <b>req-30</b> works, and a ref pasted out of a report with spaces around it still finds its artifact. Every result shows its ref beside the title, which is what tells two similarly named requirements apart. A longer ref that contains what you typed still appears below the exact match: <b>REQ-3</b> finds REQ-3 first and leaves REQ-30 further down.</p>
+    <section id="finding-and-opening-an-artifact">
+      <title>Finding and opening an artifact</title>
+      <p>Type in the top bar's box and the matches drop down below it, grouped by project; click one, or pick it with the arrow keys and <b>Enter</b>, to open it in its project. <b>Keyword</b> and <b>Semantic</b> at the top of the drop-down choose how the text is matched. The box matches titles and bodies, and it also matches <b>refs</b>: type <b>REQ-30</b> and REQ-30 comes back first, ahead of anything that merely mentions it. Case does not matter, so <b>req-30</b> works, and a ref pasted out of a report with spaces around it still finds its artifact. Every result shows its ref beside the title, which is what tells two similarly named requirements apart. A longer ref that contains what you typed still appears below the exact match: <b>REQ-3</b> finds REQ-3 first and leaves REQ-30 further down.</p>
+    </section>
     <section id="the-search-bar">
       <title>The search bar</title>
-      <p>Both boxes are <b>search bars with chips</b>. Each filter you add shows as a small coloured chip inside the bar, such as <b>Status In review ×</b> or <b>Owner Dave ×</b>, so you can see at a glance what is narrowing the list. Click a chip's <b>×</b> to remove that filter alone. Whatever you type sits after the chips and searches as before; with the box empty, <b>Backspace</b> removes the last chip. Blue chips filter, purple chips group, and yellow chips are saved searches.</p>
+      <p>The list's box is a <b>search bar with chips</b>. Each filter you add shows as a small coloured chip inside the bar, such as <b>Status In review ×</b> or <b>Owner Dave ×</b>, so you can see at a glance what is narrowing the list. Click a chip's <b>×</b> to remove that filter alone. Whatever you type sits after the chips and searches as before; with the box empty, <b>Backspace</b> removes the last chip. Blue chips filter, purple chips group, and yellow chips are saved searches.</p>
       <p><b>Typing suggests chips.</b> Type <b>dav</b> and the bar offers <i>Owner: Dave</i>, <i>Search Owner for: dav</i>, <i>Search Title for: dav</i> and so on. Pick one with the arrow keys and <b>Enter</b>, or click it, and it becomes a chip.</p>
       <p><b>The caret</b> at the right of the bar opens a panel with three columns:</p>
       <ul>
@@ -25,10 +28,6 @@
     <section id="the-lists-bar">
       <title>The list's bar</title>
       <p>The list's bar narrows the project you are in, and spans the width of the list. Its text matches the ref, title, body, type and attributes. It takes the place of the type tabs: filter by type from <b>Filters → Type</b> in the panel, where each type shows its count. The panel stays inside the window, however narrow the list.</p>
-    </section>
-    <section id="the-top-bars-chips">
-      <title>The top bar's chips</title>
-      <p>In the top bar, the chips are <b>Project</b>, <b>Type</b>, <b>Status</b> and <b>Owner</b> (a part of a name or address is enough). Chips alone are a search: <b>Type Test case</b> with <b>Owner dana</b> lists Dana's test cases without any text. Typing a ref such as <b>REQ-12</b> still finds it first, and <b>Enter</b> opens it. The results drop down below the bar, grouped by kind (Requirements, Test Cases, …), each with its project, owner and status. The chips it offers for what you typed come after the results.</p>
     </section>
   </conbody>
 </concept>
