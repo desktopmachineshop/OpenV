@@ -143,13 +143,15 @@ func (f *fakeProjectService) ListProjectsByOrg(orgID string) ([]*projects.Projec
 type fakeOrgService struct {
 	// It answers methods of Workspaces, Membership, ChannelSettings and
 	// Alerts below. BillingStore's are left to the fakes that embed this one
-	// (billingOrgFake, purchaseOrgFake, planOrgFake); it is embedded so that
-	// the fake, with all five, is an orgs.Service.
+	// (billingOrgFake, purchaseOrgFake, planOrgFake), and Notices to none: the
+	// API sends no notices. Both are embedded so that the fake, with all six,
+	// is an orgs.Service.
 	orgs.Workspaces
 	orgs.Membership
 	orgs.BillingStore
 	orgs.ChannelSettings
 	orgs.Alerts
+	orgs.Notices
 
 	// roles maps orgID -> userID -> role
 	roles map[string]map[string]string

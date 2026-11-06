@@ -390,6 +390,15 @@ Built, in order:
   offered where the deployment is `hosted`, until it moves to
   `openv-hosted`.
 
+- **Notices** (2026-11-06). OpenV sent no billing emails, and Stripe's
+  own are off account-wide (the account is shared with OpenD, which sends
+  its own). A module now emails a workspace's admins through the server's
+  mail (`ext.MailBoot`, `ext.Mail`, `docs/extending.md`), once per key: the
+  claim is a row of `workspace_notices` (migration 0072). The billing
+  module decides when (a failed renewal, a trial about to end, a drop to
+  the free tier); the core knows only who administers a workspace and what
+  was already sent, so no billing concept enters it.
+
 Still open: the cut-over itself (the maintainer's, staging first); and
 Phase 4. Removing billing's routes from a self-hosted server is subject to
 REQ-143 (a route removal is announced in two stable releases first), which

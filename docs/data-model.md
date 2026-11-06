@@ -226,6 +226,16 @@ Setting `OPENV_BUDGET_ENFORCE=true` additionally soft-blocks new launches once
 a workspace is at 100% of budget (the launch API answers 402); it fails open on
 any lookup error so a budget hiccup never wedges launches.
 
+### workspace_notices
+Once-only emails to a workspace's admins (migration 0072, `orgs.Notices`):
+`(org_id, notice_key)` is the primary key, with the `subject` sent,
+`recipients` (how many admins it reached) and `sent_at`. A module names the
+occurrence a notice is about in its key (the hosted service's billing emails
+use `billing:<kind>:<subscription>:<period end>`); the insert is the claim, so
+a polling loop that sees the cause again, on any replica, sends nothing more.
+A claim whose notice reached nobody is deleted so the next attempt can send
+it. Rows go with their workspace (`ON DELETE CASCADE`).
+
 ### org_members
 `(org_id, user_id)` → `role` (`admin` | `member`). Org admins act as owners
 of every project in the org.

@@ -13,6 +13,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/help"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/users"
+	"github.com/openv/requirements-platform/internal/notify"
 	"github.com/openv/requirements-platform/internal/seeds"
 )
 
@@ -255,3 +256,20 @@ func (b extBoot) Context() context.Context         { return b.a.ctx }
 func (b extBoot) Workspaces() ext.WorkspaceService { return b.a.orgService }
 func (b extBoot) Users() ext.UserService           { return b.a.userService }
 func (b extBoot) Metrics() any                     { return b.a.metricsCollector }
+
+// Mail lends modules the mail stage notify built, for once-only notices to a
+// workspace's admins (ext.MailBoot).
+func (b extBoot) Mail() ext.Mail {
+	return extMail{notify.NewWorkspaceMail(b.a.emailMailer, b.a.orgService, b.a.userService, b.a.emailLinkBase)}
+}
+
+// extMail is notify's WorkspaceMail as an ext.Mail.
+type extMail struct{ w *notify.WorkspaceMail }
+
+func (m extMail) Enabled() bool { return m.w.Enabled() }
+
+func (m extMail) SendToAdmins(ctx context.Context, orgID string, n ext.Notice) (bool, error) {
+	return m.w.SendToAdmins(ctx, orgID, notify.WorkspaceNotice{Key: n.Key, Subject: n.Subject, Body: n.Body, Path: n.Path})
+}
+
+var _ ext.MailBoot = extBoot{}

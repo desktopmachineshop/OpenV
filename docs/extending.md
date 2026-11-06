@@ -82,6 +82,34 @@ func init() {
 A factory's error stops the server, as a malformed setting of the core's
 own does. Registering two modules under one name panics.
 
+### Emailing a workspace's admins
+
+The server's `Boot` is also an `ext.MailBoot`: `Mail()` lends a module the
+server's own mail (`OPENV_SMTP_*`) for **notices**, emails to a workspace's
+admins about the workspace itself. A notice is sent at most once per key and
+workspace, however often the module asks, so a polling loop can ask on every
+tick:
+
+```go
+mail, _ := b.(ext.MailBoot)
+// later, each time the module sees the cause:
+sent, err := mail.Mail().SendToAdmins(ctx, orgID, ext.Notice{
+	Key:     "mymodule:quota_exceeded:2026-11", // the occurrence, prefixed with the module's name
+	Subject: "Your workspace is over its quota",
+	Body:    "Plain text: what happened and what to do.",
+	Path:    "/org/settings?tab=usage", // sent as a link on the app's origin
+})
+```
+
+The server greets each admin, adds the link and a line saying why they got
+it, and records the key, subject and recipient count (`workspace_notices`,
+`docs/data-model.md`). A notice is a service message, so the email opt-out
+does not apply; it is not stored in the bell. With mail off (`Enabled()`
+false) or no admin with an address nothing is sent or recorded. A notice
+that reached no admin is not recorded either, so the next ask tries again;
+one that reached some is never repeated. Assert `ext.MailBoot` rather than
+expecting it: a `Boot` of your own tests need not implement it.
+
 The server is `cmd/server`, a `main` package, so a program links its
 modules into it by adding one file to that directory at build time, which
 imports the module packages for their registration:
