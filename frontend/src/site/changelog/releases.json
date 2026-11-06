@@ -2,6 +2,19 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.28.2",
+   "date": "2026-11-06",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Home fits the window.** On a computer or tablet, the workspace Home and a project's Summary no longer scroll as one long page: **Needs you**, **Activity** (the **Audit trail** on a project) and **Projects** each take a share of the window and scroll on their own, and **Needs you** now lists everything waiting instead of the first few."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.28.1",
    "date": "2026-11-05",
    "stableSince": "",
