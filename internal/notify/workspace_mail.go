@@ -23,8 +23,8 @@ import (
 
 // WorkspaceNotice is one notice: Key names the occurrence it is about and is
 // sent at most once per workspace; Body is plain text, put between a
-// greeting and the link to Path (an app path such as
-// "/org/settings?tab=billing"; "" for no link).
+// greeting and the link to Path (an app path, the Billing tab of the
+// workspace settings for instance; "" for no link).
 type WorkspaceNotice struct {
 	Key     string
 	Subject string
