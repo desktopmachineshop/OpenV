@@ -153,6 +153,16 @@ type Repository interface {
 	// ClaimMinutesAlert is the same dedupe claim for the hosted-minutes
 	// allowance (migration 47).
 	ClaimMinutesAlert(orgID, month string, threshold int) (bool, error)
+	// ClaimNotice records that the notice key (with its subject) is being
+	// sent to the workspace's admins, and reports whether THIS caller won
+	// the claim: a second claim of one key in one workspace is false, so a
+	// notice goes out once however often its cause is seen (migration 72).
+	ClaimNotice(orgID, key, subject string) (bool, error)
+	// RecordNotice writes how many admins a claimed notice reached.
+	RecordNotice(orgID, key string, recipients int) error
+	// ReleaseNotice forgets a claim whose notice reached nobody, so the
+	// next attempt can send it.
+	ReleaseNotice(orgID, key string) error
 
 	// Billing writers. Each touches only the billing columns it names; the
 	// plan column is written only by SetPlan and ApplyBillingState.
@@ -228,14 +238,15 @@ type Repository interface {
 // interfaces, each declared beside the methods it names, so a caller that
 // needs one concern can take that interface rather than the whole service:
 // Workspaces (workspace.go, with deletion.go's soft delete, restore and
-// purge), Membership (membership.go), BillingStore and Alerts (billing.go)
-// and ChannelSettings (channels.go).
+// purge), Membership (membership.go), BillingStore and Alerts (billing.go),
+// ChannelSettings (channels.go) and Notices (notices.go).
 type Service interface {
 	Workspaces
 	Membership
 	BillingStore
 	ChannelSettings
 	Alerts
+	Notices
 }
 
 // DefaultService implements Service.

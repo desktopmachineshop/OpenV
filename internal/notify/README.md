@@ -29,6 +29,7 @@ The notification and event types themselves are domain packages
 | `release.go`, `stable.go`, `dedicated.go` | `ReleaseAnnouncer`; `StableScheduler`, stable releases and the upgrade window; `SupportWindowWatcher`, a dedicated instance's support window |
 | `delivery.go` | `Delivery.Deliver`, the one store → SSE → email → push every producer above calls (email synchronous on the caller's goroutine, push queued); `Channels{Email, Push}`, which `cmd/server` builds once and hands to each producer's `SetChannels`; `ToOrgAdmins`, the one fan-out to a workspace's admins |
 | `email.go`, `push.go` | the side channels: `EmailDispatcher` with `notificationPath`, each notification's deep link; `PushDispatcher` and `WebPushSender` |
+| `workspace_mail.go` | `WorkspaceMail`: a module's once-only notices to a workspace's admins (`ext.Mail`, lent by `cmd/server`'s `extBoot`), claimed in `workspace_notices` before the first email and released when none got out |
 | `invitation.go`, `verification.go`, `credentials.go` | the invitation and sign-up verification mails; the SMTP sender |
 | `notification_content*_test.go`, `testdata/notifications/*/` | S10: four goldens per notification type (`row.json`, `sse.txt`, `email.txt`, `push.json`) |
 | `internal/events/bus.go` | `DefaultBus`: stores each event, then calls every subscriber in subscription order on one dispatch goroutine |

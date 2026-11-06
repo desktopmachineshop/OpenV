@@ -89,3 +89,4 @@ users scope - not reached
 work_item_activity scope - cascade from work_items
 work_items scope project_id deleted
 worker_keys scope org_id cascade from organizations
+workspace_notices scope org_id cascade from organizations

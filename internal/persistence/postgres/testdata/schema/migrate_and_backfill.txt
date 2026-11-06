@@ -957,7 +957,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 71
+table schema_migrations rows 72
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1234,6 +1234,15 @@ table worker_keys rows 0
   index idx_worker_keys_org CREATE INDEX idx_worker_keys_org ON public.worker_keys USING btree (org_id)
   index idx_worker_keys_user CREATE INDEX idx_worker_keys_user ON public.worker_keys USING btree (org_id, user_id)
   index worker_keys_pkey CREATE UNIQUE INDEX worker_keys_pkey ON public.worker_keys USING btree (id)
+table workspace_notices rows 0
+  column org_id uuid NOT NULL
+  column notice_key character varying(200) NOT NULL
+  column subject character varying(300) NOT NULL DEFAULT ''::character varying
+  column recipients integer NOT NULL DEFAULT 0
+  column sent_at timestamp with time zone NOT NULL DEFAULT now()
+  constraint workspace_notices_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint workspace_notices_pkey PRIMARY KEY (org_id, notice_key)
+  index workspace_notices_pkey CREATE UNIQUE INDEX workspace_notices_pkey ON public.workspace_notices USING btree (org_id, notice_key)
 ledger 0001 baseline
 ledger 0002 unique_personal_org_per_user
 ledger 0003 agent_runs_retried_from
@@ -1305,3 +1314,4 @@ ledger 0068 saved_searches
 ledger 0069 retarget_crew_automations
 ledger 0070 agent_hierarchy
 ledger 0071 todos
+ledger 0072 workspace_notices

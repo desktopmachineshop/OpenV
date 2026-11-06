@@ -9,6 +9,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Workspace admins can be emailed about their workspace, once.** The server can now send a workspace's admins a one-off email about the workspace itself, such as a card payment that failed or a free trial about to end, and it records each one so the same email is never sent twice. openv.app uses this for its billing emails; a self-hosted server with no billing sends none.
+
 ## 0.29.1 — 2026-11-06
 
 ### Maintenance updates
