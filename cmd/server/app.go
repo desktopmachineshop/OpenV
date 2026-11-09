@@ -18,6 +18,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
+	"github.com/openv/requirements-platform/internal/domain/commentreads"
 	"github.com/openv/requirements-platform/internal/domain/connectedapps"
 	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/embeddings"
@@ -142,6 +143,7 @@ type app struct {
 	attributeService     *attributes.DefaultService
 	targetReleaseService *targetreleases.DefaultService
 	savedSearchService   *savedsearches.DefaultService
+	commentReadService   *commentreads.DefaultService
 	sharedProductService *sharedproducts.DefaultService
 	vvService            *vv.DefaultService
 	evidenceService      *evidence.DefaultService

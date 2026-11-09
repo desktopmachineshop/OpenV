@@ -74,6 +74,7 @@ var Registry = []Feature{
 	{Key: FeatureImpactPicker, ShippedIn: "0.28.0", Summary: "Impact analysis picks the requirement from a searchable table of the document, re-centres on any artifact in the tree, and shows the result as a table too"},
 	{Key: FeatureTodos, ShippedIn: "0.28.0", Summary: "To-dos of their own: one paragraph to tick off, kept off the board, in a project list and in My to-dos, with a promote to board task when one grows"},
 	{Key: FeatureEditorPickers, ShippedIn: "0.29.0", Summary: "Searchable dropdowns in the artifact editor that list every option, a Priority field on requirements that can follow the shall, should or may in their text, and Releases shown on every requirement"},
+	{Key: FeatureCommentReads, ShippedIn: "0.30.0", Summary: "Mark a comment read or unread: Needs you lists only the comments you have not read, opening them marks them read, and Mark unread keeps one there for later"},
 }
 
 // Feature keys the code gates on.
@@ -276,6 +277,13 @@ const (
 	// (settings.PriorityDetectionKey). Without it the editor keeps the
 	// browser's own selects. The stored priority attribute is never gated.
 	FeatureEditorPickers = "editor-pickers"
+	// FeatureCommentReads is comment read state on the Home pages: Needs you
+	// lists only the comments a member has not read, opening an artifact's
+	// comments marks them read, and Mark read, Mark all read and Mark unread
+	// set it by hand. It gates WRITING read state (PUT /me/comment-reads)
+	// and the controls; reading it is never gated. Without it Needs you lists
+	// the latest comments as before.
+	FeatureCommentReads = "comment-reads"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

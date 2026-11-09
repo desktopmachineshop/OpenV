@@ -15,6 +15,11 @@
     </ul>
     <p>It opens on <b>Comments</b>, which is what most people come to it for; the recorded changes are the backdrop.</p>
     <p>Add a comment in the box under the <b>History</b> heading. Use it for review discussion rather than editing the requirement text itself — the text is the requirement, the comment is what you think of it. Writing one while reading <b>Changes</b> switches you back to <b>Comments</b>, so you can see what you just added.</p>
+    <section id="read-and-unread-comments">
+      <title>Read and unread comments</title>
+      <p><b>Needs you</b>, on Home, lists the comments you have not read. Comments count as read once you see them here: as soon as the <b>History</b> comes into view, or straight away when you came from a <b>Needs you</b> line. A comment written since you last read the artifact's comments shows <b>New</b>.</p>
+      <p>To keep a comment in <b>Needs you</b> for later, click <b>Mark unread</b> on it. That comment, and every comment written after it on the same artifact, show <b>Unread</b> and stay in <b>Needs you</b> until you open them again or mark them read there. Your own comments are never unread to you.</p>
+    </section>
     <section id="tagging-inside-a-comment">
       <title>Tagging inside a comment</title>
       <p>A comment can name people and point at things, with the same two-marker convention the descriptions use.</p>

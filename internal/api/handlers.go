@@ -10,6 +10,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
+	"github.com/openv/requirements-platform/internal/domain/commentreads"
 	"github.com/openv/requirements-platform/internal/domain/connectedapps"
 	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/embeddings"
@@ -129,6 +130,9 @@ type HandlerDeps struct {
 	// SavedSearchService stores members' saved searches (issue #722).
 	// nil answers an empty list and refuses to save.
 	SavedSearchService savedsearches.Service
+	// CommentReadService stores when members last read each artifact's
+	// comments. nil answers no read state and refuses to store any.
+	CommentReadService commentreads.Service
 	// UserMetricsService records daily user activity and answers the
 	// platform admin's user dashboard. nil records nothing.
 	UserMetricsService usermetrics.Service

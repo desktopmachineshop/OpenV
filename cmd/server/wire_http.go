@@ -92,6 +92,7 @@ func (a *app) handlers() {
 		AttributeService:     a.attributeService,
 		TargetReleaseService: a.targetReleaseService,
 		SavedSearchService:   a.savedSearchService,
+		CommentReadService:   a.commentReadService,
 		SharedProductService: a.sharedProductService,
 		EmbeddingService:     a.embeddingService,
 		UploadsDir:           a.uploadsDir,

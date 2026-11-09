@@ -260,4 +260,22 @@ func reviewChatterSearchTour(tr *tour) {
 	tr.step("the reviewer may not delete the owner's search: 404", reviewer, savedDelete, at("id", "{{saved}}"))
 	tr.step("the owner deletes it: 204", owner, savedDelete, at("id", "{{saved}}"))
 	tr.step("deleted again: 404", owner, savedDelete, at("id", "{{saved}}"))
+
+	// Comment read state: when a member last read an artifact's comments.
+	// Each write names its time, so the golden does not follow the clock.
+	readsList := "GET /api/v1/me/comment-reads"
+	readsSet := "PUT /api/v1/me/comment-reads"
+	tr.step("no artifact named: []", owner, readsList)
+	tr.step("comments never read: []", owner, readsList, query("artifact_ids={{req1}},{{req2}}"))
+	tr.step("mark read; an id that is not an artifact is skipped", owner, readsSet,
+		jsonBody(`{"reads":[{"artifact_id":"{{req1}}","read_at":"2026-11-09T10:00:00Z"},{"artifact_id":"00000000-0000-4000-8000-000000000000"}]}`))
+	tr.step("mark unread: an earlier time replaces it", owner, readsSet,
+		jsonBody(`{"reads":[{"artifact_id":"{{req1}}","read_at":"2026-11-09T09:59:59.999Z"}]}`))
+	tr.step("the owner's read state: the earlier time", owner, readsList, query("artifact_ids={{req1}},{{req2}}"))
+	tr.step("the reviewer, in its own workspace, has none of the owner's", reviewer, readsList,
+		query("artifact_ids={{req1}}"))
+	tr.step("the reviewer cannot mark another workspace's artifact: nothing stored", reviewer, readsSet,
+		jsonBody(`{"reads":[{"artifact_id":"{{req1}}","read_at":"2026-11-09T10:00:00Z"}]}`))
+	tr.step("no reads: 400", owner, readsSet, jsonBody(`{"reads":[]}`))
+	tr.step("an id that is not an id: 400", owner, readsSet, jsonBody(`{"reads":[{"artifact_id":"nope"}]}`))
 }

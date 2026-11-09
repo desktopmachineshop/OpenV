@@ -54,6 +54,7 @@ export const FEATURE_KEYS = [
   'impact-picker',
   'todos',
   'editor-pickers',
+  'comment-reads',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

@@ -26,8 +26,11 @@ all** in its header opens the **Review Queue**.
 - **test run**: a run still in progress, with how many test cases are left.
 - **failing**: a test case whose last result is a fail, and the
   requirements it verifies.
-- **comment**: a recent comment on an artifact; **Open** opens the artifact
-  with its notes showing.
+- **comment**: a comment on an artifact that you have not read, by someone
+  other than you; **Open** opens the artifact with its notes showing, which
+  marks them read. **Mark read** clears the artifact's comments from the
+  list without opening it, **Mark all read** in the header clears them all,
+  and **Undo** on the line they leave puts them back.
 
 The **Audit trail** shows the newest events of the project, who did what to
 which artifact; click one to open what it is about. **Full history** opens

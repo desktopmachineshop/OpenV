@@ -25,6 +25,7 @@ import {
   type ActivityItem,
   type TodoItem,
 } from '../components/ProjectListHomeData';
+import { commentsNeedingMe } from '../components/noteReadState';
 
 export {
   agoLabel,
@@ -84,7 +85,10 @@ const loadProjects = async (currentId: string, current: ProjectCard): Promise<Pr
   return [current, ...cards];
 };
 
-export const loadHome = async (projectId: string): Promise<HomeData> => {
+export const loadHome = async (
+  projectId: string,
+  opts: { userId?: string | null; commentReads?: boolean } = {},
+): Promise<HomeData> => {
   const [project, artifacts, coverage, baselines, members, review, runs, events, comments, proposals] =
     await Promise.allSettled([
       projectAPI.get(projectId),
@@ -119,7 +123,14 @@ export const loadHome = async (projectId: string): Promise<HomeData> => {
     traced: percent(summary?.traced, summary?.total),
     verified: percent(summary?.verified, summary?.total),
   };
-  const commentEvents = (settled(comments) || []).filter((c) => c.payload?.entry_type === 'comment').slice(0, 3);
+  // Someone else's comments; with read state on, the unread ones, all of
+  // them, and before it the latest three.
+  const readState = Boolean(opts.commentReads);
+  const needing = await commentsNeedingMe(
+    (settled(comments) || []).filter((c) => c.payload?.entry_type === 'comment'),
+    { userId: opts.userId, readState },
+  );
+  const commentEvents = readState ? needing : needing.slice(0, 3);
   return {
     project: proj,
     artifacts: current.count,
@@ -129,7 +140,7 @@ export const loadHome = async (projectId: string): Promise<HomeData> => {
     suspect: reviewQueue ? reviewQueue.suspect_links.length : null,
     lastBaseline,
     members: settled(members)?.length ?? null,
-    todo: buildTodo({ projectId, review: reviewQueue, runs: runResults, testCases, coverage: cov, comments: commentEvents, byId }),
+    todo: buildTodo({ projectId, review: reviewQueue, runs: runResults, testCases, coverage: cov, comments: commentEvents, byId, readState }),
     activity: (settled(events) || []).map((e) => describeEvent(e)),
     projects: await loadProjects(projectId, current),
     proposals: settled(proposals) || [],

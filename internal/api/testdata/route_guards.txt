@@ -94,6 +94,7 @@ GET /api/v1/interviews/{id}/invites: project:viewer
 GET /api/v1/interviews/{id}/sessions: project:viewer
 GET /api/v1/links: project:viewer
 GET /api/v1/links/{id}: project:viewer
+GET /api/v1/me/comment-reads: session
 GET /api/v1/me/connected-apps: session
 GET /api/v1/me/default-workspace: session
 GET /api/v1/me/notification-prefs: session
@@ -337,6 +338,7 @@ PUT /api/v1/guided-sessions/{id}/step: project:editor
 PUT /api/v1/interviews/{id}/persona: project:editor, project-visible
 PUT /api/v1/links/{id}: project:editor
 PUT /api/v1/links/{id}/confirm: project:editor
+PUT /api/v1/me/comment-reads: session
 PUT /api/v1/me/connected-apps/{id}/workspaces: session, org:member
 PUT /api/v1/me/default-workspace: session
 PUT /api/v1/me/notification-prefs: session

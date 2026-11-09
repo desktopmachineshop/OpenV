@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Mark comments read, or unread for later.** **Needs you** on the Home pages now lists only the comments you have not read. Opening an artifact's comments marks them read, and **Mark read** on a comment's row, or **Mark all read** at the top of the panel, clears them without opening anything; **Undo** puts them back. To keep a comment you have already read in **Needs you**, use **Mark unread** on it in the artifact's comments: it, and anything written after it, stays listed until you mark it read. Comments you have not read show **New** when you open them.
+
+### Bug fixes
+
+- **Your own comments no longer appear in Needs you.** The Home pages listed the latest comments whoever wrote them, so a comment you had just written showed up as something waiting on you.
+
 ## 0.29.2 — 2026-11-06
 
 ### Maintenance updates

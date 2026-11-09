@@ -18,7 +18,7 @@
       <li><b>suspect</b>: a link whose ends changed after it was made. <b>✓</b> confirms the link still holds and <b>✗</b> removes it, after you confirm, right there on Home; the line leaves the list.</li>
       <li><b>test run</b>: a run still in progress, with how many test cases are left.</li>
       <li><b>failing</b>: a test case whose last result is a fail, and the requirements it verifies.</li>
-      <li><b>comment</b>: a recent comment on an artifact; <b>Open</b> opens the artifact with its notes showing.</li>
+      <li><b>comment</b>: a comment on an artifact that you have not read, by someone other than you; <b>Open</b> opens the artifact with its notes showing, which marks them read. <b>Mark read</b> clears the artifact's comments from the list without opening it, <b>Mark all read</b> in the header clears them all, and <b>Undo</b> on the line they leave puts them back.</li>
     </ul>
     <p>The <b>Audit trail</b> shows the newest events of the project, who did what to which artifact; click one to open what it is about. <b>Full history</b> opens the <b>Activity</b> page. <b>Projects</b> lists your workspace's projects with how far each is traced and verified, and when agents have proposed changes, a card counts the proposals waiting and opens the agent runs to review them.</p>
     <p>On a computer or tablet, Home fits the window: <b>Needs you</b>, the <b>Audit trail</b> and <b>Projects</b> share the height below the figures, and each scrolls on its own when it has more than fits, so <b>Needs you</b> lists everything waiting.</p>

@@ -5,6 +5,7 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/attributes"
+	"github.com/openv/requirements-platform/internal/domain/commentreads"
 	"github.com/openv/requirements-platform/internal/domain/evidence"
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
@@ -39,6 +40,8 @@ func (a *app) projects() {
 	// A member's saved searches: the named chip sets a page's search bar
 	// puts back (issue #722).
 	a.savedSearchService = savedsearches.NewDefaultService(postgres.NewSavedSearchRepository(a.db))
+	// When each member last read each artifact's comments, for Needs you.
+	a.commentReadService = commentreads.NewDefaultService(postgres.NewCommentReadRepository(a.db))
 	// The community pool of joke demo products for the new-project wizard.
 	// Limits are env-tunable so a deployment can tighten them without a
 	// release; the defaults bound both abuse and storage cost.
