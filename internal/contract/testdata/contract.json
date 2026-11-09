@@ -39,7 +39,8 @@
     "agent-hierarchy",
     "impact-picker",
     "todos",
-    "editor-pickers"
+    "editor-pickers",
+    "comment-reads"
   ],
   "event_types": [
     "artifact.created",

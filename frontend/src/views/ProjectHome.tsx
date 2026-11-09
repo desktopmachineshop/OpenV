@@ -18,7 +18,10 @@ import {
   panelStyle,
 } from '../components/ui';
 import { REDESIGN_PAGES_FEATURE } from '../features';
+import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
+import { useAppStore } from '../state/store';
+import { COMMENT_READS_FEATURE } from '../components/noteReadState';
 import { baselineDate } from '../utils/baselines';
 import { ActivityRows, NeedsPanel, fitPanel, panelScroll } from '../components/ProjectListHomePanels';
 import { loadHome, proposalLabel, type ActivityItem, type HomeData, type TodoItem } from './ProjectHomeData';
@@ -200,16 +203,18 @@ const HomeContent: React.FC = () => {
   const { isPhone } = useViewport();
   const [data, setData] = useState<HomeData | null>(null);
   const [error, setError] = useState('');
+  const commentReadsOn = useFeature(COMMENT_READS_FEATURE);
+  const meId = useAppStore((st) => st.currentUser?.id || null);
   useEffect(() => {
     let live = true;
     setData(null);
-    loadHome(projectId)
+    loadHome(projectId, { userId: meId, commentReads: commentReadsOn })
       .then((d) => live && setData(d))
       .catch((err) => live && setError(apiErrorMessage(err, 'Failed to load the project home')));
     return () => {
       live = false;
     };
-  }, [projectId]);
+  }, [projectId, meId, commentReadsOn]);
   if (error) return <ErrorBanner message={error} />;
   if (!data) return <div style={{ padding: 16, color: 'var(--text-muted)' }}>Loading…</div>;
   return (

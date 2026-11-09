@@ -101,6 +101,7 @@ GET /api/v1/interviews/{id}/invites: 200, 401, 404; phantom_matrix, real_id_read
 GET /api/v1/interviews/{id}/sessions: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/links: 200, 400, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/links/{id}: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/me/comment-reads: 200, 401; phantom_matrix
 GET /api/v1/me/connected-apps: 200, 401; phantom_matrix
 GET /api/v1/me/default-workspace: 200, 401; phantom_matrix
 GET /api/v1/me/notification-prefs: 200, 401; phantom_matrix
@@ -344,6 +345,7 @@ PUT /api/v1/guided-sessions/{id}/step: 400, 401, 403, 404; phantom_matrix, real_
 PUT /api/v1/interviews/{id}/persona: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/links/{id}: 400, 401, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/links/{id}/confirm: 401, 404; phantom_matrix (errors only)
+PUT /api/v1/me/comment-reads: 400, 401; phantom_matrix (errors only)
 PUT /api/v1/me/connected-apps/{id}/workspaces: 400, 401; phantom_matrix (errors only)
 PUT /api/v1/me/default-workspace: 400, 401, 404; phantom_matrix (errors only)
 PUT /api/v1/me/notification-prefs: 400, 401; phantom_matrix (errors only)
@@ -374,4 +376,4 @@ PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (e
 PUT /api/v1/todos/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 
-s5e: 361 of 362 routes reached (99.7%), 168 with a 2xx or 3xx answer (46.4%)
+s5e: 363 of 364 routes reached (99.7%), 169 with a 2xx or 3xx answer (46.4%)

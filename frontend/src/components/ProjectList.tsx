@@ -53,6 +53,7 @@ import { COMPACT_LAYOUT_FEATURE, REDESIGN_PAGES_FEATURE, TODOS_FEATURE } from '.
 import { NewProjectAction, ProjectCount, ProjectMeters } from './ProjectListFigures';
 import { ProjectListHome } from './ProjectListHome';
 import { loadWorkspaceHome, type WorkspaceHomeData } from './ProjectListHomeLoad';
+import { COMMENT_READS_FEATURE } from './noteReadState';
 import { useViewport } from '../hooks/useViewport';
 import { useFitWindow } from '../hooks/useFitWindow';
 import './ProjectList.css';
@@ -114,6 +115,8 @@ export const ProjectList: React.FC = () => {
   // traced and verified share (ProjectListHome, ProjectListHomeLoad).
   const homeDesign = useFeature(REDESIGN_PAGES_FEATURE);
   const todosOn = useFeature(TODOS_FEATURE);
+  const commentReadsOn = useFeature(COMMENT_READS_FEATURE);
+  const meId = useAppStore((s) => s.currentUser?.id || null);
   const location = useLocation();
   const { isPhone } = useViewport();
   const [home, setHome] = useState<WorkspaceHomeData | null>(null);
@@ -122,7 +125,7 @@ export const ProjectList: React.FC = () => {
     if (!homeDesign || loading) return undefined;
     let live = true;
     setHome(null);
-    loadWorkspaceHome(projects, { todos: todosOn })
+    loadWorkspaceHome(projects, { todos: todosOn, userId: meId, commentReads: commentReadsOn })
       .then((d) => live && setHome(d))
       // A Home that could not be gathered still draws, empty, rather than
       // saying it is gathering for ever.
@@ -131,7 +134,7 @@ export const ProjectList: React.FC = () => {
       live = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [homeDesign, loading, homeKey, todosOn]);
+  }, [homeDesign, loading, homeKey, todosOn, commentReadsOn, meId]);
   const figures = home?.figures || {};
   const [inventedByAgent, setInventedByAgent] = useState<boolean>(false);
   // Concepts already shown this session, so each invention asks for something

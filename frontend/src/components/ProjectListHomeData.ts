@@ -32,6 +32,11 @@ export interface TodoItem {
   open: string;
   /** A suspect link's id: the row confirms or removes it in place (#719). */
   linkId?: string;
+  /**
+   * A comment's artifact and when it was written: with read state on
+   * (comment-reads), the row marks the artifact's comments read in place.
+   */
+  comment?: { artifactId: string; at: string };
 }
 
 export const percent = (part: number | undefined, total: number | undefined): number | null =>
@@ -98,12 +103,14 @@ interface TodoSources {
   comments: DomainEvent[];
   byId: Map<string, Artifact>;
   now?: Date;
+  /** Read state is on: each comment row carries what Mark read needs. */
+  readState?: boolean;
 }
 
 const refOf = (byId: Map<string, Artifact>, id: string): string => byId.get(id)?.ref || '';
 
 /** What waits on the team, in the order the design lists it. */
-export const buildTodo = ({ projectId, review, runs, testCases, coverage, comments, byId, now }: TodoSources): TodoItem[] => {
+export const buildTodo = ({ projectId, review, runs, testCases, coverage, comments, byId, now, readState }: TodoSources): TodoItem[] => {
   const base = `/projects/${projectId}`;
   const open = (id: string) => `${base}/requirements?artifact=${id}`;
   const items: TodoItem[] = [];
@@ -178,6 +185,7 @@ export const buildTodo = ({ projectId, review, runs, testCases, coverage, commen
       action: 'Open',
       to: `${open(id)}&notes=1`,
       open: `${open(id)}&notes=1`,
+      ...(readState && id ? { comment: { artifactId: id, at: c.created_at } } : {}),
     });
   }
   return items;

@@ -1,5 +1,5 @@
 import type { CoverageReport } from '../api/client';
-import { coverageFigures, percent, todoNeeds } from './ProjectListHomeData';
+import { buildTodo, coverageFigures, percent, todoNeeds } from './ProjectListHomeData';
 
 // #720: the coverage report's summary counts requirements by rollup
 // (internal/domain/vv/coverage.go: Summary map[string]int, rollup -> count).
@@ -61,5 +61,26 @@ describe('todoNeeds', () => {
       ['to-do', 'Ring Sam', 'Seal rig', '/projects/p/todos?todo=a', 'Overdue · due 2026-01-01'],
       ['to-do', 'Book the rig', 'Personal', '/org/todos?todo=b', 'To-do'],
     ]);
+  });
+});
+
+describe('buildTodo comments', () => {
+  const event = {
+    id: 'e1',
+    event_type: 'chatter.created',
+    actor: 'user:u2',
+    actor_name: 'Priya',
+    payload: { artifact_id: 'a1', entry_type: 'comment', message: 'Which threshold?' },
+    created_at: '2026-11-09T10:00:00Z',
+  };
+  const sources = { projectId: 'p1', review: null, runs: [], testCases: 0, coverage: null, comments: [event], byId: new Map() };
+
+  it('gives a comment row what Mark read needs, with read state on', () => {
+    const [row] = buildTodo({ ...sources, readState: true });
+    expect(row.comment).toEqual({ artifactId: 'a1', at: '2026-11-09T10:00:00Z' });
+  });
+
+  it('leaves it out without read state', () => {
+    expect(buildTodo(sources)[0].comment).toBeUndefined();
   });
 });

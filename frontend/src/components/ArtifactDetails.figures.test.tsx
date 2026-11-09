@@ -22,7 +22,8 @@ vi.mock('../api/client', async (orig) =>
   })
 );
 
-vi.mock('./ui', () => ({
+vi.mock('./ui', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./ui')>()),
   useAlert: () => () => Promise.resolve(),
   useConfirm: () => () => Promise.resolve(true),
   usePrompt: () => () => Promise.resolve(null),

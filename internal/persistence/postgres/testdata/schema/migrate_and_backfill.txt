@@ -353,6 +353,19 @@ table chatter rows 0
   index chatter_pkey CREATE UNIQUE INDEX chatter_pkey ON public.chatter USING btree (id)
   index idx_chatter_artifact_id CREATE INDEX idx_chatter_artifact_id ON public.chatter USING btree (artifact_id)
   index idx_chatter_created_at CREATE INDEX idx_chatter_created_at ON public.chatter USING btree (created_at)
+table comment_reads rows 0
+  column user_id uuid NOT NULL
+  column org_id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column artifact_id uuid NOT NULL
+  column read_at timestamp without time zone NOT NULL
+  constraint comment_reads_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint comment_reads_pkey PRIMARY KEY (user_id, artifact_id)
+  constraint comment_reads_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  constraint comment_reads_user_id_fkey FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  index comment_reads_pkey CREATE UNIQUE INDEX comment_reads_pkey ON public.comment_reads USING btree (user_id, artifact_id)
+  index idx_comment_reads_org CREATE INDEX idx_comment_reads_org ON public.comment_reads USING btree (org_id)
+  index idx_comment_reads_project CREATE INDEX idx_comment_reads_project ON public.comment_reads USING btree (project_id)
 table connected_app_workspaces rows 0
   column grant_id uuid NOT NULL
   column org_id uuid NOT NULL
@@ -957,7 +970,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 72
+table schema_migrations rows 73
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1315,3 +1328,4 @@ ledger 0069 retarget_crew_automations
 ledger 0070 agent_hierarchy
 ledger 0071 todos
 ledger 0072 workspace_notices
+ledger 0073 comment_reads

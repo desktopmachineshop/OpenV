@@ -3876,6 +3876,265 @@
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
+    },
+    {
+      "n": 71,
+      "title": "no artifact named: []",
+      "actor": "owner",
+      "route": "GET /api/v1/me/comment-reads",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/comment-reads"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 21,
+      "kind": "json",
+      "body": [
+        "{\"comment_reads\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "comment_reads": []
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 72,
+      "title": "comments never read: []",
+      "actor": "owner",
+      "route": "GET /api/v1/me/comment-reads",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/comment-reads",
+        "query": "artifact_ids=<req1>,<req2>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 21,
+      "kind": "json",
+      "body": [
+        "{\"comment_reads\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "comment_reads": []
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 73,
+      "title": "mark read; an id that is not an artifact is skipped",
+      "actor": "owner",
+      "route": "PUT /api/v1/me/comment-reads",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/comment-reads",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"reads\":[{\"artifact_id\":\"<req1>\",\"read_at\":\"<time>\"},{\"artifact_id\":\"<phantom>\"}]}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"comment_reads\":[{\"artifact_id\":\"<req1>\",\"read_at\":\"<time>\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "comment_reads": [
+          {
+            "artifact_id": "<req1>",
+            "read_at": "<time>"
+          }
+        ]
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 74,
+      "title": "mark unread: an earlier time replaces it",
+      "actor": "owner",
+      "route": "PUT /api/v1/me/comment-reads",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/comment-reads",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"reads\":[{\"artifact_id\":\"<req1>\",\"read_at\":\"<time>\"}]}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"comment_reads\":[{\"artifact_id\":\"<req1>\",\"read_at\":\"<time>\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "comment_reads": [
+          {
+            "artifact_id": "<req1>",
+            "read_at": "<time>"
+          }
+        ]
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 75,
+      "title": "the owner's read state: the earlier time",
+      "actor": "owner",
+      "route": "GET /api/v1/me/comment-reads",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/comment-reads",
+        "query": "artifact_ids=<req1>,<req2>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"comment_reads\":[{\"artifact_id\":\"<req1>\",\"read_at\":\"<time>\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "comment_reads": [
+          {
+            "artifact_id": "<req1>",
+            "read_at": "<time>"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 76,
+      "title": "the reviewer, in its own workspace, has none of the owner's",
+      "actor": "reviewer",
+      "route": "GET /api/v1/me/comment-reads",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/me/comment-reads",
+        "query": "artifact_ids=<req1>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 21,
+      "kind": "json",
+      "body": [
+        "{\"comment_reads\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "comment_reads": []
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 77,
+      "title": "the reviewer cannot mark another workspace's artifact: nothing stored",
+      "actor": "reviewer",
+      "route": "PUT /api/v1/me/comment-reads",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/comment-reads",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"reads\":[{\"artifact_id\":\"<req1>\",\"read_at\":\"<time>\"}]}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 21,
+      "kind": "json",
+      "body": [
+        "{\"comment_reads\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "comment_reads": []
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 78,
+      "title": "no reads: 400",
+      "actor": "owner",
+      "route": "PUT /api/v1/me/comment-reads",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/comment-reads",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"reads\":[]}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 50,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"reads must name at least one artifact\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "reads must name at least one artifact"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 79,
+      "title": "an id that is not an id: 400",
+      "actor": "owner",
+      "route": "PUT /api/v1/me/comment-reads",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/me/comment-reads",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"reads\":[{\"artifact_id\":\"nope\"}]}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 49,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"artifact_id must be an artifact's id\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "artifact_id must be an artifact's id"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
     }
   ],
   "uploads": [],

@@ -88,6 +88,7 @@ GET /api/v1/interviews/{id}/invites
 GET /api/v1/interviews/{id}/sessions
 GET /api/v1/links
 GET /api/v1/links/{id}
+GET /api/v1/me/comment-reads
 GET /api/v1/me/connected-apps
 GET /api/v1/me/default-workspace
 GET /api/v1/me/notification-prefs
@@ -331,6 +332,7 @@ PUT /api/v1/guided-sessions/{id}/step
 PUT /api/v1/interviews/{id}/persona
 PUT /api/v1/links/{id}
 PUT /api/v1/links/{id}/confirm
+PUT /api/v1/me/comment-reads
 PUT /api/v1/me/connected-apps/{id}/workspaces
 PUT /api/v1/me/default-workspace
 PUT /api/v1/me/notification-prefs

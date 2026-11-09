@@ -91,6 +91,12 @@ export interface ReviewRoundResult {
   types: string[];
 }
 
+/** When the member last read an artifact's comments (GET /me/comment-reads). */
+export interface CommentRead {
+  artifact_id: string;
+  read_at: string;
+}
+
 export interface ChatterEntry {
   id: string;
   artifact_id: string;

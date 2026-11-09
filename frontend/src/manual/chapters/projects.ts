@@ -16,14 +16,19 @@ of the rail on every page.
   verifies them) and **verified**, and how many test cases fail.
 - **Needs you** lists what waits on you across every project, each line
   naming its project: artifacts in review to approve, suspect links to
-  confirm, test runs in progress, failing test cases and new comments.
+  confirm, test runs in progress, failing test cases and comments you have
+  not read (never your own).
   Click a line to open the artifact it names (for a link, the artifact the
   link starts from). The button on the right says what it does: **Review**
   and **Open** open the artifact, **Continue** the test run. A suspect link
   has two buttons instead: **✓** confirms that the link still holds, and
   **✗** removes the link once you confirm it. Either way the line leaves the
-  list there and then. **Review all**, in the panel's header, opens the
-  review queue of the project with the most waiting.
+  list there and then. A comment has **Mark read**, which takes every
+  unread comment on that artifact off the list without opening it, and
+  **Mark all read**, in the panel's header, clears every comment at once.
+  Each leaves a line saying what was marked, with **Undo** to put it back.
+  **Review all**, in the panel's header, opens the review queue of the
+  project with the most waiting.
 - **Activity** shows the newest events across the workspace's projects, who
   did what to which artifact. Click an event to open what it is about: the
   artifact, a link's source artifact, the board, the agent run, the test

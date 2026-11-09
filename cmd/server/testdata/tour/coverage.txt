@@ -100,6 +100,7 @@ GET /api/v1/interviews/{id}/invites: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/interviews/{id}/sessions: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/links: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/links/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/me/comment-reads: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/me/connected-apps: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /api/v1/me/default-workspace: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/me/notification-prefs: s5c, s5e; 2xx or 3xx in s5c, s5e
@@ -343,6 +344,7 @@ PUT /api/v1/guided-sessions/{id}/step: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/interviews/{id}/persona: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/links/{id}: s5a, s5e; 2xx or 3xx in s5a
 PUT /api/v1/links/{id}/confirm: s5a, s5e; 2xx or 3xx in s5a
+PUT /api/v1/me/comment-reads: s5a, s5e; 2xx or 3xx in s5a
 PUT /api/v1/me/connected-apps/{id}/workspaces: s5d, s5e; 2xx or 3xx in s5d
 PUT /api/v1/me/default-workspace: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/me/notification-prefs: s5c, s5e; 2xx or 3xx in s5c
@@ -373,4 +375,4 @@ PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/todos/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 362 of 362 routes reached (100.0%), 348 with a 2xx or 3xx answer (96.1%); the floor is 90%, 326 routes
+the tour: 364 of 364 routes reached (100.0%), 350 with a 2xx or 3xx answer (96.2%); the floor is 90%, 328 routes

@@ -7,6 +7,9 @@ import { NoteText } from './NoteText';
 import { NOTE_TAGGING_FEATURE } from './noteTagging';
 import { NoteComposer, postNote } from './NoteComposer';
 import { TODO_LIST_FEATURE } from '../features';
+import { useAppStore } from '../state/store';
+import { COMMENT_READS_FEATURE, useNoteReads } from './noteReadState';
+import { NoteReadMark } from './NoteReadControls';
 
 // An artifact's history: what OpenV recorded each time it changed (edits,
 // status moves, links, figures, results) and what people wrote about it, in
@@ -72,6 +75,16 @@ export const ArtifactHistory: React.FC<ArtifactHistoryProps> = ({
   // Read from the location itself, so the timeline needs no router around it.
   const wantsNotes =
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('notes') === '1';
+  // Comments read here leave Needs you (comment-reads): in the panel at once,
+  // in the section when it is asked for or scrolled into view.
+  const reads = useNoteReads({
+    artifactId,
+    entries,
+    enabled: useFeature(COMMENT_READS_FEATURE),
+    userId: useAppStore((s) => s.currentUser?.id || null),
+    seenNow: !section || wantsNotes,
+    observe: sectionRef,
+  });
 
   const loadChatterEntries = useCallback(async () => {
     setIsLoading(true);
@@ -183,6 +196,7 @@ export const ArtifactHistory: React.FC<ArtifactHistoryProps> = ({
           }}
         >
           <div style={{ fontSize: '11px', color: 'var(--text-body)', marginBottom: '4px' }}>
+            <NoteReadMark entry={entry} reads={reads} />
             {entry.is_auto_entry ? '🔄' : '✏️'}{' '}
             <span style={{ fontWeight: 'bold' }}>
               {entry.author_name || (entry.is_auto_entry ? 'System' : 'Unknown')}

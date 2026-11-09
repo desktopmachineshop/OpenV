@@ -11,7 +11,7 @@ long form. `go run ./internal/tools/areas which <path>` names a file's area.
 
 | Area (`docs/areas.json`) | Globs here |
 |---|---|
-| requirements-core | `artifact_*.go`, `attribute_*.go`, `chatter_*.go`, `embedding_*.go`, `link_*.go`, `product_profile_*.go`, `project_*.go`, `saved_search_*.go`, `settings_*.go`, `todo_*.go`, `workitem_*.go` |
+| requirements-core | `artifact_*.go`, `attribute_*.go`, `chatter_*.go`, `comment_read_*.go`, `embedding_*.go`, `link_*.go`, `product_profile_*.go`, `project_*.go`, `saved_search_*.go`, `settings_*.go`, `todo_*.go`, `workitem_*.go` |
 | verification | `evidence_*.go`, `vv_*.go` |
 | documents | `attachment_*.go`, `baseline_*.go`, `template_*.go` |
 | tenancy-identity | `invitation_*.go`, `member_*.go`, `org_*.go`, `user_*.go` |

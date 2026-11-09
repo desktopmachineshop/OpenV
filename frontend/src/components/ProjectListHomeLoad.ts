@@ -10,6 +10,7 @@ import {
   type Project,
   type Proposal,
 } from '../api/client';
+import { commentsNeedingMe } from './noteReadState';
 import { buildTodo, coverageFigures, describeEvent, percent, todoNeeds, type ActivityItem, type TodoItem } from './ProjectListHomeData';
 import type { ProjectFigures } from './ProjectListFigures';
 
@@ -47,7 +48,7 @@ const list = <T>(r: PromiseSettledResult<{ data: T[] }>): T[] => {
   return Array.isArray(d) ? d : [];
 };
 
-const loadProject = async (p: Project, comments: DomainEvent[]) => {
+const loadProject = async (p: Project, comments: DomainEvent[], readState: boolean) => {
   const [review, runs, coverage, page] = await Promise.allSettled([
     reviewAPI.get(p.id),
     vvAPI.listRuns(p.id),
@@ -75,6 +76,7 @@ const loadProject = async (p: Project, comments: DomainEvent[]) => {
     coverage: cov,
     comments,
     byId: new Map(artifacts.map((a) => [a.id, a])),
+    readState,
   }).map((t) => ({ ...t, project: p.name, projectId: p.id }));
   return {
     todo,
@@ -90,7 +92,7 @@ const loadProject = async (p: Project, comments: DomainEvent[]) => {
 
 export const loadWorkspaceHome = async (
   projects: Project[],
-  opts: { todos?: boolean } = {},
+  opts: { todos?: boolean; userId?: string | null; commentReads?: boolean } = {},
 ): Promise<WorkspaceHomeData> => {
   const names = new Map(projects.map((p) => [p.id, p.name]));
   // The member's own open to-dos are a kind of their own, with the todos
@@ -101,7 +103,14 @@ export const loadWorkspaceHome = async (
     proposalsAPI.list({ status: 'pending' }),
     opts.todos ? todosAPI.listMine() : Promise.resolve({ data: [] }),
   ]);
-  const comments = list(chatter).filter((c) => c.payload?.entry_type === 'comment');
+  // Comments by someone else, and with read state on (comment-reads) only
+  // the unread ones: every one of those waits on the member, so none is cut
+  // to the latest three a project, as the list was before read state.
+  const readState = Boolean(opts.commentReads);
+  const comments = await commentsNeedingMe(
+    list(chatter).filter((c) => c.payload?.entry_type === 'comment'),
+    { userId: opts.userId, readState },
+  );
   const out: WorkspaceHomeData = {
     todo: [],
     activity: list(events)
@@ -119,7 +128,10 @@ export const loadWorkspaceHome = async (
   for (let i = 0; i < projects.length; i += BATCH) {
     const batch = projects.slice(i, i + BATCH);
     const loaded = await Promise.all(
-      batch.map((p) => loadProject(p, comments.filter((c) => c.project_id === p.id).slice(0, 3))),
+      batch.map((p) => {
+        const mine = comments.filter((c) => c.project_id === p.id);
+        return loadProject(p, readState ? mine : mine.slice(0, 3), readState);
+      }),
     );
     batch.forEach((p, n) => {
       const l = loaded[n];

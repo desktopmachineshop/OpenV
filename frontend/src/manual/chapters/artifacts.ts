@@ -534,6 +534,18 @@ rather than editing the requirement text itself — the text is the requirement,
 the comment is what you think of it. Writing one while reading **Changes**
 switches you back to **Comments**, so you can see what you just added.
 
+### Read and unread comments
+
+**Needs you**, on Home, lists the comments you have not read. Comments
+count as read once you see them here: as soon as the **History** comes into
+view, or straight away when you came from a **Needs you** line. A comment
+written since you last read the artifact's comments shows **New**.
+
+To keep a comment in **Needs you** for later, click **Mark unread** on it.
+That comment, and every comment written after it on the same artifact,
+show **Unread** and stay in **Needs you** until you open them again or mark
+them read there. Your own comments are never unread to you.
+
 ### Tagging inside a comment
 
 A comment can name people and point at things, with the same two-marker

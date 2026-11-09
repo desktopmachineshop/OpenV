@@ -362,3 +362,5 @@ PUT /api/v1/todos/{id} -> UpdateTodo
 DELETE /api/v1/todos/{id} -> DeleteTodo
 POST /api/v1/todos/{id}/done -> SetTodoDone
 POST /api/v1/todos/{id}/promote -> PromoteTodo
+GET /api/v1/me/comment-reads -> ListCommentReads
+PUT /api/v1/me/comment-reads -> SetCommentReads [alwaysWritable]

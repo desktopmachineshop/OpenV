@@ -8,6 +8,7 @@ import type {
   Artifact,
   ArtifactStatus,
   ChatterEntry,
+  CommentRead,
   DuplicatesResponse,
   Link,
   LinkedArtifact,
@@ -147,6 +148,18 @@ export const chatterAPI = {
     client.post<ChatterEntry>('/api/v1/chatter', payload),
   list: (artifactId: string) =>
     client.get<ChatterEntry[]>('/api/v1/chatter', { params: { artifact_id: artifactId } }),
+};
+
+// When the member last read each artifact's comments (comment-reads). A
+// comment written after its artifact's read_at is unread; an artifact with no
+// row has every comment unread. A write without read_at is now.
+export const commentReadAPI = {
+  list: (artifactIds: string[]) =>
+    client.get<{ comment_reads: CommentRead[] }>('/api/v1/me/comment-reads', {
+      params: { artifact_ids: artifactIds.join(',') },
+    }),
+  set: (reads: { artifact_id: string; read_at?: string }[]) =>
+    client.put<{ comment_reads: CommentRead[] }>('/api/v1/me/comment-reads', { reads }),
 };
 
 // An empty rule set clears the level's override, so it inherits again.

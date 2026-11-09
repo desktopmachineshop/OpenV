@@ -608,6 +608,8 @@ Every artifact carries two identifiers, and they answer different questions:
 | GET | `/api/v1/projects/{projectID}/attachments` | Every attachment in the project, in artifact order then figure number. Serves cross-artifact figure citations, which need the project's figures as one list | viewer |
 | POST | `/api/v1/chatter` | Comment on an artifact `{artifact_id, message}` (a reviewer may: that is what the role is for); answers the entry | reviewer |
 | GET | `/api/v1/chatter` | List an artifact's activity feed (`?artifact_id=`, required: `400` without it). Each entry carries `mentions` (the project members its @names resolve to) and `todo` (the work item raised from it, with its current status) — both composed at read time, neither stored | viewer |
+| GET | `/api/v1/me/comment-reads` | `?artifact_ids=a,b` (at most 200: `400`) → `{comment_reads: [{artifact_id, read_at}]}`: when the caller last read each of those artifacts' comments in the active workspace. An artifact never read is left out (all its comments are unread); no ids answers `[]` | user |
+| PUT | `/api/v1/me/comment-reads` | `{reads: [{artifact_id, read_at?}]}` → `{comment_reads}`, the reads stored. A missing or future `read_at` is now; an earlier one marks the comments after it unread. An id that is not a live artifact of the active workspace is skipped. `400` for no reads, more than 200, or an id that is not an id; `403` before the workspace has `comment-reads`. Works on a read-only plan | user |
 
 ### Figures
 
