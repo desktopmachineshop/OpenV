@@ -12,6 +12,8 @@ import {
   planSuggestion,
 } from './suggestionDrafts';
 import type { FeatureKey } from '../../generated/contract';
+import { isProjectActionKind, planProjectAction } from './projectActions';
+import { applyProjectAction } from './projectActionsApply';
 
 /**
  * Applying an assistant suggestion to a project that already exists.
@@ -42,7 +44,13 @@ export const ASSISTANT_EDITS_FEATURE: FeatureKey = 'assistant-project-edits';
  * new feature; until then their cards explain instead of acting.
  */
 export const PROJECT_EDIT_KINDS: ReadonlySet<string> = new Set(['artifact', 'edit', 'move']);
-export const isProjectEditKind = (kind: unknown): boolean => PROJECT_EDIT_KINDS.has(String(kind));
+/**
+ * Whether a card changes the project rather than the wizard's form: an
+ * artifact, edit or move card, or one of the project-action cards
+ * (projectActions.ts) for the rest of the project's API.
+ */
+export const isProjectEditKind = (kind: unknown): boolean =>
+  PROJECT_EDIT_KINDS.has(String(kind)) || isProjectActionKind(kind);
 export const GATED_REASON =
   'Editing and moving artifacts from the assistant reaches this workspace with its next stable release.';
 
@@ -260,6 +268,25 @@ export const applySuggestionsToProject = async (
   const framingAt: number[] = [];
 
   for (const { suggestion } of items) {
+    if (isProjectActionKind(suggestion.kind)) {
+      const action = planProjectAction(suggestion);
+      if (action.outcome === 'refused') {
+        results.push(action.reason);
+        continue;
+      }
+      try {
+        // The working copy goes along, so a later card in the batch sees an
+        // artifact an earlier one deleted or retargeted.
+        const actx = { projectId: ctx.projectId, artifacts: ctx.artifacts };
+        await applyProjectAction(actx, action.action);
+        ctx.artifacts = actx.artifacts;
+        wrote = true;
+        results.push(null);
+      } catch (err: any) {
+        results.push(apiErrorMessage(err, err?.message || 'The change could not be saved.'));
+      }
+      continue;
+    }
     const plan = planSuggestion(suggestion);
     if (plan.outcome === 'refused') {
       results.push(plan.reason);

@@ -19,6 +19,11 @@ import {
   applySuggestionsToProject,
   isProjectEditKind,
 } from '../components/wizard/applySuggestion';
+import {
+  ASSISTANT_FULL_SCOPE_FEATURE,
+  FULL_SCOPE_GATED_REASON,
+  isProjectActionKind,
+} from '../components/wizard/projectActions';
 import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
 import { useVisualViewport } from '../hooks/useVisualViewport';
@@ -133,6 +138,7 @@ export const GuidedWizard: React.FC = () => {
   // edit, a move) may be applied from here; gated by channel like any other
   // new feature.
   const projectEditsOn = useFeature(ASSISTANT_EDITS_FEATURE);
+  const fullScopeOn = useFeature(ASSISTANT_FULL_SCOPE_FEATURE);
 
   const hydrateFromAnswers = useCallback((answers: Record<string, any>) => {
     // Entries are normalized to id-based ones; sessions saved before stable
@@ -225,18 +231,27 @@ export const GuidedWizard: React.FC = () => {
       } else if (!projectEditsOn) {
         projectItems.forEach((i) => projectResults.set(i.key, GATED_REASON));
       } else {
-        let artifacts: Artifact[] = [];
-        try {
-          artifacts = (await artifactAPI.list(projectId)).data || [];
-        } catch {
-          projectItems.forEach((i) => projectResults.set(i.key, 'The project could not be read, so nothing was changed.'));
+        // The project-action cards wait for their own release (assistant-full-scope).
+        if (!fullScopeOn) {
+          projectItems
+            .filter((i) => isProjectActionKind(i.suggestion.kind))
+            .forEach((i) => projectResults.set(i.key, FULL_SCOPE_GATED_REASON));
         }
-        if (projectResults.size === 0) {
+        const toApply = projectItems.filter((i) => !projectResults.has(i.key));
+        let artifacts: Artifact[] | null = null;
+        if (toApply.length > 0) {
+          try {
+            artifacts = (await artifactAPI.list(projectId)).data || [];
+          } catch {
+            toApply.forEach((i) => projectResults.set(i.key, 'The project could not be read, so nothing was changed.'));
+          }
+        }
+        if (artifacts) {
           const out = await applySuggestionsToProject(
             { projectId, artifacts, onChanged: () => void loadDrafts() },
-            projectItems
+            toApply
           );
-          projectItems.forEach((i, n) => projectResults.set(i.key, out[n]));
+          toApply.forEach((i, n) => projectResults.set(i.key, out[n]));
         }
       }
     }

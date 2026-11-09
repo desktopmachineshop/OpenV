@@ -5,13 +5,34 @@ import { CloudRunnerStartingNotice, RunnerOfflineNotice } from './CloudRunnerSta
 import { RECONNECT, useEventStream } from '../../hooks/useEventStream';
 import type { ArtifactTypeValue } from '../../generated/contract';
 import { quickActionsFor, useAutoSend } from './guidedChatActions';
+import { ONE_AT_A_TIME_KINDS, PROJECT_ACTION_LABELS, isProjectActionKind, projectActionLabels, projectActionSummary } from './projectActions';
 
 /**
  * One structured proposal embedded in a copilot reply: a wizard entry, or —
  * beside the project — any artifact by type and place, an edit, or a move.
  */
 export interface CopilotSuggestion {
-  kind: 'framing' | 'persona' | 'need' | 'requirement' | 'nfr' | 'hazard' | 'artifact' | 'edit' | 'move';
+  kind:
+    | 'framing'
+    | 'persona'
+    | 'need'
+    | 'requirement'
+    | 'nfr'
+    | 'hazard'
+    | 'artifact'
+    | 'edit'
+    | 'move'
+    | 'release'
+    | 'target'
+    | 'link'
+    | 'status'
+    | 'delete'
+    | 'comment'
+    | 'todo'
+    | 'task'
+    | 'baseline'
+    | 'review'
+    | 'test_run';
   [key: string]: any;
 }
 
@@ -121,6 +142,7 @@ const KIND_LABELS: Record<string, string> = {
   artifact: 'New artifact',
   edit: 'Change',
   move: 'Move',
+  ...PROJECT_ACTION_LABELS,
 };
 
 /**
@@ -180,6 +202,7 @@ const FRAMING_FIELD_LABELS: Record<string, string> = {
 };
 
 const suggestionSummary = (s: CopilotSuggestion): { title: string; detail: string } => {
+  if (isProjectActionKind(s.kind)) return projectActionSummary(s);
   switch (s.kind) {
     case 'framing':
       return { title: FRAMING_FIELD_LABELS[s.field] || String(s.field || ''), detail: s.text || '' };
@@ -219,6 +242,7 @@ const applyLabels = (
 ): { button: string; done: string } => {
   // A change to the project says so wherever the card is shown: the wizard
   // sits on top of a project too, and its locked entries are artifacts.
+  if (isProjectActionKind(s.kind)) return projectActionLabels(s);
   switch (s.kind) {
     case 'edit':
       return { button: 'Apply change', done: '✓ Changed' };
@@ -804,6 +828,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                             x.seg.type === 'suggestion' &&
                             !!x.seg.suggestion &&
                             isKnownKind(x.seg.suggestion.kind) &&
+                            !ONE_AT_A_TIME_KINDS.has(x.seg.suggestion.kind) &&
                             !applied[x.key]
                         )
                         .map((x) => ({ suggestion: x.seg.suggestion as CopilotSuggestion, key: x.key }));

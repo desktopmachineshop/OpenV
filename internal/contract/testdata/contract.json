@@ -40,7 +40,8 @@
     "impact-picker",
     "todos",
     "editor-pickers",
-    "comment-reads"
+    "comment-reads",
+    "assistant-full-scope"
   ],
   "event_types": [
     "artifact.created",

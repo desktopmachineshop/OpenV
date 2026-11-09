@@ -9,6 +9,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **The V&V Assistant can make the changes you make to a project.** Ask it to plan a release, put requirements in a release, link a test case to what it verifies, approve or send back an artifact, delete one, comment, raise a to-do or a board task, capture a baseline, start a review round or record test results, and it answers with a card that does it. Nothing changes until you press the card's button, and a card can only do what you could do yourself on that page. Delete cards are never part of **Apply all**. Project settings, members and file uploads stay on their own pages.
+
 ### Bug fixes
 
 - **Comments on deleted artifacts no longer sit in Needs you.** A comment whose artifact had since been deleted showed in **Needs you** with no title. **Open** led nowhere, and **Mark read** or **Mark all read** could not clear it, so it came back every time you opened Home. Those comments are now left out.

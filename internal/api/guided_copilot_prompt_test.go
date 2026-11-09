@@ -256,3 +256,31 @@ func TestRenderProjectOutlineFollowsTheTree(t *testing.T) {
 		t.Errorf("an empty project reads %q", got)
 	}
 }
+
+// The rest of the project's API (releases and targets, links, status,
+// delete, comments, to-dos, tasks, baselines, review rounds and test runs)
+// is offered as cards only with assistant-full-scope, and every shape the
+// frontend parses is named.
+func TestGuidedCopilotPromptOffersEveryProjectActionBehindItsGate(t *testing.T) {
+	session := &guided.Session{ID: "sess-1", ProjectID: "proj-1"}
+	shapes := []string{
+		`"kind":"release"`, `"kind":"target"`, `"kind":"link"`, `"kind":"status"`, `"kind":"delete"`,
+		`"kind":"comment"`, `"kind":"todo"`, `"kind":"task"`, `"kind":"baseline"`, `"kind":"review"`, `"kind":"test_run"`,
+	}
+	off := buildGuidedCopilotPrompt(session, nil, nil, 0, "", nil, "", nil, &projectOutline{Edits: true})
+	on := buildGuidedCopilotPrompt(session, nil, nil, 0, "", nil, "", nil, &projectOutline{Edits: true, Full: true})
+	for _, shape := range shapes {
+		if strings.Contains(off, shape) {
+			t.Errorf("without the feature the assistant was offered %s", shape)
+		}
+		if !strings.Contains(on, shape) {
+			t.Errorf("with the feature the assistant was not offered %s", shape)
+		}
+	}
+	if !strings.Contains(on, "list_releases") || !strings.Contains(on, "proj-1") {
+		t.Error("the assistant is not told how to read the project's releases")
+	}
+	if !strings.Contains(on, "never say a change was made") {
+		t.Error("the assistant is not told that a card does nothing until applied")
+	}
+}

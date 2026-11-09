@@ -55,6 +55,7 @@ export const FEATURE_KEYS = [
   'todos',
   'editor-pickers',
   'comment-reads',
+  'assistant-full-scope',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
