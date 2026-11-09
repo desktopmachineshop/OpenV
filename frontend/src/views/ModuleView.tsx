@@ -42,6 +42,7 @@ import { useBaselineView } from './moduleView/useBaselineView';
 import { useModuleData } from './moduleView/useModuleData';
 import { useColumnResize } from './moduleView/useColumnResize';
 import { useNotesParam } from './moduleView/useNotesParam';
+import { useArtifactHistoryLink } from './moduleView/useArtifactHistoryLink';
 import { usePanelEscape, usePanelMode } from './moduleView/usePanelMode';
 import { useSiblingOrdering } from './moduleView/useSiblingOrdering';
 
@@ -813,6 +814,9 @@ export const ModuleView: React.FC = () => {
     loadLinks();
   });
 
+  // A link to a deleted artifact, or to one as it was (?link=&at=), reads its history.
+  const deleted = useArtifactHistoryLink({ artifactId: urlArtifactId, live: activeArtifacts.some((a) => a.id === urlArtifactId), linkId: searchParams.get('link'), at: searchParams.get('at'), enabled: !isBaselineView && activeArtifacts.length > 0, setPreviewVersion });
+
   if (!projectId) {
     return (
       <div className="card">
@@ -822,7 +826,7 @@ export const ModuleView: React.FC = () => {
     );
   }
 
-  const selectedArtifact = activeArtifacts.find((a) => a.id === selectedArtifactId);
+  const selectedArtifact = activeArtifacts.find((a) => a.id === selectedArtifactId) || (deleted?.id === selectedArtifactId ? deleted : undefined);
   // With History in the pane, a request for the Notes pane (?notes=1) shows the document.
   const shownPane = historyInPane && stackedPane === 'notes' ? 'document' : stackedPane;
   const detailAttachments = isBaselineView ? [] : attachments;
@@ -1121,6 +1125,7 @@ export const ModuleView: React.FC = () => {
               // A baseline's artifact shares its id with the live one, so
               // its header acts on nothing.
               readOnly={isBaselineView}
+              deletedAt={selectedArtifact === deleted ? deleted?.valid_to : null}
               quality={isBaselineView ? undefined : qualityScores[selectedArtifact.id]}
               onStatusChange={(changed) => {
                 updateArtifact(changed);
@@ -1146,8 +1151,8 @@ export const ModuleView: React.FC = () => {
               onReferenceClick={handleReferenceClick}
               previewVersion={previewVersion}
               onClosePreview={() => setPreviewVersion(null)}
-              allowLinkDelete={!isBaselineView}
-              liveLinks={!isBaselineView}
+              allowLinkDelete={!isBaselineView && selectedArtifact !== deleted}
+              liveLinks={!isBaselineView && selectedArtifact !== deleted}
               showHistory={historyInPane}
               projectId={projectId || undefined}
               onLinksChanged={() => {

@@ -112,7 +112,8 @@ const str = (v: unknown): string => (typeof v === 'string' ? v : '');
  * The page an event is about (#718), or '' when there is none: the artifact
  * opened in its project, a link's source artifact, the board, the run, the
  * test run, the baseline compared, or the artifact with its notes open for a
- * comment. A deleted artifact and an event with no project lead nowhere.
+ * comment. A deleted artifact opens from its history and a removed link opens
+ * its source as it was before; an event with no project leads nowhere.
  */
 export const eventTarget = (e: DomainEvent): string => {
   if (!e.project_id) return '';
@@ -122,8 +123,14 @@ export const eventTarget = (e: DomainEvent): string => {
     id ? `${base}/requirements?artifact=${encodeURIComponent(id)}${notes ? '&notes=1' : ''}` : '';
   const family = e.event_type.split('.')[0];
   switch (e.event_type) {
+    // A deleted artifact opens from its history, which the soft delete keeps.
     case 'artifact.deleted':
-      return '';
+      return artifact(e.entity_id || '');
+    // A removed link opens its source as it was while it still had the link.
+    case 'link.deleted':
+      return str(p.from_id) && e.entity_id
+        ? `${artifact(str(p.from_id))}&link=${encodeURIComponent(e.entity_id)}&at=${encodeURIComponent(e.created_at)}`
+        : artifact(str(p.from_id));
     case 'baseline.captured':
       return e.entity_id ? `${base}/baselines/${e.entity_id}/compare` : `${base}/baselines`;
     case 'baseline.deleted':

@@ -15,6 +15,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **Activity names deleted artifacts, and they open.** A line about an artifact that has since been deleted, or a link to or from one, now names it with **(deleted)** after it (*TC-12 → REQ-4 Brake within 2 m (deleted)*) instead of leaving the name out. Clicking it opens the deleted artifact read-only at its last version, with its whole history to browse. A **Link removed** line opens the artifact the link came from as it was while it still had the link.
+
 - **Comments on deleted artifacts no longer sit in Needs you.** A comment whose artifact had since been deleted showed in **Needs you** with no title. **Open** led nowhere, and **Mark read** or **Mark all read** could not clear it, so it came back every time you opened Home. Those comments are now left out.
 - **Open on a phone goes to the artifact.** Following a link to an artifact on a phone, from **Needs you** on Home or anywhere else, showed the project's tree instead of the artifact. It now opens the artifact itself.
 

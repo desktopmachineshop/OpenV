@@ -45,6 +45,12 @@ export interface DomainEvent {
   actor_name?: string;
   entity_kind?: string;
   entity_name?: string;
+  /**
+   * The artifacts the event names that have since been deleted. A deleted
+   * artifact is still named (by its last version, marked "(deleted)") and
+   * opens from its history.
+   */
+  deleted_artifacts?: string[];
 }
 
 // In-app notification (issue #132). entity_ref carries {kind, ...ids} so the

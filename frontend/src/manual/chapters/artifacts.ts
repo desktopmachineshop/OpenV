@@ -534,6 +534,14 @@ rather than editing the requirement text itself — the text is the requirement,
 the comment is what you think of it. Writing one while reading **Changes**
 switches you back to **Comments**, so you can see what you just added.
 
+### Deleted artifacts
+
+Deleting an artifact keeps its history. A link to it (from **Activity**, a
+notification or a link someone shared) still opens it: read-only, marked
+**deleted** with the date it was deleted, at its last version. **History**
+lists every version, and **Preview** shows any of them with the links it had
+then. A deleted artifact cannot be edited or restored from here.
+
 ### Read and unread comments
 
 **Needs you**, on Home, lists the comments you have not read. Comments

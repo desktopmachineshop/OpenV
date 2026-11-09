@@ -19,10 +19,16 @@ type eventView struct {
 	ActorID   string `json:"actor_id,omitempty"`
 	ActorName string `json:"actor_name,omitempty"`
 	// EntityKind names the kind of thing the event happened to ("requirement",
-	// "work item", ...) and EntityName the thing itself. Both are empty when
-	// the name cannot be resolved (a deleted artifact, a missing service).
+	// "work item", ...) and EntityName the thing itself. A deleted artifact is
+	// named by its last version, marked "(deleted)". Both are empty when the
+	// name cannot be resolved (an artifact no version has, a missing service).
 	EntityKind string `json:"entity_kind,omitempty"`
 	EntityName string `json:"entity_name,omitempty"`
+	// DeletedArtifacts lists the artifacts the event names (its entity, a
+	// link's ends, a comment's or a result's artifact) that have since been
+	// deleted, so a client can tell them apart without parsing a name: it
+	// opens such an artifact's history rather than its live page.
+	DeletedArtifacts []string `json:"deleted_artifacts,omitempty"`
 }
 
 // eventNamer resolves the display names for one page of events. Lookups are
@@ -36,6 +42,8 @@ type eventNamer struct {
 	runs      map[string]string
 	agents    map[string]string
 	artifacts map[string]string
+	// deleted is which of the artifacts looked up are deleted.
+	deleted   map[string]bool
 	workItems map[string]string
 	baselines map[string]string
 }
@@ -49,6 +57,7 @@ func (h *Handler) decorateEvents(list []events.Event) []eventView {
 		runs:      map[string]string{},
 		agents:    map[string]string{},
 		artifacts: map[string]string{},
+		deleted:   map[string]bool{},
 		workItems: map[string]string{},
 		baselines: map[string]string{},
 	}
@@ -57,6 +66,7 @@ func (h *Handler) decorateEvents(list []events.Event) []eventView {
 		v := eventView{Event: e}
 		v.ActorKind, v.ActorID, v.ActorName = n.actor(e.Actor)
 		v.EntityKind, v.EntityName = n.entity(e)
+		v.DeletedArtifacts = n.deletedIn(e)
 		out = append(out, v)
 	}
 	return out
@@ -104,19 +114,28 @@ func (n *eventNamer) entity(e events.Event) (kind, name string) {
 			kind = "artifact"
 		}
 		name = payloadString(p, "title")
-		if name == "" {
-			// artifact.deleted carries no payload; the row may still be
-			// readable as a superseded version.
-			name = n.artifactLabel(e.EntityID)
+		// artifact.deleted carries no payload, and an artifact deleted since
+		// is named by its last version, marked deleted, rather than by the
+		// title it had when the event happened.
+		if label := n.artifactLabel(e.EntityID); name == "" || n.deleted[e.EntityID] {
+			name = label
 		}
 	case "link":
 		kind = payloadString(p, "link_type")
 		if kind == "" {
 			kind = "link"
 		}
+		// Both ends, always: an end deleted since is named by its last
+		// version, marked deleted, so the line says what the link joined.
 		from := n.artifactLabel(payloadString(p, "from_id"))
 		to := n.artifactLabel(payloadString(p, "to_id"))
-		if from != "" && to != "" {
+		if from != "" || to != "" {
+			if from == "" {
+				from = "an unknown artifact"
+			}
+			if to == "" {
+				to = "an unknown artifact"
+			}
 			name = from + " → " + to
 		}
 	case "baseline":
@@ -186,7 +205,9 @@ func (n *eventNamer) userName(id string) string {
 }
 
 // artifactLabel renders an artifact as "REQ-12 Positioner shall …", falling
-// back to whichever half is known.
+// back to whichever half is known. An artifact deleted since is rendered from
+// its last version (the soft delete keeps every version, REQ-4) with
+// " (deleted)" after it, and recorded in n.deleted.
 func (n *eventNamer) artifactLabel(id string) string {
 	if id == "" || n.h.ArtifactService == nil {
 		return ""
@@ -194,8 +215,21 @@ func (n *eventNamer) artifactLabel(id string) string {
 	if label, ok := n.artifacts[id]; ok {
 		return label
 	}
+	a, err := n.h.ArtifactService.GetArtifact(id)
+	if err != nil || a == nil {
+		a = nil
+		if versions, verr := n.h.ArtifactService.GetArtifactVersions(id); verr == nil {
+			for _, v := range versions {
+				if v != nil {
+					a = v
+					n.deleted[id] = true
+					break
+				}
+			}
+		}
+	}
 	label := ""
-	if a, err := n.h.ArtifactService.GetArtifact(id); err == nil && a != nil {
+	if a != nil {
 		label = strings.TrimSpace(a.Title)
 		switch {
 		case a.Ref == "":
@@ -204,9 +238,41 @@ func (n *eventNamer) artifactLabel(id string) string {
 		default:
 			label = a.Ref + " " + label
 		}
+		if n.deleted[id] && label != "" {
+			label += " (deleted)"
+		}
 	}
 	n.artifacts[id] = label
 	return label
+}
+
+// deletedIn lists the artifacts an event names that have been deleted, in
+// the order the event names them. entity has already looked each one up.
+func (n *eventNamer) deletedIn(e events.Event) []string {
+	var ids []string
+	add := func(id string) {
+		if id != "" && n.deleted[id] {
+			for _, seen := range ids {
+				if seen == id {
+					return
+				}
+			}
+			ids = append(ids, id)
+		}
+	}
+	p := e.Payload
+	switch {
+	case strings.HasPrefix(e.EventType, "artifact."):
+		add(e.EntityID)
+	case strings.HasPrefix(e.EventType, "link."):
+		add(payloadString(p, "from_id"))
+		add(payloadString(p, "to_id"))
+	case strings.HasPrefix(e.EventType, "chatter."):
+		add(payloadString(p, "artifact_id"))
+	case strings.HasPrefix(e.EventType, "testrun."):
+		add(payloadString(p, "test_case_id"))
+	}
+	return ids
 }
 
 func (n *eventNamer) baselineName(id string) string {

@@ -33,6 +33,12 @@ interface ArtifactHeaderProps {
    * neither loads nor counts the live artifact's versions.
    */
   readOnly?: boolean;
+  /**
+   * When the artifact was deleted, for one opened from its history (a link
+   * to it, an Activity line). Its versions are kept (REQ-4), so History
+   * still lists and previews them; nothing here can change it.
+   */
+  deletedAt?: string | null;
   /** The requirement's quality score, shown as a chip beside its status. */
   quality?: QualityFacts;
   /** A phone moves the review transitions into its bottom action bar. */
@@ -49,6 +55,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
   onStatusChange,
   nav,
   readOnly = false,
+  deletedAt = null,
   quality,
   hideTransitions = false,
 }) => {
@@ -193,20 +200,23 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
         <span title={`Review status: ${meta.label}`} style={{ display: 'inline-flex' }}>
           <Chip tone={meta.tone}>{meta.label.toLowerCase()}</Chip>
         </span>
+        {deletedAt && <Chip tone="danger">deleted</Chip>}
         <QualityChip quality={quality} withBand={isPhone} />
         {priority && <Chip tone="neutral">{priority}</Chip>}
         <span style={{ flex: 1 }} />
         {!readOnly && (
           <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', width: isPhone ? '100%' : undefined }}>
-            <button
-              type="button"
-              data-help-key="requirements.versions"
-              onClick={() => onEdit(displayArtifact)}
-              disabled={previewing}
-              style={action('secondary', previewing)}
-            >
-              Edit
-            </button>
+            {!deletedAt && (
+              <button
+                type="button"
+                data-help-key="requirements.versions"
+                onClick={() => onEdit(displayArtifact)}
+                disabled={previewing}
+                style={action('secondary', previewing)}
+              >
+                Edit
+              </button>
+            )}
             {displayArtifact.version > 1 && (
               <button
                 type="button"
@@ -218,18 +228,25 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                 History
               </button>
             )}
-            <button
-              type="button"
-              onClick={() => onDelete(displayArtifact.id)}
-              disabled={previewing}
-              style={action('danger', previewing)}
-            >
-              Delete
-            </button>
+            {!deletedAt && (
+              <button
+                type="button"
+                onClick={() => onDelete(displayArtifact.id)}
+                disabled={previewing}
+                style={action('danger', previewing)}
+              >
+                Delete
+              </button>
+            )}
           </span>
         )}
       </div>
       <h3 style={{ margin: '10px 0 8px', fontSize: isPhone ? 20 : 17, lineHeight: 1.3 }}>{displayArtifact.title}</h3>
+      {deletedAt && (
+        <p role="note" style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--danger-strong)' }}>
+          Deleted {new Date(deletedAt).toLocaleString()}. You are reading its history: History lists every version.
+        </p>
+      )}
       <dl
         style={{
           margin: 0,
@@ -250,7 +267,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
           <code style={{ fontSize: 12, color: 'var(--text-secondary)', wordBreak: 'break-all' }}>{displayArtifact.id}</code>
         </dd>
       </dl>
-      {!readOnly && !hideTransitions && !localPreviewVersion && NEXT_STATUSES[status].length > 0 && (
+      {!readOnly && !deletedAt && !hideTransitions && !localPreviewVersion && NEXT_STATUSES[status].length > 0 && (
         <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }} data-help-key="review">
           {NEXT_STATUSES[status].map((next) => (
             <button
@@ -276,7 +293,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
           versions={versions}
           loading={loadingVersions}
           onPreview={(v) => setLocalPreviewVersion(v)}
-          onRestore={handleVersionRestore}
+          onRestore={deletedAt ? undefined : handleVersionRestore}
         />
       )}
     </div>

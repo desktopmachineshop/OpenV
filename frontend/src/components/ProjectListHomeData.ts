@@ -176,11 +176,11 @@ export const buildTodo = ({ projectId, review, runs, testCases, coverage, commen
   for (const c of comments) {
     const id = String(c.payload?.artifact_id || '');
     const a = byId.get(id);
-    // A comment on an artifact that has since been deleted has nothing to
-    // open and nothing to read: the server names a comment by its artifact
-    // (entity_name), so neither the project's artifacts nor the server
-    // knowing it means it is gone, and it does not wait on anyone.
-    if (!a && !c.entity_name) continue;
+    // A comment on an artifact that has since been deleted waits on nobody:
+    // there is nothing to answer, and read state is kept for live artifacts
+    // only. The server lists such an artifact in deleted_artifacts; an older
+    // server leaves it unnamed.
+    if (!a && (!c.entity_name || (c.deleted_artifacts || []).includes(id))) continue;
     items.push({
       key: `comment-${c.id}`,
       kind: 'comment',

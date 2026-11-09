@@ -109,10 +109,10 @@ describe('ModuleView artifact stepping', () => {
   let container: HTMLDivElement;
   let root: Root;
 
-  const mount = async () => {
+  const mount = async (url = '/projects/p1/requirements?artifact=req-1') => {
     await act(async () => {
       root.render(
-        <MemoryRouter initialEntries={['/projects/p1/requirements?artifact=req-1']}>
+        <MemoryRouter initialEntries={[url]}>
           <DialogProvider>
             <Routes>
               <Route path="/projects/:projectId/requirements" element={<ModuleView />} />
@@ -285,6 +285,34 @@ describe('ModuleView artifact stepping', () => {
     await mount();
     expect((pane() as HTMLElement).style.display).not.toBe('none');
     expect(headings()).toContain('Title req-1');
+  });
+
+  it('opens a deleted artifact from its history, read-only and marked deleted', async () => {
+    getVersions.mockImplementation(async (id: string) =>
+      id === 'gone'
+        ? ({
+            data: [
+              { ...art('gone', null, 9), title: 'Brake within 2 m', version: 2, valid_to: '2026-11-08T10:00:00Z' },
+              { ...art('gone', null, 9), title: 'Brake', version: 1, valid_to: '2026-11-07T10:00:00Z' },
+            ],
+          } as any)
+        : ({ data: [] } as any)
+    );
+    act(() => root.unmount());
+    act(() => {
+      root = createRoot(container);
+    });
+    await mount('/projects/p1/requirements?artifact=gone');
+    await act(async () => {
+      for (let i = 0; i < 6; i++) await Promise.resolve();
+    });
+    expect(headings()).toContain('Brake within 2 m');
+    expect(container.textContent).toContain('deleted');
+    expect(container.querySelector('[role="note"]')?.textContent).toMatch(/^Deleted /);
+    const labels = Array.from(container.querySelectorAll('button')).map((b) => b.textContent);
+    expect(labels).not.toContain('Edit');
+    expect(labels).not.toContain('Delete');
+    expect(labels).toContain('History');
   });
 
   it('turns the page on a leftward swipe, and back on a rightward one', async () => {

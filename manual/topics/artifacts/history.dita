@@ -15,6 +15,10 @@
     </ul>
     <p>It opens on <b>Comments</b>, which is what most people come to it for; the recorded changes are the backdrop.</p>
     <p>Add a comment in the box under the <b>History</b> heading. Use it for review discussion rather than editing the requirement text itself — the text is the requirement, the comment is what you think of it. Writing one while reading <b>Changes</b> switches you back to <b>Comments</b>, so you can see what you just added.</p>
+    <section id="deleted-artifacts">
+      <title>Deleted artifacts</title>
+      <p>Deleting an artifact keeps its history. A link to it (from <b>Activity</b>, a notification or a link someone shared) still opens it: read-only, marked <b>deleted</b> with the date it was deleted, at its last version. <b>History</b> lists every version, and <b>Preview</b> shows any of them with the links it had then. A deleted artifact cannot be edited or restored from here.</p>
+    </section>
     <section id="read-and-unread-comments">
       <title>Read and unread comments</title>
       <p><b>Needs you</b>, on Home, lists the comments you have not read. Comments count as read once you see them here: as soon as the <b>History</b> comes into view, or straight away when you came from a <b>Needs you</b> line. A comment written since you last read the artifact's comments shows <b>New</b>.</p>
