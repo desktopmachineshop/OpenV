@@ -148,7 +148,7 @@ export const ModuleView: React.FC = () => {
   // The ?artifact= search param is the shareable source of truth for the
   // selection (mirrors AgentRunsPage's ?run= pattern).
   const urlArtifactId = searchParams.get('artifact');
-  useNotesParam(searchParams.get('notes') === '1', urlArtifactId, stacked, () => setStackedPane('notes'), () => setNotesRevealed(true));
+  useNotesParam(searchParams.get('notes') === '1', urlArtifactId, stacked, setStackedPane, () => setNotesRevealed(true));
 
   const {
     baselines,

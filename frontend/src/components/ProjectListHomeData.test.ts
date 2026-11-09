@@ -71,6 +71,7 @@ describe('buildTodo comments', () => {
     actor: 'user:u2',
     actor_name: 'Priya',
     payload: { artifact_id: 'a1', entry_type: 'comment', message: 'Which threshold?' },
+    entity_name: 'REQ-1 Answer in time',
     created_at: '2026-11-09T10:00:00Z',
   };
   const sources = { projectId: 'p1', review: null, runs: [], testCases: 0, coverage: null, comments: [event], byId: new Map() };
@@ -82,5 +83,13 @@ describe('buildTodo comments', () => {
 
   it('leaves it out without read state', () => {
     expect(buildTodo(sources)[0].comment).toBeUndefined();
+  });
+
+  it('drops a comment whose artifact has been deleted: nothing to open or read', () => {
+    const gone = { ...event, id: 'e2', entity_name: '', payload: { ...event.payload, artifact_id: 'deleted' } };
+    const known = { ...event, id: 'e3', entity_name: '', payload: { ...event.payload, artifact_id: 'a7' } };
+    const byId = new Map([['a7', { id: 'a7', ref: 'REQ-7', title: 'Seven' } as any]]);
+    const rows = buildTodo({ ...sources, comments: [event, gone, known], byId });
+    expect(rows.map((r) => r.key)).toEqual(['comment-e1', 'comment-e3']);
   });
 });

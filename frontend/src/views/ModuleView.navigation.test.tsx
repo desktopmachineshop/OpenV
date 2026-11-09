@@ -275,6 +275,18 @@ describe('ModuleView artifact stepping', () => {
     expect(selectedArtifactId).toBe('req-1');
   });
 
+  it('opens a linked artifact on a phone, not the tree', async () => {
+    phone = true;
+    // A fresh page, as a link opens one: the desktop mount above holds its panes.
+    act(() => root.unmount());
+    act(() => {
+      root = createRoot(container);
+    });
+    await mount();
+    expect((pane() as HTMLElement).style.display).not.toBe('none');
+    expect(headings()).toContain('Title req-1');
+  });
+
   it('turns the page on a leftward swipe, and back on a rightward one', async () => {
     phone = true;
     await mount();

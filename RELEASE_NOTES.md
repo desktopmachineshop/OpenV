@@ -9,6 +9,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Comments on deleted artifacts no longer sit in Needs you.** A comment whose artifact had since been deleted showed in **Needs you** with no title. **Open** led nowhere, and **Mark read** or **Mark all read** could not clear it, so it came back every time you opened Home. Those comments are now left out.
+- **Open on a phone goes to the artifact.** Following a link to an artifact on a phone, from **Needs you** on Home or anywhere else, showed the project's tree instead of the artifact. It now opens the artifact itself.
+
 ## 0.30.0 — 2026-11-09
 
 ### New features

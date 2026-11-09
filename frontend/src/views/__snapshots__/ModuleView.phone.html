@@ -25,12 +25,12 @@
 </div>
 </div>
 <div role="tablist" aria-label="Requirements panes" data-help-key="requirements.layout" style="display: flex; margin: 0px 12px 8px; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; flex-shrink: 0;">
-<button type="button" role="tab" aria-selected="true" style="flex: 1 1 0%; min-height: 44px; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; background: var(--neutral-soft); color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer;">Tree</button>
-<button type="button" role="tab" aria-selected="false" style="flex: 1 1 0%; min-height: 44px; border-top: medium; border-right: medium; border-bottom: medium; border-left: 1px solid var(--border); border-image: none; background: var(--surface); color: var(--text-muted); font-size: 14px; font-weight: 400; cursor: pointer;">Document</button>
+<button type="button" role="tab" aria-selected="false" style="flex: 1 1 0%; min-height: 44px; border-width: medium; border-style: none; border-color: currentcolor; border-image: none; background: var(--surface); color: var(--text-muted); font-size: 14px; font-weight: 400; cursor: pointer;">Tree</button>
+<button type="button" role="tab" aria-selected="true" style="flex: 1 1 0%; min-height: 44px; border-top: medium; border-right: medium; border-bottom: medium; border-left: 1px solid var(--border); border-image: none; background: var(--neutral-soft); color: var(--text); font-size: 14px; font-weight: 600; cursor: pointer;">Document</button>
 <button type="button" role="tab" aria-selected="false" style="flex: 1 1 0%; min-height: 44px; border-top: medium; border-right: medium; border-bottom: medium; border-left: 1px solid var(--border); border-image: none; background: var(--surface); color: var(--text-muted); font-size: 14px; font-weight: 400; cursor: pointer;">Notes</button>
 </div>
 <div style="display: flex; gap: 0px; flex: 1 1 0%; min-height: 0px; overflow: hidden;">
-<div style="flex: 1 1 0%; min-width: 0px; min-height: 0px; display: flex; flex-direction: column; overflow: hidden;">
+<div style="flex: 1 1 0%; min-width: 0px; min-height: 0px; display: none; flex-direction: column; overflow: hidden;">
 <div style="flex-shrink: 0; background: var(--surface); border-bottom: 1px solid var(--border);">
 <div style="display: flex; gap: 8px; align-items: center; padding: 8px 12px 0px;">
 <div style="position: relative; flex: 1 1 0%; min-width: 140px;" data-help-key="requirements.search">
@@ -171,8 +171,8 @@
 </div>
 </div>
 </div>
-<div style="display: none; flex: 1 1 0%; gap: 0px; min-width: 0px; overflow: hidden;">
-<div role="region" aria-label="Artifact document" data-help-key="requirements.detail" style="flex: 1 1 0%; min-width: 0px; overflow: auto; display: none; flex-direction: column; padding: 0px 12px;">
+<div style="display: flex; flex: 1 1 0%; gap: 0px; min-width: 0px; overflow: hidden;">
+<div role="region" aria-label="Artifact document" data-help-key="requirements.detail" style="flex: 1 1 0%; min-width: 0px; overflow: auto; display: flex; flex-direction: column; padding: 0px 12px;">
 <div style="width: 100%;">
 <div class="card" style="margin-bottom: 12px; padding: 12px 14px;">
 <div style="display: flex; align-items: center; gap: 6px; margin-bottom: 8px;" aria-label="Artifact navigation" role="group" data-help-key="requirements.navigate">

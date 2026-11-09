@@ -176,6 +176,11 @@ export const buildTodo = ({ projectId, review, runs, testCases, coverage, commen
   for (const c of comments) {
     const id = String(c.payload?.artifact_id || '');
     const a = byId.get(id);
+    // A comment on an artifact that has since been deleted has nothing to
+    // open and nothing to read: the server names a comment by its artifact
+    // (entity_name), so neither the project's artifacts nor the server
+    // knowing it means it is gone, and it does not wait on anyone.
+    if (!a && !c.entity_name) continue;
     items.push({
       key: `comment-${c.id}`,
       kind: 'comment',
