@@ -157,6 +157,7 @@ const FORMER_NAV_SECTIONS: NavSection[] = [
     items: [
       { to: 'board', label: 'Board' },
       { to: 'todos', label: 'To-dos', feature: 'todo-list' },
+      { to: 'gantt', label: 'Gantt', feature: 'gantt-plan' },
     ],
   },
   {

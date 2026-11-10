@@ -371,16 +371,24 @@ func (b *builder) dependencies(p *Plan) {
 			t.Conflicts = append(t.Conflicts, on.ID)
 		}
 	}
-	sort.Slice(p.Dependencies, func(i, j int) bool {
+	// In outline order, so the answer does not depend on the ids.
+	row := make(map[string]int, len(p.Tasks))
+	for i, t := range p.Tasks {
+		row[t.ID] = i
+	}
+	sort.SliceStable(p.Dependencies, func(i, j int) bool {
 		x, y := p.Dependencies[i], p.Dependencies[j]
 		if x.WorkItemID != y.WorkItemID {
-			return x.WorkItemID < y.WorkItemID
+			return row[x.WorkItemID] < row[y.WorkItemID]
 		}
-		return x.DependsOnID < y.DependsOnID
+		return row[x.DependsOnID] < row[y.DependsOnID]
 	})
+	byRow := func(ids []string) {
+		sort.SliceStable(ids, func(i, j int) bool { return row[ids[i]] < row[ids[j]] })
+	}
 	for _, t := range p.Tasks {
-		sort.Strings(t.DependsOn)
-		sort.Strings(t.Conflicts)
+		byRow(t.DependsOn)
+		byRow(t.Conflicts)
 	}
 }
 

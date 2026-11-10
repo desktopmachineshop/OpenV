@@ -319,3 +319,131 @@ export interface TodoInput {
   source_chatter_id?: string | null;
   source_artifact_id?: string | null;
 }
+
+// The project plan, the Gantt over the board (internal/domain/plan).
+
+/** A to-do on a task, as the plan shows it. */
+export interface PlanTaskTodo {
+  id: string;
+  text: string;
+  done: boolean;
+}
+
+/** One row of the plan: a board task with its schedule and progress. */
+export interface PlanTask {
+  id: string;
+  title: string;
+  column: string;
+  assignee_type: 'user' | 'agent';
+  assignee_id: string | null;
+  parent_id: string | null;
+  depth: number;
+  wbs: string;
+  /** The task's own dates, YYYY-MM-DD; end is the work item's due date. */
+  start: string | null;
+  end: string | null;
+  /** What the chart draws: the own dates widened to cover the sub-tasks. */
+  span_start: string | null;
+  span_end: string | null;
+  /** A whole percentage, from the to-dos ticked off and the sub-tasks. */
+  progress: number;
+  done: boolean;
+  late: boolean;
+  todos_done: number;
+  todos_total: number;
+  subtasks_done: number;
+  subtasks_total: number;
+  todos: PlanTaskTodo[];
+  depends_on: string[];
+  /** The tasks it depends on that end on or after the day it starts. */
+  conflicts: string[];
+}
+
+export interface PlanCriterion {
+  metric: string;
+  /** A percentage from 1 to 100. */
+  target: number;
+}
+
+export interface PlanCriterionResult extends PlanCriterion {
+  label: string;
+  actual: number;
+  count: number;
+  total: number;
+  met: boolean;
+  /** How far the criterion is to its target, as a percentage. */
+  percent: number;
+}
+
+export interface PlanMilestone {
+  /** The milestone's id, or "release:<id>" for a release's. */
+  key: string;
+  kind: 'release' | 'custom';
+  /** Empty for a release milestone still on the default criteria. */
+  id: string;
+  release_id: string | null;
+  name: string;
+  description: string;
+  date: string | null;
+  release_status?: string;
+  default_criteria: boolean;
+  criteria: PlanCriterionResult[];
+  progress: number;
+  met: boolean;
+  late: boolean;
+}
+
+export interface PlanMetric {
+  key: string;
+  label: string;
+  description: string;
+}
+
+export interface PlanMetricValue {
+  metric: string;
+  label: string;
+  count: number;
+  total: number;
+  percent: number;
+}
+
+export interface ProjectPlan {
+  project_id: string;
+  today: string;
+  start: string | null;
+  end: string | null;
+  tasks: PlanTask[];
+  milestones: PlanMilestone[];
+  dependencies: { work_item_id: string; depends_on_id: string }[];
+  metrics: PlanMetricValue[];
+  metric_catalogue: PlanMetric[];
+  summary: { tasks: number; done: number; late: number; unscheduled: number; progress: number };
+}
+
+/** A field left out stays as it is; an empty date or parent clears it. */
+export interface PlanScheduleInput {
+  start_date?: string;
+  due_date?: string;
+  parent_id?: string;
+  depends_on?: string[];
+}
+
+export interface PlanMilestoneInput {
+  name?: string;
+  description?: string;
+  target_date?: string;
+  criteria?: PlanCriterion[];
+}
+
+/** A stored milestone, as its writes answer it. */
+export interface StoredPlanMilestone {
+  id: string;
+  project_id: string;
+  release_id: string | null;
+  name: string;
+  description: string;
+  target_date: string | null;
+  criteria: PlanCriterion[];
+}
+
+export type PlanExportFormat = 'pdf' | 'excel' | 'csv' | 'json';

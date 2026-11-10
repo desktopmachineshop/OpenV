@@ -178,7 +178,7 @@
         "frontend/src/views/ProjectSettings*",
         "frontend/src/views/ReviewQueue*",
         "frontend/src/views/TodoList*",
-        "frontend/src/views/PlanGantt*",
+        "frontend/src/views/Gantt*",
         "frontend/src/components/plan/**",
         "frontend/src/views/MyTodos*",
         "frontend/src/components/todos/**",

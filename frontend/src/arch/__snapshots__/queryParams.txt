@@ -4,7 +4,7 @@
 
 page parameters read: 29 (against, agent, artifact, at, checkout, client_id, code_challenge, code_challenge_method, error, go, invite, item, link, mode, next, notes, panel, redirect_uri, release, reset, run, scope, session_id, share, signed_out, state, tab, todo, token)
 page parameters written: 10
-parameters carried by in-app links: 12
+parameters carried by in-app links: 13
 API query parameters built with URLSearchParams: 18
 
 ## Page URL parameters (modules using useSearchParams)
@@ -95,6 +95,8 @@ mode
   /login?mode=register
 next
   /login?next={}
+release
+  /projects/{}/releases?release={}
 reset
   /login?reset=done
 run

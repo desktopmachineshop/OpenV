@@ -101,6 +101,9 @@ const TestsPage = lazy(() =>
 const BaselinesPage = lazy(() =>
   import('./views/BaselinesPage').then((m) => ({ default: m.BaselinesPage }))
 );
+const Gantt = lazy(() =>
+  import('./views/Gantt').then((m) => ({ default: m.Gantt }))
+);
 
 // How long App waits before each new try of a gate load that failed; after
 // the last, only the window's focus or the browser coming back online tries
@@ -334,6 +337,7 @@ function App() {
           <Route path="design" element={<DesignItems />} />
           <Route path="tests" element={<TestsPage />} />
           <Route path="baselines" element={<BaselinesPage />} />
+          <Route path="gantt" element={<Gantt />} />
         </Route>
           <Route path="*" element={<SitePages site={site} fallback={<Navigate to="/projects" replace />} />} />
           </>

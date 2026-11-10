@@ -118,6 +118,16 @@
     <topicref href="../topics/releases/targeting-requirements.dita"/>
     <topicref href="../topics/releases/release-progress.dita"/>
     <topicref href="../topics/releases/the-burn-up.dita"/>
+    <topicref href="../topics/releases/releases-on-the-plan.dita"/>
+  </topicref>
+  <topicref href="../topics/gantt/index.dita">
+    <topicref href="../topics/gantt/reading-the-chart.dita"/>
+    <topicref href="../topics/gantt/scheduling-tasks.dita"/>
+    <topicref href="../topics/gantt/progress-from-to-dos-and-sub-tasks.dita"/>
+    <topicref href="../topics/gantt/milestones-and-their-criteria.dita"/>
+    <topicref href="../topics/gantt/release-milestones.dita"/>
+    <topicref href="../topics/gantt/exporting-the-plan.dita"/>
+    <topicref href="../topics/gantt/on-a-phone.dita"/>
   </topicref>
   <topicref href="../topics/project-pages/index.dita">
     <topicref href="../topics/project-pages/home.dita"/>

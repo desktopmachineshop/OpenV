@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 325
-  axios instance calls: 315 (DELETE 37, GET 130, HEAD 1, POST 103, PUT 44)
+call sites: 333
+  axios instance calls: 323 (DELETE 38, GET 132, HEAD 1, POST 105, PUT 47)
   helper calls (a function that passes its argument to the instance): 1
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 6 (3 of them axios calls)
-distinct METHOD PATH lines below: 324; server routes reached: 324
+distinct METHOD PATH lines below: 332; server routes reached: 332
 
 GET     /api/v1/admin/metrics/usage                                       adminAPI.usage
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
@@ -238,6 +238,12 @@ DELETE  /api/v1/projects/{id}/members/{userId}                            member
 PUT     /api/v1/projects/{id}/members/{userId}                            membersAPI.setRole
 GET     /api/v1/projects/{id}/parties                                     projectAPI.parties
 PUT     /api/v1/projects/{id}/parties                                     projectAPI.setParties
+GET     /api/v1/projects/{id}/plan                                        planAPI.get
+GET     /api/v1/projects/{id}/plan/export                                 planAPI.export
+POST    /api/v1/projects/{id}/plan/milestones                             planAPI.createMilestone
+DELETE  /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAPI.removeMilestone
+PUT     /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAPI.updateMilestone
+PUT     /api/v1/projects/{id}/plan/release-milestones/{releaseId}         planAPI.setReleaseCriteria
 GET     /api/v1/projects/{id}/priority-detection                          projectAPI.priorityDetection
 PUT     /api/v1/projects/{id}/priority-detection                          projectAPI.setPriorityDetection
 GET     /api/v1/projects/{id}/profile                                     productProfileAPI.get
@@ -332,6 +338,8 @@ GET     /api/v1/work-items/{id}                                           workIt
 PUT     /api/v1/work-items/{id}                                           workItemsAPI.update
 POST    /api/v1/work-items/{id}/comments                                  workItemsAPI.comment
 POST    /api/v1/work-items/{id}/move                                      workItemsAPI.move
+PUT     /api/v1/work-items/{id}/schedule                                  planAPI.schedule
+POST    /api/v1/work-items/{id}/todos                                     planAPI.addTodo
 
 ## Normalised call sites (the path the client writes is not literally a route template)
   attachmentAPI.fetchFile: ${version ? `?version=${version}` : ''} is a query-string suffix

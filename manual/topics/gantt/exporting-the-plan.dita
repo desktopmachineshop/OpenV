@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="exporting-the-plan">
+  <title>Exporting the plan</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt.export"/>
+  </prolog>
+  <conbody>
+    <p><b>Export</b> saves the plan as a file:</p>
+    <ul>
+      <li><b>PDF</b>: the chart on landscape pages, with the outline, dates, bars, milestones and today's line, then the milestones with their criteria.</li>
+      <li><b>Excel</b>: the tasks with a timeline of weeks drawn beside them, and the milestones on a second sheet.</li>
+      <li><b>CSV</b>: the tasks, then the milestones and their criteria.</li>
+      <li><b>JSON</b>: the whole plan as the app reads it.</li>
+    </ul>
+    <p>Agents read the plan with the <codeph>get_plan</codeph> tool and place a task with <codeph>schedule_work_item</codeph>.</p>
+  </conbody>
+</concept>

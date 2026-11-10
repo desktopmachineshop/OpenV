@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="reading-the-chart">
+  <title>Reading the chart</title>
+  <shortdesc>The outline on the left lists the tasks, numbered as an outline (1, 1.1, 1.2, 2). A task with sub-tasks has an arrow that folds them away. The figure at the end of each row is the task's progress.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt.chart"/>
+    <resourceid appname="openv-web" appid="gantt.summary"/>
+  </prolog>
+  <conbody>
+    <p>On the timeline, each task is a bar from its start to its due date:</p>
+    <ul>
+      <li>The bar <b>fills</b> from the left as the task progresses.</li>
+      <li>A <b>green</b> bar is a task in <b>Done</b>. A <b>red</b> bar is late: it is past its due date and not done.</li>
+      <li>A task with sub-tasks is drawn as a thinner, darker bar that spans all of them.</li>
+      <li>An <b>arrow</b> runs from a task to each task that waits for it. A dashed red arrow means the waiting task starts before the other one ends; the outline marks that task with a warning sign.</li>
+      <li>A task with no dates yet shows <b>+ Schedule</b> at today.</li>
+    </ul>
+    <p>The row of <b>Milestones</b> above the tasks holds a diamond for each milestone, with its name and progress. The thin band leading up to a diamond, from the milestone before it, fills as that milestone's criteria are met. The red vertical line is today.</p>
+    <p><b>Days</b>, <b>Weeks</b>, <b>Months</b> and <b>Quarters</b> change the scale. The page opens at the scale that shows the whole plan. The figures above the chart count the plan: how far it is complete, its tasks, those done, late and not yet scheduled, and the milestones met.</p>
+  </conbody>
+</concept>

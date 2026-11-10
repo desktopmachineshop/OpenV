@@ -184,20 +184,37 @@ func (c *pdfChart) newPage() float64 {
 		}
 	}
 
-	// The milestone row.
 	y := top + pdfHeadH
+	c.milestoneRow(y)
+	return y + pdfRowH
+}
+
+// milestoneRow draws the chart's row of milestones at y: a diamond each.
+func (c *pdfChart) milestoneRow(y float64) {
+	pdf := c.pdf
 	pdf.SetFont("Go", "B", pdfTextSize)
 	rgb(pdf.SetTextColor, pdfText)
 	pdf.Text(pdfMargin+2, y+4.2, "Milestones")
 	pdf.SetFont("Go", "", pdfTextSize-1)
+	// Each label runs from its diamond to the next one, cut to fit; where
+	// two diamonds sit too close for a name, the table on the last pages
+	// names them.
+	type mark struct {
+		m MilestoneProgress
+		x float64
+	}
+	marks := []mark{}
 	for _, m := range c.doc.Plan.Milestones {
 		if m.Date == nil {
 			continue
 		}
-		x, ok := c.x(*m.Date)
-		if !ok {
-			continue
+		if x, ok := c.x(*m.Date); ok {
+			marks = append(marks, mark{m, x})
 		}
+	}
+	const r = 1.9
+	for i, mk := range marks {
+		m, x := mk.m, mk.x
 		color := pdfAccent
 		if m.Kind == KindRelease {
 			color = pdfPurple
@@ -208,19 +225,20 @@ func (c *pdfChart) newPage() float64 {
 			color = pdfDanger
 		}
 		rgb(pdf.SetFillColor, color)
-		cy, r := y+pdfRowH/2, 1.9
+		cy := y + pdfRowH/2
 		pdf.Polygon([]gofpdf.PointType{{X: x, Y: cy - r}, {X: x + r, Y: cy}, {X: x, Y: cy + r}, {X: x - r, Y: cy}}, "F")
-		label := fmt.Sprintf("%s %d%%", m.Name, m.Progress)
-		rgb(pdf.SetTextColor, pdfMuted)
-		if x+r+1+pdf.GetStringWidth(label) < c.x1 {
-			pdf.Text(x+r+1, cy+1, label)
-		} else {
-			pdf.Text(x-r-1-pdf.GetStringWidth(label), cy+1, label)
+		room := c.x1 - x - r - 1
+		if i+1 < len(marks) {
+			room = marks[i+1].x - x - 2*r - 2
 		}
+		if room < 9 {
+			continue
+		}
+		rgb(pdf.SetTextColor, pdfMuted)
+		pdf.Text(x+r+1, cy+1, c.fit(fmt.Sprintf("%s %d%%", m.Name, m.Progress), room))
 	}
 	rgb(pdf.SetDrawColor, pdfBorder)
 	pdf.Line(pdfMargin, y+pdfRowH, pdfW-pdfMargin, y+pdfRowH)
-	return y + pdfRowH
 }
 
 func (c *pdfChart) footer() {

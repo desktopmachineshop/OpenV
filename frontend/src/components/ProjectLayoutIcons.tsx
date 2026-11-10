@@ -24,6 +24,7 @@ const PAGE_ICONS: Record<string, string> = {
   review: 'M2 10s3-6 8-6 8 6 8 6-3 6-8 6-8-6-8-6zM10 10m-2 0a2 2 0 104 0 2 2 0 10-4 0',
   board: 'M3 3h4v14H3zM8 3h4v9H8zM13 3h4v11h-4z',
   todos: 'M3 5l1.5 1.5L7 4M3 11l1.5 1.5L7 10M9 5h8M9 11h8M9 16h8M4 16h1',
+  gantt: 'M3 4h8v3H3zM7 8.5h9v3H7zM5 13h7v3H5z',
   agents: 'M10 3l1.5 4.5L16 9l-4.5 1.5L10 15l-1.5-4.5L4 9l4.5-1.5z',
   automations: 'M11 2L4 11h5l-1 7 7-9h-5z',
   'agent-runs': 'M6 4l10 6-10 6z',

@@ -6,5 +6,7 @@
   <prolog>
     <resourceid appname="openv-web" appid="board"/>
   </prolog>
-  <conbody/>
+  <conbody>
+    <p>Every card is also a task of the project's plan: the <b>Gantt</b> page draws the cards on a timeline, with start dates, sub-tasks and dependencies. See <xref href="https://openv.app/manual/gantt" scope="external" format="html">The plan (Gantt)</xref>.</p>
+  </conbody>
 </concept>

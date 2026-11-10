@@ -18,9 +18,15 @@ import type {
   DownloadSelection,
   LinkTypeRule,
   Party,
+  PlanExportFormat,
+  PlanMilestoneInput,
+  PlanScheduleInput,
+  PlanTask,
   ProductProfile,
   Project,
   ProjectExport,
+  ProjectPlan,
+  StoredPlanMilestone,
   Template,
   Todo,
   TodoInput,
@@ -192,4 +198,38 @@ export const todosAPI = {
   promote: (id: string) =>
     client.post<{ todo: Todo; work_item: WorkItem }>(`/api/v1/todos/${id}/promote`),
   remove: (id: string) => client.delete(`/api/v1/todos/${id}`),
+};
+
+const PLAN_EXTENSION: Record<PlanExportFormat, string> = { pdf: 'pdf', excel: 'xlsx', csv: 'csv', json: 'json' };
+
+/** The project plan, the Gantt over the board: its read, edits and export. */
+export const planAPI = {
+  get: (projectId: string) => client.get<ProjectPlan>(`/api/v1/projects/${projectId}/plan`),
+  /** A task's dates, parent and dependencies; answers its row of the plan. */
+  schedule: (workItemId: string, payload: PlanScheduleInput) =>
+    client.put<PlanTask>(`/api/v1/work-items/${workItemId}/schedule`, payload),
+  /** A to-do raised on a task, which counts toward its progress. */
+  addTodo: (workItemId: string, text: string) =>
+    client.post<Todo>(`/api/v1/work-items/${workItemId}/todos`, { text }),
+  createMilestone: (projectId: string, payload: PlanMilestoneInput) =>
+    client.post<StoredPlanMilestone>(`/api/v1/projects/${projectId}/plan/milestones`, payload),
+  updateMilestone: (projectId: string, milestoneId: string, payload: PlanMilestoneInput) =>
+    client.put<StoredPlanMilestone>(`/api/v1/projects/${projectId}/plan/milestones/${milestoneId}`, payload),
+  removeMilestone: (projectId: string, milestoneId: string) =>
+    client.delete(`/api/v1/projects/${projectId}/plan/milestones/${milestoneId}`),
+  /** The completion criteria of a release's milestone. */
+  setReleaseCriteria: (projectId: string, releaseId: string, criteria: PlanMilestoneInput['criteria']) =>
+    client.put<StoredPlanMilestone>(`/api/v1/projects/${projectId}/plan/release-milestones/${releaseId}`, { criteria }),
+  /** Saves the plan as a file in the chosen format. */
+  export: async (projectId: string, format: PlanExportFormat) => {
+    const response = await client.get(`/api/v1/projects/${projectId}/plan/export`, {
+      params: { format },
+      responseType: 'blob',
+    });
+    const filename =
+      filenameFromContentDisposition(response.headers['content-disposition']) ||
+      `plan-${new Date().toISOString().slice(0, 10)}.${PLAN_EXTENSION[format]}`;
+    saveBlob(response.data, filename);
+    return response;
+  },
 };
