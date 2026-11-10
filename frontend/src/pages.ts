@@ -16,7 +16,7 @@
 // beside its <Route> in App.tsx. projectPath() builds the URL of a project's
 // page for new code; existing call sites keep their template strings.
 import type { FeatureKey } from './generated/contract';
-import { REDESIGN_PAGES_FEATURE, TARGET_RELEASES_FEATURE, TODO_LIST_FEATURE } from './features';
+import { GANTT_PLAN_FEATURE, REDESIGN_PAGES_FEATURE, TARGET_RELEASES_FEATURE, TODO_LIST_FEATURE } from './features';
 
 /** The labelled groups of the project menu, in the order it draws them. */
 export type NavGroup = 'Define' | 'Verify' | 'Plan' | 'Agents';
@@ -196,6 +196,14 @@ export const PAGES: readonly Page[] = [
     public: false,
     help: { topic: 'todos' },
     nav: { group: 'Plan', label: 'To-dos', feature: TODO_LIST_FEATURE },
+  },
+  {
+    scope: 'project',
+    path: 'gantt',
+    load: 'lazy',
+    public: false,
+    help: { topic: 'gantt' },
+    nav: { group: 'Plan', label: 'Gantt', feature: GANTT_PLAN_FEATURE },
   },
   {
     scope: 'project',

@@ -1288,6 +1288,21 @@ A to-do (issue #731) is one paragraph to tick off, kept apart from the board: no
 | POST | `/api/v1/todos/{id}/promote` | Make a board task of it: a work item in `todo` carrying the text (title cut at 120 characters), assignee, due date and source artifact; the to-do is ticked off with `done_note: "promoted"` and `promoted_work_item_id`. Answers `{todo, work_item}`; `400` for a personal to-do, `409` for one already promoted | editor |
 | DELETE | `/api/v1/todos/{id}` | Delete → `204` | editor (personal: its writer) |
 
+### Plan (the Gantt)
+
+A project's plan is the Gantt over its board (`internal/domain/plan`). Its tasks are the board's work items: the plan adds a start date, a parent task (a sub-task), finish-to-start dependencies and the to-dos on a task, and the due date it shows is the work item's own. Its milestones are every target release of the project (a *release milestone*, whose name, date and status are the release's) and the custom ones a team adds. A milestone carries completion criteria `[{metric, target}]`: `target` is a percentage from 1 to 100 and `metric` one of `needs_addressed`, `requirements_approved`, `requirements_designed`, `requirements_tested`, `requirements_verified`, `tests_passing`, `hazards_mitigated`, `tasks_done`. A release milestone measures the requirement metrics over the requirements in its release, and starts with `requirements_approved` and `requirements_verified` at 100 until its own are set. Progress is computed: a task in Done is 100%, any other the share of its to-dos ticked off and its sub-tasks' progress; a milestone the mean of each criterion's way to its target. Writes need the `gantt-plan` feature on for the workspace (`403` otherwise); reads do not.
+
+| Method | Path | Purpose | Auth |
+|---|---|---|---|
+| GET | `/api/v1/projects/{id}/plan` | The plan: `tasks` in outline order (`wbs`, `depth`, `parent_id`, own `start` and `end`, drawn `span_start` and `span_end`, `progress`, `done`, `late`, to-do and sub-task counts, `todos`, `depends_on`, `conflicts`), `milestones` in date order with each criterion's `target`, `actual`, `count`, `total` and `met`, `dependencies`, the project-wide `metrics` with their `metric_catalogue`, `summary`, and the `start` and `end` the plan spans | viewer |
+| GET | `/api/v1/projects/{id}/plan/export` | The plan as a file: `?format=pdf` (the default: the chart on landscape A4, then the milestones), `excel`, `csv` or `json`; another format is `400` | viewer |
+| PUT | `/api/v1/work-items/{id}/schedule` | Place a task `{start_date?, due_date?, parent_id?, depends_on?}`: a field left out stays as it is, an empty date or parent clears it, `due_date` writes the work item's due date. `400` for a malformed date, a start after the due date, a parent or dependency on another project's board, a task as its own parent or dependency, and a loop of parents or dependencies. Answers the task's row of the plan | editor |
+| POST | `/api/v1/work-items/{id}/todos` | Raise a to-do on a task `{text}` → `201`: a project to-do, listed with the others, that counts toward the task's progress | editor |
+| POST | `/api/v1/projects/{id}/plan/milestones` | Add a custom milestone `{name, description?, target_date?, criteria?}` → `201` | editor |
+| PUT | `/api/v1/projects/{id}/plan/milestones/{milestoneId}` | Change a milestone: each field sent replaces what is there, an empty `target_date` clears it. A release milestone takes `criteria` only (`400` for its name, description or date: edit the release) | editor |
+| DELETE | `/api/v1/projects/{id}/plan/milestones/{milestoneId}` | Delete → `204`. Deleting a release milestone's stored criteria puts the defaults back; the release stays | editor |
+| PUT | `/api/v1/projects/{id}/plan/release-milestones/{releaseId}` | Set a release milestone's criteria `{criteria}`, storing the milestone the first time | editor |
+
 ### Guided sessions (requirements wizard + V&V Assistant chat)
 
 The assistant's transcript is stored on a guided session, and one conversation

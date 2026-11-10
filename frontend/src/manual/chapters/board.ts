@@ -6,6 +6,10 @@ The **Board** is a kanban view of the project's work items. Its special trick:
 cards can be assigned to AI agents, and dragging an agent's card to
 **To Do** kicks off an agent run.
 
+Every card is also a task of the project's plan: the **Gantt** page draws
+the cards on a timeline, with start dates, sub-tasks and dependencies. See
+[The plan (Gantt)](/manual/gantt).
+
 ## Columns
 
 Backlog · To Do · In Progress · Review · Done. Each column shows its card

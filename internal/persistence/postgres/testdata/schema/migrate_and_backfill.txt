@@ -774,6 +774,57 @@ table password_resets rows 0
   index idx_password_resets_token CREATE UNIQUE INDEX idx_password_resets_token ON public.password_resets USING btree (token_hash)
   index idx_password_resets_user CREATE INDEX idx_password_resets_user ON public.password_resets USING btree (user_id)
   index password_resets_pkey CREATE UNIQUE INDEX password_resets_pkey ON public.password_resets USING btree (id)
+table plan_dependencies rows 0
+  column work_item_id uuid NOT NULL
+  column depends_on_id uuid NOT NULL
+  column project_id uuid NOT NULL
+  constraint plan_dependencies_depends_on_id_fkey FOREIGN KEY (depends_on_id) REFERENCES work_items(id) ON DELETE CASCADE
+  constraint plan_dependencies_pkey PRIMARY KEY (work_item_id, depends_on_id)
+  constraint plan_dependencies_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  constraint plan_dependencies_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES work_items(id) ON DELETE CASCADE
+  index idx_plan_dependencies_depends_on CREATE INDEX idx_plan_dependencies_depends_on ON public.plan_dependencies USING btree (depends_on_id)
+  index idx_plan_dependencies_project CREATE INDEX idx_plan_dependencies_project ON public.plan_dependencies USING btree (project_id)
+  index plan_dependencies_pkey CREATE UNIQUE INDEX plan_dependencies_pkey ON public.plan_dependencies USING btree (work_item_id, depends_on_id)
+table plan_milestones rows 0
+  column id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column release_id uuid
+  column name character varying(200) NOT NULL DEFAULT ''::character varying
+  column description text NOT NULL DEFAULT ''::text
+  column target_date date
+  column criteria jsonb NOT NULL DEFAULT '[]'::jsonb
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint plan_milestones_pkey PRIMARY KEY (id)
+  constraint plan_milestones_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  constraint plan_milestones_release_id_fkey FOREIGN KEY (release_id) REFERENCES target_releases(id) ON DELETE CASCADE
+  index idx_plan_milestones_project CREATE INDEX idx_plan_milestones_project ON public.plan_milestones USING btree (project_id)
+  index idx_plan_milestones_release CREATE UNIQUE INDEX idx_plan_milestones_release ON public.plan_milestones USING btree (release_id) WHERE (release_id IS NOT NULL)
+  index plan_milestones_pkey CREATE UNIQUE INDEX plan_milestones_pkey ON public.plan_milestones USING btree (id)
+table plan_task_todos rows 0
+  column todo_id uuid NOT NULL
+  column work_item_id uuid NOT NULL
+  column project_id uuid NOT NULL
+  constraint plan_task_todos_pkey PRIMARY KEY (todo_id)
+  constraint plan_task_todos_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  constraint plan_task_todos_todo_id_fkey FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE
+  constraint plan_task_todos_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES work_items(id) ON DELETE CASCADE
+  index idx_plan_task_todos_project CREATE INDEX idx_plan_task_todos_project ON public.plan_task_todos USING btree (project_id)
+  index idx_plan_task_todos_work_item CREATE INDEX idx_plan_task_todos_work_item ON public.plan_task_todos USING btree (work_item_id)
+  index plan_task_todos_pkey CREATE UNIQUE INDEX plan_task_todos_pkey ON public.plan_task_todos USING btree (todo_id)
+table plan_tasks rows 0
+  column work_item_id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column start_date date
+  column parent_id uuid
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint plan_tasks_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES work_items(id) ON DELETE SET NULL
+  constraint plan_tasks_pkey PRIMARY KEY (work_item_id)
+  constraint plan_tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  constraint plan_tasks_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES work_items(id) ON DELETE CASCADE
+  index idx_plan_tasks_parent CREATE INDEX idx_plan_tasks_parent ON public.plan_tasks USING btree (parent_id) WHERE (parent_id IS NOT NULL)
+  index idx_plan_tasks_project CREATE INDEX idx_plan_tasks_project ON public.plan_tasks USING btree (project_id)
+  index plan_tasks_pkey CREATE UNIQUE INDEX plan_tasks_pkey ON public.plan_tasks USING btree (work_item_id)
 table product_profiles rows 0
   column project_id uuid NOT NULL
   column vision text NOT NULL DEFAULT ''::text
@@ -971,7 +1022,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 74
+table schema_migrations rows 75
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1331,3 +1382,4 @@ ledger 0071 todos
 ledger 0072 workspace_notices
 ledger 0073 comment_reads
 ledger 0074 agents_archived
+ledger 0075 plan

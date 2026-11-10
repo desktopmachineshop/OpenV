@@ -26,6 +26,7 @@ apps:
       /projects/:projectId/review: review
       /projects/:projectId/board: board
       /projects/:projectId/todos: todos
+      /projects/:projectId/gantt: gantt
       /projects/:projectId/crew/**: crew
       /projects/:projectId/team/**: crew
       /projects/:projectId/agents: agents

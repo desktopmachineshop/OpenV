@@ -366,3 +366,11 @@ POST /api/v1/todos/{id}/done -> SetTodoDone
 POST /api/v1/todos/{id}/promote -> PromoteTodo
 GET /api/v1/me/comment-reads -> ListCommentReads
 PUT /api/v1/me/comment-reads -> SetCommentReads [alwaysWritable]
+GET /api/v1/projects/{id}/plan -> GetPlan
+GET /api/v1/projects/{id}/plan/export -> ExportPlan
+POST /api/v1/projects/{id}/plan/milestones -> CreatePlanMilestone
+PUT /api/v1/projects/{id}/plan/milestones/{milestoneId} -> UpdatePlanMilestone
+DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId} -> DeletePlanMilestone
+PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId} -> SetReleaseMilestoneCriteria
+PUT /api/v1/work-items/{id}/schedule -> ScheduleWorkItem
+POST /api/v1/work-items/{id}/todos -> AddWorkItemTodo

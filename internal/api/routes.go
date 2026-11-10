@@ -57,4 +57,5 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerSavedSearchRoutes(router)
 	h.registerTodoRoutes(router)
 	h.registerCommentReadRoutes(router)
+	h.registerPlanRoutes(router)
 }

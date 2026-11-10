@@ -59,6 +59,7 @@ export const FEATURE_KEYS = [
   'flat-agent-team',
   'admin-usage',
   'artifact-reinstate',
+  'gantt-plan',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

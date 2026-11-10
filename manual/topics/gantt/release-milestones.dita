@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="release-milestones">
+  <title>Release milestones</title>
+  <shortdesc>Every release on the <b>Releases</b> page is a milestone on the plan, drawn as a filled diamond at the release's target date. Its name, date and status are the release's: change them on the Releases page, which <b>Open the release</b> leads to.</shortdesc>
+  <conbody>
+    <p>A release milestone starts with two criteria: every requirement in the release approved, and every one verified, which is what the Releases page calls ready. <b>Edit criteria</b> sets its own, and <b>Reset to defaults</b> puts those two back. Its requirement criteria count only the requirements in that release. A release marked <b>Released</b> is met.</p>
+  </conbody>
+</concept>

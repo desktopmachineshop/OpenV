@@ -36,6 +36,7 @@
     "src/views/BaselineCompare.tsx": "dynamic entry",
     "src/views/BaselinesPage.tsx": "dynamic entry",
     "src/views/DesignItems.tsx": "dynamic entry",
+    "src/views/Gantt.tsx": "dynamic entry",
     "src/views/ImpactView.tsx": "dynamic entry",
     "src/views/Landing.tsx": "dynamic entry",
     "src/views/ManualView.tsx": "dynamic entry",

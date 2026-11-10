@@ -31,6 +31,7 @@ DELETE /api/v1/orgs/{id}/runner-session: org:member, runner-sessions
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: org:admin
 DELETE /api/v1/projects/{id}: project:owner
 DELETE /api/v1/projects/{id}/members/{userId}: project:owner
+DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}: project:editor
 DELETE /api/v1/projects/{id}/releases/{releaseId}: project:editor
 DELETE /api/v1/projects/{id}/team-access/{teamId}: project:owner
 DELETE /api/v1/provider-api-keys/{env}: org:admin
@@ -150,6 +151,8 @@ GET /api/v1/projects/{id}/interviews: project:viewer
 GET /api/v1/projects/{id}/linked-artifacts: project:viewer
 GET /api/v1/projects/{id}/members: project:viewer
 GET /api/v1/projects/{id}/parties: project:viewer
+GET /api/v1/projects/{id}/plan: project:viewer
+GET /api/v1/projects/{id}/plan/export: project:viewer
 GET /api/v1/projects/{id}/priority-detection: project:viewer
 GET /api/v1/projects/{id}/profile: project:viewer
 GET /api/v1/projects/{id}/quality: project:viewer
@@ -285,6 +288,7 @@ POST /api/v1/projects/{id}/draft-test-cases: project:editor
 POST /api/v1/projects/{id}/evidence-bundles: project:editor
 POST /api/v1/projects/{id}/interviews: no-proposal-run, project:editor, project-visible
 POST /api/v1/projects/{id}/members: project:owner
+POST /api/v1/projects/{id}/plan/milestones: project:editor
 POST /api/v1/projects/{id}/reindex-embeddings: project:owner
 POST /api/v1/projects/{id}/releases: project:editor
 POST /api/v1/projects/{id}/repo-connections: project:owner
@@ -322,6 +326,7 @@ POST /api/v1/todos/{id}/done: project:editor
 POST /api/v1/todos/{id}/promote: project:editor
 POST /api/v1/work-items/{id}/comments: project:viewer
 POST /api/v1/work-items/{id}/move: project:editor
+POST /api/v1/work-items/{id}/todos: project:editor
 POST /mcp: -
 POST /oauth/register: -
 POST /oauth/revoke: -
@@ -356,6 +361,8 @@ PUT /api/v1/orgs/{id}/quality-rules: org:admin
 PUT /api/v1/projects/{id}: project:editor, project-visible
 PUT /api/v1/projects/{id}/members/{userId}: project:owner
 PUT /api/v1/projects/{id}/parties: project:editor
+PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}: project:editor
+PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}: project:editor
 PUT /api/v1/projects/{id}/priority-detection: project:editor
 PUT /api/v1/projects/{id}/profile: project:editor
 PUT /api/v1/projects/{id}/quality-rules: project:editor
@@ -370,3 +377,4 @@ PUT /api/v1/shared-products/{id}/vote: session
 PUT /api/v1/test-runs/{id}: project:editor
 PUT /api/v1/todos/{id}: project:editor
 PUT /api/v1/work-items/{id}: project:editor
+PUT /api/v1/work-items/{id}/schedule: project:editor

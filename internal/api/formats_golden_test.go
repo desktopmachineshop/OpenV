@@ -164,6 +164,7 @@ func TestFormatsGolden(t *testing.T) {
 var s9FormatRoutesExempt = map[string]string{
 	"GET /api/v1/attachments/{id}/download":    "an upload's bytes as stored (S5a pins it, Range requests included)",
 	"GET /api/v1/evidence-files/{id}/download": "an evidence file's bytes as stored (S5b pins it)",
+	"GET /api/v1/projects/{id}/plan/export":    "the plan, not the project's artifacts: the S5b plan tour pins its PDF text, workbook cells, CSV rows and JSON",
 	"GET /api/v1/public/connector/download":    "the Agent Connector binary (S5c pins the answer)",
 	"HEAD /api/v1/public/connector/download":   "the Agent Connector binary's headers (S5c)",
 }

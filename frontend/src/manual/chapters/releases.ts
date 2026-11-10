@@ -90,6 +90,12 @@ release was released:
 
 A target date inside the span is marked on the chart. A long span is shown
 as one point every few days.
+
+## Releases on the plan
+
+Each release is also a milestone on the **Gantt** page, at its target date,
+where its progress is measured against criteria you can set. See
+[The plan (Gantt)](/manual/gantt).
 `;
 
 export default content;

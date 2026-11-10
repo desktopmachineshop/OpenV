@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="scheduling-tasks">
+  <title>Scheduling tasks</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt.task"/>
+    <resourceid appname="openv-web" appid="gantt.add-task"/>
+  </prolog>
+  <conbody>
+    <p><b>Add task</b> makes a card in the board's To Do column and places it on the plan, with a start and a due date if you give them.</p>
+    <p>To move a task, drag its bar. To change one date, drag that end of the bar. Both move in whole days. To place a task that has no dates, choose <b>+ Schedule</b> in its row: it gets a week from today, which you then drag to where it belongs.</p>
+    <p>Select a task to open it beside the chart. There you can:</p>
+    <ul>
+      <li>set or clear its <b>Start</b> and <b>Due</b> dates. The due date is the card's own, so the board shows the same day;</li>
+      <li>make it a <b>sub-task of</b> another task, or a top-level task again;</li>
+      <li>choose the tasks it <b>depends on</b>: it should not start before they end;</li>
+      <li>add <b>to-dos</b> and tick them off;</li>
+      <li>add <b>sub-tasks</b>.</li>
+    </ul>
+    <p>A task cannot start after it is due, be a sub-task of one of its own sub-tasks, or depend on a task that already waits for it.</p>
+  </conbody>
+</concept>

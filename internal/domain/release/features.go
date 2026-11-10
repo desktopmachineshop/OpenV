@@ -79,6 +79,7 @@ var Registry = []Feature{
 	{Key: FeatureFlatAgentTeam, ShippedIn: "0.31.0", Summary: "A flatter team of agents: the V&V Assistant you chat with, a Requirements Auditor, a Test Auditor, a Link Auditor and the interviewer; the agents they replace are archived with their history kept"},
 	{Key: FeatureAdminUsage, ShippedIn: "0.31.0", Summary: "Platform admins see how much each workspace and person uses OpenV, and whether that use is speeding up or slowing down, with workspaces grouped by plan and people filtered by plan or workspace"},
 	{Key: FeatureArtifactReinstate, ShippedIn: "0.31.0", Summary: "Removing an artifact archives it, as it always kept its history: open it from Activity and Reinstate brings it back as it was"},
+	{Key: FeatureGanttPlan, ShippedIn: "0.32.0", Summary: "A Gantt plan under Plan: the board's tasks on a timeline with sub-tasks, dependencies and progress from their to-dos, milestones with completion criteria read from the project's artifacts, each release as a milestone, and the plan exported as PDF, Excel, CSV or JSON"},
 }
 
 // Feature keys the code gates on.
@@ -316,6 +317,12 @@ const (
 	// people list filtered by plan or workspace. It is gated on the
 	// admin's active workspace.
 	FeatureAdminUsage = "admin-usage"
+	// FeatureGanttPlan is the project plan (internal/domain/plan): the Plan
+	// page with its Gantt, a task's schedule, sub-tasks, dependencies and
+	// to-dos, milestones and their criteria, and the plan's export. It gates
+	// the page and every write; reading a plan is not gated, and neither is
+	// the board, whose tasks the plan draws.
+	FeatureGanttPlan = "gantt-plan"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

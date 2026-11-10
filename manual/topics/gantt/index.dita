@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="gantt">
+  <title>The plan (Gantt)</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt"/>
+  </prolog>
+  <conbody>
+    <p>The <b>Gantt</b> page, under <b>Plan</b> in the project menu, draws the project's plan on a timeline: its tasks as bars, what each waits for as arrows, and its milestones as diamonds. Nothing on it is typed in as a percentage. A task's progress comes from the to-dos ticked off on it and from its sub-tasks, and a milestone's from criteria measured against the project's artifacts, such as <i>every user need addressed</i>.</p>
+    <p>The tasks are the cards of the <b>Board</b>. A card added on the board is a task here, and a task added here is a card there: one title, one assignee, one due date. The plan adds what a schedule needs and a board does not: a start date, sub-tasks, and what a task depends on.</p>
+  </conbody>
+</concept>

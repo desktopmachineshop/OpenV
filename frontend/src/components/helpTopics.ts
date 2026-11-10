@@ -229,6 +229,24 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     ],
     chapter: { slug: 'board', title: 'Kanban board' },
   },
+  gantt: {
+    title: 'Gantt',
+    summary:
+      "The project's plan on a timeline: the board's tasks with their sub-tasks, dependencies and progress, and milestones whose progress is measured from the project's artifacts.",
+    tips: [
+      'Every card on the board is a task here: give it a start and a due date by dragging its bar, or in its panel.',
+      "A task's bar fills as its to-dos are ticked off and its sub-tasks finish; a task in Done is 100%.",
+      'Each release is a milestone on the plan; add your own, such as Definition complete, with criteria like user needs addressed: 100%.',
+      'The band leading up to a milestone fills as its criteria are met.',
+      'A dashed red arrow means a task starts before one it depends on ends.',
+      'Export saves the plan as a PDF of the chart, an Excel workbook, CSV or JSON.',
+    ],
+    chapter: { slug: 'gantt', title: 'The plan (Gantt)' },
+    also: [
+      { slug: 'board', title: 'Kanban board' },
+      { slug: 'releases', title: 'Target releases' },
+    ],
+  },
   matrix: {
     title: 'Traceability Matrix',
     summary:

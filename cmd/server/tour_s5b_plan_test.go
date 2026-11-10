@@ -1,0 +1,136 @@
+//go:build unix
+
+package main
+
+import (
+	"net/http"
+	"testing"
+)
+
+// TestTourS5bPlan is the S5b tour's plan area: the Gantt over the board
+// (internal/domain/plan). Its golden is testdata/tour/s5b/plan.json.
+//
+// The owner, in its personal (nightly) workspace, keeps project P with user
+// needs N1 and N2, requirement R deriving from N1, release MVP, and three
+// board tasks: Build, with sub-tasks Frame (done) and Wiring. Project Q has a
+// task and a milestone of its own. The viewer is a project viewer of P. The
+// dates are far in the past or the future, so late never depends on the day
+// the tour runs.
+//
+// What the golden shows:
+//   - an empty project's plan: no tasks, no milestones, every metric at 0;
+//   - a schedule sets a start, a due date (the work item's own), a parent
+//     and dependencies; a start after the due date, a task of Q as parent or
+//     dependency, a task as its own parent, a loop of parents or of
+//     dependencies and a malformed date are a 400; the viewer's is a 403;
+//   - a to-do raised on a task is the project's, and ticking it moves the
+//     task's progress and its parent's;
+//   - a milestone takes criteria; an unknown metric, a target of 0 and a
+//     missing name are a 400; MVP is a release milestone with the default
+//     criteria until its own are set; its name cannot be set here (400);
+//   - the plan: the outline with spans and progress, a late task, the
+//     dependencies, the milestones in date order with their criteria
+//     measured (one of two user needs addressed: 50%);
+//   - the export as CSV, JSON, Excel and PDF; ReqIF is a 400;
+//   - Q's milestone and Q's release through P are a 404; a deleted milestone
+//     is a 404 after it.
+func TestTourS5bPlan(t *testing.T) {
+	runTourArea(t, tourArea{
+		slice: "s5b",
+		key:   "plan",
+		about: "The plan: a task's schedule, sub-tasks, dependencies and to-dos, milestones and their criteria, " +
+			"release milestones, the computed plan and its export.",
+		run: planTour,
+	})
+}
+
+func planTour(tr *tour) {
+	o := tr.owner
+	tr.setup("project P", o, "POST /api/v1/projects", jsonBody(`{"name":"Tour plan"}`)).capture("p", "/id")
+	tr.setup("project Q", o, "POST /api/v1/projects", jsonBody(`{"name":"Tour plan elsewhere"}`)).capture("q", "/id")
+	viewer := tr.register("viewer", "Tour Viewer", "a project viewer of P")
+	tr.setup("the viewer joins P", o, "POST /api/v1/projects/{id}/members", at("id", "{{p}}"),
+		jsonBody(`{"email":"tour-viewer@example.com","role":"viewer"}`), expect(http.StatusCreated))
+
+	plan := "GET /api/v1/projects/{id}/plan"
+	tr.step("P's plan before anything: no tasks, no milestones", o, plan, at("id", "{{p}}"))
+
+	art := "POST /api/v1/artifacts"
+	tr.setup("user need N1", o, art, jsonBody(`{"project_id":"{{p}}","type":"user-need","title":"Stop in time"}`)).capture("n1", "/id")
+	tr.setup("user need N2", o, art, jsonBody(`{"project_id":"{{p}}","type":"user-need","title":"Stay quiet"}`)).capture("n2", "/id")
+	tr.setup("requirement R", o, art, jsonBody(`{"project_id":"{{p}}","type":"requirement","title":"Brake within 2 m",`+
+		`"body":"The system shall brake within 2 m."}`)).capture("r", "/id")
+	tr.setup("R derives from N1", o, "POST /api/v1/links", jsonBody(`{"from_id":"{{r}}","to_id":"{{n1}}","type":"derives-from"}`))
+	tr.setup("release MVP", o, "POST /api/v1/projects/{id}/releases", at("id", "{{p}}"),
+		jsonBody(`{"name":"MVP","target_date":"2099-06-30"}`)).capture("mvp", "/id")
+	tr.setup("Q's release", o, "POST /api/v1/projects/{id}/releases", at("id", "{{q}}"), jsonBody(`{"name":"MVP"}`)).capture("q_mvp", "/id")
+	card := "POST /api/v1/projects/{id}/work-items"
+	tr.setup("task Build", o, card, at("id", "{{p}}"), jsonBody(`{"title":"Build the rig","column":"in-progress"}`)).capture("build", "/id")
+	tr.setup("task Frame, done", o, card, at("id", "{{p}}"), jsonBody(`{"title":"Weld the frame","column":"done"}`)).capture("frame", "/id")
+	tr.setup("task Wiring", o, card, at("id", "{{p}}"), jsonBody(`{"title":"Wire the rig","column":"todo"}`)).capture("wiring", "/id")
+	tr.setup("task Order, long overdue", o, card, at("id", "{{p}}"), jsonBody(`{"title":"Order the parts","column":"todo"}`)).capture("order", "/id")
+	tr.setup("Q's task", o, card, at("id", "{{q}}"), jsonBody(`{"title":"Elsewhere"}`)).capture("q_task", "/id")
+
+	schedule := "PUT /api/v1/work-items/{id}/schedule"
+	tr.step("Frame: 1 to 10 March 2099, under Build", o, schedule, at("id", "{{frame}}"),
+		jsonBody(`{"start_date":"2099-03-01","due_date":"2099-03-10","parent_id":"{{build}}"}`))
+	tr.step("Wiring: starts the day Frame ends, under Build, after Frame", o, schedule, at("id", "{{wiring}}"),
+		jsonBody(`{"start_date":"2099-03-10","due_date":"2099-03-20","parent_id":"{{build}}","depends_on":["{{frame}}"]}`))
+	tr.step("Order: a due date alone, in 2020, so it is late", o, schedule, at("id", "{{order}}"),
+		jsonBody(`{"due_date":"2020-01-15"}`))
+	tr.step("Frame waits on Order; its parent and dates stay as they were", o, schedule, at("id", "{{frame}}"),
+		jsonBody(`{"depends_on":["{{order}}"]}`))
+	tr.step("a start after the due date: 400", o, schedule, at("id", "{{frame}}"), jsonBody(`{"start_date":"2099-04-01"}`))
+	tr.step("a date not written YYYY-MM-DD: 400", o, schedule, at("id", "{{frame}}"), jsonBody(`{"start_date":"01/03/2099"}`))
+	tr.step("its own parent: 400", o, schedule, at("id", "{{build}}"), jsonBody(`{"parent_id":"{{build}}"}`))
+	tr.step("a parent that is its sub-task: 400", o, schedule, at("id", "{{build}}"), jsonBody(`{"parent_id":"{{frame}}"}`))
+	tr.step("Q's task as parent: 400", o, schedule, at("id", "{{build}}"), jsonBody(`{"parent_id":"{{q_task}}"}`))
+	tr.step("Q's task as dependency: 400", o, schedule, at("id", "{{build}}"), jsonBody(`{"depends_on":["{{q_task}}"]}`))
+	tr.step("a loop of dependencies: 400", o, schedule, at("id", "{{order}}"), jsonBody(`{"depends_on":["{{wiring}}"]}`))
+	tr.step("the viewer may not schedule: 403", viewer, schedule, at("id", "{{frame}}"), jsonBody(`{"start_date":"2099-03-02"}`))
+
+	todo := "POST /api/v1/work-items/{id}/todos"
+	tr.step("a to-do on Wiring", o, todo, at("id", "{{wiring}}"), jsonBody(`{"text":"Crimp the connectors"}`)).capture("t1", "/id")
+	tr.step("a second to-do on Wiring", o, todo, at("id", "{{wiring}}"), jsonBody(`{"text":"Label the loom"}`)).capture("t2", "/id")
+	tr.step("no text: 400", o, todo, at("id", "{{wiring}}"), jsonBody(`{"text":" "}`))
+	tr.step("the viewer may not add one: 403", viewer, todo, at("id", "{{wiring}}"), jsonBody(`{"text":"x"}`))
+	tr.setup("the first to-do ticked off", o, "POST /api/v1/todos/{id}/done", at("id", "{{t1}}"), jsonBody(`{"done":true}`))
+
+	milestone := "POST /api/v1/projects/{id}/plan/milestones"
+	tr.step("a milestone: every user need addressed by 1 February 2020", o, milestone, at("id", "{{p}}"),
+		jsonBody(`{"name":"Definition complete","target_date":"2020-02-01","criteria":[{"metric":"needs_addressed","target":100},{"metric":"tasks_done","target":100}]}`)).
+		capture("m1", "/id")
+	tr.step("a milestone with no date and no criteria", o, milestone, at("id", "{{p}}"), jsonBody(`{"name":"Kick-off"}`)).capture("m2", "/id")
+	tr.step("Q's milestone", o, milestone, at("id", "{{q}}"), jsonBody(`{"name":"Elsewhere"}`)).capture("q_m", "/id")
+	tr.step("no name: 400", o, milestone, at("id", "{{p}}"), jsonBody(`{"name":" "}`))
+	tr.step("an unknown metric: 400", o, milestone, at("id", "{{p}}"), jsonBody(`{"name":"M","criteria":[{"metric":"velocity","target":100}]}`))
+	tr.step("a target of 0: 400", o, milestone, at("id", "{{p}}"), jsonBody(`{"name":"M","criteria":[{"metric":"tests_passing","target":0}]}`))
+	tr.step("the viewer may not add one: 403", viewer, milestone, at("id", "{{p}}"), jsonBody(`{"name":"M"}`))
+
+	update := "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}"
+	tr.step("Kick-off gets a date; its name stays", o, update, at("id", "{{p}}", "milestoneId", "{{m2}}"), jsonBody(`{"target_date":"2099-01-05"}`))
+	tr.step("Q's milestone through P: 404", o, update, at("id", "{{p}}", "milestoneId", "{{q_m}}"), jsonBody(`{"name":"x"}`))
+	tr.step("the plan with MVP on its default criteria", viewer, plan, at("id", "{{p}}"))
+
+	criteria := "PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}"
+	tr.step("MVP's own criteria: requirements approved, 80%", o, criteria, at("id", "{{p}}", "releaseId", "{{mvp}}"),
+		jsonBody(`{"criteria":[{"metric":"requirements_approved","target":80}]}`)).capture("mvp_m", "/id")
+	tr.step("Q's release through P: 404", o, criteria, at("id", "{{p}}", "releaseId", "{{q_mvp}}"), jsonBody(`{"criteria":[]}`))
+	tr.step("a release milestone's name is the release's: 400", o, update, at("id", "{{p}}", "milestoneId", "{{mvp_m}}"),
+		jsonBody(`{"name":"Renamed"}`))
+	tr.step("the plan: MVP now carries its own criterion", o, plan, at("id", "{{p}}"))
+
+	export := "GET /api/v1/projects/{id}/plan/export"
+	tr.step("the plan as CSV", viewer, export, at("id", "{{p}}"), query("format=csv"))
+	tr.step("the plan as JSON", o, export, at("id", "{{p}}"), query("format=json"))
+	tr.step("the plan as Excel", o, export, at("id", "{{p}}"), query("format=excel"))
+	tr.step("the plan as PDF, the default", o, export, at("id", "{{p}}"))
+	tr.step("ReqIF is not a plan format: 400", o, export, at("id", "{{p}}"), query("format=reqif"))
+
+	del := "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}"
+	tr.step("the viewer may not delete one: 403", viewer, del, at("id", "{{p}}", "milestoneId", "{{m2}}"))
+	tr.step("Kick-off deleted: 204", o, del, at("id", "{{p}}", "milestoneId", "{{m2}}"))
+	tr.step("Kick-off after the delete: 404", o, update, at("id", "{{p}}", "milestoneId", "{{m2}}"), jsonBody(`{"name":"x"}`))
+	tr.step("MVP's stored milestone deleted: its criteria are the defaults again", o, del, at("id", "{{p}}", "milestoneId", "{{mvp_m}}"))
+	tr.step("the plan after the deletes", o, plan, at("id", "{{p}}"))
+}

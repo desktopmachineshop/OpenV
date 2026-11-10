@@ -90,3 +90,10 @@ export const ARTIFACT_REINSTATE_FEATURE: FeatureKey = 'artifact-reinstate';
 // and pace per workspace and person, workspaces grouped by plan and people
 // filtered by plan or workspace.
 export const ADMIN_USAGE_FEATURE: FeatureKey = 'admin-usage';
+
+/**
+ * The project plan (internal/domain/plan): the Gantt page under Plan, a
+ * task's schedule, sub-tasks, dependencies and to-dos, milestones with
+ * their criteria, and the plan's export.
+ */
+export const GANTT_PLAN_FEATURE: FeatureKey = 'gantt-plan';

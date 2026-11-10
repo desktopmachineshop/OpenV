@@ -71,8 +71,7 @@ func (a *app) billing() {
 // nudges.
 func (a *app) handlers() {
 	cfg := a.env()
-	// The in-app help reads the user manual from OpenD when a docs site is
-	// configured (docs/plans/opend-help.md), else it keeps the help it ships.
+	// The in-app help reads the manual from OpenD when a docs site is set (docs/plans/opend-help.md).
 	var helpService *help.Service
 	if docs := cfg.HelpDocs(); docs != nil {
 		helpService = help.NewService(help.Config{URL: docs.URL, Secret: docs.EmbedSecret, AdminToken: docs.AdminToken}, nil)
@@ -108,6 +107,7 @@ func (a *app) handlers() {
 		BuildSHA:             a.buildSHA,
 		WorkItemService:      a.workItemService,
 		TodoService:          a.todoService,
+		PlanService:          a.planService,
 		GuidedService:        a.guidedService,
 		InterviewService:     a.interviewService,
 		ShareLinkService:     a.shareLinkService,
