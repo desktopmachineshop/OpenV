@@ -76,6 +76,7 @@ var Registry = []Feature{
 	{Key: FeatureEditorPickers, ShippedIn: "0.29.0", Summary: "Searchable dropdowns in the artifact editor that list every option, a Priority field on requirements that can follow the shall, should or may in their text, and Releases shown on every requirement"},
 	{Key: FeatureCommentReads, ShippedIn: "0.30.0", Summary: "Mark a comment read or unread: Needs you lists only the comments you have not read, opening them marks them read, and Mark unread keeps one there for later"},
 	{Key: FeatureAssistantFullScope, ShippedIn: "0.31.0", Summary: "The V&V Assistant offers a card for every change you can make to a project: releases and what each artifact targets, links, review status, deleting, comments, to-dos, board tasks, baselines, a review round and test results"},
+	{Key: FeatureFlatAgentTeam, ShippedIn: "0.31.0", Summary: "A flatter team of agents: the V&V Assistant you chat with, a Requirements Auditor, a Test Auditor, a Link Auditor and the interviewer; the agents they replace are archived with their history kept"},
 }
 
 // Feature keys the code gates on.
@@ -295,6 +296,13 @@ const (
 	// the cards' Apply; without it the assistant has artifact, edit and move
 	// cards as before.
 	FeatureAssistantFullScope = "assistant-full-scope"
+	// FeatureFlatAgentTeam is the flat seeded team (internal/seeds): the V&V
+	// Assistant as the general agent, with a Requirements Auditor, a Test
+	// Auditor, a Link Auditor and the interviewer under it. It gates which
+	// team a workspace is seeded with at boot and at creation, and so the
+	// archiving of the earlier team's untouched agents. Archiving and
+	// unarchiving an agent by hand is not gated: it is a field of the agent.
+	FeatureFlatAgentTeam = "flat-agent-team"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

@@ -91,12 +91,15 @@ func (a *app) agents() {
 		}
 	})
 
-	// Seed default agents into every workspace missing them.
+	// Seed default agents into every workspace missing them: the team its
+	// release channel has (seedTeamFor), the flat one archiving what it
+	// replaces.
+	a.seedTeam = seedTeamFor(a.orgService, a.releases, a.automationService)
 	if orgIDs, err := a.orgService.ListAll(); err != nil {
 		slog.Warn("failed to list organizations for seeding", "error", err)
 	} else {
 		for _, orgID := range orgIDs {
-			if err := seeds.EnsureOrgDefaults(orgID, a.agentService); err != nil {
+			if err := seeds.EnsureOrgDefaults(orgID, a.agentService, a.seedTeam(orgID)); err != nil {
 				slog.Warn("failed to seed default agents", "org_id", orgID, "error", err)
 			}
 		}

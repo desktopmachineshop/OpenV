@@ -2314,7 +2314,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:10>\",\"org_id\":\"<owner.workspace>\",\"event_type\":\"workitem.moved\",\"project_id\":\"<p>\",\"entity_id\":\"<w_barrier>\",\"actor\":\"agent:<run_barrier>\",\"payload\":{\"assignee_id\":\"<developer>\",\"assignee_type\":\"agent\",\"column\":\"todo\"},\"created_at\":\"<time@before step 53>\",\"actor_kind\":\"agent\",\"actor_id\":\"<run_barrier>\",\"actor_name\":\"Developer\",\"entity_kind\":\"work item\",\"entity_name\":\"Barrier item\"},{\"id\":\"<uuid:11>\",\"org_id\":\"<owner.workspace>\",\"event_type\":\"workitem.moved\",\"project_id\":\"<p>\",\"entity_id\":\"<w_barrier>\",\"actor\":\"user:<owner>\",\"payload\":{\"assignee_id\":\"<developer>\",\"assignee_type\":\"agent\",\"column\":\"todo\"},\"created_at\":\"<time@before step 53>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"work item\",\"entity_name\":\"Barrier item\"},{\"id\":\"<uuid:9>\",\"org_id\":\"<owner.workspace>\",\"event_type\":\"workitem.created\",\"project_id\":\"<p>\",\"entity_id\":\"<w_barrier>\",\"actor\":\"user:<owner>\",\"payload\":{\"column\":\"backlog\",\"title\":\"Barrier item\"},\"created_at\":\"<time@before step 53>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"work item\",\"entity_name\":\"Barrier item\"}]"
+        "[{\"id\":\"<uuid:10>\",\"org_id\":\"<owner.workspace>\",\"event_type\":\"workitem.moved\",\"project_id\":\"<p>\",\"entity_id\":\"<w_barrier>\",\"actor\":\"agent:<run_barrier>\",\"payload\":{\"assignee_id\":\"<developer>\",\"assignee_type\":\"agent\",\"column\":\"todo\"},\"created_at\":\"<time@before step 53>\",\"actor_kind\":\"agent\",\"actor_id\":\"<run_barrier>\",\"actor_name\":\"Link Auditor\",\"entity_kind\":\"work item\",\"entity_name\":\"Barrier item\"},{\"id\":\"<uuid:11>\",\"org_id\":\"<owner.workspace>\",\"event_type\":\"workitem.moved\",\"project_id\":\"<p>\",\"entity_id\":\"<w_barrier>\",\"actor\":\"user:<owner>\",\"payload\":{\"assignee_id\":\"<developer>\",\"assignee_type\":\"agent\",\"column\":\"todo\"},\"created_at\":\"<time@before step 53>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"work item\",\"entity_name\":\"Barrier item\"},{\"id\":\"<uuid:9>\",\"org_id\":\"<owner.workspace>\",\"event_type\":\"workitem.created\",\"project_id\":\"<p>\",\"entity_id\":\"<w_barrier>\",\"actor\":\"user:<owner>\",\"payload\":{\"column\":\"backlog\",\"title\":\"Barrier item\"},\"created_at\":\"<time@before step 53>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"work item\",\"entity_name\":\"Barrier item\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2333,7 +2333,7 @@
           "created_at": "<time@before step 53>",
           "actor_kind": "agent",
           "actor_id": "<run_barrier>",
-          "actor_name": "Developer",
+          "actor_name": "Link Auditor",
           "entity_kind": "work item",
           "entity_name": "Barrier item"
         },

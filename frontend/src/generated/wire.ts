@@ -167,6 +167,7 @@ export interface WireAgent {
   config: Record<string, unknown> | null;
   system_prompt: string;
   locked: boolean;
+  archived: boolean;
   parent_agent_id: string | null;
   reports_to: string;
   group_name: string;

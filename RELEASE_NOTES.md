@@ -12,6 +12,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 ### New features
 
 - **The V&V Assistant can make the changes you make to a project.** Ask it to plan a release, put requirements in a release, link a test case to what it verifies, approve or send back an artifact, delete one, comment, raise a to-do or a board task, capture a baseline, start a review round or record test results, and it answers with a card that does it. Nothing changes until you press the card's button, and a card can only do what you could do yourself on that page. Delete cards are never part of **Apply all**. Project settings, members and file uploads stay on their own pages.
+- **A flatter team of agents.** Workspaces now start with the **V&V Assistant**, the general agent you chat with, and four specialists beside it: a **Requirements Auditor**, a **Test Auditor**, a **Link Auditor** and the **Requirements Interviewer**. The auditors check quality, coverage and traceability and propose fixes for you to approve; **Draft test cases** now runs the Test Auditor. The agents they replace (Chief of Staff, Requirements Analyst, V&V Engineer, Developer, Reviewer and Test Case Author) are **archived** rather than deleted, so their runs and proposals are kept. One your workspace edited, locked or uses in an automation is left as it was.
+- **Archive an agent instead of deleting it.** An archived agent leaves the team and cannot be run, but its history stays; find it under **Archived** on the Agents page and **Unarchive** it at any time.
 
 ### Bug fixes
 

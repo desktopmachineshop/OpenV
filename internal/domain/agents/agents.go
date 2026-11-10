@@ -85,6 +85,9 @@ func RepoAccessUnsupported(provider string) error {
 // ErrNotFound is returned when an agent doesn't exist.
 var ErrNotFound = errors.New("agent not found")
 
+// ErrArchived is returned when a run is launched for an archived agent.
+var ErrArchived = errors.New("this agent is archived; unarchive it on the Agents page to run it")
+
 // ErrSlugExists is returned when creating an agent whose slug is already
 // taken in the org. The database's unique index on (org_id, slug) is the
 // authority, so a lost check-then-create race still surfaces as this error.
@@ -134,6 +137,10 @@ type Agent struct {
 	// For a workspace that needs to be able to say this agent does not
 	// change unless we change it.
 	Locked bool `json:"locked"`
+	// Archived retires the agent without deleting it: it leaves the Agents
+	// page's hierarchy and cannot be run, and its run history stays, which a
+	// delete would take with it. Unarchiving puts it back as it was.
+	Archived bool `json:"archived"`
 	// The hierarchy (issue 733): where the agent sits on the Agents page.
 	// Display and arrangement only; no agent starts another. ParentAgentID
 	// is the agent it reports to, an agent of the same workspace, resolved
@@ -169,6 +176,9 @@ type Definition struct {
 	// sync: an agent edited on disk stays locked without anyone having to
 	// remember to re-tick it.
 	Locked bool `json:"locked" yaml:"locked,omitempty"`
+	// Archived travels in the frontmatter like Locked, so a file sync keeps
+	// a retired agent retired.
+	Archived bool `json:"archived" yaml:"archived,omitempty"`
 	// The hierarchy (issue 733), in the frontmatter so a file carries its
 	// place: reports_to names the parent agent by slug (a slug, not an id,
 	// so the file means the same in any workspace), group its group, and

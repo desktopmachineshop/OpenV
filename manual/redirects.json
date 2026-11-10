@@ -59,6 +59,8 @@
   "/manual/board#to-dos-small-jobs-kept-off-the-board": "topics/board/to-dos-small-jobs-kept-off-the-board",
   "/manual/agents": "topics/agents/index",
   "/manual/agents#the-agent-hierarchy": "topics/agents/the-agent-hierarchy",
+  "/manual/agents#the-default-agents": "topics/agents/the-default-agents",
+  "/manual/agents#archived-agents": "topics/agents/archived-agents",
   "/manual/agents#the-agent-list": "topics/agents/the-agent-list",
   "/manual/agents#launching-a-run": "topics/agents/launching-a-run",
   "/manual/agents#the-agent-editor": "topics/agents/the-agent-editor",

@@ -1144,3 +1144,18 @@ func TestTruncateRuneSafety(t *testing.T) {
 		t.Errorf("Truncate = %q, want %q", got, "aé…")
 	}
 }
+
+// An archived agent cannot be run: the launch is refused before a run or a
+// token exists.
+func TestLaunchRefusesAnArchivedAgent(t *testing.T) {
+	catalog := &fakeAgentCatalog{byID: map[string]*agents.Agent{"agent-1": {ID: "agent-1", Name: "Chief of Staff", Provider: "claude", Archived: true}}}
+	repo := &fakeRunRepo{runs: map[string]*Run{}, logs: map[string][]LogEntry{}}
+	svc := NewDefaultService(repo, catalog, nil)
+	_, _, err := svc.Launch(LaunchRequest{OrgID: "org-1", AgentID: "agent-1", Prompt: "plan it"})
+	if !errors.Is(err, agents.ErrArchived) {
+		t.Fatalf("launch = %v, want agents.ErrArchived", err)
+	}
+	if len(repo.runs) != 0 {
+		t.Fatalf("a run was stored for an archived agent: %d", len(repo.runs))
+	}
+}

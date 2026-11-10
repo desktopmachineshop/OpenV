@@ -99,7 +99,8 @@ export const TestRunView: React.FC = () => {
     agentsAPI
       .list()
       .then((res) => {
-        const list = res.data || [];
+        // An archived agent cannot run, so it is not offered.
+        const list = (res.data || []).filter((a) => !a.archived);
         setAgents(list);
         setAgentSlug((prev) => (prev && list.some((a) => a.slug === prev) ? prev : list[0]?.slug || ''));
       })

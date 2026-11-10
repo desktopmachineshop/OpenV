@@ -180,6 +180,7 @@ table agents rows 0
   column parent_agent_id uuid
   column group_name character varying(120)
   column sort_order integer NOT NULL DEFAULT 0
+  column archived boolean NOT NULL DEFAULT false
   constraint agents_parent_agent_id_fkey FOREIGN KEY (parent_agent_id) REFERENCES agents(id) ON DELETE SET NULL
   constraint agents_pkey PRIMARY KEY (id)
   index agents_pkey CREATE UNIQUE INDEX agents_pkey ON public.agents USING btree (id)
@@ -970,7 +971,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 73
+table schema_migrations rows 74
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1329,3 +1330,4 @@ ledger 0070 agent_hierarchy
 ledger 0071 todos
 ledger 0072 workspace_notices
 ledger 0073 comment_reads
+ledger 0074 agents_archived

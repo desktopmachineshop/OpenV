@@ -136,7 +136,7 @@ func (a *app) handlers() {
 		VAPID:                a.vapid,
 		Provisioner:          a.provisioner,
 		OrgSeeder: func(orgID string) error {
-			return seeds.EnsureOrgDefaults(orgID, a.agentService)
+			return seeds.EnsureOrgDefaults(orgID, a.agentService, a.seedTeam(orgID))
 		},
 		Bus:               a.bus,
 		EventRepo:         a.eventRepo,

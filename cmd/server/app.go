@@ -60,6 +60,7 @@ import (
 	"github.com/openv/requirements-platform/internal/notify"
 	"github.com/openv/requirements-platform/internal/orchestration"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
+	"github.com/openv/requirements-platform/internal/seeds"
 )
 
 // app holds the locals of main() that more than one of its stages uses,
@@ -181,9 +182,12 @@ type app struct {
 	deploymentKind       string
 	buildSHA             string
 	releaseService       *release.DefaultService
-	googleOAuth          *api.GoogleOAuthConfig
-	oidcConfig           *api.OIDCConfig
-	billingService       *billing.Service
+	// seedTeam answers which seeded agent team a workspace gets (stage
+	// agents builds it; stage handlers' org seeder reads it too).
+	seedTeam       func(orgID string) seeds.Team
+	googleOAuth    *api.GoogleOAuthConfig
+	oidcConfig     *api.OIDCConfig
+	billingService *billing.Service
 	// extModules are the registered modules (ext.Register), built in stage
 	// billing for stage handlers.
 	extModules []ext.Module

@@ -302,7 +302,7 @@
         "about": "The list reads that take no query, and search for R1 with no project, after the owner made project Q, which only it belongs to, and R1 in Q.",
         "rows": [
           "GET /api/v1/agent-runs | 401: authentication required | 200 text null | 200 text null | 200 text[2] | 200 text null | 401: authentication required | 401: authentication required | 200 text null",
-          "GET /api/v1/agents | 401: authentication required | 200 text[9] | 200 text[9] | 200 text[9] | 200 text[8] | 401: authentication required | 401: authentication required | 200 text[8]",
+          "GET /api/v1/agents | 401: authentication required | 200 text[6] | 200 text[6] | 200 text[6] | 200 text[5] | 401: authentication required | 401: authentication required | 200 text[5]",
           "GET /api/v1/automations | 401: authentication required | 200 text[1] | 200 text[1] | 200 text[1] | 200 text null | 401: authentication required | 401: authentication required | 200 text null",
           "GET /api/v1/events | 401: authentication required | 200 text[12] | 200 text[12] | 200 text[15] | 200 text[0] | 401: authentication required | 401: authentication required | 200 text[0]",
           "GET /api/v1/orgs | 401: authentication required | 200 text /orgs[2] | 200 text /orgs[2] | 200 text /orgs[2] | 200 text /orgs[1] | 401: authentication required | 401: authentication required | 200 text /orgs[1]",

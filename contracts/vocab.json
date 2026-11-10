@@ -218,7 +218,8 @@
     "todos",
     "editor-pickers",
     "comment-reads",
-    "assistant-full-scope"
+    "assistant-full-scope",
+    "flat-agent-team"
   ],
   "event_types": [
     "artifact.created",

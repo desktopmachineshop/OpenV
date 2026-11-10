@@ -71,6 +71,8 @@
   </topicref>
   <topicref href="../topics/agents/index.dita">
     <topicref href="../topics/agents/the-agent-hierarchy.dita"/>
+    <topicref href="../topics/agents/the-default-agents.dita"/>
+    <topicref href="../topics/agents/archived-agents.dita"/>
     <topicref href="../topics/agents/the-agent-list.dita"/>
     <topicref href="../topics/agents/launching-a-run.dita"/>
     <topicref href="../topics/agents/the-agent-editor.dita"/>

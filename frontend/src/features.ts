@@ -74,3 +74,11 @@ export const AGENT_HIERARCHY_FEATURE: FeatureKey = 'agent-hierarchy';
  * board card, as before.
  */
 export const TODOS_FEATURE: FeatureKey = 'todos';
+
+/**
+ * The flat seeded team of agents (internal/seeds): the V&V Assistant, the
+ * Requirements, Test and Link Auditors and the interviewer. The server seeds
+ * it by the workspace's channel; the app reads nothing behind it, since the
+ * Agents page shows whichever team the workspace has.
+ */
+export const FLAT_AGENT_TEAM_FEATURE: FeatureKey = 'flat-agent-team';

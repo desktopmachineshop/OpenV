@@ -317,7 +317,7 @@ export const ProjectList: React.FC = () => {
     setInventError('');
     setSlowInventionRun(null);
     try {
-      const agents = (await agentsAPI.list()).data || [];
+      const agents = ((await agentsAPI.list()).data || []).filter((a) => !a.archived);
       const agent =
         agents.find((a) => a.slug === 'requirements-copilot') ||
         agents.find((a) => a.slug === 'chief-of-staff') ||

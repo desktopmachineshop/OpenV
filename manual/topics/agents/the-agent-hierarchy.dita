@@ -27,9 +27,7 @@
         <li><b>Group</b> — type a group's name, pick an existing one, or clear it so the agent takes the group of the agent it reports to.</li>
         <li><b>↑ ↓</b> — move it among the agents beside it.</li>
       </ul>
-      <p>Each change is saved at once, to the agent's definition file (<codeph>reports_to</codeph>, <codeph>group</codeph> and <codeph>sort_order</codeph> in its frontmatter). Click <b>Done</b> to leave Edit mode. The default agents arrive already arranged: the Chief of Staff on top, with Requirements, Verification and Engineering groups beneath it.</p>
-      <p>On a phone the groups stack in one column; tap a group's header to fold it.</p>
-      <p>Crews, the graphs of agents the Crew page used to build, have been removed; the hierarchy is how agents are arranged now.</p>
+      <p>Each change is saved at once, to the agent's definition file (<codeph>reports_to</codeph>, <codeph>group</codeph> and <codeph>sort_order</codeph> in its frontmatter). Click <b>Done</b> to leave Edit mode.</p>
     </section>
   </conbody>
 </concept>

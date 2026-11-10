@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-default-agents">
+  <title>The default agents</title>
+  <shortdesc>Every workspace starts with a small, flat team, already arranged:</shortdesc>
+  <conbody>
+    <ul>
+      <li><b>V&amp;V Assistant</b> on top: the general agent you chat with beside the wizard and on every project page. It answers questions, reviews, and proposes any change to the project as a card you apply.</li>
+      <li><b>Requirements Auditor</b>: checks requirements and user needs against the project's quality rules, and proposes rewrites.</li>
+      <li><b>Test Auditor</b>: checks verification coverage and test cases, and drafts missing test cases with their <i>verifies</i> links. <b>Draft test cases</b> runs it.</li>
+      <li><b>Link Auditor</b>: checks traceability (suspect, missing and mistyped links) and proposes fixes.</li>
+      <li><b>Requirements Interviewer</b>: holds elicitation interviews with the people you invite.</li>
+    </ul>
+    <p>The three auditors write only proposals: nothing they change lands until someone approves it. Run one from its card with <b>▶ Launch run</b>, and say what to audit.</p>
+    <p>A workspace that had the earlier team (Chief of Staff, Requirements Analyst, V&amp;V Engineer, Developer, Reviewer and Test Case Author) moved to this one with the release: those agents were <b>archived</b>, not deleted, so their runs and proposals are kept. An agent your workspace had edited or locked, or that an automation runs, was left as it was; archive it yourself if you no longer need it.</p>
+  </conbody>
+</concept>

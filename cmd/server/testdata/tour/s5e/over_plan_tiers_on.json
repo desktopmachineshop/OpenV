@@ -1337,7 +1337,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-over\",\"name\":\"Tour Over\",\"description\":\"The S5e over-plan pass's agent.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-over.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run3>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise W.\",\"worker_id\":\"tour-over\",\"heartbeat_at\":\"<time@step 30>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<m1>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Over\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<run3.token>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-over\",\"name\":\"Tour Over\",\"description\":\"The S5e over-plan pass's agent.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-over.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run3>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise W.\",\"worker_id\":\"tour-over\",\"heartbeat_at\":\"<time@step 30>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<m1>\",\"created_at\":\"<time@before step 1>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Over\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<run3.token>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1360,6 +1360,7 @@
           "config": {},
           "system_prompt": "You answer in one line.",
           "locked": false,
+          "archived": false,
           "parent_agent_id": null,
           "reports_to": "",
           "group_name": "",

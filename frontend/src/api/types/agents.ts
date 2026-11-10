@@ -15,6 +15,8 @@ export interface AgentDef {
   allowed_tools: string[];
   /** Pinned against seed adoption: releases never update this agent. */
   locked?: boolean;
+  /** Retired: out of the team and cannot run; its runs are kept. */
+  archived?: boolean;
   write_mode: 'proposal' | 'direct';
   repo_access: boolean;
   max_turns: number;
