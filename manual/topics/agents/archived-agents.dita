@@ -3,7 +3,7 @@
 <concept id="archived-agents">
   <title>Archived agents</title>
   <conbody>
-    <p>An archived agent is out of the team: it leaves the hierarchy and cannot be run, and its runs and proposals stay. They are listed under <b>Archived</b> beneath the hierarchy; <b>Unarchive</b> puts one back where it was. To archive an agent, open it with <b>Edit</b> and tick <b>Archive this agent</b>. Archiving is the way to retire an agent you may want back: deleting one also deletes its runs and the automations that use it.</p>
+    <p>An archived agent is out of the team: it leaves the hierarchy and cannot be run, and its runs and proposals stay. They are listed under <b>Archived</b> beneath the hierarchy; <b>Reinstate</b> puts one back where it was. To archive an agent, open it with <b>Edit</b> and tick <b>Archive this agent</b>. Archiving is the way to retire an agent you may want back: deleting one also deletes its runs and the automations that use it.</p>
     <p>On a phone the groups stack in one column; tap a group's header to fold it.</p>
     <p>Crews, the graphs of agents the Crew page used to build, have been removed; the hierarchy is how agents are arranged now.</p>
   </conbody>

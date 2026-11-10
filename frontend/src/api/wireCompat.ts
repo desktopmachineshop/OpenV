@@ -93,7 +93,7 @@ export type COMPAT_EXCEPTIONS = {
     actor_name: ['client-side', 'eventView (internal/api) adds it beside the events.Event it embeds, for the activity log'];
     entity_kind: ['client-side', 'eventView (internal/api) adds it beside the events.Event it embeds, for the activity log'];
     entity_name: ['client-side', 'eventView (internal/api) adds it beside the events.Event it embeds, for the activity log'];
-    deleted_artifacts: ['client-side', 'eventView (internal/api) adds it beside the events.Event it embeds: the deleted artifacts the event names'];
+    archived_artifacts: ['client-side', 'eventView (internal/api) adds it beside the events.Event it embeds: the archived artifacts the event names'];
   };
 };
 

@@ -63,8 +63,8 @@ describe('planProjectAction', () => {
     expect(run).toEqual({ kind: 'test_run', name: 'R', description: '', results: [{ ref: 'TC-1', status: 'pass', notes: '' }], complete: true });
   });
 
-  it('plans the rest: delete, comment, to-do, task, baseline, review', () => {
-    expect(ok({ kind: 'delete', refs: ['REQ-9'] })).toEqual({ kind: 'delete', refs: ['REQ-9'] });
+  it('plans the rest: archive, comment, to-do, task, baseline, review', () => {
+    expect(ok({ kind: 'archive', refs: ['REQ-9'] })).toEqual({ kind: 'archive', refs: ['REQ-9'] });
     expect(ok({ kind: 'comment', ref: 'REQ-1', message: 'Which threshold?' })).toEqual({ kind: 'comment', ref: 'REQ-1', message: 'Which threshold?' });
     expect(refused({ kind: 'comment', ref: 'REQ-1', message: ' ' })).toMatch(/empty/);
     expect(ok({ kind: 'todo', text: 'Check limit', assignee: 'Priya', due: '2027-02-01', ref: 'REQ-1' })).toEqual({
@@ -87,6 +87,6 @@ describe('the card face', () => {
     expect(projectActionSummary({ kind: 'link', from: 'TC-1', to: 'REQ-1', type: 'verifies', action: 'remove' }).detail).toBe('Remove this link');
     expect(projectActionLabels({ kind: 'release', release: 'MVP', status: 'released' }).button).toBe('Change release');
     expect(projectActionLabels({ kind: 'release', name: 'MVP' }).button).toBe('+ Add release');
-    expect(projectActionLabels({ kind: 'delete', refs: ['REQ-1'] }).button).toBe('Delete');
+    expect(projectActionLabels({ kind: 'archive', refs: ['REQ-1'] }).button).toBe('Archive');
   });
 });

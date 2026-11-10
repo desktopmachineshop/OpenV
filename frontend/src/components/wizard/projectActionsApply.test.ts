@@ -96,14 +96,14 @@ describe('applying project-action cards', () => {
     expect(linkAPI.confirm).toHaveBeenCalledWith('l2');
   });
 
-  it('changes status and deletes per artifact, naming the one that failed', async () => {
+  it('changes status and archives per artifact, naming the one that failed', async () => {
     vi.mocked(artifactAPI.changeStatus).mockImplementation(async (id: string) => {
       if (id === 'a2') throw new Error('illegal transition');
       return { data: {} } as any;
     });
     const [reason] = await apply([{ kind: 'status', refs: ['REQ-1', 'REQ-2'], status: 'approved' }]);
     expect(reason).toMatch(/Applied to 1 of 2\. REQ-2:/);
-    expect(await apply([{ kind: 'delete', refs: ['REQ-1'] }, { kind: 'delete', refs: ['REQ-404'] }])).toEqual([
+    expect(await apply([{ kind: 'archive', refs: ['REQ-1'] }, { kind: 'archive', refs: ['REQ-404'] }])).toEqual([
       null,
       'There is no artifact REQ-404 in this project.',
     ]);

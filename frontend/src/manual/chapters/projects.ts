@@ -32,9 +32,9 @@ of the rail on every page.
 - **Activity** shows the newest events across the workspace's projects, who
   did what to which artifact. Click an event to open what it is about: the
   artifact, a link's source artifact, the board, the agent run, the test
-  run, the baseline, or a comment with its notes open. An artifact deleted
-  since is still named, with **(deleted)** after it, and opens read-only
-  from its history. A removed link opens the artifact it came from as it
+  run, the baseline, or a comment with its notes open. An artifact archived
+  since is still named, with **(archived)** after it, and opens read-only
+  from its history, where **Reinstate** brings it back. A removed link opens the artifact it came from as it
   was while it still had that link, so you can see what was there. When agents have proposed
   changes, a card below it counts the proposals waiting.
 - **Projects**, below them, is where you pick a project, and **+ New

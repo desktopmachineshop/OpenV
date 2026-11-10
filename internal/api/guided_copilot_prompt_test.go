@@ -264,7 +264,7 @@ func TestRenderProjectOutlineFollowsTheTree(t *testing.T) {
 func TestGuidedCopilotPromptOffersEveryProjectActionBehindItsGate(t *testing.T) {
 	session := &guided.Session{ID: "sess-1", ProjectID: "proj-1"}
 	shapes := []string{
-		`"kind":"release"`, `"kind":"target"`, `"kind":"link"`, `"kind":"status"`, `"kind":"delete"`,
+		`"kind":"release"`, `"kind":"target"`, `"kind":"link"`, `"kind":"status"`, `"kind":"archive"`,
 		`"kind":"comment"`, `"kind":"todo"`, `"kind":"task"`, `"kind":"baseline"`, `"kind":"review"`, `"kind":"test_run"`,
 	}
 	off := buildGuidedCopilotPrompt(session, nil, nil, 0, "", nil, "", nil, &projectOutline{Edits: true})

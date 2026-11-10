@@ -112,8 +112,9 @@ you could make yourself and the assistant answers with a card for it:
 - **Review status**: move artifacts to draft, in review, approved or
   superseded. A change the review workflow does not allow is refused on the
   card, with the reason.
-- **Delete**: delete artifacts. **Apply all** never includes a delete card;
-  each one is applied by its own button.
+- **Archive**: archive artifacts, which keeps their history so they can be
+  reinstated. **Apply all** never includes an archive card; each one is
+  applied by its own button.
 - **Comment**: post a comment on an artifact, in your name.
 - **To-do** and **Board task**: raise a to-do or add a task to the board,
   assigned to a member and with a due date if the card names them.

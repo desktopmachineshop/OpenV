@@ -417,7 +417,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                   </label>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, maxWidth: 'var(--measure-field)' }}>
                     An archived agent leaves the team and cannot be run, and its runs and proposals are kept.
-                    Unarchive it from the Archived list at any time.
+                    Reinstate it from the Archived list at any time.
                   </div>
                 </div>
               </div>

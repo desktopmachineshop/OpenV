@@ -197,7 +197,7 @@ func TestDecorateEventsNames(t *testing.T) {
 				Payload: map[string]interface{}{"title": "Brake"},
 			},
 			actorKind: "user", actorID: "u1", actorName: "Dana Ross",
-			entityKind: "artifact", entityName: "REQ-7 Brake within 2 m (deleted)",
+			entityKind: "artifact", entityName: "REQ-7 Brake within 2 m (archived)",
 		},
 		{
 			name: "a link names both ends, a deleted one marked",
@@ -206,7 +206,7 @@ func TestDecorateEventsNames(t *testing.T) {
 				Payload: map[string]interface{}{"link_type": "verifies", "from_id": "a2", "to_id": "gone"},
 			},
 			actorKind: "user", actorID: "u1", actorName: "Dana Ross",
-			entityKind: "verifies", entityName: "TC-3 Compliance test → REQ-7 Brake within 2 m (deleted)",
+			entityKind: "verifies", entityName: "TC-3 Compliance test → REQ-7 Brake within 2 m (archived)",
 		},
 		{
 			name:      "unknown user leaves the name empty rather than inventing one",
@@ -323,20 +323,20 @@ func TestListDomainEventsServesNames(t *testing.T) {
 
 // The ids of deleted artifacts an event names ride along, so a client opens
 // their history instead of guessing from a name.
-func TestDecorateEventsListsDeletedArtifacts(t *testing.T) {
+func TestDecorateEventsListsArchivedArtifacts(t *testing.T) {
 	h, _ := namingHandler(t)
 	got := h.decorateEvents([]events.Event{
 		{EventType: events.LinkCreated, EntityID: "l1", Payload: map[string]interface{}{"from_id": "gone", "to_id": "a1"}},
 		{EventType: events.ChatterCreated, EntityID: "c1", Payload: map[string]interface{}{"artifact_id": "gone"}},
 		{EventType: events.ArtifactUpdated, EntityID: "a1"},
 	})
-	if len(got[0].DeletedArtifacts) != 1 || got[0].DeletedArtifacts[0] != "gone" {
-		t.Errorf("link: deleted = %v, want [gone]", got[0].DeletedArtifacts)
+	if len(got[0].ArchivedArtifacts) != 1 || got[0].ArchivedArtifacts[0] != "gone" {
+		t.Errorf("link: deleted = %v, want [gone]", got[0].ArchivedArtifacts)
 	}
-	if len(got[1].DeletedArtifacts) != 1 {
-		t.Errorf("comment: deleted = %v, want [gone]", got[1].DeletedArtifacts)
+	if len(got[1].ArchivedArtifacts) != 1 {
+		t.Errorf("comment: deleted = %v, want [gone]", got[1].ArchivedArtifacts)
 	}
-	if got[2].DeletedArtifacts != nil {
-		t.Errorf("a live artifact is listed as deleted: %v", got[2].DeletedArtifacts)
+	if got[2].ArchivedArtifacts != nil {
+		t.Errorf("a live artifact is listed as deleted: %v", got[2].ArchivedArtifacts)
 	}
 }

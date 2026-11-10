@@ -30,7 +30,7 @@
         <li><b>Release target</b>: put artifacts in a release, optionally until a later one, or clear their own targeting so they follow their parent's.</li>
         <li><b>Link</b>: add a traceability link, remove one, or confirm a suspect link.</li>
         <li><b>Review status</b>: move artifacts to draft, in review, approved or superseded. A change the review workflow does not allow is refused on the card, with the reason.</li>
-        <li><b>Delete</b>: delete artifacts. <b>Apply all</b> never includes a delete card; each one is applied by its own button.</li>
+        <li><b>Archive</b>: archive artifacts, which keeps their history so they can be reinstated. <b>Apply all</b> never includes an archive card; each one is applied by its own button.</li>
         <li><b>Comment</b>: post a comment on an artifact, in your name.</li>
         <li><b>To-do</b> and <b>Board task</b>: raise a to-do or add a task to the board, assigned to a member and with a due date if the card names them.</li>
         <li><b>Baseline</b>, <b>Review round</b> and <b>Test run</b>: capture a baseline, send every draft for review, or record a test run's results.</li>

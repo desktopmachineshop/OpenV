@@ -82,7 +82,7 @@ need it.
 
 An archived agent is out of the team: it leaves the hierarchy and cannot be
 run, and its runs and proposals stay. They are listed under **Archived**
-beneath the hierarchy; **Unarchive** puts one back where it was. To archive
+beneath the hierarchy; **Reinstate** puts one back where it was. To archive
 an agent, open it with **Edit** and tick **Archive this agent**. Archiving
 is the way to retire an agent you may want back: deleting one also deletes
 its runs and the automations that use it.

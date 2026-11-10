@@ -82,3 +82,6 @@ export const TODOS_FEATURE: FeatureKey = 'todos';
  * Agents page shows whichever team the workspace has.
  */
 export const FLAT_AGENT_TEAM_FEATURE: FeatureKey = 'flat-agent-team';
+
+/** Reinstating an archived artifact from its page (POST /artifacts/{id}/reinstate). */
+export const ARTIFACT_REINSTATE_FEATURE: FeatureKey = 'artifact-reinstate';

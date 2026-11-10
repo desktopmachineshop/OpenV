@@ -223,7 +223,13 @@ func artifactsAttributesArtifacts(tr *tour) {
 		at("id", "{{persona}}"), note("the guard asks the project of the versions, which the delete closes and keeps "+
 			"(fixed under R7, REQ-4: it looked the project up through the current row, and answered 404)"))
 	tr.step("delete it again", owner, "DELETE /api/v1/artifacts/{id}", at("id", "{{persona}}"))
-	tr.step("the project's artifacts after the updates, the restore and the delete", owner, "GET /api/v1/artifacts",
+	// Reinstate: the archived persona back as its last version, live again.
+	reinstate := "POST /api/v1/artifacts/{id}/reinstate"
+	tr.step("reinstate an artifact no version has: 404", owner, reinstate, at("id", "{{phantom}}"))
+	tr.step("reinstate the archived persona: 200, its last version again as the next, and artifact.reinstated", owner,
+		reinstate, at("id", "{{persona}}"))
+	tr.step("reinstate it again: 409, it is not archived", owner, reinstate, at("id", "{{persona}}"))
+	tr.step("the project's artifacts after the updates, the restore, the archive and the reinstatement", owner, "GET /api/v1/artifacts",
 		query("project_id={{project}}"))
 }
 

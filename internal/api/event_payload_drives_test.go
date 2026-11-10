@@ -128,6 +128,7 @@ func payloadDrives() []payloadDrive {
 		httpDrive("PUT /api/v1/artifacts/{id}", "/api/v1/artifacts/art-req", `{"title":"Renamed"}`),
 		httpDrive("PUT /api/v1/artifacts/{id}/status", "/api/v1/artifacts/art-req/status", `{"status":"in_review"}`),
 		httpDrive("POST /api/v1/artifacts/{id}/restore", "/api/v1/artifacts/art-req/restore", `{"version":1}`),
+		httpDrive("POST /api/v1/artifacts/{id}/reinstate", "/api/v1/artifacts/art-req/reinstate", ``),
 		httpDrive("DELETE /api/v1/artifacts/{id}", "/api/v1/artifacts/art-gone", ""),
 		httpDrive("POST /api/v1/links", "/api/v1/links", `{"from_id":"art-tc","to_id":"art-req","type":"verifies"}`),
 		httpDrive("PUT /api/v1/links/{id}", "/api/v1/links/link-1", `{"type":"relates-to","attributes":{"note":"retyped"}}`),
@@ -324,6 +325,27 @@ func (f *payloadArtifacts) RestoreArtifactVersion(id string, version int) (*arti
 	restored.Title = "Requirement, as first written"
 	restored.Version++
 	return &restored, nil
+}
+
+// GetArtifactVersions answers an artifact's one version, so a history guard
+// finds its project.
+func (f *payloadArtifacts) GetArtifactVersions(id string) ([]*artifacts.Artifact, error) {
+	a, err := f.GetArtifact(id)
+	if err != nil {
+		return nil, nil
+	}
+	return []*artifacts.Artifact{a}, nil
+}
+
+// ReinstateArtifact answers the requirement back at its next version.
+func (f *payloadArtifacts) ReinstateArtifact(id string) (*artifacts.Artifact, error) {
+	a, err := f.GetArtifact(id)
+	if err != nil {
+		return nil, err
+	}
+	back := *a
+	back.Version++
+	return &back, nil
 }
 
 func (f *payloadArtifacts) StartProjectReview(projectID string, req artifacts.ReviewRoundRequest) (*artifacts.ReviewRoundResult, error) {

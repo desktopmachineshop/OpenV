@@ -287,7 +287,7 @@ describe('ModuleView artifact stepping', () => {
     expect(headings()).toContain('Title req-1');
   });
 
-  it('opens a deleted artifact from its history, read-only and marked deleted', async () => {
+  it('opens an archived artifact from its history, read-only and marked archived, with Reinstate', async () => {
     getVersions.mockImplementation(async (id: string) =>
       id === 'gone'
         ? ({
@@ -307,12 +307,13 @@ describe('ModuleView artifact stepping', () => {
       for (let i = 0; i < 6; i++) await Promise.resolve();
     });
     expect(headings()).toContain('Brake within 2 m');
-    expect(container.textContent).toContain('deleted');
-    expect(container.querySelector('[role="note"]')?.textContent).toMatch(/^Deleted /);
+    expect(container.textContent).toContain('archived');
+    expect(container.querySelector('[role="note"]')?.textContent).toMatch(/^Archived /);
     const labels = Array.from(container.querySelectorAll('button')).map((b) => b.textContent);
     expect(labels).not.toContain('Edit');
-    expect(labels).not.toContain('Delete');
+    expect(labels).not.toContain('Archive');
     expect(labels).toContain('History');
+    expect(labels).toContain('Reinstate');
   });
 
   it('turns the page on a leftward swipe, and back on a rightward one', async () => {

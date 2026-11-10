@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { artifactAPI, type Artifact } from '../../api/client';
+import { ARTIFACT_REINSTATE_FEATURE } from '../../features';
+import { useFeature } from '../../hooks/useFeature';
 
 /**
  * Opening an artifact at a point in its history, from a link that says when.
  *
- * The soft delete keeps every version of an artifact (REQ-4), and a link
+ * Archiving keeps every version of an artifact (REQ-4), and a link
  * write versions both its ends with a snapshot of their links, so the
  * project's history can answer "what did this look like then":
  *
- * - `?artifact=` naming a deleted artifact opens it from its versions,
- *   read-only and marked deleted, instead of an empty page.
+ * - `?artifact=` naming an archived artifact (one deleted: the soft delete
+ *   keeps every version) opens it from its versions, read-only and marked
+ *   archived, instead of an empty page, with Reinstate to bring it back.
  * - `&link=<id>&at=<time>` (an Activity line for a removed link) previews the
  *   source artifact as it was while it still had that link: the newest
  *   version up to that time whose link snapshot holds it.
@@ -56,13 +59,19 @@ interface Options {
    */
   enabled: boolean;
   setPreviewVersion: (v: Artifact | null) => void;
+  /** After a reinstatement: reload the project's artifacts, which now hold it. */
+  onReinstated: () => void;
 }
 
-/** The deleted artifact the URL names, once its history has been read; null otherwise. */
-export const useArtifactHistoryLink = ({ artifactId, live, linkId, at, enabled, setPreviewVersion }: Options): Artifact | null => {
-  const [deleted, setDeleted] = useState<Artifact | null>(null);
+/**
+ * The archived artifact the URL names, once its history has been read (null
+ * otherwise), and reinstate, which brings it back.
+ */
+export const useArtifactHistoryLink = ({ artifactId, live, linkId, at, enabled, setPreviewVersion, onReinstated }: Options) => {
+  const [archived, setArchived] = useState<Artifact | null>(null);
+  const reinstateOn = useFeature(ARTIFACT_REINSTATE_FEATURE);
   useEffect(() => {
-    setDeleted(null);
+    setArchived(null);
     if (!enabled || !artifactId || (live && !linkId && !at)) return undefined;
     let gone = false;
     artifactAPI
@@ -74,11 +83,11 @@ export const useArtifactHistoryLink = ({ artifactId, live, linkId, at, enabled, 
         // A newest version still open is a live artifact the list has not
         // brought in yet: nothing to do here.
         if (!latest) return;
-        const isDeleted = Boolean(latest.valid_to);
-        if (!live && !isDeleted) return;
+        const isArchived = Boolean(latest.valid_to);
+        if (!live && !isArchived) return;
         const chosen = pickVersion(versions, linkId, at);
-        if (isDeleted) {
-          setDeleted(latest);
+        if (isArchived) {
+          setArchived(latest);
           setPreviewVersion(chosen && chosen.version !== latest.version ? chosen : null);
         } else if (chosen && chosen.valid_to) {
           setPreviewVersion(chosen);
@@ -91,5 +100,12 @@ export const useArtifactHistoryLink = ({ artifactId, live, linkId, at, enabled, 
     // setPreviewVersion is a state setter.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [artifactId, live, linkId, at, enabled]);
-  return deleted;
+  const reinstate = async () => {
+    if (!archived) return;
+    await artifactAPI.reinstate(archived.id);
+    setPreviewVersion(null);
+    onReinstated();
+  };
+  // Reinstating waits for the workspace's release; reading does not.
+  return { archived, reinstate: reinstateOn ? reinstate : undefined };
 };

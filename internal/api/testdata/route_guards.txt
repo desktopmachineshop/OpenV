@@ -216,6 +216,7 @@ POST /api/v1/agents: org:admin
 POST /api/v1/agents/sync: org:admin
 POST /api/v1/agents/{slug}/runs: no-proposal-run, project:editor, unscoped-launch
 POST /api/v1/artifacts: project:editor, project:viewer
+POST /api/v1/artifacts/{id}/reinstate: project:editor
 POST /api/v1/artifacts/{id}/restore: project:editor
 POST /api/v1/attachments/upload: project:editor
 POST /api/v1/attachments/{id}/versions: project:editor

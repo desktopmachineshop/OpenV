@@ -26,6 +26,7 @@ const EVENT_TYPES: DomainEventType[] = [
   'artifact.deleted',
   'artifact.status_changed',
   'artifact.restored',
+  'artifact.reinstated',
   'link.created',
   'link.updated',
   'link.deleted',

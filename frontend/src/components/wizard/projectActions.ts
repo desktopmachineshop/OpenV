@@ -3,7 +3,7 @@ import { text } from './artifactTemplates';
 
 /**
  * The rest of a project's API as V&V Assistant cards (assistant-full-scope):
- * releases and what artifacts target, links, review status, deleting,
+ * releases and what artifacts target, links, review status, archiving,
  * comments, to-dos, board tasks, baselines, a review round and test runs.
  *
  * Beside the artifact, edit and move cards (suggestionDrafts.ts), these are
@@ -25,7 +25,7 @@ export const PROJECT_ACTION_KINDS: ReadonlySet<string> = new Set([
   'target',
   'link',
   'status',
-  'delete',
+  'archive',
   'comment',
   'todo',
   'task',
@@ -39,7 +39,7 @@ export const PROJECT_ACTION_LABELS: Record<string, string> = {
   target: 'Release target',
   link: 'Link',
   status: 'Review status',
-  delete: 'Delete',
+  archive: 'Archive',
   comment: 'Comment',
   todo: 'To-do',
   task: 'Board task',
@@ -48,10 +48,10 @@ export const PROJECT_ACTION_LABELS: Record<string, string> = {
   test_run: 'Test run',
 };
 /**
- * Cards Apply all leaves out: deleting is done one card at a time, by the
+ * Cards Apply all leaves out: archiving is done one card at a time, by the
  * card's own button, never as a side effect of applying a reply's batch.
  */
-export const ONE_AT_A_TIME_KINDS: ReadonlySet<string> = new Set(['delete']);
+export const ONE_AT_A_TIME_KINDS: ReadonlySet<string> = new Set(['archive']);
 export const isProjectActionKind = (kind: unknown): boolean => PROJECT_ACTION_KINDS.has(String(kind));
 export const FULL_SCOPE_GATED_REASON =
   'Releases, links, status and the assistant’s other project changes reach this workspace with its next stable release.';
@@ -72,7 +72,7 @@ export type ProjectAction =
   | { kind: 'target'; refs: string[]; release?: string; until?: string; clear: boolean }
   | { kind: 'link'; action: 'add' | 'remove' | 'confirm'; from: string; to: string; type?: string }
   | { kind: 'status'; refs: string[]; status: string }
-  | { kind: 'delete'; refs: string[] }
+  | { kind: 'archive'; refs: string[] }
   | { kind: 'comment'; ref: string; message: string }
   | { kind: 'todo'; text: string; assignee?: string; due?: string; ref?: string }
   | { kind: 'task'; title: string; description: string; refs: string[]; assignee?: string; due?: string }
@@ -164,10 +164,10 @@ export const planProjectAction = (s: Suggestion): ProjectActionPlan => {
       return act({ kind: 'status', refs, status });
     }
 
-    case 'delete': {
+    case 'archive': {
       const refs = refsOf(s);
-      if (refs.length === 0) return refuse('The delete names no artifact.');
-      return act({ kind: 'delete', refs });
+      if (refs.length === 0) return refuse('The archive card names no artifact.');
+      return act({ kind: 'archive', refs });
     }
 
     case 'comment': {
@@ -265,8 +265,8 @@ export const projectActionSummary = (s: Suggestion): { title: string; detail: st
       };
     case 'status':
       return { title: list(a.refs), detail: `Move to ${a.status.replace('_', ' ')}` };
-    case 'delete':
-      return { title: list(a.refs), detail: 'Delete' };
+    case 'archive':
+      return { title: list(a.refs), detail: 'Archive: out of the project, history kept' };
     case 'comment':
       return { title: `Comment on ${a.ref}`, detail: a.message };
     case 'todo':
@@ -300,8 +300,8 @@ export const projectActionLabels = (s: Suggestion): { button: string; done: stri
     }
     case 'status':
       return { button: 'Change status', done: '✓ Changed' };
-    case 'delete':
-      return { button: 'Delete', done: '✓ Deleted' };
+    case 'archive':
+      return { button: 'Archive', done: '✓ Archived' };
     case 'comment':
       return { button: 'Post comment', done: '✓ Posted' };
     case 'todo':

@@ -4,11 +4,11 @@ import { apiErrorMessage } from '../../api/errors';
 
 // The workspace's archived agents, under the hierarchy. An archived agent is
 // out of the team and cannot run, and its runs and proposals are kept (a
-// delete would take them with it); Unarchive puts it back where it was.
+// delete would take them with it); Reinstate puts it back where it was.
 
 interface Props {
   agents: AgentDef[];
-  /** Workspace admins unarchive; everyone else reads the list. */
+  /** Workspace admins reinstate; everyone else reads the list. */
   canEdit: boolean;
   onChanged: () => void;
   onEdit: (agent: AgentDef) => void;
@@ -19,13 +19,13 @@ export const ArchivedAgents: React.FC<Props> = ({ agents, canEdit, onChanged, on
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState('');
   if (agents.length === 0) return null;
-  const unarchive = async (agent: AgentDef) => {
+  const reinstate = async (agent: AgentDef) => {
     setBusy(agent.slug);
     try {
       await agentsAPI.update(agent.slug, { ...agent, archived: false });
       onChanged();
     } catch (err) {
-      onError(apiErrorMessage(err, `Failed to unarchive ${agent.name}`));
+      onError(apiErrorMessage(err, `Failed to reinstate ${agent.name}`));
     } finally {
       setBusy('');
     }
@@ -57,8 +57,8 @@ export const ArchivedAgents: React.FC<Props> = ({ agents, canEdit, onChanged, on
                   <button type="button" className="button-secondary" onClick={() => onEdit(a)}>
                     Edit
                   </button>
-                  <button type="button" className="button-secondary" disabled={busy === a.slug} onClick={() => unarchive(a)}>
-                    Unarchive
+                  <button type="button" className="button-secondary" disabled={busy === a.slug} onClick={() => reinstate(a)}>
+                    Reinstate
                   </button>
                 </>
               )}

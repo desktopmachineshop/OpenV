@@ -222,6 +222,7 @@ POST /api/v1/agents: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/agents/sync: s5d, s5e; 2xx or 3xx in s5d, s5e
 POST /api/v1/agents/{slug}/runs: s5d, s5e; 2xx or 3xx in s5d, s5e
 POST /api/v1/artifacts: s5a, s5b, s5d, s5e; 2xx or 3xx in s5a, s5b, s5d
+POST /api/v1/artifacts/{id}/reinstate: s5a, s5e; 2xx or 3xx in s5a
 POST /api/v1/artifacts/{id}/restore: s5a, s5e; 2xx or 3xx in s5a
 POST /api/v1/attachments/upload: s5a, s5e; 2xx or 3xx in s5a
 POST /api/v1/attachments/{id}/versions: s5a, s5e; 2xx or 3xx in s5a
@@ -375,4 +376,4 @@ PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/todos/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 364 of 364 routes reached (100.0%), 350 with a 2xx or 3xx answer (96.2%); the floor is 90%, 328 routes
+the tour: 365 of 365 routes reached (100.0%), 351 with a 2xx or 3xx answer (96.2%); the floor is 90%, 329 routes

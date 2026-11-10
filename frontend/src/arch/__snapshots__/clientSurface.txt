@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 240; members of exported objects: 320
+exports: 240; members of exported objects: 321
 
 interface AdminUser
 interface AdminWorkspace
@@ -215,6 +215,7 @@ const     artifactAPI
             .getVersions
             .list
             .listPage
+            .reinstate
             .restoreVersion
             .update
 const     attachmentAPI

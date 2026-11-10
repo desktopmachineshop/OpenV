@@ -46,11 +46,11 @@ export interface DomainEvent {
   entity_kind?: string;
   entity_name?: string;
   /**
-   * The artifacts the event names that have since been deleted. A deleted
-   * artifact is still named (by its last version, marked "(deleted)") and
-   * opens from its history.
+   * The artifacts the event names that have since been archived. An
+   * archived artifact is still named (by its last version, marked
+   * "(archived)") and opens from its history, where it can be reinstated.
    */
-  deleted_artifacts?: string[];
+  archived_artifacts?: string[];
 }
 
 // In-app notification (issue #132). entity_ref carries {kind, ...ids} so the

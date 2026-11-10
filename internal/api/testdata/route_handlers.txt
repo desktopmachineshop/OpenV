@@ -63,6 +63,7 @@ PUT /api/v1/artifacts/{id}/status -> ChangeArtifactStatus
 DELETE /api/v1/artifacts/{id} -> DeleteArtifact
 GET /api/v1/artifacts/{id}/versions -> GetArtifactVersions
 POST /api/v1/artifacts/{id}/restore -> RestoreArtifactVersion
+POST /api/v1/artifacts/{id}/reinstate -> ReinstateArtifact
 GET /api/v1/artifacts/{id}/links -> GetArtifactVersionLinks
 POST /api/v1/links -> CreateLink
 GET /api/v1/links -> ListLinks

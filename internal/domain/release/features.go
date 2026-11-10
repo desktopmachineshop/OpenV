@@ -77,6 +77,7 @@ var Registry = []Feature{
 	{Key: FeatureCommentReads, ShippedIn: "0.30.0", Summary: "Mark a comment read or unread: Needs you lists only the comments you have not read, opening them marks them read, and Mark unread keeps one there for later"},
 	{Key: FeatureAssistantFullScope, ShippedIn: "0.31.0", Summary: "The V&V Assistant offers a card for every change you can make to a project: releases and what each artifact targets, links, review status, deleting, comments, to-dos, board tasks, baselines, a review round and test results"},
 	{Key: FeatureFlatAgentTeam, ShippedIn: "0.31.0", Summary: "A flatter team of agents: the V&V Assistant you chat with, a Requirements Auditor, a Test Auditor, a Link Auditor and the interviewer; the agents they replace are archived with their history kept"},
+	{Key: FeatureArtifactReinstate, ShippedIn: "0.31.0", Summary: "Removing an artifact archives it, as it always kept its history: open it from Activity and Reinstate brings it back as it was"},
 }
 
 // Feature keys the code gates on.
@@ -303,6 +304,11 @@ const (
 	// archiving of the earlier team's untouched agents. Archiving and
 	// unarchiving an agent by hand is not gated: it is a field of the agent.
 	FeatureFlatAgentTeam = "flat-agent-team"
+	// FeatureArtifactReinstate is bringing an archived artifact back (POST
+	// /artifacts/{id}/reinstate and its button on the archived artifact's
+	// page). It gates REINSTATING only: reading an archived artifact's
+	// history, and calling a delete archiving, are not gated.
+	FeatureArtifactReinstate = "artifact-reinstate"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

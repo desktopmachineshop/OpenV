@@ -176,11 +176,11 @@ export const buildTodo = ({ projectId, review, runs, testCases, coverage, commen
   for (const c of comments) {
     const id = String(c.payload?.artifact_id || '');
     const a = byId.get(id);
-    // A comment on an artifact that has since been deleted waits on nobody:
+    // A comment on an artifact that has since been archived waits on nobody:
     // there is nothing to answer, and read state is kept for live artifacts
-    // only. The server lists such an artifact in deleted_artifacts; an older
+    // only. The server lists such an artifact in archived_artifacts; an older
     // server leaves it unnamed.
-    if (!a && (!c.entity_name || (c.deleted_artifacts || []).includes(id))) continue;
+    if (!a && (!c.entity_name || (c.archived_artifacts || []).includes(id))) continue;
     items.push({
       key: `comment-${c.id}`,
       kind: 'comment',

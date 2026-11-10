@@ -8,7 +8,7 @@ import { useAppStore } from '../state/store';
 import { agentsAPI, type AgentDef, type Org } from '../api/client';
 
 // Archived agents (the flat team archives the agents it replaces): out of the
-// hierarchy, listed under Archived, and put back by Unarchive.
+// hierarchy, listed under Archived, and put back by Reinstate.
 
 const ok = (data: unknown) => Promise.resolve({ data });
 const agent = (id: string, name: string, extra: Partial<AgentDef> = {}): AgentDef =>
@@ -106,10 +106,10 @@ describe('archived agents', () => {
     expect(button('Archived (1)')).toBeTruthy();
   });
 
-  it('unarchives one, keeping the rest of its definition', async () => {
+  it('reinstates one, keeping the rest of its definition', async () => {
     await mount();
     await act(async () => button('Archived (1)').click());
-    await act(async () => button('Unarchive').click());
+    await act(async () => button('Reinstate').click());
     await flush();
     expect(agentsAPI.update).toHaveBeenCalledWith('chief-of-staff', expect.objectContaining({ archived: false, system_prompt: 'Prompt.' }));
   });

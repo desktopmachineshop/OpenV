@@ -26,7 +26,7 @@ export interface CopilotSuggestion {
     | 'target'
     | 'link'
     | 'status'
-    | 'delete'
+    | 'archive'
     | 'comment'
     | 'todo'
     | 'task'

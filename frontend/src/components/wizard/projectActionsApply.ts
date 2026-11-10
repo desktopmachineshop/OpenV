@@ -149,7 +149,7 @@ export const applyProjectAction = async (ctx: ActionContext, a: ProjectAction): 
       });
       return;
 
-    case 'delete':
+    case 'archive':
       await each(a.refs, async (ref) => {
         const target = need(ctx, ref);
         await artifactAPI.delete(target.id);

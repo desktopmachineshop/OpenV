@@ -339,7 +339,7 @@ export const AutomationsPage: React.FC = () => {
             >
               <option value="">Choose agent…</option>
               {/* An archived agent stays listed for the automation that names
-                  it, marked, but it cannot run until it is unarchived. */}
+                  it, marked, but it cannot run until it is reinstated. */}
               {agents.map((a) => (
                 <option key={a.id} value={a.id} disabled={a.archived && form.agent_id !== a.id}>
                   {a.archived ? `${a.name} (archived)` : a.name}
