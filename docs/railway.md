@@ -449,7 +449,9 @@ building from this repository.
   `hosted-staging.yml` commits the merged commit to `main`'s
   `OPENV_VERSION`, so staging runs exactly the commit *Staging smoke* waits
   for. Both images report that OpenV commit (`/build.json` and the API's
-  build).
+  build). The pin commit is marked `[skip ci]`: openv-hosted is private, so
+  its Actions minutes are billed, and the commit has already passed CI
+  here. openv-hosted's CI still runs on the release pull request.
 - **openv-hosted's own changes** (billing, the site) merge to `main` and
   reach staging there. To ship one, merge `main` into `release` and keep
   `release`'s `OPENV_VERSION`.
