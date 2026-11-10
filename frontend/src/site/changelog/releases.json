@@ -2,6 +2,19 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.32.0",
+   "date": "2026-11-10",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**A Gantt plan for every project.** The new **Gantt** page, under **Plan**, draws the board's cards on a timeline. Give a task a start and a due date by dragging its bar, make it a sub-task of another, and say which tasks it waits for; an arrow turns red when a task starts before one it depends on ends. Nothing is typed in as a percentage: a task's bar fills as the to-dos on it are ticked off and its sub-tasks finish. Add **milestones** with criteria measured from the project itself, such as *user needs addressed: 100%* for an early definition milestone or *requirements verified: 80%* later, and the band leading up to each milestone fills as its criteria are met. Every **release** is a milestone on the plan at its target date, with its own criteria. **Export** saves the plan as a PDF of the chart, an Excel workbook, CSV or JSON. On a phone the same plan is a schedule list grouped by milestone. Agents read the plan with `get_plan` and place a task with `schedule_work_item`."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.31.0",
    "date": "2026-11-10",
    "stableSince": "",
