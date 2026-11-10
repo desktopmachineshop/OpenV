@@ -8,7 +8,8 @@ interface ArtifactVersionListProps {
   versions: Artifact[];
   loading: boolean;
   onPreview: (version: Artifact) => void;
-  onRestore: (version: number) => void;
+  /** Absent for a deleted artifact: its history is read, not restored, from here. */
+  onRestore?: (version: number) => void;
 }
 
 // The artifact's versions, newest as the server lists them: each with its
@@ -50,9 +51,11 @@ export const ArtifactVersionList: React.FC<ArtifactVersionListProps> = ({ versio
                   <button type="button" onClick={() => onPreview(v)} style={buttonStyle('secondary', { compact: true })}>
                     Preview
                   </button>
-                  <button type="button" onClick={() => onRestore(v.version)} style={buttonStyle('secondary', { compact: true })}>
-                    Restore
-                  </button>
+                  {onRestore && (
+                    <button type="button" onClick={() => onRestore(v.version)} style={buttonStyle('secondary', { compact: true })}>
+                      Restore
+                    </button>
+                  )}
                 </div>
               )}
             </div>

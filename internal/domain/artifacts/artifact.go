@@ -16,6 +16,8 @@ var (
 	// ErrVersionNotFound is a restore naming a version the artifact never
 	// had; handlers answer it 404, as a version's links do.
 	ErrVersionNotFound = errors.New("artifact version not found")
+	// ErrNotArchived is a reinstatement of an artifact that is live.
+	ErrNotArchived = errors.New("this artifact is not archived")
 )
 
 // Artifact represents a single requirement, test case, hazard, or other typed item
@@ -264,6 +266,9 @@ type Service interface {
 	// version, keeping the artifact's ref; ErrVersionNotFound for a version
 	// the artifact never had.
 	RestoreArtifactVersion(id string, version int) (*Artifact, error)
+	// ReinstateArtifact brings an archived artifact back (see
+	// DefaultService.ReinstateArtifact).
+	ReinstateArtifact(id string) (*Artifact, error)
 	// SearchArtifacts finds current artifacts whose title or body contains
 	// query (case-insensitive) within the given projects, title matches first.
 	// opts.MatchRefs additionally matches and ranks stable refs.
@@ -581,6 +586,49 @@ func (s *DefaultService) SearchArtifacts(projectIDs []string, query string, limi
 		return []*SearchHit{}, nil
 	}
 	return s.repo.SearchInProjects(projectIDs, query, limit, opts)
+}
+
+// ReinstateArtifact brings an archived artifact back. Archiving closes its
+// newest version and keeps every version (Delete); reinstating writes that
+// version again as the next one, live, so the history shows both when it was
+// archived and when it came back. Its ref, status, content and links are as
+// they were. A parent that is itself archived is not there to sit under, so
+// the artifact comes back at the top level. ErrNotFound when no version has
+// the id; ErrNotArchived when the artifact is live.
+func (s *DefaultService) ReinstateArtifact(id string) (*Artifact, error) {
+	versions, err := s.repo.FindVersionsByID(id)
+	if err != nil {
+		return nil, err
+	}
+	var last *Artifact
+	for _, v := range versions {
+		if v != nil && (last == nil || v.Version > last.Version) {
+			last = v
+		}
+	}
+	if last == nil {
+		return nil, ErrNotFound
+	}
+	if last.ValidTo == nil {
+		return nil, ErrNotArchived
+	}
+	parentID := last.ParentID
+	if parentID != nil && *parentID != "" {
+		if parent, err := s.repo.FindByID(*parentID); err != nil || parent == nil {
+			parentID = nil
+		}
+	}
+	now := time.Now().UTC() // TIMESTAMP columns hold a UTC wall clock (#379 bug 162)
+	back := *last
+	back.ParentID = parentID
+	back.Version = last.Version + 1
+	back.ValidFrom = now
+	back.ValidTo = nil
+	back.UpdatedAt = now
+	if err := s.repo.Update(&back); err != nil {
+		return nil, err
+	}
+	return &back, nil
 }
 
 // GetArtifactVersions retrieves all versions of an artifact

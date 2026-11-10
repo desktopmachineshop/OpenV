@@ -42,6 +42,7 @@ import { useBaselineView } from './moduleView/useBaselineView';
 import { useModuleData } from './moduleView/useModuleData';
 import { useColumnResize } from './moduleView/useColumnResize';
 import { useNotesParam } from './moduleView/useNotesParam';
+import { useArtifactHistoryLink } from './moduleView/useArtifactHistoryLink';
 import { usePanelEscape, usePanelMode } from './moduleView/usePanelMode';
 import { useSiblingOrdering } from './moduleView/useSiblingOrdering';
 
@@ -148,7 +149,7 @@ export const ModuleView: React.FC = () => {
   // The ?artifact= search param is the shareable source of truth for the
   // selection (mirrors AgentRunsPage's ?run= pattern).
   const urlArtifactId = searchParams.get('artifact');
-  useNotesParam(searchParams.get('notes') === '1', urlArtifactId, stacked, () => setStackedPane('notes'), () => setNotesRevealed(true));
+  useNotesParam(searchParams.get('notes') === '1', urlArtifactId, stacked, setStackedPane, () => setNotesRevealed(true));
 
   const {
     baselines,
@@ -424,9 +425,9 @@ export const ModuleView: React.FC = () => {
 
   const handleDeleteArtifact = async (id: string) => {
     const ok = await confirm({
-      title: 'Delete artifact',
-      message: 'Are you sure you want to delete this artifact?',
-      confirmLabel: 'Delete',
+      title: 'Archive artifact',
+      message: 'It leaves the project and keeps every version. Reinstate it from its page, which Activity links to.',
+      confirmLabel: 'Archive',
       danger: true,
     });
     if (!ok) {
@@ -440,9 +441,9 @@ export const ModuleView: React.FC = () => {
       }
       setError('');
     } catch (error: any) {
-      console.error('Failed to delete artifact:', error);
+      console.error('Failed to archive artifact:', error);
       const errorMsg = apiErrorMessage(error, 'Unknown error');
-      setError(`Failed to delete artifact: ${errorMsg}`);
+      setError(`Failed to archive artifact: ${errorMsg}`);
     }
   };
 
@@ -568,7 +569,7 @@ export const ModuleView: React.FC = () => {
         setError(`${ref} is no longer on ${holder.ref}. Showing the artifact instead.`);
         return;
       }
-      setError(`${ref} is not in this project — it may have been deleted.`);
+      setError(`${ref} is not in this project — it may have been archived.`);
       return;
     }
     const target = artifacts.find((a) => a.ref === ref);
@@ -578,7 +579,7 @@ export const ModuleView: React.FC = () => {
       setIsCreating(false);
       return;
     }
-    setError(`${ref} is not in this project — it may have been deleted.`);
+    setError(`${ref} is not in this project — it may have been archived.`);
   };
 
   const handleArtifactContextMenu = (action: ArtifactContextAction, artifact: Artifact) => {
@@ -813,6 +814,9 @@ export const ModuleView: React.FC = () => {
     loadLinks();
   });
 
+  // A link to an archived artifact, or to one as it was (?link=&at=), reads its history.
+  const { archived, reinstate } = useArtifactHistoryLink({ artifactId: urlArtifactId, live: activeArtifacts.some((a) => a.id === urlArtifactId), linkId: searchParams.get('link'), at: searchParams.get('at'), enabled: !isBaselineView && activeArtifacts.length > 0, setPreviewVersion, onReinstated: loadArtifacts });
+
   if (!projectId) {
     return (
       <div className="card">
@@ -822,7 +826,7 @@ export const ModuleView: React.FC = () => {
     );
   }
 
-  const selectedArtifact = activeArtifacts.find((a) => a.id === selectedArtifactId);
+  const selectedArtifact = activeArtifacts.find((a) => a.id === selectedArtifactId) || (archived?.id === selectedArtifactId ? archived : undefined);
   // With History in the pane, a request for the Notes pane (?notes=1) shows the document.
   const shownPane = historyInPane && stackedPane === 'notes' ? 'document' : stackedPane;
   const detailAttachments = isBaselineView ? [] : attachments;
@@ -1121,6 +1125,8 @@ export const ModuleView: React.FC = () => {
               // A baseline's artifact shares its id with the live one, so
               // its header acts on nothing.
               readOnly={isBaselineView}
+              archivedAt={selectedArtifact === archived ? archived?.valid_to : null}
+              onReinstate={selectedArtifact === archived ? reinstate : undefined}
               quality={isBaselineView ? undefined : qualityScores[selectedArtifact.id]}
               onStatusChange={(changed) => {
                 updateArtifact(changed);
@@ -1146,8 +1152,8 @@ export const ModuleView: React.FC = () => {
               onReferenceClick={handleReferenceClick}
               previewVersion={previewVersion}
               onClosePreview={() => setPreviewVersion(null)}
-              allowLinkDelete={!isBaselineView}
-              liveLinks={!isBaselineView}
+              allowLinkDelete={!isBaselineView && selectedArtifact !== archived}
+              liveLinks={!isBaselineView && selectedArtifact !== archived}
               showHistory={historyInPane}
               projectId={projectId || undefined}
               onLinksChanged={() => {

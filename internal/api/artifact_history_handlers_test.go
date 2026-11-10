@@ -17,6 +17,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/attachments"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
@@ -160,6 +161,8 @@ func historyCall(h *Handler, method, target, body, user string, vars map[string]
 	switch {
 	case strings.HasSuffix(path, "/restore"):
 		h.RestoreArtifactVersion(w, r)
+	case strings.HasSuffix(path, "/reinstate"):
+		h.ReinstateArtifact(w, r)
 	case strings.HasSuffix(path, "/versions"):
 		h.GetArtifactVersions(w, r)
 	case strings.HasSuffix(path, "/links"):
@@ -309,5 +312,57 @@ func TestAFigureUploadTakesTheArtifactToANewVersion(t *testing.T) {
 	}
 	if len(repo.rows) != 3 {
 		t.Errorf("the store holds %d versions, want 3", len(repo.rows))
+	}
+}
+
+// An archived artifact is reinstated by an editor of its project: its last
+// version again as the next one, live, with a note and artifact.reinstated.
+// A live one is 409, an id no version has 404, and a viewer may not.
+func TestReinstatingAnArchivedArtifact(t *testing.T) {
+	h, bus, _, id := historyFixture(t)
+	vars := map[string]string{"id": id}
+	if w := historyCall(h, http.MethodPost, "/api/v1/artifacts/"+id+"/reinstate", "", "editor", vars); w.Code != http.StatusConflict {
+		t.Fatalf("reinstate a live artifact = %d, want 409", w.Code)
+	}
+	if err := h.ArtifactService.DeleteArtifact(id); err != nil {
+		t.Fatal(err)
+	}
+	if w := historyCall(h, http.MethodPost, "/api/v1/artifacts/"+id+"/reinstate", "", "viewer", vars); w.Code != http.StatusForbidden && w.Code != http.StatusNotFound {
+		t.Fatalf("a viewer reinstates = %d, want a refusal", w.Code)
+	}
+	w := historyCall(h, http.MethodPost, "/api/v1/artifacts/"+id+"/reinstate", "", "editor", vars)
+	if w.Code != http.StatusOK {
+		t.Fatalf("reinstate = %d %s", w.Code, w.Body.String())
+	}
+	var got artifacts.Artifact
+	_ = json.Unmarshal(w.Body.Bytes(), &got)
+	if got.Ref != "REQ-1" || got.Version != 3 || got.ValidTo != nil || got.Body != "The system shall answer within 1 s." {
+		t.Errorf("reinstated = ref %q version %d body %q, want REQ-1 back at version 3 as it was", got.Ref, got.Version, got.Body)
+	}
+	if live, err := h.ArtifactService.GetArtifact(id); err != nil || live == nil {
+		t.Errorf("the artifact is not live after reinstating: %v", err)
+	}
+	if types := bus.types(); len(types) != 1 || types[0] != "artifact.reinstated" {
+		t.Errorf("published %v, want one artifact.reinstated", types)
+	}
+	if w := historyCall(h, http.MethodPost, "/api/v1/artifacts/nope/reinstate", "", "editor", map[string]string{"id": "nope"}); w.Code != http.StatusNotFound {
+		t.Errorf("an id no version has = %d, want 404", w.Code)
+	}
+}
+
+// Reinstating waits for a stable-channel workspace's release
+// (FeatureArtifactReinstate); reading the archived artifact does not.
+func TestReinstatingIsGatedOnTheFeature(t *testing.T) {
+	h, _, _, id := historyFixture(t)
+	h.OrgService = &fakeOrgService{plan: orgs.PlanTeam, stableRelease: "0.9.2", roles: map[string]map[string]string{"org-1": {}}}
+	if err := h.ArtifactService.DeleteArtifact(id); err != nil {
+		t.Fatal(err)
+	}
+	vars := map[string]string{"id": id}
+	if w := historyCall(h, http.MethodPost, "/api/v1/artifacts/"+id+"/reinstate", "", "editor", vars); w.Code != http.StatusForbidden {
+		t.Fatalf("reinstate without the feature = %d, want 403", w.Code)
+	}
+	if w := historyCall(h, http.MethodGet, "/api/v1/artifacts/"+id+"/versions", "", "editor", vars); w.Code != http.StatusOK {
+		t.Fatalf("reading the archived artifact's versions = %d, want 200", w.Code)
 	}
 }

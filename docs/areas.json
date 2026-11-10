@@ -412,6 +412,7 @@
         "internal/persistence/postgres/provider_*.go",
         "internal/persistence/postgres/repo_connection_*.go",
         "internal/scheduler/**",
+        "internal/seeds/flat_team*.go",
         "internal/seeds/seeds*.go"
       ]
     },

@@ -57,8 +57,9 @@ export const dayLabel = (iso: string, now: Date = new Date()): string => {
 export const VERBS: Record<string, string> = {
   'artifact.created': 'created',
   'artifact.updated': 'edited',
-  'artifact.deleted': 'deleted',
+  'artifact.deleted': 'archived',
   'artifact.restored': 'restored',
+  'artifact.reinstated': 'reinstated',
   'link.created': 'linked',
   'link.updated': 'changed a link of',
   'link.deleted': 'removed a link of',
@@ -81,9 +82,10 @@ export const VERBS: Record<string, string> = {
 export const EVENT_TYPE_LABELS: Record<string, string> = {
   'artifact.created': 'Artifact created',
   'artifact.updated': 'Artifact edited',
-  'artifact.deleted': 'Artifact deleted',
+  'artifact.deleted': 'Artifact archived',
   'artifact.status_changed': 'Status changed',
   'artifact.restored': 'Version restored',
+  'artifact.reinstated': 'Artifact reinstated',
   'link.created': 'Link created',
   'link.updated': 'Link changed',
   'link.deleted': 'Link removed',
@@ -112,7 +114,8 @@ const str = (v: unknown): string => (typeof v === 'string' ? v : '');
  * The page an event is about (#718), or '' when there is none: the artifact
  * opened in its project, a link's source artifact, the board, the run, the
  * test run, the baseline compared, or the artifact with its notes open for a
- * comment. A deleted artifact and an event with no project lead nowhere.
+ * comment. An archived artifact opens from its history and a removed link opens
+ * its source as it was before; an event with no project leads nowhere.
  */
 export const eventTarget = (e: DomainEvent): string => {
   if (!e.project_id) return '';
@@ -122,8 +125,14 @@ export const eventTarget = (e: DomainEvent): string => {
     id ? `${base}/requirements?artifact=${encodeURIComponent(id)}${notes ? '&notes=1' : ''}` : '';
   const family = e.event_type.split('.')[0];
   switch (e.event_type) {
+    // An archived artifact opens from its history, which archiving keeps.
     case 'artifact.deleted':
-      return '';
+      return artifact(e.entity_id || '');
+    // A removed link opens its source as it was while it still had the link.
+    case 'link.deleted':
+      return str(p.from_id) && e.entity_id
+        ? `${artifact(str(p.from_id))}&link=${encodeURIComponent(e.entity_id)}&at=${encodeURIComponent(e.created_at)}`
+        : artifact(str(p.from_id));
     case 'baseline.captured':
       return e.entity_id ? `${base}/baselines/${e.entity_id}/compare` : `${base}/baselines`;
     case 'baseline.deleted':

@@ -6,7 +6,7 @@
 
 import { client } from './http';
 import type { Org } from './types/orgs';
-import type { AdminUser, AdminWorkspace, ReleaseInfo, SiteVisit, UserDashboard, VisitorDashboard } from './types/platform';
+import type { AdminUsage, AdminUser, AdminWorkspace, ReleaseInfo, SiteVisit, UserDashboard, VisitorDashboard } from './types/platform';
 import type { WorkspacePlan } from '../generated/contract';
 
 export const releaseAPI = {
@@ -39,6 +39,7 @@ export const adminAPI = {
   users: () => client.get<AdminUser[]>('/api/v1/admin/users'),
   userMetrics: () => client.get<UserDashboard>('/api/v1/admin/metrics/users'),
   visitorMetrics: () => client.get<VisitorDashboard>('/api/v1/admin/metrics/visitors'),
+  usage: () => client.get<AdminUsage>('/api/v1/admin/metrics/usage'),
   setPlan: (orgId: string, plan: string) => client.put<Org>(`/api/v1/orgs/${orgId}/plan`, { plan }),
   setAdmin: (userId: string, isAdmin: boolean) =>
     client.put<AdminUser>(`/api/v1/admin/users/${userId}/admin`, { is_admin: isAdmin }),

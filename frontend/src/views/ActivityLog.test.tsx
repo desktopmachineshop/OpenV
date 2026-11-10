@@ -66,6 +66,7 @@ describe('ActivityLog type filter', () => {
       'artifact.deleted',
       'artifact.status_changed',
       'artifact.restored',
+      'artifact.reinstated',
       'link.created',
       'link.updated',
       'link.deleted',

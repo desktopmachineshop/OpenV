@@ -55,6 +55,10 @@ export const FEATURE_KEYS = [
   'todos',
   'editor-pickers',
   'comment-reads',
+  'assistant-full-scope',
+  'flat-agent-team',
+  'admin-usage',
+  'artifact-reinstate',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
@@ -68,6 +72,7 @@ export const DOMAIN_EVENT_TYPES = [
   'artifact.deleted',
   'artifact.status_changed',
   'artifact.restored',
+  'artifact.reinstated',
   'link.created',
   'link.updated',
   'link.deleted',

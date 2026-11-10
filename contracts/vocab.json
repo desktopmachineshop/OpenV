@@ -217,7 +217,11 @@
     "impact-picker",
     "todos",
     "editor-pickers",
-    "comment-reads"
+    "comment-reads",
+    "assistant-full-scope",
+    "flat-agent-team",
+    "admin-usage",
+    "artifact-reinstate"
   ],
   "event_types": [
     "artifact.created",
@@ -225,6 +229,7 @@
     "artifact.deleted",
     "artifact.status_changed",
     "artifact.restored",
+    "artifact.reinstated",
     "link.created",
     "link.updated",
     "link.deleted",

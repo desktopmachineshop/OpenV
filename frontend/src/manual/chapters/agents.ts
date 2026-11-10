@@ -48,9 +48,44 @@ then shows:
 
 Each change is saved at once, to the agent's definition file
 (\`reports_to\`, \`group\` and \`sort_order\` in its frontmatter). Click
-**Done** to leave Edit mode. The default agents arrive already arranged: the
-Chief of Staff on top, with Requirements, Verification and Engineering
-groups beneath it.
+**Done** to leave Edit mode.
+
+## The default agents
+
+Every workspace starts with a small, flat team, already arranged:
+
+- **V&V Assistant** on top: the general agent you chat with beside the
+  wizard and on every project page. It answers questions, reviews, and
+  proposes any change to the project as a card you apply.
+- **Requirements Auditor**: checks requirements and user needs against the
+  project's quality rules, and proposes rewrites.
+- **Test Auditor**: checks verification coverage and test cases, and drafts
+  missing test cases with their *verifies* links. **Draft test cases** runs
+  it.
+- **Link Auditor**: checks traceability (suspect, missing and mistyped links)
+  and proposes fixes.
+- **Requirements Interviewer**: holds elicitation interviews with the people
+  you invite.
+
+The three auditors write only proposals: nothing they change lands until
+someone approves it. Run one from its card with **▶ Launch run**, and say
+what to audit.
+
+A workspace that had the earlier team (Chief of Staff, Requirements Analyst,
+V&V Engineer, Developer, Reviewer and Test Case Author) moved to this one
+with the release: those agents were **archived**, not deleted, so their runs
+and proposals are kept. An agent your workspace had edited or locked, or that
+an automation runs, was left as it was; archive it yourself if you no longer
+need it.
+
+## Archived agents
+
+An archived agent is out of the team: it leaves the hierarchy and cannot be
+run, and its runs and proposals stay. They are listed under **Archived**
+beneath the hierarchy; **Reinstate** puts one back where it was. To archive
+an agent, open it with **Edit** and tick **Archive this agent**. Archiving
+is the way to retire an agent you may want back: deleting one also deletes
+its runs and the automations that use it.
 
 On a phone the groups stack in one column; tap a group's header to fold it.
 

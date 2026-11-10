@@ -55,7 +55,7 @@ func TestAgentRepositoryRoundTrip(t *testing.T) {
 		AllowedTools: []string{"Read", "Grep", "mcp__openv__create_artifact"}, WriteMode: "direct", RepoAccess: true,
 		MaxTurns: 12, TimeoutSeconds: 600,
 		Config: map[string]interface{}{"temperature": 0.2, "mcp": map[string]interface{}{"servers": []interface{}{"openv"}}},
-		Locked: true, SystemPrompt: "You draft requirements.\n\nUse ISO 29148 wording.", FilePath: "agents/requirements-drafter.md",
+		Locked: true, Archived: true, SystemPrompt: "You draft requirements.\n\nUse ISO 29148 wording.", FilePath: "agents/requirements-drafter.md",
 		ContentHash: "sha256:abc", SyncedAt: &synced, CreatedAt: rtAt(0), UpdatedAt: rtAt(1).In(rtCEST)}
 	if err := repo.Save(saved); err != nil {
 		t.Fatalf("Save: %v", err)
@@ -99,7 +99,7 @@ func TestAgentRepositoryRoundTrip(t *testing.T) {
 		changed.OrgID, changed.Slug = otherOrg, "renamed-slug" // neither is written
 		changed.Name, changed.Description, changed.Provider, changed.Model, changed.Effort = "Drafter", "", "gemini", "", "low"
 		changed.AllowedTools, changed.WriteMode, changed.RepoAccess = nil, "proposal", false
-		changed.MaxTurns, changed.TimeoutSeconds, changed.Config, changed.Locked = 0, 0, nil, false
+		changed.MaxTurns, changed.TimeoutSeconds, changed.Config, changed.Locked, changed.Archived = 0, 0, nil, false, false
 		changed.SystemPrompt, changed.FilePath, changed.ContentHash, changed.SyncedAt = "", "", "", nil
 		changed.CreatedAt, changed.UpdatedAt = rtAt(50), rtAt(60) // created_at is not written either
 		if err := repo.Update(&changed); err != nil {

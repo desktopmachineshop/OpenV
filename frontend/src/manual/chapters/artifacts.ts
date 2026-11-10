@@ -117,7 +117,7 @@ On a phone, **Tree** shows the outline instead.
 
 The selected artifact opens on the right (on a phone, in the **Document**
 pane). Its header carries the **ref**, the **status**, **quality** and
-**priority** chips, and **Edit**, **History** and **Delete**; below the title
+**priority** chips, and **Edit**, **History** and **Archive**; below the title
 are its type, owner, verification method, the **releases** it is planned for
 (when it sets its own and the project plans target releases, such as *MVP
 onwards*), version and when it last changed, then the review step it can take next (**Submit for review**, **Approve**, …).
@@ -533,6 +533,15 @@ Add a comment in the box under the **History** heading. Use it for review discus
 rather than editing the requirement text itself — the text is the requirement,
 the comment is what you think of it. Writing one while reading **Changes**
 switches you back to **Comments**, so you can see what you just added.
+
+### Archiving and reinstating
+
+**Archive** takes an artifact out of the project and keeps every version. A
+link to it (from **Activity**, a notification or a shared link) opens it
+read-only, marked **archived**, at its last version; **History** previews
+every version with its links. **Reinstate** (editor access) brings it back
+as it was, as a new version: reference, content, status and links. Under an
+archived heading, it comes back at the top level.
 
 ### Read and unread comments
 

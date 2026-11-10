@@ -90,7 +90,7 @@ func workItemsSeed(tr *tour) (viewer, outsider *tourActor) {
 	tr.setup("the viewer joins P as a viewer", o, "POST /api/v1/projects/{id}/members", at("id", "{{p}}"),
 		jsonBody(`{"email":"tour-viewer@example.com","role":"viewer"}`), expect(201))
 	tr.setup("the workspace's agents, for the seeded developer's id (S5d pins the route)", o, "GET /api/v1/agents").
-		captureWhere("developer", "", "slug", "developer", "id")
+		captureWhere("developer", "", "slug", "link-auditor", "id")
 	outsider = tr.register("outsider", "Tour Outsider", "an ordinary account in a workspace of its own, with no "+
 		"access to P")
 	return viewer, outsider

@@ -28,6 +28,7 @@
                 "mcp__openv__get_artifact",
                 "mcp__openv__create_artifact"
               ],
+              "archived": false,
               "config": {},
               "content_hash": "9b1c2d3e4f5a",
               "created_at": "<time>",
@@ -110,6 +111,7 @@
                 "mcp__openv__get_artifact",
                 "mcp__openv__create_artifact"
               ],
+              "archived": false,
               "config": {},
               "content_hash": "9b1c2d3e4f5a",
               "created_at": "<time>",
@@ -193,6 +195,7 @@
                 "mcp__openv__get_artifact",
                 "mcp__openv__create_artifact"
               ],
+              "archived": false,
               "config": {},
               "content_hash": "9b1c2d3e4f5a",
               "created_at": "<time>",
@@ -276,6 +279,7 @@
                 "mcp__openv__get_artifact",
                 "mcp__openv__create_artifact"
               ],
+              "archived": false,
               "config": {},
               "content_hash": "9b1c2d3e4f5a",
               "created_at": "<time>",

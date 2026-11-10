@@ -9,6 +9,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **The V&V Assistant can make the changes you make to a project.** Ask it to plan a release, put requirements in a release, link a test case to what it verifies, approve or send back an artifact, archive one, comment, raise a to-do or a board task, capture a baseline, start a review round or record test results, and it answers with a card that does it. Nothing changes until you press the card's button, and a card can only do what you could do yourself on that page. Archive cards are never part of **Apply all**. Project settings, members and file uploads stay on their own pages.
+- **A flatter team of agents.** Workspaces now start with the **V&V Assistant**, the general agent you chat with, and four specialists beside it: a **Requirements Auditor**, a **Test Auditor**, a **Link Auditor** and the **Requirements Interviewer**. The auditors check quality, coverage and traceability and propose fixes for you to approve; **Draft test cases** now runs the Test Auditor. The agents they replace (Chief of Staff, Requirements Analyst, V&V Engineer, Developer, Reviewer and Test Case Author) are **archived** rather than deleted, so their runs and proposals are kept. One your workspace edited, locked or uses in an automation is left as it was.
+- **Artifacts are archived, and can be reinstated.** Nothing you remove from a project was ever really deleted, so **Delete** is now **Archive**: the artifact leaves the project and keeps every version. Open an archived artifact from **Activity** and **Reinstate** brings it back as it was, reference, content and links included. The activity trail says **archived** and **reinstated**.
+- **Platform admins can see usage and its pace.** The Platform admin page has a **Usage** section: workspaces grouped by plan and then company or personal, each with how many requirements, test cases, links, runs and comments it holds, its changes per week for 12 weeks, and a pace badge that says whether its use is accelerating, steady, slowing, new or gone quiet. Open a workspace to see its members, or switch to **By person** and filter everyone by plan, workspace or pace. It shows counts only, never what an artifact says.
+- **Archive an agent instead of deleting it.** An archived agent leaves the team and cannot be run, but its history stays; find it under **Archived** on the Agents page and **Reinstate** it at any time.
+
+### Bug fixes
+
+- **Activity names archived artifacts, and they open.** A line about an artifact that has since been archived, or a link to or from one, now names it with **(archived)** after it (*TC-12 → REQ-4 Brake within 2 m (archived)*) instead of leaving the name out. Clicking it opens the artifact read-only at its last version, with its whole history to browse. A **Link removed** line opens the artifact the link came from as it was while it still had the link.
+
+- **Comments on archived artifacts no longer sit in Needs you.** A comment whose artifact had since been archived showed in **Needs you** with no title. **Open** led nowhere, and **Mark read** or **Mark all read** could not clear it, so it came back every time you opened Home. Those comments are now left out.
+- **Open on a phone goes to the artifact.** Following a link to an artifact on a phone, from **Needs you** on Home or anywhere else, showed the project's tree instead of the artifact. It now opens the artifact itself.
+
 ## 0.30.0 — 2026-11-09
 
 ### New features

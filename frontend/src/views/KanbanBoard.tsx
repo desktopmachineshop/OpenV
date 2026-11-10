@@ -88,7 +88,8 @@ export const KanbanBoard: React.FC = () => {
 
   // Static-ish caches
   useEffect(() => {
-    agentsAPI.list().then((res) => setAgents(res.data || [])).catch(() => setAgents([]));
+    // An archived agent cannot run, so a card is not assigned to one.
+    agentsAPI.list().then((res) => setAgents((res.data || []).filter((a) => !a.archived))).catch(() => setAgents([]));
     authAPI.listUsers().then((res) => setUsers(res.data || [])).catch(() => setUsers([]));
     if (projectId) {
       artifactAPI

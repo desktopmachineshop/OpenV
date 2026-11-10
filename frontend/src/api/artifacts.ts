@@ -95,8 +95,12 @@ export const artifactAPI = {
   // (400 unknown status, 409 illegal transition, 403 insufficient role).
   changeStatus: (id: string, status: ArtifactStatus) =>
     client.put<Artifact>(`/api/v1/artifacts/${id}/status`, { status }),
+  // Archives the artifact: it leaves the project and keeps every version.
   delete: (id: string) =>
     client.delete(`/api/v1/artifacts/${id}`),
+  // Brings an archived artifact back: its last version again, live.
+  reinstate: (id: string) =>
+    client.post<Artifact>(`/api/v1/artifacts/${id}/reinstate`),
   getVersions: (id: string) =>
     client.get<Artifact[]>(`/api/v1/artifacts/${id}/versions`),
   restoreVersion: (id: string, version: number) =>

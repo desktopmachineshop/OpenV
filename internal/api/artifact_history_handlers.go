@@ -14,6 +14,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/links"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/domain/traceability"
 )
 
@@ -22,6 +23,7 @@ import (
 func (h *Handler) registerArtifactHistoryRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/artifacts/{id}/versions", h.GetArtifactVersions).Methods("GET")
 	router.HandleFunc("/api/v1/artifacts/{id}/restore", h.RestoreArtifactVersion).Methods("POST")
+	router.HandleFunc("/api/v1/artifacts/{id}/reinstate", h.ReinstateArtifact).Methods("POST")
 	router.HandleFunc("/api/v1/artifacts/{id}/links", h.GetArtifactVersionLinks).Methods("GET")
 }
 
@@ -118,6 +120,51 @@ func (h *Handler) RestoreArtifactVersion(w http.ResponseWriter, r *http.Request)
 		"restored_version": restoredFromVersion,
 	})
 
+	writeJSONOK(w, artifact)
+}
+
+// ReinstateArtifact brings an archived artifact back: its last version is
+// written again as the next, live one (artifacts.ReinstateArtifact). Guarded
+// as a read of the artifact's history is, by the project of its versions,
+// since an archived artifact has no live row: an editor of that project may
+// reinstate it, and an id no version has answers 404. A proposal-mode run is
+// refused, as it is for a draft launch: no proposal carries a reinstatement.
+// 409 when the artifact is not archived.
+func (h *Handler) ReinstateArtifact(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	_, projectID, ok := h.artifactHistory(w, r, id, true)
+	if !ok || !h.requireProjectRoleFor(w, r, projectID, members.RoleEditor, missing("artifact not found")) {
+		return
+	}
+	if _, proposalRun := h.proposalRunID(r); proposalRun {
+		writeJSONError(w, http.StatusForbidden, "proposal-mode agent runs cannot reinstate artifacts")
+		return
+	}
+	if !h.featureEnabled(r, h.orgIDForProject(projectID), release.FeatureArtifactReinstate) {
+		writeJSONError(w, http.StatusForbidden, "reinstating an artifact reaches this workspace with its next stable release")
+		return
+	}
+	artifact, err := h.ArtifactService.ReinstateArtifact(id)
+	switch {
+	case errors.Is(err, artifacts.ErrNotArchived):
+		writeJSONError(w, http.StatusConflict, err.Error())
+		return
+	case errors.Is(err, artifacts.ErrNotFound):
+		writeJSONError(w, http.StatusNotFound, "artifact not found")
+		return
+	case err != nil:
+		respondInternal(w, r, "failed to reinstate artifact", err)
+		return
+	}
+	note := chatter.NewChatterEntry(id, fmt.Sprintf("Reinstated from the archive as version %d.", artifact.Version), true, "reinstate")
+	if err := h.ChatterService.CreateEntry(note); err != nil {
+		slog.Warn("api: failed to create chatter entry for reinstatement", "artifact_id", id, "error", err)
+	}
+	h.publish(r, events.ArtifactReinstated, artifact.ProjectID, artifact.ID, map[string]interface{}{
+		"artifact_type": artifact.Type,
+		"title":         artifact.Title,
+		"version":       artifact.Version,
+	})
 	writeJSONOK(w, artifact)
 }
 

@@ -102,7 +102,28 @@ page:
   as a whole.
 
 Suggestion cards beside the project add a draft artifact, or make the change
-they describe, when you press their button, and only then. Other pages can
+they describe, when you press their button, and only then. Ask for any change
+you could make yourself and the assistant answers with a card for it:
+
+- **Release**: add a target release, or change one's name, date or status.
+- **Release target**: put artifacts in a release, optionally until a later
+  one, or clear their own targeting so they follow their parent's.
+- **Link**: add a traceability link, remove one, or confirm a suspect link.
+- **Review status**: move artifacts to draft, in review, approved or
+  superseded. A change the review workflow does not allow is refused on the
+  card, with the reason.
+- **Archive**: archive artifacts, which keeps their history so they can be
+  reinstated. **Apply all** never includes an archive card; each one is
+  applied by its own button.
+- **Comment**: post a comment on an artifact, in your name.
+- **To-do** and **Board task**: raise a to-do or add a task to the board,
+  assigned to a member and with a due date if the card names them.
+- **Baseline**, **Review round** and **Test run**: capture a baseline, send
+  every draft for review, or record a test run's results.
+
+Each card does what the same action on its page would, with your access: a
+change you could not make there is refused on the card too. Project
+settings, members, uploads and evidence files stay on their own pages. Other pages can
 start a turn for you: **Draft tests** on the V&V dashboard's *Top gaps* card
 opens the panel and asks for test cases for those gaps (see *V&V* → *Gaps*).
 

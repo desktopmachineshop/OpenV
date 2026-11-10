@@ -7,6 +7,7 @@ import {
   applySuggestionsToProject,
   isProjectEditKind,
 } from './applySuggestion';
+import { ASSISTANT_FULL_SCOPE_FEATURE, FULL_SCOPE_GATED_REASON, isProjectActionKind } from './projectActions';
 import type { CopilotSuggestion } from './GuidedChatPanel';
 
 /**
@@ -28,6 +29,7 @@ import type { CopilotSuggestion } from './GuidedChatPanel';
 export const useProjectSuggestions = (projectId: string | undefined, onArtifactsChanged?: () => void) => {
   const [applied, setApplied] = useState<Record<string, boolean>>({});
   const editsEnabled = useFeature(ASSISTANT_EDITS_FEATURE);
+  const fullScope = useFeature(ASSISTANT_FULL_SCOPE_FEATURE);
 
   const applySuggestions = useCallback(
     async (items: { suggestion: CopilotSuggestion; key: string }[]): Promise<(string | null)[]> => {
@@ -44,13 +46,19 @@ export const useProjectSuggestions = (projectId: string | undefined, onArtifacts
       // A gated kind is answered, not applied: the server does not offer
       // these shapes to a gated workspace, but a transcript can carry one
       // from before the gate closed, or from another member's channel.
-      const allowed = editsEnabled ? items : items.filter((i) => !isProjectEditKind(i.suggestion?.kind));
+      const gated = (kind: unknown): string | null =>
+        !editsEnabled && isProjectEditKind(kind)
+          ? GATED_REASON
+          : !fullScope && isProjectActionKind(kind)
+            ? FULL_SCOPE_GATED_REASON
+            : null;
+      const allowed = items.filter((i) => !gated(i.suggestion?.kind));
       const applyResults = await applySuggestionsToProject(
         { projectId, artifacts, onChanged: onArtifactsChanged },
         allowed
       );
       const byKey = new Map(allowed.map((i, n) => [i.key, applyResults[n]]));
-      const results = items.map((i) => (byKey.has(i.key) ? byKey.get(i.key)! : GATED_REASON));
+      const results = items.map((i) => (byKey.has(i.key) ? byKey.get(i.key)! : gated(i.suggestion?.kind) || GATED_REASON));
       setApplied((prev) => {
         const next = { ...prev };
         items.forEach((i, n) => {
@@ -60,7 +68,7 @@ export const useProjectSuggestions = (projectId: string | undefined, onArtifacts
       });
       return results;
     },
-    [projectId, onArtifactsChanged, editsEnabled]
+    [projectId, onArtifactsChanged, editsEnabled, fullScope]
   );
 
   return { applied, applySuggestions };

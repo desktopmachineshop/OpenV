@@ -166,6 +166,11 @@ export const AgentsList: React.FC = () => {
                 <strong style={{ flex: 1, fontSize: 14, color: 'var(--text)' }}>
                   🤖 {agent.name}
                 </strong>
+                {agent.archived && (
+                  <span title="Archived: out of the team and cannot run; its runs are kept" style={chipStyle('neutral')}>
+                    archived
+                  </span>
+                )}
                 {agent.locked && (
                   <span title="Locked: platform updates never change this agent" style={{ fontSize: 13 }}>
                     🔒

@@ -6,13 +6,17 @@ export const useNotesParam = (
   notes: boolean,
   artifactId: string | null,
   stacked: boolean,
-  openStacked: () => void,
+  openStacked: (pane: 'document' | 'notes') => void,
   reveal: () => void
 ) => {
   useEffect(() => {
-    if (!notes || !artifactId) return;
-    if (stacked) openStacked();
-    else reveal();
+    if (!artifactId) return;
+    // On a phone the panes stack and the tree shows first, so a link to an
+    // artifact (from Home, a notification, a shared URL) opens its document,
+    // or its notes when it asks for them; otherwise the phone landed on the
+    // tree and the artifact looked as if the link had gone nowhere.
+    if (stacked) openStacked(notes ? 'notes' : 'document');
+    else if (notes) reveal();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notes, artifactId]);
 };

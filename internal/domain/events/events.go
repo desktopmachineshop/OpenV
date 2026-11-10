@@ -19,10 +19,14 @@ const (
 	// new one; payload carries {artifact_type, title, version,
 	// restored_version}, the version written and the one it copies (REQ-4).
 	ArtifactRestored = "artifact.restored"
-	LinkCreated      = "link.created"
-	LinkUpdated      = "link.updated"
-	LinkDeleted      = "link.deleted"
-	BaselineCaptured = "baseline.captured"
+	// ArtifactReinstated fires when an archived artifact is brought back:
+	// its last version written again as the next, live one. Payload
+	// carries {artifact_type, title, version}.
+	ArtifactReinstated = "artifact.reinstated"
+	LinkCreated        = "link.created"
+	LinkUpdated        = "link.updated"
+	LinkDeleted        = "link.deleted"
+	BaselineCaptured   = "baseline.captured"
 	// BaselineDeleted fires when a project owner deletes a baseline; payload
 	// carries {name}, since the baseline it names is gone (REQ-5).
 	BaselineDeleted = "baseline.deleted"

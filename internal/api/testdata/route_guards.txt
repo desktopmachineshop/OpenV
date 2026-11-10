@@ -46,6 +46,7 @@ DELETE /mcp: -
 GET /.well-known/oauth-authorization-server: -
 GET /.well-known/oauth-protected-resource: -
 GET /.well-known/oauth-protected-resource/mcp: -
+GET /api/v1/admin/metrics/usage: platform-admin
 GET /api/v1/admin/metrics/users: platform-admin
 GET /api/v1/admin/metrics/visitors: platform-admin
 GET /api/v1/admin/users: platform-admin
@@ -216,6 +217,7 @@ POST /api/v1/agents: org:admin
 POST /api/v1/agents/sync: org:admin
 POST /api/v1/agents/{slug}/runs: no-proposal-run, project:editor, unscoped-launch
 POST /api/v1/artifacts: project:editor, project:viewer
+POST /api/v1/artifacts/{id}/reinstate: project:editor
 POST /api/v1/artifacts/{id}/restore: project:editor
 POST /api/v1/attachments/upload: project:editor
 POST /api/v1/attachments/{id}/versions: project:editor

@@ -40,6 +40,9 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 	if agent == nil {
 		return nil, "", agents.ErrNotFound
 	}
+	if agent.Archived {
+		return nil, "", agents.ErrArchived
+	}
 
 	token, err := tokens.NewToken()
 	if err != nil {

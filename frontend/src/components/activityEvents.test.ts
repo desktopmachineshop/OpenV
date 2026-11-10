@@ -29,9 +29,15 @@ describe('eventTarget', () => {
     expect(eventTarget(ev({ event_type: 'chatter.created', entity_id: 'c1', payload: { artifact_id: 'a9' } }))).toBe('/projects/p1/requirements?artifact=a9&notes=1');
   });
 
-  it('leads nowhere for a deleted artifact or an event without a project', () => {
-    expect(eventTarget(ev({ event_type: 'artifact.deleted' }))).toBe('');
+  it('opens a deleted artifact from its history, and leads nowhere without a project', () => {
+    expect(eventTarget(ev({ event_type: 'artifact.deleted' }))).toBe('/projects/p1/requirements?artifact=a1');
     expect(eventTarget(ev({ project_id: undefined }))).toBe('');
+  });
+
+  it('opens a removed link\'s source as it was while it had the link', () => {
+    expect(
+      eventTarget(ev({ event_type: 'link.deleted', entity_id: 'l1', payload: { from_id: 'tc1', to_id: 'r1', link_type: 'verifies' } }))
+    ).toBe('/projects/p1/requirements?artifact=tc1&link=l1&at=2026-11-04T23%3A10%3A00Z');
   });
 });
 

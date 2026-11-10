@@ -6,6 +6,7 @@ import { useAppStore } from '../state/store';
 import { useViewport } from '../hooks/useViewport';
 import { AgentEditor } from '../components/agents/AgentEditor';
 import { AgentHierarchy } from '../components/agents/AgentHierarchy';
+import { ArchivedAgents } from '../components/agents/ArchivedAgents';
 import { LaunchRunModal } from '../components/agents/LaunchRunModal';
 import { ErrorBanner, Modal, Sheet } from '../components/ui';
 
@@ -27,7 +28,9 @@ export const AgentsHierarchyPage: React.FC = () => {
   const { isCompact } = useViewport();
   const navigate = useNavigate();
 
-  const [agents, setAgents] = useState<AgentDef[]>([]);
+  const [all, setAgents] = useState<AgentDef[]>([]);
+  // An archived agent is out of the team: listed under it, not in it.
+  const agents = all.filter((a) => !a.archived);
   const [stats, setStats] = useState<Record<string, AgentStats>>({});
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(false);
@@ -134,6 +137,13 @@ export const AgentsHierarchyPage: React.FC = () => {
           onLaunch={setLaunchAgent}
         />
       )}
+      <ArchivedAgents
+        agents={all.filter((a) => a.archived)}
+        canEdit={isAdmin}
+        onChanged={load}
+        onEdit={(agent) => setEditor({ agent })}
+        onError={setError}
+      />
 
       {editor &&
         (isCompact ? (

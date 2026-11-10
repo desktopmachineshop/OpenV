@@ -319,6 +319,8 @@ const Detail: React.FC<{ e: DomainEvent; names: ArtifactNames }> = ({ e, names }
           Version {String(p.version ?? '?')} brings back version {String(p.restored_version ?? '?')}.
         </span>
       );
+    case 'artifact.reinstated':
+      return <span>Back from the archive as version {String(p.version ?? '?')}, as it was when archived.</span>;
     case 'project.member_role_changed':
       return (
         <div style={rowStyle}>

@@ -40,6 +40,7 @@ DELETE /mcp
 GET /.well-known/oauth-authorization-server
 GET /.well-known/oauth-protected-resource
 GET /.well-known/oauth-protected-resource/mcp
+GET /api/v1/admin/metrics/usage
 GET /api/v1/admin/metrics/users
 GET /api/v1/admin/metrics/visitors
 GET /api/v1/admin/users
@@ -210,6 +211,7 @@ POST /api/v1/agents
 POST /api/v1/agents/sync
 POST /api/v1/agents/{slug}/runs
 POST /api/v1/artifacts
+POST /api/v1/artifacts/{id}/reinstate
 POST /api/v1/artifacts/{id}/restore
 POST /api/v1/attachments/upload
 POST /api/v1/attachments/{id}/versions

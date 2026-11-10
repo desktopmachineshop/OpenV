@@ -5,13 +5,17 @@ import (
 	"log/slog"
 	"os"
 
+	openv "github.com/openv/requirements-platform"
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/automations"
 	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/projects"
+	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/domain/reports"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
+	"github.com/openv/requirements-platform/internal/seeds"
 )
 
 // The function values main() hands to services: each looks something up in
@@ -90,4 +94,54 @@ func downloadWorkspaceSource(projectService projects.Service, orgService *orgs.D
 // workspace's budget and the run service's month-to-date spend.
 func budgetGuard(orgService *orgs.DefaultService, runService *agentruns.DefaultService) func(orgID string) (bool, string) {
 	return agentruns.BudgetGuard(orgService, runService)
+}
+
+// seedTeamFor answers which seeded team a workspace gets (seeds.Team): the
+// flat one where FeatureFlatAgentTeam is on for its release channel, and
+// with it what still uses an agent, so the earlier team's agents an
+// automation runs are kept. Seeding at boot runs before stage release builds
+// the release service, so until there is one the embedded notes are read
+// here. A workspace whose channel cannot be read gets the earlier team.
+func seedTeamFor(orgService *orgs.DefaultService, releases func() release.Service, automationService *automations.DefaultService) func(orgID string) seeds.Team {
+	var parsed release.Service
+	return func(orgID string) seeds.Team {
+		org, err := orgService.Get(orgID)
+		if err != nil || org == nil {
+			return seeds.Team{}
+		}
+		svc := releases()
+		if svc == nil {
+			if parsed == nil {
+				if built, err := release.NewService(openv.ReleaseNotesMarkdown); err == nil {
+					parsed = built
+				}
+			}
+			svc = parsed
+		}
+		if !release.FeaturesFor(svc, org.ReleaseChannel, org.StableRelease)[release.FeatureFlatAgentTeam] {
+			return seeds.Team{}
+		}
+		return seeds.Team{Flat: true, InUse: func(agentID string) bool {
+			list, err := automationService.List(orgID, "")
+			if err != nil {
+				return true // unsure: keep the agent
+			}
+			for _, a := range list {
+				if a.AgentID != nil && *a.AgentID == agentID {
+					return true
+				}
+			}
+			return false
+		}}
+	}
+}
+
+// releases is the release service once stage release has built it, and nil
+// before: a nil *DefaultService must not reach seedTeamFor as a non-nil
+// interface.
+func (a *app) releases() release.Service {
+	if a.releaseService == nil {
+		return nil
+	}
+	return a.releaseService
 }

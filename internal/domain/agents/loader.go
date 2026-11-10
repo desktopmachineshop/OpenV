@@ -459,6 +459,7 @@ func (s *FileService) syncOne(orgID string, def *Definition, path, content strin
 		existing.TimeoutSeconds = def.TimeoutSeconds
 		existing.Config = def.Config
 		existing.Locked = def.Locked
+		existing.Archived = def.Archived
 		existing.GroupName = def.GroupName
 		existing.SortOrder = def.SortOrder
 		existing.ParentAgentID, existing.ReportsTo = s.parentOf(orgID, def.ReportsTo, existing.ID)
@@ -491,6 +492,7 @@ func (s *FileService) syncOne(orgID string, def *Definition, path, content strin
 		TimeoutSeconds: def.TimeoutSeconds,
 		Config:         def.Config,
 		Locked:         def.Locked,
+		Archived:       def.Archived,
 		ParentAgentID:  parentID,
 		ReportsTo:      reportsTo,
 		GroupName:      def.GroupName,

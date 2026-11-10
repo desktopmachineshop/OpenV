@@ -474,6 +474,16 @@ type fakeArtifactService struct {
 	artifacts.Service
 	byID       map[string]*artifacts.Artifact
 	updateReqs []artifacts.UpdateArtifactRequest
+	// versions holds the history of artifacts byID does not: a deleted
+	// artifact's rows, newest first, which the soft delete keeps.
+	versions map[string][]*artifacts.Artifact
+}
+
+func (f *fakeArtifactService) GetArtifactVersions(id string) ([]*artifacts.Artifact, error) {
+	if a, ok := f.byID[id]; ok {
+		return []*artifacts.Artifact{a}, nil
+	}
+	return f.versions[id], nil
 }
 
 func (f *fakeArtifactService) GetArtifact(id string) (*artifacts.Artifact, error) {

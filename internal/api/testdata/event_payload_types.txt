@@ -30,6 +30,11 @@ artifact.deleted              (org)              org-1                    DELETE
 artifact.deleted              (org)              org-1                    proposal applier DeleteArtifact
 artifact.deleted              artifact_type      string                   proposal applier DeleteArtifact
 artifact.deleted              title              string                   proposal applier DeleteArtifact
+artifact.reinstated           (actor)            user:u-admin             POST /api/v1/artifacts/{id}/reinstate
+artifact.reinstated           (org)              org-1                    POST /api/v1/artifacts/{id}/reinstate
+artifact.reinstated           artifact_type      string                   POST /api/v1/artifacts/{id}/reinstate
+artifact.reinstated           title              string                   POST /api/v1/artifacts/{id}/reinstate
+artifact.reinstated           version            int                      POST /api/v1/artifacts/{id}/reinstate
 artifact.restored             (actor)            user:u-admin             POST /api/v1/artifacts/{id}/restore
 artifact.restored             (org)              org-1                    POST /api/v1/artifacts/{id}/restore
 artifact.restored             artifact_type      string                   POST /api/v1/artifacts/{id}/restore

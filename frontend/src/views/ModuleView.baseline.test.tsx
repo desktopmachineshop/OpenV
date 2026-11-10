@@ -112,7 +112,7 @@ const byText = <T extends Element>(selector: string, text: string): T => {
 const documentButtons = () =>
   Array.from(container.querySelectorAll('[aria-label="Artifact document"] button')).map((b) => (b.textContent ?? '').trim());
 
-const WRITES = ['Edit', 'Delete', 'History', 'Submit for review', 'Return to draft', 'Approve', 'Mark superseded'];
+const WRITES = ['Edit', 'Archive', 'History', 'Submit for review', 'Return to draft', 'Approve', 'Mark superseded'];
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -147,7 +147,7 @@ describe('ModuleView baseline document', () => {
 
     // Live, the artifact's header carries its actions.
     expect(byText('h3', 'The pump shall start within 2 seconds')).toBeTruthy();
-    expect(documentButtons()).toEqual(expect.arrayContaining(['Edit', 'Delete', 'History', 'Submit for review']));
+    expect(documentButtons()).toEqual(expect.arrayContaining(['Edit', 'Archive', 'History', 'Submit for review']));
 
     // The same artifact as the baseline captured it: read only.
     await choose(container.querySelector<HTMLSelectElement>('select[title="Select baseline"]')!, 'bl-1');

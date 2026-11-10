@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
+	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/evidence"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
@@ -116,6 +117,7 @@ var (
 	// refusal, a 402 the UI can message clearly.
 	launchErrs402 = []launchErr{
 		{agentruns.ErrBudgetExceeded, http.StatusPaymentRequired, ""},
+		{agents.ErrArchived, http.StatusConflict, ""},
 		{nil, http.StatusBadRequest, ""},
 	}
 	// launchErrs400 answers RunAutomationNow and LaunchTestRunAgent: every refusal, an over-budget one included.

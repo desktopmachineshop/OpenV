@@ -15,6 +15,10 @@
     </ul>
     <p>It opens on <b>Comments</b>, which is what most people come to it for; the recorded changes are the backdrop.</p>
     <p>Add a comment in the box under the <b>History</b> heading. Use it for review discussion rather than editing the requirement text itself — the text is the requirement, the comment is what you think of it. Writing one while reading <b>Changes</b> switches you back to <b>Comments</b>, so you can see what you just added.</p>
+    <section id="archiving-and-reinstating">
+      <title>Archiving and reinstating</title>
+      <p><b>Archive</b> takes an artifact out of the project and keeps every version. A link to it (from <b>Activity</b>, a notification or a shared link) opens it read-only, marked <b>archived</b>, at its last version; <b>History</b> previews every version with its links. <b>Reinstate</b> (editor access) brings it back as it was, as a new version: reference, content, status and links. Under an archived heading, it comes back at the top level.</p>
+    </section>
     <section id="read-and-unread-comments">
       <title>Read and unread comments</title>
       <p><b>Needs you</b>, on Home, lists the comments you have not read. Comments count as read once you see them here: as soon as the <b>History</b> comes into view, or straight away when you came from a <b>Needs you</b> line. A comment written since you last read the artifact's comments shows <b>New</b>.</p>

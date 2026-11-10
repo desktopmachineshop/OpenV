@@ -4408,7 +4408,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-pool\",\"name\":\"Tour Pool\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line.\",\"locked\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-pool.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 122>\",\"created_at\":\"<time@before step 122>\",\"updated_at\":\"<time@before step 122>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<mrun>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy my week.\",\"worker_id\":\"tour-lease\",\"heartbeat_at\":\"<time@step 122>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@before step 122>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Pool\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<mrun.token>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-pool\",\"name\":\"Tour Pool\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-pool.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 122>\",\"created_at\":\"<time@before step 122>\",\"updated_at\":\"<time@before step 122>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<mrun>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy my week.\",\"worker_id\":\"tour-lease\",\"heartbeat_at\":\"<time@step 122>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@before step 122>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Pool\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<mrun.token>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4431,6 +4431,7 @@
           "config": {},
           "system_prompt": "You answer in one line.",
           "locked": false,
+          "archived": false,
           "parent_agent_id": null,
           "reports_to": "",
           "group_name": "",

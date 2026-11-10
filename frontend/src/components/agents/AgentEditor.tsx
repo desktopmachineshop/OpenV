@@ -43,6 +43,7 @@ interface FormState {
   write_mode: 'proposal' | 'direct';
   repo_access: boolean;
   locked: boolean;
+  archived: boolean;
   max_turns: number;
   timeout_seconds: number;
   allowed_tools: string;
@@ -59,6 +60,7 @@ const toForm = (agent: AgentDef | null): FormState => ({
   write_mode: agent?.write_mode || 'proposal',
   repo_access: agent?.repo_access || false,
   locked: agent?.locked || false,
+  archived: agent?.archived || false,
   max_turns: agent?.max_turns ?? 30,
   timeout_seconds: agent?.timeout_seconds ?? 600,
   allowed_tools: (agent?.allowed_tools || []).join(', '),
@@ -138,6 +140,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
       write_mode: form.write_mode,
       repo_access: form.repo_access,
       locked: form.locked,
+      archived: form.archived,
       max_turns: Number(form.max_turns) || 0,
       timeout_seconds: Number(form.timeout_seconds) || 0,
       allowed_tools: allowedTools,
@@ -395,6 +398,26 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                     where you have not changed them. Lock it and they never will — this agent
                     then changes only when someone here changes it. You can unlock it again at
                     any time.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="form-group" style={{ gridColumn: isPhone ? undefined : '1 / span 2' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <input
+                  id="agent-archived"
+                  type="checkbox"
+                  checked={form.archived}
+                  onChange={(e) => set({ archived: e.target.checked })}
+                  style={{ width: 'auto', marginTop: 3 }}
+                />
+                <div>
+                  <label htmlFor="agent-archived" style={{ margin: 0, fontWeight: 400 }}>
+                    Archive this agent
+                  </label>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, maxWidth: 'var(--measure-field)' }}>
+                    An archived agent leaves the team and cannot be run, and its runs and proposals are kept.
+                    Reinstate it from the Archived list at any time.
                   </div>
                 </div>
               </div>

@@ -71,6 +71,8 @@
   </topicref>
   <topicref href="../topics/agents/index.dita">
     <topicref href="../topics/agents/the-agent-hierarchy.dita"/>
+    <topicref href="../topics/agents/the-default-agents.dita"/>
+    <topicref href="../topics/agents/archived-agents.dita"/>
     <topicref href="../topics/agents/the-agent-list.dita"/>
     <topicref href="../topics/agents/launching-a-run.dita"/>
     <topicref href="../topics/agents/the-agent-editor.dita"/>
@@ -135,6 +137,7 @@
   <topicref href="../topics/platform-admin/index.dita">
     <topicref href="../topics/platform-admin/who-is-a-platform-admin.dita"/>
     <topicref href="../topics/platform-admin/password-reset-links-for-support.dita"/>
+    <topicref href="../topics/platform-admin/usage.dita"/>
     <topicref href="../topics/platform-admin/workspaces-and-plans.dita"/>
   </topicref>
   <topicref href="../topics/troubleshooting/index.dita">

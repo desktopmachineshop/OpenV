@@ -24,7 +24,18 @@
         <li>On a phone it opens as a sheet from the bottom of the screen.</li>
         <li>The quick actions fit where you are: <i>Review this</i> and <i>How would I verify it?</i> beside a requirement, <i>Gap analysis</i> and <i>Draft tests</i> for the project as a whole.</li>
       </ul>
-      <p>Suggestion cards beside the project add a draft artifact, or make the change they describe, when you press their button, and only then. Other pages can start a turn for you: <b>Draft tests</b> on the V&amp;V dashboard's <i>Top gaps</i> card opens the panel and asks for test cases for those gaps (see <i>V&amp;V</i> → <i>Gaps</i>).</p>
+      <p>Suggestion cards beside the project add a draft artifact, or make the change they describe, when you press their button, and only then. Ask for any change you could make yourself and the assistant answers with a card for it:</p>
+      <ul>
+        <li><b>Release</b>: add a target release, or change one's name, date or status.</li>
+        <li><b>Release target</b>: put artifacts in a release, optionally until a later one, or clear their own targeting so they follow their parent's.</li>
+        <li><b>Link</b>: add a traceability link, remove one, or confirm a suspect link.</li>
+        <li><b>Review status</b>: move artifacts to draft, in review, approved or superseded. A change the review workflow does not allow is refused on the card, with the reason.</li>
+        <li><b>Archive</b>: archive artifacts, which keeps their history so they can be reinstated. <b>Apply all</b> never includes an archive card; each one is applied by its own button.</li>
+        <li><b>Comment</b>: post a comment on an artifact, in your name.</li>
+        <li><b>To-do</b> and <b>Board task</b>: raise a to-do or add a task to the board, assigned to a member and with a due date if the card names them.</li>
+        <li><b>Baseline</b>, <b>Review round</b> and <b>Test run</b>: capture a baseline, send every draft for review, or record a test run's results.</li>
+      </ul>
+      <p>Each card does what the same action on its page would, with your access: a change you could not make there is refused on the card too. Project settings, members, uploads and evidence files stay on their own pages. Other pages can start a turn for you: <b>Draft tests</b> on the V&amp;V dashboard's <i>Top gaps</i> card opens the panel and asks for test cases for those gaps (see <i>V&amp;V</i> → <i>Gaps</i>).</p>
       <p>Starting a conversation needs editor access to the project, and a workspace its plan has made read-only cannot start one. In either case the panel says so and what to do instead of a chat.</p>
       <p>On a workspace still on an earlier release, the assistant is a tab of the <b>Notes</b> panel on the Requirements page instead, beside the artifact's History.</p>
       <p>Assistant turns execute on an agent runner like any other agent work. If no runner is online the panel says so and pauses replies — messages you send are saved and answered as soon as a runner connects (see <i>Runs &amp; runners</i>).</p>

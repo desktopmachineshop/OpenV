@@ -35,6 +35,7 @@ GET /api/v1/admin/users -> AdminListUsers
 PUT /api/v1/admin/users/{id}/admin -> AdminSetUserAdmin
 GET /api/v1/admin/metrics/users -> AdminUserMetrics
 GET /api/v1/admin/metrics/visitors -> AdminVisitorMetrics
+GET /api/v1/admin/metrics/usage -> AdminUsageMetrics
 POST /api/v1/public/visits -> RecordSiteVisit
 GET /api/v1/public/plans -> GetPublicPlans
 GET /api/v1/orgs/{id}/billing -> GetOrgBilling
@@ -63,6 +64,7 @@ PUT /api/v1/artifacts/{id}/status -> ChangeArtifactStatus
 DELETE /api/v1/artifacts/{id} -> DeleteArtifact
 GET /api/v1/artifacts/{id}/versions -> GetArtifactVersions
 POST /api/v1/artifacts/{id}/restore -> RestoreArtifactVersion
+POST /api/v1/artifacts/{id}/reinstate -> ReinstateArtifact
 GET /api/v1/artifacts/{id}/links -> GetArtifactVersionLinks
 POST /api/v1/links -> CreateLink
 GET /api/v1/links -> ListLinks
