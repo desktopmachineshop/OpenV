@@ -153,13 +153,10 @@ header Set-Cookie: openv_session=<token>; Path=/; Expires=<expires>; Max-Age=259
 header X-Content-Type-Options: nosniff
 header X-Frame-Options: DENY
 body not recorded (the new account; S5c pins it)
-log level=INFO msg="seeds: created default agent \"chief-of-staff\" for org <uuid>"
-log level=INFO msg="seeds: created default agent \"requirements-analyst\" for org <uuid>"
-log level=INFO msg="seeds: created default agent \"vv-engineer\" for org <uuid>"
-log level=INFO msg="seeds: created default agent \"developer\" for org <uuid>"
-log level=INFO msg="seeds: created default agent \"reviewer\" for org <uuid>"
-log level=INFO msg="seeds: created default agent \"test-case-author\" for org <uuid>"
 log level=INFO msg="seeds: created default agent \"requirements-copilot\" for org <uuid>"
+log level=INFO msg="seeds: created default agent \"requirements-auditor\" for org <uuid>"
+log level=INFO msg="seeds: created default agent \"test-auditor\" for org <uuid>"
+log level=INFO msg="seeds: created default agent \"link-auditor\" for org <uuid>"
 log level=INFO msg="seeds: created default agent \"requirements-interviewer\" for org <uuid>"
 log level=INFO msg="http request" method=POST path=/api/v1/auth/register status=200 duration=<duration>
 
