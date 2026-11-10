@@ -39,6 +39,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/plan"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
@@ -95,9 +96,11 @@ type HandlerDeps struct {
 	// it so a deployment can be matched to a commit — which is what lets the
 	// staging smoke gate prove it tested the commit it thinks it did
 	// (REQ-141).
-	BuildSHA         string
-	WorkItemService  workitems.Service
-	TodoService      todos.Service
+	BuildSHA        string
+	WorkItemService workitems.Service
+	TodoService     todos.Service
+	// PlanService is a project's plan, the Gantt over the board (plan_handlers.go).
+	PlanService      plan.Service
 	GuidedService    guided.Service
 	InterviewService interviews.Service
 	// ShareLinkService mints and resolves project share links (REQ-149).

@@ -32,6 +32,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/plan"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
@@ -96,6 +97,7 @@ type app struct {
 	evidenceRepo         *postgres.EvidenceRepository
 	workItemRepo         *postgres.WorkItemRepository
 	todoRepo             *postgres.TodoRepository
+	planRepo             *postgres.PlanRepository
 	guidedRepo           *postgres.GuidedRepository
 	interviewRepo        *postgres.InterviewRepository
 	agentRepo            *postgres.AgentRepository
@@ -150,6 +152,7 @@ type app struct {
 	evidenceService      *evidence.DefaultService
 	workItemService      *workitems.DefaultService
 	todoService          *todos.DefaultService
+	planService          *plan.DefaultService
 	guidedService        *guided.DefaultService
 	interviewService     *interviews.DefaultService
 	shareLinkService     *sharelinks.DefaultService

@@ -44,7 +44,8 @@
     "assistant-full-scope",
     "flat-agent-team",
     "admin-usage",
-    "artifact-reinstate"
+    "artifact-reinstate",
+    "gantt-plan"
   ],
   "event_types": [
     "artifact.created",

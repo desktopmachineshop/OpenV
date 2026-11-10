@@ -39,6 +39,7 @@
       "internal/domain/members",
       "internal/domain/notifications",
       "internal/domain/orgs",
+      "internal/domain/plan",
       "internal/domain/products",
       "internal/domain/projects",
       "internal/domain/proposals",
@@ -103,6 +104,7 @@
       "internal/domain/mentions",
       "internal/domain/notifications",
       "internal/domain/orgs",
+      "internal/domain/plan",
       "internal/domain/products",
       "internal/domain/projects",
       "internal/domain/proposals",
@@ -259,6 +261,14 @@
       "internal/domain/links",
       "internal/domain/snapshot"
     ],
+    "internal/domain/plan": [
+      "internal/domain/artifacts",
+      "internal/domain/links",
+      "internal/domain/targetreleases",
+      "internal/domain/todos",
+      "internal/domain/vv",
+      "internal/domain/workitems"
+    ],
     "internal/domain/todos": [
       "internal/domain/workitems"
     ],
@@ -338,6 +348,7 @@
       "internal/domain/members",
       "internal/domain/notifications",
       "internal/domain/orgs",
+      "internal/domain/plan",
       "internal/domain/products",
       "internal/domain/projects",
       "internal/domain/proposals",

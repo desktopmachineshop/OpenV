@@ -9,6 +9,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/evidence"
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
+	"github.com/openv/requirements-platform/internal/domain/plan"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/savedsearches"
 	"github.com/openv/requirements-platform/internal/domain/settings"
@@ -68,6 +69,7 @@ func (a *app) projects() {
 	a.evidenceService = evidence.NewDefaultService(a.evidenceRepo)
 	a.workItemService = workitems.NewDefaultService(a.workItemRepo, a.bus)
 	a.todoService = todos.NewDefaultService(a.todoRepo, a.workItemService)
+	a.planService = plan.NewDefaultService(a.planRepo, a.workItemService, a.todoService, a.targetReleaseService)
 	a.guidedService = guided.NewDefaultService(a.guidedRepo, a.artifactService, a.linkService, a.chatterService, a.productService, a.bus)
 	a.interviewService = interviews.NewDefaultService(a.interviewRepo)
 	a.shareLinkService = sharelinks.NewService(postgres.NewShareLinkRepository(a.db))

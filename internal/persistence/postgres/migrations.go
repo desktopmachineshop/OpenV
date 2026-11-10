@@ -129,4 +129,5 @@ var migrations = []Migration{
 	{Version: 72, Name: "workspace_notices", Run: m0072WorkspaceNotices},
 	{Version: 73, Name: "comment_reads", Run: m0073CommentReads},
 	{Version: 74, Name: "agents_archived", Run: m0074AgentsArchived},
+	{Version: 75, Name: "plan", Run: m0075Plan},
 }
