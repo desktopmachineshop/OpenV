@@ -43,6 +43,7 @@
     "comment-reads",
     "assistant-full-scope",
     "flat-agent-team",
+    "admin-usage",
     "artifact-reinstate"
   ],
   "event_types": [

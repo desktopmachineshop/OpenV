@@ -94,4 +94,4 @@ PUT /api/v1/links/{id}/confirm: 200, 404; links_managed_edits
 PUT /api/v1/me/comment-reads: 200, 400; review_chatter_search
 PUT /api/v1/projects/{id}: 200, 400; projects_templates
 
-s5a: 82 of 365 routes reached (22.5%), 82 with a 2xx or 3xx answer (22.5%)
+s5a: 82 of 366 routes reached (22.4%), 82 with a 2xx or 3xx answer (22.4%)

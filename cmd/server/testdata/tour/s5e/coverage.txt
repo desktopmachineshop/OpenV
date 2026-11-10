@@ -53,6 +53,7 @@ DELETE /mcp: 405; phantom_matrix (errors only)
 GET /.well-known/oauth-authorization-server: 200; phantom_matrix
 GET /.well-known/oauth-protected-resource: 200; phantom_matrix
 GET /.well-known/oauth-protected-resource/mcp: 200; phantom_matrix
+GET /api/v1/admin/metrics/usage: 200, 401, 403; phantom_matrix
 GET /api/v1/admin/metrics/users: 200, 401, 403; phantom_matrix
 GET /api/v1/admin/metrics/visitors: 200, 401, 403; phantom_matrix
 GET /api/v1/admin/users: 200, 401, 403; phantom_matrix
@@ -377,4 +378,4 @@ PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (e
 PUT /api/v1/todos/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 
-s5e: 364 of 365 routes reached (99.7%), 169 with a 2xx or 3xx answer (46.3%)
+s5e: 365 of 366 routes reached (99.7%), 170 with a 2xx or 3xx answer (46.4%)

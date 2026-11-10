@@ -117,6 +117,7 @@
   "/manual/platform-admin": "topics/platform-admin/index",
   "/manual/platform-admin#who-is-a-platform-admin": "topics/platform-admin/who-is-a-platform-admin",
   "/manual/platform-admin#password-reset-links-for-support": "topics/platform-admin/password-reset-links-for-support",
+  "/manual/platform-admin#usage": "topics/platform-admin/usage",
   "/manual/platform-admin#workspaces-and-plans": "topics/platform-admin/workspaces-and-plans",
   "/manual/troubleshooting": "topics/troubleshooting/index",
   "/manual/troubleshooting#agent-runs-stay-queued": "topics/troubleshooting/agent-runs-stay-queued",

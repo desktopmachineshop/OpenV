@@ -85,3 +85,8 @@ export const FLAT_AGENT_TEAM_FEATURE: FeatureKey = 'flat-agent-team';
 
 /** Reinstating an archived artifact from its page (POST /artifacts/{id}/reinstate). */
 export const ARTIFACT_REINSTATE_FEATURE: FeatureKey = 'artifact-reinstate';
+
+// The platform admin's usage view (components/admin/UsageOverview): counts
+// and pace per workspace and person, workspaces grouped by plan and people
+// filtered by plan or workspace.
+export const ADMIN_USAGE_FEATURE: FeatureKey = 'admin-usage';

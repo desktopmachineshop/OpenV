@@ -1,8 +1,9 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 240; members of exported objects: 321
+exports: 245; members of exported objects: 322
 
+interface AdminUsage
 interface AdminUser
 interface AdminWorkspace
 interface AgentDef
@@ -166,9 +167,12 @@ interface TestRun
 interface Todo
 interface TodoInput
 type      UploadProgressHandler
+interface UsagePace
+type      UsageTrend
 interface User
 interface UserDashboard
 interface UserDashboardPoint
+interface UserUsage
 interface VisitorBreakdownRow
 interface VisitorDashboard
 interface WorkItem
@@ -178,10 +182,12 @@ interface WorkerStatus
 interface WorkerStatusQueue
 interface WorkerStatusWorker
 interface WorkspaceLimits
+interface WorkspaceUsage
 const     adminAPI
             .issuePasswordReset
             .setAdmin
             .setPlan
+            .usage
             .userMetrics
             .users
             .visitorMetrics

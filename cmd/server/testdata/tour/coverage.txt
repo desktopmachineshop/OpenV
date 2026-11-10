@@ -52,6 +52,7 @@ DELETE /mcp: s5d, s5e (errors only)
 GET /.well-known/oauth-authorization-server: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /.well-known/oauth-protected-resource: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /.well-known/oauth-protected-resource/mcp: s5d, s5e; 2xx or 3xx in s5d, s5e
+GET /api/v1/admin/metrics/usage: s5e; 2xx or 3xx in s5e
 GET /api/v1/admin/metrics/users: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/admin/metrics/visitors: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/admin/users: s5c, s5e; 2xx or 3xx in s5c, s5e
@@ -376,4 +377,4 @@ PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/todos/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 365 of 365 routes reached (100.0%), 351 with a 2xx or 3xx answer (96.2%); the floor is 90%, 329 routes
+the tour: 366 of 366 routes reached (100.0%), 352 with a 2xx or 3xx answer (96.2%); the floor is 90%, 330 routes

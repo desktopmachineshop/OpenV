@@ -198,6 +198,7 @@
           "GET /.well-known/oauth-authorization-server | 200 json | 200 json | 200 json | 200 json | 200 json | 200 json | 200 json | 200 json",
           "GET /.well-known/oauth-protected-resource | 200 json | 200 json | 200 json | 200 json | 200 json | 200 json | 200 json | 200 json",
           "GET /.well-known/oauth-protected-resource/mcp | 200 json | 200 json | 200 json | 200 json | 200 json | 200 json | 200 json | 200 json",
+          "GET /api/v1/admin/metrics/usage | 401: authentication required | 403: platform admins only | 403: platform admins only | 403: platform admins only | 403: platform admins only | 401: authentication required | 401: authentication required | 200 json",
           "GET /api/v1/admin/metrics/users | 401: authentication required | 403: platform admins only | 403: platform admins only | 403: platform admins only | 403: platform admins only | 401: authentication required | 401: authentication required | 200 json",
           "GET /api/v1/admin/metrics/visitors | 401: authentication required | 403: platform admins only | 403: platform admins only | 403: platform admins only | 403: platform admins only | 401: authentication required | 401: authentication required | 200 json",
           "GET /api/v1/admin/users | 401: authentication required | 403: platform admins only | 403: platform admins only | 403: platform admins only | 403: platform admins only | 401: authentication required | 401: authentication required | 200 json",

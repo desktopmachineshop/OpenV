@@ -140,6 +140,9 @@ type HandlerDeps struct {
 	// accounts they make and answers the platform admin's visitor
 	// dashboard. nil records nothing.
 	VisitorMetrics usermetrics.VisitorService
+	// UsageMetrics answers the platform admin's usage view: counts per
+	// workspace and person, and their pace. nil answers 503.
+	UsageMetrics usermetrics.UsageService
 	// ConnectedApps holds the AI clients members attach to a workspace over
 	// the remote MCP endpoint, their consents and their tokens (REQ-44). nil
 	// turns the endpoint and its OAuth off: they answer 404.

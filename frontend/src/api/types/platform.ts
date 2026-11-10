@@ -138,3 +138,49 @@ export interface UserDashboard {
   unknown_country: number;
   cohorts: { month: string; size: number; retained: number[] }[];
 }
+
+// GET /api/v1/admin/metrics/usage: how much each workspace and person uses
+// OpenV, counts only (Go's usermetrics.Usage). Each series is one count per
+// rolling week, oldest first, the last ending today.
+export type UsageTrend = 'accelerating' | 'steady' | 'slowing' | 'new' | 'dormant' | 'idle';
+
+export interface UsagePace {
+  recent: number;
+  previous: number;
+  change: number;
+  trend: UsageTrend;
+}
+
+export interface WorkspaceUsage {
+  id: string;
+  projects: number;
+  requirements: number;
+  test_cases: number;
+  other_artifacts: number;
+  links: number;
+  test_runs: number;
+  test_results: number;
+  comments: number;
+  members: number;
+  active_members_30d: number;
+  changes: number[];
+  last_activity?: string;
+  pace: UsagePace;
+}
+
+export interface UserUsage {
+  id: string;
+  workspaces: { workspace_id: string; role: string }[];
+  changes: number[];
+  active_days: number[];
+  last_active?: string;
+  pace: UsagePace;
+}
+
+export interface AdminUsage {
+  generated_at: string;
+  weeks: string[];
+  pace_weeks: number;
+  workspaces: WorkspaceUsage[];
+  users: UserUsage[];
+}

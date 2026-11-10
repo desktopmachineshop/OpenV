@@ -77,6 +77,7 @@ var Registry = []Feature{
 	{Key: FeatureCommentReads, ShippedIn: "0.30.0", Summary: "Mark a comment read or unread: Needs you lists only the comments you have not read, opening them marks them read, and Mark unread keeps one there for later"},
 	{Key: FeatureAssistantFullScope, ShippedIn: "0.31.0", Summary: "The V&V Assistant offers a card for every change you can make to a project: releases and what each artifact targets, links, review status, deleting, comments, to-dos, board tasks, baselines, a review round and test results"},
 	{Key: FeatureFlatAgentTeam, ShippedIn: "0.31.0", Summary: "A flatter team of agents: the V&V Assistant you chat with, a Requirements Auditor, a Test Auditor, a Link Auditor and the interviewer; the agents they replace are archived with their history kept"},
+	{Key: FeatureAdminUsage, ShippedIn: "0.31.0", Summary: "Platform admins see how much each workspace and person uses OpenV, and whether that use is speeding up or slowing down, with workspaces grouped by plan and people filtered by plan or workspace"},
 	{Key: FeatureArtifactReinstate, ShippedIn: "0.31.0", Summary: "Removing an artifact archives it, as it always kept its history: open it from Activity and Reinstate brings it back as it was"},
 }
 
@@ -309,6 +310,12 @@ const (
 	// page). It gates REINSTATING only: reading an archived artifact's
 	// history, and calling a delete archiving, are not gated.
 	FeatureArtifactReinstate = "artifact-reinstate"
+	// FeatureAdminUsage is the platform admin's usage view (GET
+	// /api/v1/admin/metrics/usage): counts per workspace and person, their
+	// weekly changes and pace, workspaces grouped by plan and type, and the
+	// people list filtered by plan or workspace. It is gated on the
+	// admin's active workspace.
+	FeatureAdminUsage = "admin-usage"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

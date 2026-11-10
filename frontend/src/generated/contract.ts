@@ -57,6 +57,7 @@ export const FEATURE_KEYS = [
   'comment-reads',
   'assistant-full-scope',
   'flat-agent-team',
+  'admin-usage',
   'artifact-reinstate',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];

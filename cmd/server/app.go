@@ -176,6 +176,7 @@ type app struct {
 	pushSubService       *pushsubs.DefaultService
 	userMetricsService   *usermetrics.DefaultService
 	visitorMetrics       *usermetrics.DefaultVisitorService
+	usageMetrics         *usermetrics.DefaultUsageService
 	connectedApps        *connectedapps.DefaultService
 	notificationService  *notifications.DefaultService
 	minutesMonitor       *notify.MinutesMonitor

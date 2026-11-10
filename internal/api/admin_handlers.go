@@ -13,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
@@ -22,6 +23,7 @@ func (h *Handler) registerAdminRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/admin/users/{id}/admin", h.AdminSetUserAdmin).Methods("PUT")
 	router.HandleFunc("/api/v1/admin/metrics/users", h.AdminUserMetrics).Methods("GET")
 	router.HandleFunc("/api/v1/admin/metrics/visitors", h.AdminVisitorMetrics).Methods("GET")
+	router.HandleFunc("/api/v1/admin/metrics/usage", h.AdminUsageMetrics).Methods("GET")
 	router.HandleFunc("/api/v1/public/visits", h.RecordSiteVisit).Methods("POST")
 }
 
@@ -145,4 +147,29 @@ func (h *Handler) AdminUserMetrics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, d)
+}
+
+// AdminUsageMetrics answers the usage view: per workspace what it holds
+// (counts only, never an artifact's content) and its weekly changes, per
+// person their workspaces, weekly changes and signed-in days, each with a
+// pace. It waits for the admin's active workspace's release
+// (FeatureAdminUsage).
+func (h *Handler) AdminUsageMetrics(w http.ResponseWriter, r *http.Request) {
+	if h.requirePlatformAdmin(w, r, "platform admins only", http.StatusUnauthorized) == nil {
+		return
+	}
+	if !h.featureEnabled(r, ActiveOrg(r), release.FeatureAdminUsage) {
+		writeJSONError(w, http.StatusForbidden, "the usage view is not in your workspace's release yet")
+		return
+	}
+	if h.UsageMetrics == nil {
+		writeJSONError(w, http.StatusServiceUnavailable, "usage metrics are not available")
+		return
+	}
+	u, err := h.UsageMetrics.Usage()
+	if err != nil {
+		respondInternal(w, r, "failed to build the usage view", err)
+		return
+	}
+	respondJSON(w, http.StatusOK, u)
 }
