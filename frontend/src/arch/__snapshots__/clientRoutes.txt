@@ -1,8 +1,8 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 338
-  axios instance calls: 328 (DELETE 39, GET 133, HEAD 1, POST 106, PUT 49)
+call sites: 339
+  axios instance calls: 329 (DELETE 39, GET 133, HEAD 1, POST 106, PUT 50)
   helper calls (a function that passes its argument to the instance): 1
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 6 (3 of them axios calls)
@@ -245,7 +245,7 @@ DELETE  /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAP
 PUT     /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAPI.updateMilestone
 POST    /api/v1/projects/{id}/plan/recalculate                            planAPI.recalculate
 PUT     /api/v1/projects/{id}/plan/release-milestones/{releaseId}         planAPI.setReleaseCriteria
-PUT     /api/v1/projects/{id}/plan/settings                               planAPI.setWorkingDays
+PUT     /api/v1/projects/{id}/plan/settings                               planAPI.setSettings, planAPI.setWorkingDays
 GET     /api/v1/projects/{id}/priority-detection                          projectAPI.priorityDetection
 PUT     /api/v1/projects/{id}/priority-detection                          projectAPI.setPriorityDetection
 GET     /api/v1/projects/{id}/profile                                     productProfileAPI.get

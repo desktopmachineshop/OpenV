@@ -355,8 +355,14 @@ export interface PlanTask {
   float_days: number | null;
   /** On the critical path, the chain of tasks that decides when the plan ends, and not done. Never a task with sub-tasks. */
   critical: boolean;
-  /** The last day the task's end can slip to before it pushes a task it drives; null when it drives none or has no room. */
+  /** The last day the task's end can slip to before it pushes a task it drives, or the plan's end; null when it has no room. */
   float_until: string | null;
+  /** The duration counts calendar days, weekends and holidays included. */
+  elapsed: boolean;
+  /** The day the task should be finished by; it moves nothing. */
+  deadline: string | null;
+  /** Not done, and it ends or has run past its deadline. */
+  deadline_missed: boolean;
   /** The critical path runs through this task's sub-tasks. */
   critical_subtasks: boolean;
   /** A whole percentage, from the to-dos ticked off and the sub-tasks. */
@@ -381,14 +387,32 @@ export interface PlanTask {
   conflicts: string[];
 }
 
-/** FS: finish to start. SS: start to start. FF: finish to finish. */
-export type PlanRelationshipType = 'FS' | 'SS' | 'FF';
+/** FS: finish to start. SS: start to start. FF: finish to finish. SF: start to finish. */
+export type PlanRelationshipType = 'FS' | 'SS' | 'FF' | 'SF';
+
+/** An offset's unit: working days, elapsed (calendar) days, or percent of the driving task's duration. */
+export type PlanLagUnit = 'd' | 'ed' | '%';
+
+/** A day the plan does not work whatever its weekday. */
+export interface PlanHoliday {
+  date: string;
+  name: string;
+}
+
+/** The plan's calendar and critical threshold; a change names the fields it sets. */
+export interface PlanSettings {
+  working_days: number[];
+  holidays: PlanHoliday[];
+  /** A task with this much float or less is critical. */
+  critical_slack_days: number;
+}
 
 export interface PlanRelationship {
   task_id: string;
   type: PlanRelationshipType;
-  /** The offset: working days the driven task keeps after what the type asks for; negative leads. */
+  /** The offset: what the driven task keeps after what the type asks for; negative leads. */
   lag_days: number;
+  lag_unit: PlanLagUnit;
   conflict: boolean;
 }
 
@@ -446,6 +470,8 @@ export interface ProjectPlan {
   project_id: string;
   /** The days of the week the plan works, as ISO weekday numbers: Monday is 1, Sunday 7. */
   working_days: number[];
+  holidays: PlanHoliday[];
+  critical_slack_days: number;
   today: string;
   start: string | null;
   end: string | null;
@@ -468,6 +494,10 @@ export interface PlanScheduleInput {
   duration_days?: number;
   /** Person-days; 0 clears it. */
   effort_days?: number;
+  /** Count the duration in calendar days. */
+  elapsed?: boolean;
+  /** YYYY-MM-DD; empty clears it. */
+  deadline?: string;
   parent_id?: string;
   /** The key of the milestone the task is assigned to; empty takes it off. */
   milestone?: string;

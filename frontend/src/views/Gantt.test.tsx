@@ -32,6 +32,9 @@ const task = (id: string, title: string, extra: Partial<PlanTask> = {}): PlanTas
   critical: false,
   critical_subtasks: false,
   float_until: null,
+  elapsed: false,
+  deadline: null,
+  deadline_missed: false,
   progress: 0,
   done: false,
   late: false,
@@ -87,6 +90,8 @@ const plan: ProjectPlan = {
   project_id: 'p1',
   // Every day works, so the fixture's durations are its calendar days.
   working_days: [1, 2, 3, 4, 5, 6, 7],
+  holidays: [],
+  critical_slack_days: 0,
   today: '2027-03-10',
   start: '2027-03-01',
   end: '2027-04-01',
@@ -105,7 +110,7 @@ const plan: ProjectPlan = {
       end: '2027-03-09',
       span_start: '2027-03-01',
       span_end: '2027-03-09',
-      drives: [{ task_id: 'wiring', type: 'FS', lag_days: 0, conflict: true }],
+      drives: [{ task_id: 'wiring', type: 'FS', lag_days: 0, lag_unit: 'd', conflict: true }],
     }),
     task('wiring', 'Wire the rig', {
       wbs: '1.2',
@@ -130,7 +135,7 @@ const plan: ProjectPlan = {
         { id: 't1', text: 'Crimp the connectors', done: true, due_date: null },
       ],
       depends_on: ['frame'],
-      relationships: [{ task_id: 'frame', type: 'FS', lag_days: 0, conflict: true }],
+      relationships: [{ task_id: 'frame', type: 'FS', lag_days: 0, lag_unit: 'd', conflict: true }],
       conflicts: ['frame'],
     }),
     task('loose', 'Packaging concept', { wbs: '2' }),
@@ -159,6 +164,7 @@ vi.mock('../api/client', async (orig) =>
       relate: () => ok(plan.tasks[2]),
       unrelate: () => ok(undefined),
       recalculate: () => ok({ moved: 2 }),
+      setSettings: () => ok({ working_days: [1, 2, 3, 4, 5], holidays: [], critical_slack_days: 0 }),
       setWorkingDays: () => ok({ working_days: [1, 2, 3, 4, 5, 6] }),
       setReleaseCriteria: () => ok({}),
       addTodo: () => ok({}),
@@ -302,9 +308,11 @@ describe('Plan page', () => {
       'Start to finish: this starts after that finishes (FS)',
       'Start to start: this starts after that starts (SS)',
       'Finish to finish: this finishes after that finishes (FF)',
+      'Finish to start: this finishes after that starts (SF)',
       'Finish to start: that starts after this finishes (FS)',
       'Start to start: that starts after this starts (SS)',
       'Finish to finish: that finishes after this finishes (FF)',
+      'Start to finish: that finishes after this starts (SF)',
     ]);
     expect(type.value).toBe('driven_by:FS');
   });
@@ -319,7 +327,7 @@ describe('Plan page', () => {
         el.dispatchEvent(new Event('input', { bubbles: true }));
       });
     };
-    const inputs = () => Array.from(panel.querySelectorAll('[data-help-key="gantt.schedule"] input'));
+    const inputs = () => Array.from(panel.querySelectorAll('[data-help-key="gantt.schedule"] input')).slice(0, 4);
     const fields = () => inputs().map((i) => (i as HTMLInputElement).value);
     const [start, due, duration, effort] = inputs();
     expect(fields()).toEqual(['2027-03-08', '2027-03-20', '13', '6.5']);
@@ -378,11 +386,11 @@ describe('Plan page', () => {
     await mount();
     await click(container.querySelector('[data-task-bar="wiring"]'));
     await change(container.querySelector('select[aria-label="How this task relates to Weld the frame"]'), 'driven_by:SS');
-    expect(vi.mocked(planAPI.relate)).toHaveBeenLastCalledWith('wiring', 'frame', 'SS', 'driven_by', 0);
+    expect(vi.mocked(planAPI.relate)).toHaveBeenLastCalledWith('wiring', 'frame', 'SS', 'driven_by', 0, 'd');
 
     await change(container.querySelector('select[aria-label="How this task relates to the task chosen"]'), 'drives:FF');
     await change(container.querySelector('#gantt-relationship-add'), 'loose');
-    expect(vi.mocked(planAPI.relate)).toHaveBeenLastCalledWith('wiring', 'loose', 'FF', 'drives', 0);
+    expect(vi.mocked(planAPI.relate)).toHaveBeenLastCalledWith('wiring', 'loose', 'FF', 'drives', 0, 'd');
   });
 
   it('shows a relationship on the task that drives too, worded from its side, and edits it there', async () => {
@@ -395,7 +403,7 @@ describe('Plan page', () => {
     expect(type.value).toBe('drives:FS');
     expect(type.selectedOptions[0].textContent).toBe('Finish to start: that starts after this finishes (FS)');
     await change(type, 'drives:FF');
-    expect(vi.mocked(planAPI.relate)).toHaveBeenLastCalledWith('frame', 'wiring', 'FF', 'drives', 0);
+    expect(vi.mocked(planAPI.relate)).toHaveBeenLastCalledWith('frame', 'wiring', 'FF', 'drives', 0, 'd');
     await flush();
     await click(container.querySelector('button[aria-label="Remove the relationship to Wire the rig"]'));
     await flush();
@@ -435,7 +443,7 @@ describe('Plan page', () => {
   it('gives a relationship an offset in working days, and recalculates the plan when asked', async () => {
     await mount();
     await click(container.querySelector('[data-task-bar="wiring"]'));
-    const offset = container.querySelector('input[aria-label="Offset of the relationship to Weld the frame, in working days"]') as HTMLInputElement;
+    const offset = container.querySelector('input[aria-label="Offset of the relationship to Weld the frame"]') as HTMLInputElement;
     expect(offset.value).toBe('0');
     await act(async () => {
       Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(offset, '5');
@@ -445,7 +453,7 @@ describe('Plan page', () => {
       offset.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
     });
     await flush();
-    expect(vi.mocked(planAPI.relate)).toHaveBeenLastCalledWith('wiring', 'frame', 'FS', 'driven_by', 5);
+    expect(vi.mocked(planAPI.relate)).toHaveBeenLastCalledWith('wiring', 'frame', 'FS', 'driven_by', 5, 'd');
 
     await click(button('Recalculate'));
     expect(vi.mocked(planAPI.recalculate)).not.toHaveBeenCalled();
@@ -453,6 +461,46 @@ describe('Plan page', () => {
     await click(Array.from(document.querySelectorAll('[role="dialog"] button, [role="alertdialog"] button')).find((b) => b.textContent === 'Recalculate'));
     expect(vi.mocked(planAPI.recalculate)).toHaveBeenCalledWith('p1');
     expect(container.querySelector('[role="status"]')?.textContent).toContain('2 tasks moved.');
+  });
+
+  it('sets holidays and the critical threshold, a deadline and elapsed time, and lists only the critical path', async () => {
+    await mount();
+    await click(Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.startsWith('Holidays')));
+    const dialog = document.querySelector('[data-help-key="gantt.holidays"]:not(button)')!;
+    const set = async (el: Element | null, value: string) => {
+      await act(async () => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(el, value);
+        el!.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    };
+    await set(dialog.querySelector('input[aria-label="Date of the new holiday"]'), '2027-03-17');
+    await set(dialog.querySelector('input[aria-label="Name of the new holiday"]'), 'Shutdown');
+    await act(async () => {
+      dialog.querySelector('form')!.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    await flush();
+    expect(vi.mocked(planAPI.setSettings)).toHaveBeenLastCalledWith('p1', { holidays: [{ date: '2027-03-17', name: 'Shutdown' }] });
+    const slack = dialog.querySelector('input[aria-label="Critical threshold in working days"]') as HTMLInputElement;
+    await set(slack, '2');
+    await act(async () => {
+      slack.dispatchEvent(new FocusEvent('focusout', { bubbles: true }));
+    });
+    await flush();
+    expect(vi.mocked(planAPI.setSettings)).toHaveBeenLastCalledWith('p1', { critical_slack_days: 2 });
+    await click(Array.from(dialog.querySelectorAll('button')).find((b) => b.textContent === 'Done'));
+
+    // Only the critical path: Wiring, and Build, which it sits under.
+    await click(button('Only critical'));
+    expect(Array.from(container.querySelectorAll('[data-task-bar]')).map((b) => b.getAttribute('data-task-bar'))).toEqual(['build', 'wiring']);
+    await click(button('Only critical'));
+
+    await click(container.querySelector('[data-task-bar="wiring"]'));
+    const schedule = container.querySelector('[data-help-key="gantt.schedule"]')!;
+    const [, , , , deadline, elapsed] = Array.from(schedule.querySelectorAll('input')) as HTMLInputElement[];
+    await set(deadline, '2027-03-31');
+    await click(elapsed);
+    await click(button('Save schedule'));
+    expect(vi.mocked(planAPI.schedule)).toHaveBeenLastCalledWith('wiring', expect.objectContaining({ deadline: '2027-03-31', elapsed: true }));
   });
 
   it('gives a task with sub-tasks no dates of its own, and no bar to drag', async () => {

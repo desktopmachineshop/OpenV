@@ -300,6 +300,25 @@ export const TaskBar: React.FC<{
           }}
         />
       )}
+      {task.deadline && (
+        <span
+          role="img"
+          data-deadline={task.id}
+          aria-label={`Deadline ${shortDate(task.deadline, today)}${task.deadline_missed ? ', missed' : ''}`}
+          title={`Deadline ${shortDate(task.deadline, today)}${task.deadline_missed ? ': missed' : ''}`}
+          style={{
+            position: 'absolute',
+            left: scale.x(task.deadline) + scale.dayWidth - 5,
+            top: 2,
+            width: 0,
+            height: 0,
+            borderLeft: '5px solid transparent',
+            borderRight: '5px solid transparent',
+            borderTop: `7px solid ${task.deadline_missed ? 'var(--danger)' : 'var(--success)'}`,
+            pointerEvents: 'none',
+          }}
+        />
+      )}
       {onLinkStart && !drag && (
         <>
           <span aria-hidden title="Drag to another bar to link from this task's start" data-link-handle={`${task.id}:start`} onPointerDown={(e) => onLinkStart('start', e)} style={linkHandle(left - 18)}>

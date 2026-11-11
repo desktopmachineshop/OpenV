@@ -137,6 +137,11 @@ The days switched on are the days the plan works: Monday to Friday until
 you change it. Switch on Saturday for a six-day week, or switch a day off
 that your team never works. A plan works at least one day.
 
+**Holidays**, beside the working days, opens the plan's calendar. Add each
+day the plan does not work whatever its weekday, a public holiday or a
+shutdown, with a name if you like; remove one with its cross. A holiday is
+skipped exactly as a weekend day is, and shaded on the chart.
+
 Durations and float count working days only. With Monday to Friday, a task
 that starts on a Thursday and lasts 3 days is due the following Monday, and
 a task from a Monday to the Friday of the next week has a duration of 10.
@@ -158,6 +163,16 @@ keeps its duration, so its dates move together:
 | **Duration** | The due date moves; the start stays |
 | The bar, by dragging it | Both dates move |
 | One end of the bar, by dragging it | The duration changes |
+
+Tick **Elapsed time** for a task whose duration is time that simply
+passes, such as paint curing or a delivery: its duration then counts
+calendar days, weekends and holidays included.
+
+A **Deadline** is the day a task should be finished by. It moves nothing:
+it is a marker, a small triangle above the task's row on the chart, green
+while the task is on course and red once the task ends after it or the day
+has passed with the task not done, when the panel also says **Deadline
+missed**.
 
 A task with no dates yet can still be given a duration: it takes effect when
 the task gets a start or a due date. If a card's due date is changed on the
@@ -196,7 +211,14 @@ another, a thin dashed line runs to the last day its end can slip to before it
 pushes that task, and ends in a tick, so the room between one task and the
 next is the length of the line. The line is amber on the critical path and
 grey elsewhere; a task with no room has none. A task's panel says **Critical** with any float it
-has, or how many days of float it has. A task with sub-tasks is never critical itself: its panel
+has, or how many days of float it has.
+
+**Only critical**, beside **Critical path**, lists just the tasks on the
+path, with the tasks they sit under. In the plan's calendar (**Holidays**)
+you can raise the threshold: *a task is critical when its float is at most
+N working days* also marks the tasks that are nearly critical. Every task
+with room shows its float line, to the task it would push or, when nothing
+waits for it, to the end of the plan. A task with sub-tasks is never critical itself: its panel
 says **Critical sub-tasks** when the path runs through them, and it carries
 the amber marks on the chart while it is folded. The float is worked out from the dates as they stand: OpenV
 does not move tasks for you. A task with no relationships has float up to
@@ -204,7 +226,7 @@ the plan's last day, so only relationships make a path longer than one task.
 
 ## Relationships between tasks
 
-A relationship says how one task drives another. Each has one of the three
+A relationship says how one task drives another. Each has one of the four
 types project plans use:
 
 | Type | Meaning | The arrow |
@@ -212,6 +234,7 @@ types project plans use:
 | **Finish to start** (FS) | The task starts after the other finishes | From the other's end to the task's start |
 | **Start to start** (SS) | The task starts no earlier than the other starts | Joins the two starts |
 | **Finish to finish** (FF) | The task finishes no earlier than the other finishes | Joins the two ends |
+| **Start to finish** (SF) | The task finishes no earlier than the other starts | From the other's start to the task's end |
 
 A relationship belongs to both of its tasks, and each one's panel lists it
 under **Relationships**, named from that task's side: by this task's end,
@@ -226,9 +249,11 @@ it from either one:
 | Finish to start: that starts after this finishes | FS | This task |
 | Start to start: that starts after this starts | SS | This task |
 | Finish to finish: that finishes after this finishes | FF | This task |
+| Start to finish: that finishes after this starts | SF | This task |
 | Start to finish: this starts after that finishes | FS | The other task |
 | Start to start: this starts after that starts | SS | The other task |
 | Finish to finish: this finishes after that finishes | FF | The other task |
+| Finish to start: this finishes after that starts | SF | The other task |
 
 To add one, choose how this task relates to the other, then the other task.
 A task can have several relationships, so two tasks can together decide
@@ -239,8 +264,11 @@ row, or remove it with the cross.
 
 ### Offsets
 
-A relationship can carry an **offset**: a number of working days the
-driven task keeps after what the type asks for. *Start to start* with an
+A relationship can carry an **offset**: time the driven task keeps after
+what the type asks for. Its unit is **working days**, **elapsed days**
+(calendar days, for a wait that does not stop at weekends) or a
+**percentage of the driving task's duration** (50% of a ten-day task is
+five working days). *Start to start* with an
 offset of 5 means the second task starts five working days after the first
 one starts; *finish to start* with an offset of 2 leaves two working days
 between the first task's end and the second's start. A negative offset
@@ -262,6 +290,7 @@ dates its relationships and their offsets ask for.
 | Finish to start | Starts the working day after the other ends, plus the offset |
 | Start to start | Starts the day the other starts, plus the offset |
 | Finish to finish | Ends the day the other ends, plus the offset |
+| Start to finish | Ends the day the other starts, plus the offset |
 
 Each task keeps its duration. A task driven by several others takes the
 latest date any of them asks for. A task that nothing drives stays where
@@ -281,7 +310,7 @@ says what releasing would make. Which ends you join decides the type:
 | The **+** at a bar's end | The start of another bar | Finish to start: the other task starts after this one finishes |
 | The **+** at a bar's start | The start of another bar | Start to start |
 | The **+** at a bar's end | The end of another bar | Finish to finish |
-| The **+** at a bar's start | The end of another bar | Finish to start, the other way round: this task starts after the other finishes |
+| The **+** at a bar's start | The end of another bar | Start to finish: the other task finishes after this one starts |
 
 Release over the left half of a bar for its start, the right half for its
 end. Release anywhere else, or press Escape, to abandon the line.

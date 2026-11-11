@@ -30,8 +30,12 @@ func (s *DefaultService) Recalculate(projectID, actor string, now time.Time) (in
 	if err != nil {
 		return 0, err
 	}
-	p := Build(Inputs{ProjectID: projectID, Items: items, Schedules: schedules, Dependencies: deps, WorkingDays: days}, now)
-	r := newRecalc(p, NewCalendar(days))
+	holidays, err := s.repo.Holidays(projectID)
+	if err != nil {
+		return 0, err
+	}
+	p := Build(Inputs{ProjectID: projectID, Items: items, Schedules: schedules, Dependencies: deps, WorkingDays: days, Holidays: holidays}, now)
+	r := newRecalc(p, NewCalendar(days).WithHolidays(holidays))
 	// A move can push what the moved task drives, so go round until a pass
 	// moves nothing: at most once per task along the longest chain.
 	for pass := 0; pass <= len(p.Tasks) && r.pass(); pass++ {
@@ -115,12 +119,21 @@ func (r *recalc) span(id string) *placed {
 // dates span, or a day.
 func (r *recalc) duration(t *Task) int {
 	if at := r.at[t.ID]; at != nil {
-		return r.cal.Span(at.start, at.end)
+		return r.own(t).Span(at.start, at.end)
 	}
 	if t.DurationDays != nil && *t.DurationDays > 0 {
 		return *t.DurationDays
 	}
 	return 1
+}
+
+// own is the calendar a task's duration counts: every day for a task whose
+// duration is elapsed time, the plan's otherwise.
+func (r *recalc) own(t *Task) Calendar {
+	if t.Elapsed && len(r.children[t.ID]) == 0 {
+		return elapsedCalendar
+	}
+	return r.cal
 }
 
 // wanted is the start a task's relationships ask of it: the latest of what
@@ -132,14 +145,10 @@ func (r *recalc) wanted(t *Task, duration int) string {
 		if on == nil {
 			continue
 		}
-		var start string
-		switch d.Type {
-		case RelStartToStart:
-			start = r.cal.Add(on.start, d.LagDays)
-		case RelFinishToFinish:
-			start = r.cal.Start(r.cal.Add(on.end, d.LagDays), duration)
-		default:
-			start = r.cal.Add(r.cal.Add(on.end, 1), d.LagDays)
+		asked := askedDate(r.cal, d.Type, d.LagDays, d.LagUnit, on.start, on.end, r.cal.Span(on.start, on.end))
+		start := asked
+		if endDriven(d.Type) {
+			start = r.own(t).Start(asked, duration)
 		}
 		if start > want {
 			want = start
@@ -149,7 +158,7 @@ func (r *recalc) wanted(t *Task, duration int) string {
 		return ""
 	}
 	// The first working day on or after it.
-	return r.cal.End(want, 1)
+	return r.cal.OnOrAfter(want)
 }
 
 // pass moves every driven task once, and reports whether any moved.
@@ -165,7 +174,7 @@ func (r *recalc) pass() bool {
 			if start == "" || (r.at[t.ID] != nil && r.at[t.ID].start == start) {
 				continue
 			}
-			r.at[t.ID] = &placed{start, r.cal.End(start, duration)}
+			r.at[t.ID] = &placed{start, r.own(t).End(start, duration)}
 			moved = true
 			continue
 		}
@@ -195,8 +204,8 @@ func (r *recalc) shift(id string, n int) bool {
 		if at == nil || k.Done || len(r.drivers[k.ID]) > 0 || n == 0 {
 			continue
 		}
-		start := r.cal.End(r.cal.Add(at.start, n), 1)
-		r.at[k.ID] = &placed{start, r.cal.End(start, r.cal.Span(at.start, at.end))}
+		start := r.cal.OnOrAfter(r.cal.Add(at.start, n))
+		r.at[k.ID] = &placed{start, r.own(k).End(start, r.own(k).Span(at.start, at.end))}
 		moved = true
 	}
 	return moved

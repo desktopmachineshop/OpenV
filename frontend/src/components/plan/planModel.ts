@@ -1,7 +1,7 @@
 // What the plan's views share beyond the API's answer: which rows a folded
 // outline shows, a task's descendants, the colours of a bar and a milestone,
 // and the phone's grouping of tasks under the milestone they lead to.
-import type { PlanMilestone, PlanRelationshipDirection, PlanRelationshipType, PlanTask } from '../../api/client';
+import type { PlanLagUnit, PlanMilestone, PlanRelationshipDirection, PlanRelationshipType, PlanTask } from '../../api/client';
 import { addDays, isoWeekday } from './ganttScale';
 import type { ChipTone } from '../ui';
 import { BOARD_COLUMNS } from '../kanban/columns';
@@ -33,6 +33,7 @@ export const RELATIONSHIP_TYPES: { value: PlanRelationshipType; label: string; h
   { value: 'FS', label: 'Finish to start', hint: 'Starts after that task finishes' },
   { value: 'SS', label: 'Start to start', hint: 'Starts no earlier than that task starts' },
   { value: 'FF', label: 'Finish to finish', hint: 'Finishes no earlier than that task finishes' },
+  { value: 'SF', label: 'Start to finish', hint: 'Finishes no earlier than that task starts' },
 ];
 
 export const relationshipLabel = (type: PlanRelationshipType): string =>
@@ -43,6 +44,7 @@ export const RELATIONSHIP_BROKEN: Record<PlanRelationshipType, string> = {
   FS: 'This task starts before that one finishes',
   SS: 'This task starts before that one starts',
   FF: 'This task finishes before that one finishes',
+  SF: 'This task finishes before that one starts',
 };
 
 /** The tasks that would make a loop if `id` were driven by them: itself and whatever it drives. */
@@ -78,9 +80,11 @@ export const RELATIONSHIP_VIEWS: (RelationshipView & { label: string })[] = [
   { direction: 'driven_by', type: 'FS', label: 'Start to finish: this starts after that finishes' },
   { direction: 'driven_by', type: 'SS', label: 'Start to start: this starts after that starts' },
   { direction: 'driven_by', type: 'FF', label: 'Finish to finish: this finishes after that finishes' },
+  { direction: 'driven_by', type: 'SF', label: 'Finish to start: this finishes after that starts' },
   { direction: 'drives', type: 'FS', label: 'Finish to start: that starts after this finishes' },
   { direction: 'drives', type: 'SS', label: 'Start to start: that starts after this starts' },
   { direction: 'drives', type: 'FF', label: 'Finish to finish: that finishes after this finishes' },
+  { direction: 'drives', type: 'SF', label: 'Start to finish: that finishes after this starts' },
 ];
 
 export const viewKey = (v: RelationshipView): string => `${v.direction}:${v.type}`;
@@ -94,12 +98,12 @@ export type BarEnd = 'start' | 'end';
 /**
  * The relationship a link dragged from one end of a bar to an end of another
  * makes, from the first task's side. Finish to start, start to start and
- * finish to finish drive the task the link lands on; a link from a start to
- * a finish is finish to start the other way round.
+ * finish to finish drive the task the link lands on, and so does a link from
+ * a start to a finish: start to finish.
  */
 export const linkBetween = (from: BarEnd, to: BarEnd): RelationshipView => {
   if (from === 'end') return { direction: 'drives', type: to === 'start' ? 'FS' : 'FF' };
-  return to === 'start' ? { direction: 'drives', type: 'SS' } : { direction: 'driven_by', type: 'FS' };
+  return { direction: 'drives', type: to === 'start' ? 'SS' : 'SF' };
 };
 
 /** The row that stands for a task on the chart: itself, or the folded task it is under. */
@@ -113,32 +117,51 @@ export const shownAs = (tasks: PlanTask[], folded: ReadonlySet<string>): Map<str
   return out;
 };
 
-/** Whether the plan works on a day. */
-export const worksOn = (workingDays: number[], date: string): boolean => workingDays.includes(isoWeekday(date));
+/** Whether the plan works on a day: one of its working weekdays, and not a holiday. */
+export const worksOn = (workingDays: number[], date: string, holidays: readonly string[] = []): boolean =>
+  workingDays.includes(isoWeekday(date)) && !holidays.includes(date);
 
 /** A task's duration from start to end in working days, counting both ends; at least 1. */
-export const workSpan = (workingDays: number[], start: string, end: string): number => {
+export const workSpan = (workingDays: number[], start: string, end: string, holidays: readonly string[] = []): number => {
   let n = 0;
-  for (let d = start; d <= end; d = addDays(d, 1)) if (worksOn(workingDays, d)) n++;
+  for (let d = start; d <= end; d = addDays(d, 1)) if (worksOn(workingDays, d, holidays)) n++;
   return Math.max(n, 1);
 };
 
-const step = (workingDays: number[], from: string, duration: number, by: 1 | -1): string => {
+const step = (workingDays: number[], from: string, duration: number, by: 1 | -1, holidays: readonly string[]): string => {
   if (workingDays.length === 0) return from;
   let d = from;
-  while (!worksOn(workingDays, d)) d = addDays(d, by);
-  for (let left = duration - 1; left > 0; ) {
+  // A calendar with no working day in ten years is not walked further.
+  for (let i = 0; i < 3660 && !worksOn(workingDays, d, holidays); i++) d = addDays(d, by);
+  for (let left = duration - 1, i = 0; left > 0 && i < 36600; i++) {
     d = addDays(d, by);
-    if (worksOn(workingDays, d)) left--;
+    if (worksOn(workingDays, d, holidays)) left--;
   }
   return d;
 };
 
 /** The due date of a task that starts on a day and runs for so many working days. */
-export const workEnd = (workingDays: number[], start: string, duration: number): string => step(workingDays, start, duration, 1);
+export const workEnd = (workingDays: number[], start: string, duration: number, holidays: readonly string[] = []): string =>
+  step(workingDays, start, duration, 1, holidays);
 
 /** The start of a task that is due on a day and runs for so many working days. */
-export const workStart = (workingDays: number[], due: string, duration: number): string => step(workingDays, due, duration, -1);
+export const workStart = (workingDays: number[], due: string, duration: number, holidays: readonly string[] = []): string =>
+  step(workingDays, due, duration, -1, holidays);
+
+/** An offset's units, as a chooser names them. */
+export const LAG_UNITS: { value: PlanLagUnit; label: string }[] = [
+  { value: 'd', label: 'working days' },
+  { value: 'ed', label: 'elapsed days' },
+  { value: '%', label: "% of that task's duration" },
+];
+
+/** An offset in words: "5 working days later", "50% of its duration later", "2 elapsed days earlier"; empty for none. */
+export const lagText = (lag: number, unit: PlanLagUnit): string => {
+  if (!lag) return '';
+  const n = Math.abs(lag);
+  const amount = unit === '%' ? `${n}% of the driving task's duration` : `${n} ${unit === 'ed' ? 'elapsed' : 'working'} ${n === 1 ? 'day' : 'days'}`;
+  return `${amount} ${lag > 0 ? 'later' : 'earlier'}`;
+};
 
 export const WEEKDAYS: { day: number; short: string; name: string }[] = [
   { day: 1, short: 'M', name: 'Monday' },

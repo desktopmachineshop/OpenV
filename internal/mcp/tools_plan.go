@@ -46,8 +46,10 @@ func planTools() []Tool {
 				"duration_days": str("How long the task runs, in whole working days counting its first and last; the task keeps it, so a start date sent alone moves the due date and a due date sent alone moves the start. \"0\" clears it"),
 				"effort_days":   str("The work in the task, in person-days (may be a decimal); \"0\" clears it"),
 				"parent_id":     str("Work item ID of the parent task; an empty string makes it a top-level task"),
+				"deadline":      str("The day the task should be finished by, YYYY-MM-DD; it moves nothing, and the plan flags a task that misses it. An empty string clears it"),
+				"elapsed":       str("\"true\" makes the duration count calendar days, weekends and holidays included (a cure, a delivery); \"false\" counts working days"),
 				"milestone":     str("Key of the milestone the task is assigned to, as get_plan lists it (a milestone's id, or \"release:<release id>\"); an empty string takes it off. The milestone then counts the task among its tasks done"),
-				"relationships": strList("The tasks that drive this one, each \"<work item id>:FS\", \":SS\" or \":FF\", with an optional offset in working days after it as in \"<id>:SS:5\" (negative leads); replaces the task's relationships"),
+				"relationships": strList("The tasks that drive this one, each \"<work item id>:FS\", \":SS\", \":FF\" or \":SF\", with an optional offset after it as in \"<id>:SS:5\" (working days; negative leads), \"<id>:FS:3ed\" (elapsed days) or \"<id>:SS:50%\" (of the driving task's duration); replaces the task's relationships"),
 				"depends_on":    strList("Earlier form of relationships: work item IDs, each finish to start unless it already has a type"),
 			}),
 			Handler: scheduleWorkItem,
@@ -64,6 +66,19 @@ func planTools() []Tool {
 				out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/recalculate", nil, nil)
 				return out, err
 			},
+		},
+		{
+			Name: "set_plan_calendar",
+			Description: "Set a project's plan holidays and its critical threshold. holidays replaces the plan's days off " +
+				"(days it does not work whatever the weekday), each \"YYYY-MM-DD\" or \"YYYY-MM-DD:Name\"; " +
+				"critical_slack_days is the float, in working days, at or below which a task counts as critical (\"0\" by default). " +
+				"An argument left out stays as it is. Answers the working days, holidays and threshold as stored.",
+			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+				"project_id":          str("Project ID"),
+				"holidays":            strList("The plan's holidays, each \"YYYY-MM-DD\" or \"YYYY-MM-DD:Name\"; an empty list clears them"),
+				"critical_slack_days": str("Float in working days at or below which a task is critical, \"0\" to \"365\""),
+			}),
+			Handler: setPlanCalendar,
 		},
 		{
 			Name: "set_plan_working_days",
@@ -95,10 +110,13 @@ func planTools() []Tool {
 // as the schedule route reads them.
 func scheduleWorkItem(c *Client, args map[string]interface{}) (string, error) {
 	body := map[string]interface{}{}
-	for _, key := range []string{"start_date", "due_date", "parent_id", "milestone"} {
+	for _, key := range []string{"start_date", "due_date", "parent_id", "milestone", "deadline"} {
 		if _, set := args[key]; set {
 			body[key] = strArg(args, key)
 		}
+	}
+	if _, set := args["elapsed"]; set {
+		body["elapsed"] = strings.EqualFold(strings.TrimSpace(strArg(args, "elapsed")), "true")
 	}
 	for _, key := range []string{"duration_days", "effort_days"} {
 		if _, set := args[key]; !set {
@@ -117,11 +135,18 @@ func scheduleWorkItem(c *Client, args map[string]interface{}) (string, error) {
 			kind, lag, _ := strings.Cut(rest, ":")
 			rel := map[string]interface{}{"task_id": strings.TrimSpace(id), "type": strings.TrimSpace(kind)}
 			if lag = strings.TrimSpace(lag); lag != "" {
+				unit := "d"
+				for _, u := range []string{"ed", "%", "d"} {
+					if strings.HasSuffix(lag, u) {
+						unit, lag = u, strings.TrimSuffix(lag, u)
+						break
+					}
+				}
 				n, err := strconv.Atoi(lag)
 				if err != nil {
-					return "", fmt.Errorf("a relationship's offset is a whole number of working days")
+					return "", fmt.Errorf("a relationship's offset is a whole number, optionally followed by ed (elapsed days) or %% (of the driving task's duration)")
 				}
-				rel["lag_days"] = n
+				rel["lag_days"], rel["lag_unit"] = n, unit
 			}
 			rels = append(rels, rel)
 		}
@@ -135,5 +160,27 @@ func scheduleWorkItem(c *Client, args map[string]interface{}) (string, error) {
 		body["depends_on"] = deps
 	}
 	out, _, err := c.request("PUT", "/api/v1/work-items/"+strArg(args, "id")+"/schedule", nil, body)
+	return out, err
+}
+
+// setPlanCalendar is set_plan_calendar's call: the settings that are set.
+func setPlanCalendar(c *Client, args map[string]interface{}) (string, error) {
+	body := map[string]interface{}{}
+	if _, set := args["holidays"]; set {
+		holidays := []map[string]string{}
+		for _, h := range strListArg(args, "holidays") {
+			date, name, _ := strings.Cut(h, ":")
+			holidays = append(holidays, map[string]string{"date": strings.TrimSpace(date), "name": strings.TrimSpace(name)})
+		}
+		body["holidays"] = holidays
+	}
+	if _, set := args["critical_slack_days"]; set {
+		n, err := strconv.Atoi(strings.TrimSpace(strArg(args, "critical_slack_days")))
+		if err != nil {
+			return "", fmt.Errorf("critical_slack_days is a whole number of working days")
+		}
+		body["critical_slack_days"] = n
+	}
+	out, _, err := c.request("PUT", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/settings", nil, body)
 	return out, err
 }

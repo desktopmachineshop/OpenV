@@ -4,9 +4,11 @@
   <title>Working days</title>
   <prolog>
     <resourceid appname="openv-web" appid="gantt.working-days"/>
+    <resourceid appname="openv-web" appid="gantt.holidays"/>
   </prolog>
   <conbody>
     <p><b>Working days</b>, above the chart, has a button for each day of the week. The days switched on are the days the plan works: Monday to Friday until you change it. Switch on Saturday for a six-day week, or switch a day off that your team never works. A plan works at least one day.</p>
+    <p><b>Holidays</b>, beside the working days, opens the plan's calendar. Add each day the plan does not work whatever its weekday, a public holiday or a shutdown, with a name if you like; remove one with its cross. A holiday is skipped exactly as a weekend day is, and shaded on the chart.</p>
     <p>Durations and float count working days only. With Monday to Friday, a task that starts on a Thursday and lasts 3 days is due the following Monday, and a task from a Monday to the Friday of the next week has a duration of 10. A start that falls on a day off counts from the next working day. The chart shades the days off at the <b>Days</b> scale. Changing the working days does not move any task's dates: durations and float are counted again.</p>
   </conbody>
 </concept>

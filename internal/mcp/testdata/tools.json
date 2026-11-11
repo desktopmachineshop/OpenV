@@ -748,6 +748,10 @@
       "description": "Place a board task on the plan: its start date and due date (YYYY-MM-DD), its duration in working days and effort in days (a task with sub-tasks takes all four from them and refuses them), its parent task (making it a sub-task) and its relationships to the tasks that drive it. A relationship is written \"<work item id>:<type>\", where the type is FS (finish to start: this task starts after that one finishes), SS (start to start: it starts no earlier than that one starts) or FF (finish to finish: it finishes no earlier than that one finishes); with no type it is FS. A task may have several, so two tasks can together drive when it starts. Only the arguments you pass change; pass an empty string to clear a date or the parent, and an empty relationships list to clear them. Answers the task's row of the plan.",
       "input_schema": {
         "properties": {
+          "deadline": {
+            "description": "The day the task should be finished by, YYYY-MM-DD; it moves nothing, and the plan flags a task that misses it. An empty string clears it",
+            "type": "string"
+          },
           "depends_on": {
             "description": "Earlier form of relationships: work item IDs, each finish to start unless it already has a type",
             "items": {"type": "string"},
@@ -765,6 +769,10 @@
             "description": "The work in the task, in person-days (may be a decimal); \"0\" clears it",
             "type": "string"
           },
+          "elapsed": {
+            "description": "\"true\" makes the duration count calendar days, weekends and holidays included (a cure, a delivery); \"false\" counts working days",
+            "type": "string"
+          },
           "id": {"description": "Work item ID", "type": "string"},
           "milestone": {
             "description": "Key of the milestone the task is assigned to, as get_plan lists it (a milestone's id, or \"release:<release id>\"); an empty string takes it off. The milestone then counts the task among its tasks done",
@@ -775,7 +783,7 @@
             "type": "string"
           },
           "relationships": {
-            "description": "The tasks that drive this one, each \"<work item id>:FS\", \":SS\" or \":FF\", with an optional offset in working days after it as in \"<id>:SS:5\" (negative leads); replaces the task's relationships",
+            "description": "The tasks that drive this one, each \"<work item id>:FS\", \":SS\", \":FF\" or \":SF\", with an optional offset after it as in \"<id>:SS:5\" (working days; negative leads), \"<id>:FS:3ed\" (elapsed days) or \"<id>:SS:50%\" (of the driving task's duration); replaces the task's relationships",
             "items": {"type": "string"},
             "type": "array"
           },
@@ -789,7 +797,7 @@
       },
       "calls": ["PUT /api/v1/work-items/{id}/schedule"],
       "requests": [
-        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"duration_days\":21,\"effort_days\":7.5,\"milestone\":\"release:99999999-9999-4999-8999-999999999999\",\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"relationships\":[{\"lag_days\":5,\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"\"}],\"start_date\":\"2027-01-11\"}"
+        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"deadline\":\"2027-02-15\",\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"duration_days\":21,\"effort_days\":7.5,\"elapsed\":true,\"milestone\":\"release:99999999-9999-4999-8999-999999999999\",\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"relationships\":[{\"lag_days\":5,\"lag_unit\":\"ed\",\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"lag_days\":50,\"lag_unit\":\"%\",\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"SF\"}],\"start_date\":\"2027-01-11\"}"
       ]
     },
     {
@@ -805,6 +813,31 @@
       },
       "calls": ["POST /api/v1/projects/{id}/plan/recalculate"],
       "requests": ["POST /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/recalculate"]
+    },
+    {
+      "name": "set_plan_calendar",
+      "read_only": false,
+      "description": "Set a project's plan holidays and its critical threshold. holidays replaces the plan's days off (days it does not work whatever the weekday), each \"YYYY-MM-DD\" or \"YYYY-MM-DD:Name\"; critical_slack_days is the float, in working days, at or below which a task counts as critical (\"0\" by default). An argument left out stays as it is. Answers the working days, holidays and threshold as stored.",
+      "input_schema": {
+        "properties": {
+          "critical_slack_days": {
+            "description": "Float in working days at or below which a task is critical, \"0\" to \"365\"",
+            "type": "string"
+          },
+          "holidays": {
+            "description": "The plan's holidays, each \"YYYY-MM-DD\" or \"YYYY-MM-DD:Name\"; an empty list clears them",
+            "items": {"type": "string"},
+            "type": "array"
+          },
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["PUT /api/v1/projects/{id}/plan/settings"],
+      "requests": [
+        "PUT /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/settings {\"critical_slack_days\":2,\"holidays\":[{\"date\":\"2027-12-27\",\"name\":\"Shutdown\"},{\"date\":\"2027-01-01\",\"name\":\"\"}]}"
+      ]
     },
     {
       "name": "set_plan_working_days",

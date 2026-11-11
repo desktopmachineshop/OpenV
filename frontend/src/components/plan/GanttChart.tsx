@@ -189,6 +189,8 @@ export interface GanttChartProps {
   touch?: boolean;
   /** Marks the critical path, the arrows along it, and each task's float after its bar. */
   showCritical: boolean;
+  /** Lists only the tasks on the critical path, with the tasks they are under. */
+  onlyCritical?: boolean;
   /** Counts presses of Today: each one scrolls today back to a third of the way in. */
   todaySignal: number;
 }
@@ -208,6 +210,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   busy,
   touch,
   showCritical,
+  onlyCritical,
   todaySignal,
 }) => {
   const scroller = useRef<HTMLDivElement>(null);
@@ -237,8 +240,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     () => buildScale(zoom, plan.start, plan.end, plan.today, Math.max(viewWidth - outlineWidth, 0)),
     [zoom, plan.start, plan.end, plan.today, viewWidth, outlineWidth],
   );
-  const ticks = useMemo(() => buildTicks(scale, plan.working_days), [scale, plan.working_days]);
-  const rows = useMemo(() => visibleTasks(plan.tasks, folded), [plan.tasks, folded]);
+  const holidays = useMemo(() => plan.holidays.map((h) => h.date), [plan.holidays]);
+  const ticks = useMemo(() => buildTicks(scale, plan.working_days, holidays), [scale, plan.working_days, holidays]);
+  const rows = useMemo(() => {
+    const shown = visibleTasks(plan.tasks, folded);
+    // Only the critical path: its tasks, and the tasks they sit under.
+    return onlyCritical ? shown.filter((t) => t.critical || t.critical_subtasks) : shown;
+  }, [plan.tasks, folded, onlyCritical]);
 
   const timelineWidth = Math.max(viewWidth - outlineWidth, 0);
 

@@ -2,7 +2,7 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="relationships-between-tasks">
   <title>Relationships between tasks</title>
-  <shortdesc>A relationship says how one task drives another. Each has one of the three types project plans use:</shortdesc>
+  <shortdesc>A relationship says how one task drives another. Each has one of the four types project plans use:</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="gantt.relationships"/>
     <resourceid appname="openv-web" appid="gantt.recalculate"/>
@@ -13,6 +13,7 @@
       <strow><stentry><b>Finish to start</b> (FS)</stentry><stentry>The task starts after the other finishes</stentry><stentry>From the other's end to the task's start</stentry></strow>
       <strow><stentry><b>Start to start</b> (SS)</stentry><stentry>The task starts no earlier than the other starts</stentry><stentry>Joins the two starts</stentry></strow>
       <strow><stentry><b>Finish to finish</b> (FF)</stentry><stentry>The task finishes no earlier than the other finishes</stentry><stentry>Joins the two ends</stentry></strow>
+      <strow><stentry><b>Start to finish</b> (SF)</stentry><stentry>The task finishes no earlier than the other starts</stentry><stentry>From the other's start to the task's end</stentry></strow>
     </simpletable>
     <p>A relationship belongs to both of its tasks, and each one's panel lists it under <b>Relationships</b>, named from that task's side: by this task's end, then the other task's end. Open <i>Write the requirements</i> and its relationship to <i>Design</i> reads <b>Finish to start: that starts after this finishes</b>; open <i>Design</i> and the same relationship reads <b>Start to finish: this starts after that finishes</b>. You can add, change or remove it from either one:</p>
     <simpletable>
@@ -20,14 +21,16 @@
       <strow><stentry>Finish to start: that starts after this finishes</stentry><stentry>FS</stentry><stentry>This task</stentry></strow>
       <strow><stentry>Start to start: that starts after this starts</stentry><stentry>SS</stentry><stentry>This task</stentry></strow>
       <strow><stentry>Finish to finish: that finishes after this finishes</stentry><stentry>FF</stentry><stentry>This task</stentry></strow>
+      <strow><stentry>Start to finish: that finishes after this starts</stentry><stentry>SF</stentry><stentry>This task</stentry></strow>
       <strow><stentry>Start to finish: this starts after that finishes</stentry><stentry>FS</stentry><stentry>The other task</stentry></strow>
       <strow><stentry>Start to start: this starts after that starts</stentry><stentry>SS</stentry><stentry>The other task</stentry></strow>
       <strow><stentry>Finish to finish: this finishes after that finishes</stentry><stentry>FF</stentry><stentry>The other task</stentry></strow>
+      <strow><stentry>Finish to start: this finishes after that starts</stentry><stentry>SF</stentry><stentry>The other task</stentry></strow>
     </simpletable>
     <p>To add one, choose how this task relates to the other, then the other task. A task can have several relationships, so two tasks can together decide when a third starts: <i>Build the prototype</i> can wait for <i>Wheel guard design</i> and for <i>Electronics</i> to finish. Two tasks have one relationship between them: setting another replaces it. Change a relationship in its row, or remove it with the cross.</p>
     <section id="offsets">
       <title>Offsets</title>
-      <p>A relationship can carry an <b>offset</b>: a number of working days the driven task keeps after what the type asks for. <i>Start to start</i> with an offset of 5 means the second task starts five working days after the first one starts; <i>finish to start</i> with an offset of 2 leaves two working days between the first task's end and the second's start. A negative offset lets the driven task begin that many days earlier.</p>
+      <p>A relationship can carry an <b>offset</b>: time the driven task keeps after what the type asks for. Its unit is <b>working days</b>, <b>elapsed days</b> (calendar days, for a wait that does not stop at weekends) or a <b>percentage of the driving task's duration</b> (50% of a ten-day task is five working days). <i>Start to start</i> with an offset of 5 means the second task starts five working days after the first one starts; <i>finish to start</i> with an offset of 2 leaves two working days between the first task's end and the second's start. A negative offset lets the driven task begin that many days earlier.</p>
       <p>Set it in the <b>Offset</b> field under the relationship, on either task, and press Enter or leave the field; a new relationship takes one in the add form. A relationship whose task does not keep its offset is <b>Broken</b>, and float and the critical path count the offset as time the task cannot use.</p>
     </section>
     <section id="recalculating-the-plan">
@@ -38,6 +41,7 @@
         <strow><stentry>Finish to start</stentry><stentry>Starts the working day after the other ends, plus the offset</stentry></strow>
         <strow><stentry>Start to start</stentry><stentry>Starts the day the other starts, plus the offset</stentry></strow>
         <strow><stentry>Finish to finish</stentry><stentry>Ends the day the other ends, plus the offset</stentry></strow>
+        <strow><stentry>Start to finish</stentry><stentry>Ends the day the other starts, plus the offset</stentry></strow>
       </simpletable>
       <p>Each task keeps its duration. A task driven by several others takes the latest date any of them asks for. A task that nothing drives stays where it is, and so does a task that is done. A driven task with sub-tasks moves them, by as many working days as it has to move. The page asks before it recalculates, and then says how many tasks moved; recalculating a plan that already agrees with its relationships moves nothing.</p>
     </section>
@@ -49,7 +53,7 @@
         <strow><stentry>The <b>+</b> at a bar's end</stentry><stentry>The start of another bar</stentry><stentry>Finish to start: the other task starts after this one finishes</stentry></strow>
         <strow><stentry>The <b>+</b> at a bar's start</stentry><stentry>The start of another bar</stentry><stentry>Start to start</stentry></strow>
         <strow><stentry>The <b>+</b> at a bar's end</stentry><stentry>The end of another bar</stentry><stentry>Finish to finish</stentry></strow>
-        <strow><stentry>The <b>+</b> at a bar's start</stentry><stentry>The end of another bar</stentry><stentry>Finish to start, the other way round: this task starts after the other finishes</stentry></strow>
+        <strow><stentry>The <b>+</b> at a bar's start</stentry><stentry>The end of another bar</stentry><stentry>Start to finish: the other task finishes after this one starts</stentry></strow>
       </simpletable>
       <p>Release over the left half of a bar for its start, the right half for its end. Release anywhere else, or press Escape, to abandon the line.</p>
       <p>OpenV does not move a task when its dates break a relationship. It marks the relationship <b>Broken</b>, draws its arrow dashed and red, and leaves the dates to you. A relationship to a task that is done is never broken. A relationship that would make a loop, where two tasks end up waiting on each other, is refused.</p>

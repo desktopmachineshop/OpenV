@@ -24,8 +24,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/openv/requirements-platform/internal/domain/targetreleases"
 	"github.com/openv/requirements-platform/internal/domain/todos"
 	"github.com/openv/requirements-platform/internal/domain/workitems"
@@ -52,10 +50,12 @@ var (
 	ErrInvalidDuration   = errors.New("a duration is a whole number of days, 1 or more")
 	ErrInvalidEffort     = errors.New("effort is a number of days, 0 or more")
 	ErrWorkingDays       = errors.New("working days are weekday numbers from 1 (Monday) to 7 (Sunday), at least one")
-	ErrInvalidLag        = errors.New("a relationship's offset is a whole number of working days, at most 3650 either way")
+	ErrInvalidLag        = errors.New("a relationship's offset is a whole number, at most 3650 either way, in working days (d), elapsed days (ed) or percent of the driving task's duration (%)")
+	ErrHoliday           = errors.New("a holiday is a date written YYYY-MM-DD with a name of at most 80 characters, and a plan has at most 366")
+	ErrCriticalSlack     = errors.New("the critical threshold is a whole number of working days from 0 to 365")
 	ErrMilestone         = errors.New("the milestone is not one of this project's")
 	ErrParentDates       = errors.New("a task with sub-tasks takes its dates, duration and effort from them")
-	ErrRelationshipType  = errors.New("a relationship is FS (finish to start), SS (start to start) or FF (finish to finish)")
+	ErrRelationshipType  = errors.New("a relationship is FS (finish to start), SS (start to start), FF (finish to finish) or SF (start to finish)")
 	ErrUnknownMetric     = errors.New("unknown criterion metric")
 	ErrInvalidTarget     = errors.New("a criterion's target is a percentage from 1 to 100")
 	ErrTooManyCriteria   = errors.New("a milestone carries at most 12 criteria")
@@ -79,6 +79,12 @@ type TaskSchedule struct {
 	DurationDays *int
 	// EffortDays is the work in the task, in person-days.
 	EffortDays *float64
+	// Elapsed: the duration counts calendar days, weekends and holidays
+	// included, as for a cure or a delivery.
+	Elapsed bool
+	// Deadline is the day the task should be finished by, YYYY-MM-DD; it
+	// moves nothing, and the plan flags a task that misses it.
+	Deadline *string
 	// MilestoneKey is the milestone the task is assigned to, by the key the
 	// plan gives it: a stored milestone's id, or "release:<id>".
 	MilestoneKey *string
@@ -92,14 +98,16 @@ const (
 	RelStartToStart = "SS"
 	// RelFinishToFinish: the task finishes no earlier than the other finishes.
 	RelFinishToFinish = "FF"
+	// RelStartToFinish: the task finishes no earlier than the other starts.
+	RelStartToFinish = "SF"
 )
 
 // RelationshipTypes lists the types in the order a chooser shows them.
-var RelationshipTypes = []string{RelFinishToStart, RelStartToStart, RelFinishToFinish}
+var RelationshipTypes = []string{RelFinishToStart, RelStartToStart, RelFinishToFinish, RelStartToFinish}
 
 // ValidRelationshipType reports whether t names a relationship type.
 func ValidRelationshipType(t string) bool {
-	return t == RelFinishToStart || t == RelStartToStart || t == RelFinishToFinish
+	return t == RelFinishToStart || t == RelStartToStart || t == RelFinishToFinish || t == RelStartToFinish
 }
 
 // Dependency is a relationship between two tasks: WorkItemID is driven by
@@ -109,9 +117,12 @@ type Dependency struct {
 	WorkItemID  string `json:"work_item_id"`
 	DependsOnID string `json:"depends_on_id"`
 	Type        string `json:"type"`
-	// LagDays is the offset: the working days the driven task keeps after
-	// what the type asks for, or before it when negative.
+	// LagDays is the offset: what the driven task keeps after what the
+	// type asks for, or before it when negative, in LagUnit.
 	LagDays int `json:"lag_days"`
+	// LagUnit is the offset's unit: working days ("d", the default),
+	// elapsed days ("ed") or percent of the driving task's duration ("%").
+	LagUnit string `json:"lag_unit"`
 }
 
 // Relationship names, in a schedule request, a task this one is driven by
@@ -119,8 +130,10 @@ type Dependency struct {
 type Relationship struct {
 	TaskID string `json:"task_id"`
 	Type   string `json:"type"`
-	// LagDays is the relationship's offset in working days; negative leads.
-	LagDays int `json:"lag_days"`
+	// LagDays is the relationship's offset; negative leads. LagUnit is its
+	// unit: "d" (working days, the default), "ed" or "%".
+	LagDays int    `json:"lag_days"`
+	LagUnit string `json:"lag_unit"`
 }
 
 // Criterion is one completion criterion of a milestone: a metric and the
@@ -174,7 +187,11 @@ type ScheduleRequest struct {
 	ParentID     *string  `json:"parent_id"`
 	// Milestone is the key of the milestone the task is assigned to; empty
 	// takes it off its milestone.
-	Milestone     *string         `json:"milestone"`
+	Milestone *string `json:"milestone"`
+	// Elapsed makes the duration count calendar days.
+	Elapsed *bool `json:"elapsed"`
+	// Deadline is YYYY-MM-DD; empty clears it.
+	Deadline      *string         `json:"deadline"`
 	DependsOn     *[]string       `json:"depends_on"`
 	Relationships *[]Relationship `json:"relationships"`
 }
@@ -189,6 +206,12 @@ type Repository interface {
 	// or nil when the project has never set them.
 	WorkingDays(projectID string) ([]int, error)
 	SetWorkingDays(projectID string, days []int) error
+	// Holidays lists the plan's holidays in date order.
+	Holidays(projectID string) ([]Holiday, error)
+	SetHolidays(projectID string, holidays []Holiday) error
+	// CriticalSlackDays is the float at or below which a task is critical.
+	CriticalSlackDays(projectID string) (int, error)
+	SetCriticalSlackDays(projectID string, days int) error
 	// SetDependencies replaces a task's relationships; each entry's
 	// DependsOnID and Type are read.
 	SetDependencies(projectID, workItemID string, relationships []Dependency) error
@@ -231,10 +254,13 @@ type Service interface {
 	Schedule(workItemID string, req ScheduleRequest, actor string) error
 	// SetWorkingDays sets which days of the week the plan works.
 	SetWorkingDays(projectID string, days []int) ([]int, error)
+	// SetSettings changes the plan's calendar and critical threshold: the
+	// fields the request names.
+	SetSettings(projectID string, req SettingsRequest) (Settings, error)
 	// Relate makes a relationship between two tasks of one project, from
 	// either end: drives says the task drives the other one (else it is
 	// driven by it). Any relationship the pair already has is replaced.
-	Relate(taskID, otherID, kind string, drives bool, lagDays int) error
+	Relate(taskID, otherID, kind string, drives bool, lagDays int, lagUnit string) error
 	// Recalculate moves each task that another drives to the dates its
 	// relationships ask for, and answers how many tasks it moved.
 	Recalculate(projectID, actor string, now time.Time) (int, error)
@@ -379,8 +405,17 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 	if err != nil {
 		return err
 	}
+	elapsed, deadline := current.Elapsed, current.Deadline
+	if req.Elapsed != nil {
+		elapsed = *req.Elapsed
+	}
+	if req.Deadline != nil {
+		if deadline, err = cleanDate(*req.Deadline); err != nil {
+			return err
+		}
+	}
 	if err := s.repo.SaveSchedule(&TaskSchedule{WorkItemID: item.ID, ProjectID: item.ProjectID, StartDate: start, ParentID: parent,
-		DurationDays: duration, EffortDays: effort, MilestoneKey: milestone}); err != nil {
+		DurationDays: duration, EffortDays: effort, MilestoneKey: milestone, Elapsed: elapsed, Deadline: deadline}); err != nil {
 		return err
 	}
 	if setRelationships {
@@ -453,11 +488,15 @@ func (s *DefaultService) placeTask(item *workitems.WorkItem, current *TaskSchedu
 	if hasSubtasks && (req.StartDate != nil || req.DueDate != nil || req.DurationDays != nil || req.EffortDays != nil) {
 		return nil, nil, nil, nil, ErrParentDates
 	}
-	days, err := s.repo.WorkingDays(item.ProjectID)
+	cal, err := s.calendar(item.ProjectID)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	if start, due, duration, err = placeDates(NewCalendar(days), current, dayOf(item.DueDate), req); err != nil {
+	// A task whose duration is elapsed time counts every day.
+	if elapsed := current.Elapsed; (req.Elapsed != nil && *req.Elapsed) || (req.Elapsed == nil && elapsed) {
+		cal = elapsedCalendar
+	}
+	if start, due, duration, err = placeDates(cal, current, dayOf(item.DueDate), req); err != nil {
 		return nil, nil, nil, nil, err
 	}
 	effort = current.EffortDays
@@ -564,6 +603,44 @@ func checkParent(id, want string, parents map[string]string, onBoard map[string]
 // MaxLagDays bounds a relationship's offset, either way.
 const MaxLagDays = 3650
 
+// The units of a relationship's offset.
+const (
+	LagWorkingDays = "d"
+	LagElapsedDays = "ed"
+	LagPercent     = "%"
+)
+
+// ValidLagUnit reports whether u names an offset's unit; the empty unit is
+// working days.
+func ValidLagUnit(u string) bool {
+	return u == "" || u == LagWorkingDays || u == LagElapsedDays || u == LagPercent
+}
+
+func lagUnit(u string) string {
+	if u == "" {
+		return LagWorkingDays
+	}
+	return u
+}
+
+// Settings are a plan's calendar and its critical threshold.
+type Settings struct {
+	WorkingDays []int     `json:"working_days"`
+	Holidays    []Holiday `json:"holidays"`
+	// CriticalSlackDays: a task with that much float or less is critical.
+	CriticalSlackDays int `json:"critical_slack_days"`
+}
+
+// SettingsRequest changes the settings it names.
+type SettingsRequest struct {
+	WorkingDays       *[]int     `json:"working_days"`
+	Holidays          *[]Holiday `json:"holidays"`
+	CriticalSlackDays *int       `json:"critical_slack_days"`
+}
+
+// MaxCriticalSlackDays bounds the critical threshold.
+const MaxCriticalSlackDays = 365
+
 // wantedRelationships reads the relationships a request asks for: its
 // Relationships, or its DependsOn with each task keeping the type it has now.
 func wantedRelationships(id string, req ScheduleRequest, existing []Dependency) []Relationship {
@@ -579,7 +656,7 @@ func wantedRelationships(id string, req ScheduleRequest, existing []Dependency) 
 	out := make([]Relationship, 0, len(*req.DependsOn))
 	for _, dep := range *req.DependsOn {
 		dep = strings.TrimSpace(dep)
-		out = append(out, Relationship{TaskID: dep, Type: has[dep].Type, LagDays: has[dep].LagDays})
+		out = append(out, Relationship{TaskID: dep, Type: has[dep].Type, LagDays: has[dep].LagDays, LagUnit: has[dep].LagUnit})
 	}
 	return out
 }
@@ -612,11 +689,11 @@ func checkDependencies(id string, want []Relationship, existing []Dependency, on
 			return nil, ErrOtherProject
 		case !ValidRelationshipType(kind):
 			return nil, ErrRelationshipType
-		case rel.LagDays > MaxLagDays || rel.LagDays < -MaxLagDays:
+		case rel.LagDays > MaxLagDays || rel.LagDays < -MaxLagDays || !ValidLagUnit(rel.LagUnit):
 			return nil, ErrInvalidLag
 		}
 		seen[dep] = true
-		out = append(out, Dependency{WorkItemID: id, DependsOnID: dep, Type: kind, LagDays: rel.LagDays})
+		out = append(out, Dependency{WorkItemID: id, DependsOnID: dep, Type: kind, LagDays: rel.LagDays, LagUnit: lagUnit(rel.LagUnit)})
 	}
 	visited := map[string]bool{}
 	stack := make([]string, 0, len(out))
@@ -682,98 +759,4 @@ func (s *DefaultService) AddTodo(workItemID, orgID, text string, due *time.Time,
 		return nil, err
 	}
 	return t, nil
-}
-
-// GetMilestone returns one stored milestone.
-func (s *DefaultService) GetMilestone(id string) (*Milestone, error) { return s.repo.GetMilestone(id) }
-
-// CreateMilestone adds a custom milestone.
-func (s *DefaultService) CreateMilestone(projectID string, req MilestoneRequest) (*Milestone, error) {
-	now := s.now()
-	m := &Milestone{ID: uuid.New().String(), ProjectID: projectID, Criteria: []Criterion{}, CreatedAt: now, UpdatedAt: now}
-	if req.Name == nil || strings.TrimSpace(*req.Name) == "" {
-		return nil, ErrNameRequired
-	}
-	if err := applyMilestone(m, req); err != nil {
-		return nil, err
-	}
-	if err := s.repo.CreateMilestone(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-func applyMilestone(m *Milestone, req MilestoneRequest) error {
-	if req.Name != nil {
-		name := strings.TrimSpace(*req.Name)
-		if name == "" {
-			return ErrNameRequired
-		}
-		m.Name = name
-	}
-	if req.Description != nil {
-		m.Description = strings.TrimSpace(*req.Description)
-	}
-	if req.TargetDate != nil {
-		d, err := cleanDate(*req.TargetDate)
-		if err != nil {
-			return err
-		}
-		m.TargetDate = d
-	}
-	if req.Criteria != nil {
-		c, err := CleanCriteria(*req.Criteria)
-		if err != nil {
-			return err
-		}
-		m.Criteria = c
-	}
-	return nil
-}
-
-// UpdateMilestone changes a milestone. A release's milestone takes only
-// criteria: its name and date are the release's.
-func (s *DefaultService) UpdateMilestone(id string, req MilestoneRequest) (*Milestone, error) {
-	m, err := s.repo.GetMilestone(id)
-	if err != nil {
-		return nil, err
-	}
-	if m.ReleaseID != nil && (req.Name != nil || req.TargetDate != nil || req.Description != nil) {
-		return nil, ErrReleaseMilestone
-	}
-	if err := applyMilestone(m, req); err != nil {
-		return nil, err
-	}
-	m.UpdatedAt = s.now()
-	if err := s.repo.UpdateMilestone(m); err != nil {
-		return nil, err
-	}
-	return m, nil
-}
-
-// DeleteMilestone removes a stored milestone. Removing a release's resets
-// its criteria to the defaults; the release itself stays.
-func (s *DefaultService) DeleteMilestone(id string) error { return s.repo.DeleteMilestone(id) }
-
-// SetReleaseCriteria sets the criteria of a release's milestone, storing
-// the milestone the first time.
-func (s *DefaultService) SetReleaseCriteria(projectID, releaseID string, criteria []Criterion) (*Milestone, error) {
-	clean, err := CleanCriteria(criteria)
-	if err != nil {
-		return nil, err
-	}
-	stored, err := s.repo.ListMilestones(projectID)
-	if err != nil {
-		return nil, err
-	}
-	now := s.now()
-	for _, m := range stored {
-		if m.ReleaseID != nil && *m.ReleaseID == releaseID {
-			m.Criteria = clean
-			m.UpdatedAt = now
-			return m, s.repo.UpdateMilestone(m)
-		}
-	}
-	m := &Milestone{ID: uuid.New().String(), ProjectID: projectID, ReleaseID: &releaseID, Criteria: clean, CreatedAt: now, UpdatedAt: now}
-	return m, s.repo.CreateMilestone(m)
 }

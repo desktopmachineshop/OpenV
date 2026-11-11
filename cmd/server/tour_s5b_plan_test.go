@@ -31,6 +31,9 @@ import (
 //     plan reports each task's float and marks the critical path;
 //   - a relationship is made, retyped, turned round and removed from either
 //     task; a task with sub-tasks takes no dates of its own (400);
+//   - the plan has holidays and a critical threshold; a task has a
+//     deadline and may count its duration in calendar days; a relationship
+//     may be start to finish, and its offset has a unit;
 //   - a relationship carries an offset in working days, and the plan is
 //     recalculated: the driven tasks move to what their relationships ask,
 //     and a second recalculation moves nothing;
@@ -137,6 +140,16 @@ func planTour(tr *tour) {
 		at("id", "{{order}}", "otherId", "{{wiring}}"))
 	tr.step("an offset: Order drives Wiring start to start, 5 working days later", o, rel,
 		at("id", "{{order}}", "otherId", "{{wiring}}"), jsonBody(`{"type":"SS","direction":"drives","lag_days":5}`))
+	tr.step("an offset in an unknown unit: 400", o, rel, at("id", "{{order}}", "otherId", "{{wiring}}"),
+		jsonBody(`{"type":"SS","direction":"drives","lag_days":5,"lag_unit":"weeks"}`))
+	tr.step("start to finish, half the driver's duration later", o, rel, at("id", "{{order}}", "otherId", "{{wiring}}"),
+		jsonBody(`{"type":"SF","direction":"drives","lag_days":50,"lag_unit":"%"}`))
+	tr.setup("back to start to start, 5 working days later", o, rel,
+		at("id", "{{order}}", "otherId", "{{wiring}}"), jsonBody(`{"type":"SS","direction":"drives","lag_days":5}`))
+	tr.step("Wiring gets a deadline, and its duration counts calendar days", o, schedule, at("id", "{{wiring}}"),
+		jsonBody(`{"deadline":"2099-12-31","elapsed":true}`))
+	tr.step("a deadline that is not a date: 400", o, schedule, at("id", "{{wiring}}"), jsonBody(`{"deadline":"soon"}`))
+	tr.setup("Wiring counts working days again, with no deadline", o, schedule, at("id", "{{wiring}}"), jsonBody(`{"deadline":"","elapsed":false}`))
 	tr.step("an offset beyond ten years: 400", o, rel, at("id", "{{order}}", "otherId", "{{wiring}}"),
 		jsonBody(`{"type":"SS","direction":"drives","lag_days":99999}`))
 	recalculate := "POST /api/v1/projects/{id}/plan/recalculate"
@@ -149,6 +162,11 @@ func planTour(tr *tour) {
 
 	settings := "PUT /api/v1/projects/{id}/plan/settings"
 	tr.step("the plan works Monday to Saturday", o, settings, at("id", "{{p}}"), jsonBody(`{"working_days":[6,1,2,3,4,5]}`))
+	tr.step("holidays, and a critical threshold of two days", o, settings, at("id", "{{p}}"),
+		jsonBody(`{"holidays":[{"date":"2099-12-25","name":"Christmas"},{"date":"2099-01-01"}],"critical_slack_days":2}`))
+	tr.step("a holiday that is not a date: 400", o, settings, at("id", "{{p}}"), jsonBody(`{"holidays":[{"date":"Christmas"}]}`))
+	tr.step("a threshold over a year: 400", o, settings, at("id", "{{p}}"), jsonBody(`{"critical_slack_days":999}`))
+	tr.setup("the holidays and the threshold cleared", o, settings, at("id", "{{p}}"), jsonBody(`{"holidays":[],"critical_slack_days":0}`))
 	tr.step("no working days: 400", o, settings, at("id", "{{p}}"), jsonBody(`{"working_days":[]}`))
 	tr.step("a day 8: 400", o, settings, at("id", "{{p}}"), jsonBody(`{"working_days":[1,8]}`))
 	tr.step("the viewer may not set them: 403", viewer, settings, at("id", "{{p}}"), jsonBody(`{"working_days":[1]}`))

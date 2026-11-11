@@ -48,7 +48,7 @@ func writePlanError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, plan.ErrNameRequired), errors.Is(err, plan.ErrInvalidDate), errors.Is(err, plan.ErrDateOrder),
 		errors.Is(err, plan.ErrParentSelf), errors.Is(err, plan.ErrParentCycle), errors.Is(err, plan.ErrOtherProject),
 		errors.Is(err, plan.ErrDependsOnSelf), errors.Is(err, plan.ErrDependencyCycle), errors.Is(err, plan.ErrRelationshipType), errors.Is(err, plan.ErrInvalidDuration), errors.Is(err, plan.ErrInvalidEffort),
-		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrMilestone), errors.Is(err, plan.ErrInvalidLag), errors.Is(err, plan.ErrUnknownMetric),
+		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrMilestone), errors.Is(err, plan.ErrInvalidLag), errors.Is(err, plan.ErrHoliday), errors.Is(err, plan.ErrCriticalSlack), errors.Is(err, plan.ErrUnknownMetric),
 		errors.Is(err, plan.ErrInvalidTarget), errors.Is(err, plan.ErrTooManyCriteria), errors.Is(err, plan.ErrDuplicateMetric),
 		errors.Is(err, plan.ErrReleaseMilestone), errors.Is(err, plan.ErrUnsupportedFormat),
 		errors.Is(err, todos.ErrTextRequired), errors.Is(err, todos.ErrTextTooLong), errors.Is(err, todos.ErrParagraphs):
@@ -440,26 +440,28 @@ func (h *Handler) RecalculatePlan(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, map[string]int{"moved": moved})
 }
 
-// SetPlanSettings sets the plan's working days: {"working_days": [1, 2, 3,
-// 4, 5]}, ISO weekday numbers from Monday (1) to Sunday (7). Durations and
-// float count only those days. It answers the days as stored.
+// SetPlanSettings changes the plan's calendar and critical threshold,
+// whichever the body names: {"working_days": [1, 2, 3, 4, 5]}, ISO weekday
+// numbers from Monday (1) to Sunday (7); {"holidays": [{"date", "name"}]},
+// days off whatever the weekday, which replace the ones it had; and
+// {"critical_slack_days": n}, the float at or below which a task is
+// critical. Durations and float count only working days. It answers all
+// three as stored.
 func (h *Handler) SetPlanSettings(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
 	if !h.planReady(w, r, projectID, members.RoleEditor, true) {
 		return
 	}
-	var req struct {
-		WorkingDays []int `json:"working_days"`
-	}
+	var req plan.SettingsRequest
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	days, err := h.PlanService.SetWorkingDays(projectID, req.WorkingDays)
+	settings, err := h.PlanService.SetSettings(projectID, req)
 	if err != nil {
 		writePlanError(w, r, err)
 		return
 	}
-	respondJSON(w, http.StatusOK, map[string]interface{}{"working_days": days})
+	respondJSON(w, http.StatusOK, settings)
 }
 
 // planTaskRow answers the plan's row for a task after a write to it.
@@ -491,6 +493,7 @@ func (h *Handler) RelateWorkItems(w http.ResponseWriter, r *http.Request) {
 		Type      string `json:"type"`
 		Direction string `json:"direction"`
 		LagDays   int    `json:"lag_days"`
+		LagUnit   string `json:"lag_unit"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
@@ -500,7 +503,7 @@ func (h *Handler) RelateWorkItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := mux.Vars(r)["id"]
-	if err := h.PlanService.Relate(id, mux.Vars(r)["otherId"], req.Type, req.Direction == "drives", req.LagDays); err != nil {
+	if err := h.PlanService.Relate(id, mux.Vars(r)["otherId"], req.Type, req.Direction == "drives", req.LagDays, req.LagUnit); err != nil {
 		writePlanError(w, r, err)
 		return
 	}
