@@ -141,7 +141,8 @@ const eachPeriod = (scale: Scale, months: number, fn: (year: number, month: numb
  * The header's two rows. Upper: months (days, weeks), quarters or years.
  * Lower: days, weeks by their Monday, months, or quarters.
  */
-export const buildTicks = (scale: Scale, workingDays: number[] = [1, 2, 3, 4, 5]): { upper: Tick[]; lower: Tick[] } => {
+export const buildTicks = (scale: Scale, workingDays: number[] = [1, 2, 3, 4, 5], holidays: readonly string[] = []): { upper: Tick[]; lower: Tick[] } => {
+  const off = new Set(holidays);
   const upper: Tick[] = [];
   const lower: Tick[] = [];
   const push = (list: Tick[], key: string, label: string, from: number, to: number, weekend?: boolean) => {
@@ -153,7 +154,7 @@ export const buildTicks = (scale: Scale, workingDays: number[] = [1, 2, 3, 4, 5]
     if (scale.zoom === 'days') {
       for (let day = scale.first; day <= scale.last; day++) {
         const d = new Date(day * DAY_MS);
-        push(lower, String(day), String(d.getUTCDate()), day, day + 1, !workingDays.includes(d.getUTCDay() || 7));
+        push(lower, String(day), String(d.getUTCDate()), day, day + 1, !workingDays.includes(d.getUTCDay() || 7) || off.has(fromDay(day)));
       }
     } else {
       for (let day = scale.first; day <= scale.last; day += 7) {

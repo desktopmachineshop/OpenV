@@ -21,6 +21,7 @@ import {
   artifactAPI,
   planAPI,
   PlanExportFormat,
+  PlanLagUnit,
   PlanMilestone,
   PlanMilestoneInput,
   PlanScheduleInput,
@@ -145,8 +146,8 @@ const PlanPage: React.FC = () => {
 
   const schedule = (t: PlanTask, change: PlanScheduleInput) => run(() => planAPI.schedule(t.id, change), 'Failed to schedule the task');
 
-  const relate = (taskId: string, otherId: string, view: RelationshipView, lagDays = 0) =>
-    run(() => planAPI.relate(taskId, otherId, view.type, view.direction, lagDays), 'Failed to relate the tasks');
+  const relate = (taskId: string, otherId: string, view: RelationshipView, lagDays = 0, lagUnit: PlanLagUnit = 'd') =>
+    run(() => planAPI.relate(taskId, otherId, view.type, view.direction, lagDays, lagUnit), 'Failed to relate the tasks');
 
   /** Moves the driven tasks to what their relationships ask, once the reader agrees, and says how many moved. */
   const recalculate = async () => {
@@ -289,7 +290,7 @@ const PlanPage: React.FC = () => {
       editable
       busy={busy}
       onSchedule={schedule}
-      onRelate={(t, otherId, view, lagDays) => relate(t.id, otherId, view, lagDays)}
+      onRelate={(t, otherId, view, lagDays, lagUnit) => relate(t.id, otherId, view, lagDays, lagUnit)}
       onUnrelate={(t, otherId) => run(() => planAPI.unrelate(t.id, otherId), 'Failed to remove the relationship')}
       onAddSubtask={(t, title) => addTask({ title, start: '', end: '' }, t.id)}
       onAddTodo={(t, text, due) => run(() => planAPI.addTodo(t.id, text, due), 'Failed to add the to-do')}
@@ -368,6 +369,7 @@ const PlanPage: React.FC = () => {
           onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
           onLink={coarsePointer ? undefined : relate}
           onRecalculate={recalculate}
+          onSettings={(change) => run(() => planAPI.setSettings(projectId, change), 'Failed to save the plan calendar')}
           onAddTask={(title) => addTask({ title, start: '', end: '' }, undefined, true)}
           busy={busy}
           touch={coarsePointer}

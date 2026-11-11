@@ -15,6 +15,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Holidays.** **Holidays**, beside the Gantt's working days, lists the days the plan does not work whatever the weekday. Durations and float skip them and the chart shades them.
+- **Elapsed time and deadlines.** A task can count its duration in calendar days (**Elapsed time**), for a cure or a delivery, and can carry a **Deadline**: a marker on the chart that moves nothing and turns red when the task runs past it.
+- **Start to finish, and offsets in other units.** A relationship can be **start to finish**, and its offset can be in working days, elapsed days or a percentage of the driving task's duration.
+- **A critical threshold, and only the critical path.** The plan's calendar sets how much float still counts as critical, and **Only critical** lists just the tasks on the path. Every task with room now shows its float line, including tasks nothing depends on.
 - **Offsets on relationships.** A relationship on the Gantt takes an **Offset** in working days: start to start with an offset of 5 starts the second task five working days after the first. A negative offset starts it earlier. A relationship whose task does not keep its offset shows as broken.
 - **Recalculate the plan.** **Recalculate**, above the Gantt, moves every task that another drives to the dates its relationships and offsets ask for, keeping each task's duration. It asks first and says how many tasks moved; nothing else moves a task.
 - **Assign tasks to a milestone.** A task's panel on the Gantt has a **Milestone**, and a milestone's panel lists its **Tasks** and assigns more; a release's milestone takes tasks too. A task with sub-tasks brings them with it. A milestone with tasks counts the share of them done, **Milestone tasks done**, as part of its percentage without being asked, and the criterion can be added with a lower target.

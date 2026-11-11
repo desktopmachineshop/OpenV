@@ -19,6 +19,14 @@ const direct = (type: string, on: PlanTask, t: PlanTask, y1: number, y2: number,
     const x2 = leftOf(t, scale);
     return `M${x1} ${y1} H${Math.min(x1, x2) - 8} V${y2} H${x2 - 1}`;
   }
+  if (type === 'SF') {
+    // Out of the driver's start, round to the task's end.
+    const x1 = leftOf(on, scale);
+    const x2 = rightOf(t, scale);
+    return x2 <= x1 - 14
+      ? `M${x1} ${y1} H${x1 - 7} V${y2} H${x2 + 1}`
+      : `M${x1} ${y1} H${x1 - 7} V${y1 + (y2 > y1 ? 1 : -1) * (ROW_HEIGHT / 2)} H${x2 + 9} V${y2} H${x2 + 1}`;
+  }
   if (type === 'FF') {
     // Out of the driver's end, down a gutter right of both, back into the task's end.
     const x1 = rightOf(on, scale);
@@ -39,8 +47,8 @@ const direct = (type: string, on: PlanTask, t: PlanTask, y1: number, y2: number,
  */
 const viaFolded = (type: string, x1: number, y1: number, hidden1: boolean, x2: number, y2: number, hidden2: boolean): string => {
   const dir = y2 > y1 ? 1 : -1;
-  const out = type === 'SS' ? -1 : 1;
-  const into = type === 'FF' ? 1 : -1;
+  const out = type === 'SS' || type === 'SF' ? -1 : 1;
+  const into = type === 'FF' || type === 'SF' ? 1 : -1;
   const mid = y1 + (dir * ROW_HEIGHT) / 2;
   const leave = hidden1 ? `M${x1} ${y1 + dir * 6} V${mid}` : `M${x1} ${y1} H${x1 + out * 7} V${mid}`;
   const land = hidden2 ? ` H${x2} V${y2 - dir * 6}` : ` H${x2 + into * 9} V${y2} H${x2 + into}`;
@@ -51,7 +59,8 @@ const viaFolded = (type: string, x1: number, y1: number, hidden1: boolean, x2: n
  * The arrows between related tasks, each from the end of the driving task
  * its type names to the end it drives: finish to start leaves the driver's
  * right edge for the task's left edge, start to start joins the two left
- * edges, finish to finish the two right edges. A link of a sub-task inside a
+ * edges, finish to finish the two right edges, start to finish the driver's
+ * left edge and the task's right edge. A link of a sub-task inside a
  * folded task is drawn to the folded task's bar; one between two sub-tasks
  * of the same folded task is not drawn. A broken relationship is dashed red.
  */
@@ -83,8 +92,8 @@ export const DependencyLines: React.FC<{
       if (!hidden1 && !hidden2) {
         d = direct(rel.type, on, t, y1, y2, scale);
       } else {
-        const x1 = rel.type === 'SS' ? leftOf(on, scale) : rightOf(on, scale);
-        const x2 = rel.type === 'FF' ? rightOf(t, scale) : leftOf(t, scale);
+        const x1 = rel.type === 'SS' || rel.type === 'SF' ? leftOf(on, scale) : rightOf(on, scale);
+        const x2 = rel.type === 'FF' || rel.type === 'SF' ? rightOf(t, scale) : leftOf(t, scale);
         d = viaFolded(rel.type, x1, y1, hidden1, x2, y2, hidden2);
         if (hidden1) dots.push({ key: `${on.id}>${t.id}:from`, x: x1, y: y1 });
         if (hidden2) dots.push({ key: `${on.id}>${t.id}:to`, x: x2, y: y2 });
@@ -216,7 +225,7 @@ export const LinkBand: React.FC<{ link: LinkDrag }> = ({ link }) => {
         role="status"
         style={{ position: 'absolute', left: link.x + 12, top: link.y - 28, zIndex: 5, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--surface)', color: view ? 'var(--text)' : 'var(--text-muted)', fontSize: 11, whiteSpace: 'nowrap', pointerEvents: 'none' }}
       >
-        {view ? `${relationshipLabel(view.type)}${view.direction === 'driven_by' ? ', from that task to this one' : ''}` : 'Drop on the start or the end of another bar'}
+        {view ? relationshipLabel(view.type) : 'Drop on the start or the end of another bar'}
       </span>
     </>
   );

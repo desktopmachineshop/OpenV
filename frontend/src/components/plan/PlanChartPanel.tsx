@@ -2,9 +2,10 @@
 // working days, the critical path switch, Today and the zoom; the chart; the
 // milestones that have no date yet; and a line on how to use it.
 import React, { useState } from 'react';
-import type { PlanMilestone, ProjectPlan } from '../../api/client';
+import type { PlanMilestone, PlanSettings, ProjectPlan } from '../../api/client';
 import { PanelHeader, SegmentedControl, buttonStyle, mutedStyle, panelStyle } from '../ui';
 import { GanttChart, type GanttChartProps } from './GanttChart';
+import { PlanCalendar } from './PlanCalendar';
 import { WorkingDays } from './WorkingDays';
 import { ZOOMS, Zoom } from './ganttScale';
 
@@ -13,13 +14,17 @@ export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'sho
   zoom: Zoom;
   onZoom: (zoom: Zoom) => void;
   onWorkingDays: (days: number[]) => void;
+  /** Changes the plan's holidays or critical threshold. */
+  onSettings: (change: Partial<PlanSettings>) => void;
   /** Moves the driven tasks to the dates their relationships ask for. */
   onRecalculate: () => void;
   onSelectMilestone: (m: PlanMilestone) => void;
 }
 
-export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onWorkingDays, onRecalculate, onSelectMilestone, busy, touch, ...chart }) => {
+export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onWorkingDays, onSettings, onRecalculate, onSelectMilestone, busy, touch, ...chart }) => {
   const [showCritical, setShowCritical] = useState(true);
+  const [onlyCritical, setOnlyCritical] = useState(false);
+  const [calendar, setCalendar] = useState(false);
   const [todaySignal, setTodaySignal] = useState(0);
   const undated = plan.milestones.filter((m) => !m.date);
   const openMilestone = onSelectMilestone;
@@ -31,6 +36,9 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
             action={
               <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <WorkingDays days={plan.working_days} busy={busy} onChange={onWorkingDays} />
+                <button type="button" onClick={() => setCalendar(true)} data-help-key="gantt.holidays" title="Holidays, and when a task counts as critical" style={buttonStyle('secondary', { compact: true })}>
+                  Holidays{plan.holidays.length ? ` · ${plan.holidays.length}` : ''}
+                </button>
                 <button
                   type="button"
                   disabled={busy}
@@ -55,6 +63,17 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
                   <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--warning)' }} />
                   Critical path
                 </button>
+                {showCritical && (
+                  <button
+                    type="button"
+                    aria-pressed={onlyCritical}
+                    onClick={() => setOnlyCritical((on) => !on)}
+                    title="List only the tasks on the critical path"
+                    style={{ ...buttonStyle('secondary', { compact: true }), ...(onlyCritical ? { background: 'var(--tint-yellow)', borderColor: 'var(--tint-yellow-border)', color: 'var(--warning-text)' } : {}) }}
+                  >
+                    Only critical
+                  </button>
+                )}
                 <button type="button" onClick={() => setTodaySignal((n) => n + 1)} style={buttonStyle('secondary', { compact: true })}>
                   Today
                 </button>
@@ -62,7 +81,8 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
               </span>
             }
           />
-          <GanttChart {...chart} plan={plan} zoom={zoom} busy={busy} touch={touch} onSelectMilestone={onSelectMilestone} showCritical={showCritical} todaySignal={todaySignal} />
+          <GanttChart {...chart} plan={plan} zoom={zoom} busy={busy} touch={touch} onSelectMilestone={onSelectMilestone} showCritical={showCritical} onlyCritical={showCritical && onlyCritical} todaySignal={todaySignal} />
+          {calendar && <PlanCalendar plan={plan} busy={busy} onChange={onSettings} onClose={() => setCalendar(false)} />}
           {undated.length > 0 && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', borderTop: '1px solid var(--border-soft)' }}>
               <span style={mutedStyle}>No date yet:</span>

@@ -1,6 +1,6 @@
 import type { PlanMilestone, PlanTask } from '../../api/client';
 import { FIT_MARGIN, buildScale, buildTicks, fitZoom, fromDay, isoWeekday, openingScroll, shortDate, spanLabel, toDay, todayScroll, unitSpan } from './ganttScale';
-import { barTone, dependents, descendants, linkBetween, phoneGroups, shownAs, visibleTasks, workEnd, workSpan, workStart, worksOn } from './planModel';
+import { barTone, dependents, descendants, lagText, linkBetween, phoneGroups, shownAs, visibleTasks, workEnd, workSpan, workStart, worksOn } from './planModel';
 
 // The plan's pure parts: the time scale the chart draws on, and what the
 // views derive from the plan (folded rows, loops to refuse, the phone's
@@ -25,6 +25,9 @@ const task = (id: string, extra: Partial<PlanTask> = {}): PlanTask => ({
   critical: false,
   critical_subtasks: false,
   float_until: null,
+  elapsed: false,
+  deadline: null,
+  deadline_missed: false,
   progress: 0,
   done: false,
   late: false,
@@ -109,6 +112,8 @@ describe('the Gantt scale', () => {
     expect(off([1, 2, 3, 4, 5])).toBe(2);
     expect(off([1, 2, 3, 4, 5, 6])).toBe(1);
     expect(off([1, 2, 3, 4, 5, 6, 7])).toBe(0);
+    // A holiday is shaded like a day off.
+    expect(buildTicks(scale, [1, 2, 3, 4, 5, 6, 7], ['2027-03-03']).lower.filter((t) => t.weekend).length).toBe(1);
     expect(unitSpan('days', '2027-03-10')).toEqual({ start: '2027-03-10', end: '2027-03-10' });
     expect(unitSpan('weeks', '2027-03-10')).toEqual({ start: '2027-03-08', end: '2027-03-14' });
     expect(unitSpan('months', '2027-02-10')).toEqual({ start: '2027-02-01', end: '2027-02-28' });
@@ -174,8 +179,8 @@ describe('the plan model', () => {
     expect(linkBetween('end', 'start')).toEqual({ direction: 'drives', type: 'FS' });
     expect(linkBetween('start', 'start')).toEqual({ direction: 'drives', type: 'SS' });
     expect(linkBetween('end', 'end')).toEqual({ direction: 'drives', type: 'FF' });
-    // From a start to a finish is finish to start the other way round.
-    expect(linkBetween('start', 'end')).toEqual({ direction: 'driven_by', type: 'FS' });
+    // From a start to a finish is start to finish.
+    expect(linkBetween('start', 'end')).toEqual({ direction: 'drives', type: 'SF' });
   });
 
   it('counts a duration in working days', () => {
@@ -193,6 +198,16 @@ describe('the plan model', () => {
     expect(workStart(week, '2027-03-08', 3)).toBe('2027-03-04');
     expect(workStart(week, '2027-03-07', 2)).toBe('2027-03-04');
     expect(workEnd([1, 2, 3, 4, 5, 6, 7], '2027-03-04', 3)).toBe('2027-03-06');
+    // A holiday is a day off whatever its weekday.
+    const holidays = ['2027-03-03'];
+    expect(worksOn(week, '2027-03-03', holidays)).toBe(false);
+    expect(workSpan(week, '2027-03-01', '2027-03-05', holidays)).toBe(4);
+    expect(workEnd(week, '2027-03-02', 2, holidays)).toBe('2027-03-04');
+    expect(workStart(week, '2027-03-04', 2, holidays)).toBe('2027-03-02');
+    expect(lagText(5, 'd')).toBe('5 working days later');
+    expect(lagText(-1, 'ed')).toBe('1 elapsed day earlier');
+    expect(lagText(50, '%')).toBe("50% of the driving task's duration later");
+    expect(lagText(0, 'd')).toBe('');
   });
 
   it('colours a bar by its state', () => {

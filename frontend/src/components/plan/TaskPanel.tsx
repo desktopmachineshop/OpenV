@@ -117,38 +117,46 @@ const FolderSchedule: React.FC<{ task: PlanTask; today: string }> = ({ task, tod
  * moves the due date, a new due date moves the start, and a new duration
  * moves the due date. Effort is a number of its own, the work in person-days.
  */
-const Schedule: React.FC<Pick<TaskPanelProps, 'task' | 'editable' | 'busy' | 'onSchedule'> & { workingDays: number[] }> = ({
+const Schedule: React.FC<Pick<TaskPanelProps, 'task' | 'editable' | 'busy' | 'onSchedule'> & { workingDays: number[]; holidays: string[]; today: string }> = ({
   task,
   editable,
   busy,
   onSchedule,
-  workingDays,
+  workingDays: planDays,
+  holidays: planHolidays,
+  today,
 }) => {
   const initial = () => ({
     start: task.start || '',
     end: task.end || '',
     duration: task.duration_days ? String(task.duration_days) : '',
     effort: task.effort_days ? String(task.effort_days) : '',
+    deadline: task.deadline || '',
+    elapsed: task.elapsed,
   });
   const [v, setV] = useState(initial);
   useEffect(() => {
     setV(initial());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [task.id, task.start, task.end, task.duration_days, task.effort_days]);
+  }, [task.id, task.start, task.end, task.duration_days, task.effort_days, task.deadline, task.elapsed]);
 
+  // A duration in elapsed time counts every day; otherwise the plan's working days, less its holidays.
+  const workingDays = v.elapsed ? [1, 2, 3, 4, 5, 6, 7] : planDays;
+  const holidays = v.elapsed ? [] : planHolidays;
   const days = whole(v.duration);
-  const setStart = (start: string) => setV((p) => ({ ...p, start, end: start && days ? workEnd(workingDays, start, days) : p.end }));
-  const setEnd = (end: string) => setV((p) => ({ ...p, end, start: end && days ? workStart(workingDays, end, days) : p.start }));
+  const setStart = (start: string) => setV((p) => ({ ...p, start, end: start && days ? workEnd(workingDays, start, days, holidays) : p.end }));
+  const setEnd = (end: string) => setV((p) => ({ ...p, end, start: end && days ? workStart(workingDays, end, days, holidays) : p.start }));
   const setDuration = (duration: string) =>
     setV((p) => {
       const n = whole(duration);
       if (!n) return { ...p, duration };
-      if (p.start) return { ...p, duration, end: workEnd(workingDays, p.start, n) };
-      return { ...p, duration, start: p.end ? workStart(workingDays, p.end, n) : p.start };
+      if (p.start) return { ...p, duration, end: workEnd(workingDays, p.start, n, holidays) };
+      return { ...p, duration, start: p.end ? workStart(workingDays, p.end, n, holidays) : p.start };
     });
 
   const was = initial();
-  const changed = v.start !== was.start || v.end !== was.end || v.duration !== was.duration || v.effort !== was.effort;
+  const changed =
+    v.start !== was.start || v.end !== was.end || v.duration !== was.duration || v.effort !== was.effort || v.deadline !== was.deadline || v.elapsed !== was.elapsed;
   const badOrder = Boolean(v.start && v.end && v.start > v.end);
   const badEffort = v.effort !== '' && !(Number(v.effort) >= 0);
   const save = () =>
@@ -156,8 +164,10 @@ const Schedule: React.FC<Pick<TaskPanelProps, 'task' | 'editable' | 'busy' | 'on
       start_date: v.start,
       due_date: v.end,
       // Both dates decide the duration; without them it is kept as typed.
-      duration_days: v.start && v.end ? workSpan(workingDays, v.start, v.end) : days,
+      duration_days: v.start && v.end ? workSpan(workingDays, v.start, v.end, holidays) : days,
       effort_days: Number(v.effort) || 0,
+      ...(v.deadline !== was.deadline ? { deadline: v.deadline } : {}),
+      ...(v.elapsed !== was.elapsed ? { elapsed: v.elapsed } : {}),
     });
 
   return (
@@ -173,16 +183,35 @@ const Schedule: React.FC<Pick<TaskPanelProps, 'task' | 'editable' | 'busy' | 'on
           <input type="date" value={v.end} disabled={!editable} onChange={(e) => setEnd(e.target.value)} style={inputStyle} />
         </label>
         <label style={fieldStyle}>
-          Duration (working days)
+          Duration ({v.elapsed ? 'calendar days' : 'working days'})
           <input type="number" min={1} step={1} value={v.duration} disabled={!editable} placeholder="Not set" onChange={(e) => setDuration(e.target.value)} style={inputStyle} />
         </label>
         <label style={fieldStyle}>
           Effort (days)
           <input type="number" min={0} step={0.5} value={v.effort} disabled={!editable} placeholder="Not set" onChange={(e) => setV((p) => ({ ...p, effort: e.target.value }))} style={inputStyle} />
         </label>
+        <label style={fieldStyle}>
+          Deadline
+          <input type="date" value={v.deadline} disabled={!editable} onChange={(e) => setV((p) => ({ ...p, deadline: e.target.value }))} style={inputStyle} />
+        </label>
+        <label style={{ ...fieldStyle, flexDirection: 'row', alignItems: 'center', gap: 6, fontWeight: 400, alignSelf: 'end', minHeight: 32 }} title="Count the duration in calendar days, weekends and holidays included: a cure, a delivery">
+          <input
+            type="checkbox"
+            checked={v.elapsed}
+            disabled={!editable}
+            onChange={(e) => setV((p) => ({ ...p, elapsed: e.target.checked }))}
+            style={{ width: 'auto', flex: 'none', margin: 0 }}
+          />
+          Elapsed time
+        </label>
       </div>
+      {task.deadline && (
+        <span style={{ ...mutedStyle, color: task.deadline_missed ? 'var(--danger-strong)' : undefined }}>
+          {task.deadline_missed ? `Past its deadline of ${shortDate(task.deadline, today)}.` : `Deadline ${shortDate(task.deadline, today)}: it moves nothing, and the task is flagged if it runs past it.`}
+        </span>
+      )}
       <span style={mutedStyle}>
-        The task keeps its duration, counted in the plan's working days ({workingDaysText(workingDays)}): a new start moves the due date, a new due date moves the start. Change the duration to make it longer or shorter. Effort is the work in it, in person-days.
+        The task keeps its duration, counted in {v.elapsed ? 'calendar days' : `the plan's working days (${workingDaysText(planDays)})`}: a new start moves the due date, a new due date moves the start. Change the duration to make it longer or shorter. Effort is the work in it, in person-days.
       </span>
       {badOrder && <span style={{ ...mutedStyle, color: 'var(--danger-strong)' }}>A task cannot start after it is due.</span>}
       {editable && changed && (
@@ -315,6 +344,11 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
               Critical
             </Chip>
           )}
+          {task.deadline_missed && (
+            <Chip tone="danger" title="It is not done and runs past its deadline">
+              Deadline missed
+            </Chip>
+          )}
           {task.critical_subtasks && (
             <Chip tone="warning" title="The critical path runs through its sub-tasks: a slip in one of them moves the plan's end">
               Critical sub-tasks
@@ -358,7 +392,15 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
       {task.subtasks_total > 0 ? (
         <FolderSchedule task={task} today={plan.today} />
       ) : (
-        <Schedule task={task} editable={editable} busy={busy} onSchedule={onSchedule} workingDays={plan.working_days} />
+        <Schedule
+          task={task}
+          editable={editable}
+          busy={busy}
+          onSchedule={onSchedule}
+          workingDays={plan.working_days}
+          holidays={plan.holidays.map((h) => h.date)}
+          today={plan.today}
+        />
       )}
 
       <div style={sectionStyle}>

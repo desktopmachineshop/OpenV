@@ -4,10 +4,10 @@
 // finish" on the one that follows), so
 // a relationship is read, changed and removed from either task.
 import React, { useEffect, useMemo, useState } from 'react';
-import type { PlanRelationship, PlanTask, ProjectPlan } from '../../api/client';
+import type { PlanLagUnit, PlanRelationship, PlanTask, ProjectPlan } from '../../api/client';
 import { Chip, Picker, buttonStyle, eyebrowStyle, mutedStyle, type PickerOption } from '../ui';
 import { spanLabel } from './ganttScale';
-import { RELATIONSHIP_BROKEN, RELATIONSHIP_VIEWS, RelationshipView, relationshipViewLabel, viewKey } from './planModel';
+import { LAG_UNITS, RELATIONSHIP_BROKEN, RELATIONSHIP_VIEWS, RelationshipView, lagText, relationshipViewLabel, viewKey } from './planModel';
 
 const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', minWidth: 0 };
 const inputStyle: React.CSSProperties = { padding: '5px 8px', minHeight: 32, boxSizing: 'border-box' };
@@ -42,18 +42,21 @@ const ViewSelect: React.FC<{ value: RelationshipView; label: string; disabled?: 
 const wholeDays = (text: string): number | null => (/^-?\d{1,4}$/.test(text.trim()) ? Number(text.trim()) : text.trim() === '' ? 0 : null);
 
 /**
- * A relationship's offset: the working days the driven task keeps after
- * what the type asks for, or before it when negative. With onCommit it
+ * A relationship's offset: what the driven task keeps after what the type
+ * asks for, or before it when negative, in working days, elapsed days or a
+ * percentage of the driving task's duration. With onCommit it
  * saves when the field is left or Enter is pressed; with onChange it is a
  * field of the add form.
  */
-const OffsetField: React.FC<{ value: number; label: string; disabled?: boolean; onCommit?: (days: number) => void; onChange?: (days: number) => void }> = ({
-  value,
-  label,
-  disabled,
-  onCommit,
-  onChange,
-}) => {
+const OffsetField: React.FC<{
+  value: number;
+  unit: PlanLagUnit;
+  label: string;
+  disabled?: boolean;
+  onCommit?: (days: number) => void;
+  onChange?: (days: number) => void;
+  onUnit: (unit: PlanLagUnit) => void;
+}> = ({ value, unit, label, disabled, onCommit, onChange, onUnit }) => {
   const [text, setText] = useState(String(value));
   useEffect(() => setText(String(value)), [value]);
   const commit = () => {
@@ -84,7 +87,13 @@ const OffsetField: React.FC<{ value: number; label: string; disabled?: boolean; 
         }}
         style={{ ...inputStyle, width: 72, flex: 'none' }}
       />
-      <span style={mutedStyle}>working days{value > 0 ? ' later' : value < 0 ? ' earlier' : ''}</span>
+      <select value={unit} disabled={disabled} aria-label={`Unit of the ${label.charAt(0).toLowerCase()}${label.slice(1)}`} onChange={(e) => onUnit(e.target.value as PlanLagUnit)} style={{ ...inputStyle, flex: '1 1 110px', minWidth: 0 }}>
+        {LAG_UNITS.map((u) => (
+          <option key={u.value} value={u.value}>
+            {u.label}
+          </option>
+        ))}
+      </select>
     </label>
   );
 };
@@ -94,8 +103,8 @@ export interface TaskRelationshipsProps {
   task: PlanTask;
   editable: boolean;
   busy: boolean;
-  /** Makes or changes the relationship to another task, with its offset in working days. */
-  onRelate: (task: PlanTask, otherId: string, view: RelationshipView, lagDays: number) => void;
+  /** Makes or changes the relationship to another task, with its offset and the offset's unit. */
+  onRelate: (task: PlanTask, otherId: string, view: RelationshipView, lagDays: number, lagUnit: PlanLagUnit) => void;
   onUnrelate: (task: PlanTask, otherId: string) => void;
   onSelectTask: (task: PlanTask) => void;
 }
@@ -103,6 +112,7 @@ export interface TaskRelationshipsProps {
 export const TaskRelationships: React.FC<TaskRelationshipsProps> = ({ plan, task, editable, busy, onRelate, onUnrelate, onSelectTask }) => {
   const [adding, setAdding] = useState<RelationshipView>(RELATIONSHIP_VIEWS[0]);
   const [addingLag, setAddingLag] = useState(0);
+  const [addingUnit, setAddingUnit] = useState<PlanLagUnit>('d');
   const byId = useMemo(() => new Map(plan.tasks.map((t) => [t.id, t])), [plan.tasks]);
   const rows: { rel: PlanRelationship; view: RelationshipView }[] = [
     ...task.relationships.map((rel) => ({ rel, view: { direction: 'driven_by' as const, type: rel.type } })),
@@ -145,13 +155,20 @@ export const TaskRelationships: React.FC<TaskRelationshipsProps> = ({ plan, task
             </div>
             {editable ? (
               <>
-                <ViewSelect value={view} disabled={busy} label={`How this task relates to ${other.title}`} onChange={(v) => onRelate(task, other.id, v, rel.lag_days)} />
-                <OffsetField value={rel.lag_days} disabled={busy} label={`Offset of the relationship to ${other.title}, in working days`} onCommit={(days) => onRelate(task, other.id, view, days)} />
+                <ViewSelect value={view} disabled={busy} label={`How this task relates to ${other.title}`} onChange={(v) => onRelate(task, other.id, v, rel.lag_days, rel.lag_unit)} />
+                <OffsetField
+                  value={rel.lag_days}
+                  unit={rel.lag_unit}
+                  disabled={busy}
+                  label={`Offset of the relationship to ${other.title}`}
+                  onCommit={(days) => onRelate(task, other.id, view, days, rel.lag_unit)}
+                  onUnit={(unit) => onRelate(task, other.id, view, rel.lag_days, unit)}
+                />
               </>
             ) : (
               <span style={mutedStyle}>
                 {relationshipViewLabel(view)}
-                {rel.lag_days ? `, ${Math.abs(rel.lag_days)} working ${Math.abs(rel.lag_days) === 1 ? 'day' : 'days'} ${rel.lag_days > 0 ? 'later' : 'earlier'}` : ''}
+                {rel.lag_days ? `, ${lagText(rel.lag_days, rel.lag_unit)}` : ''}
               </span>
             )}
           </div>
@@ -163,7 +180,7 @@ export const TaskRelationships: React.FC<TaskRelationshipsProps> = ({ plan, task
             Add a relationship from this task
           </label>
           <ViewSelect value={adding} label="How this task relates to the task chosen" onChange={setAdding} />
-          <OffsetField value={addingLag} label="Offset of the new relationship, in working days" onChange={setAddingLag} />
+          <OffsetField value={addingLag} unit={addingUnit} label="Offset of the new relationship" onChange={setAddingLag} onUnit={setAddingUnit} />
           <Picker
             id="gantt-relationship-add"
             value=""
@@ -174,8 +191,9 @@ export const TaskRelationships: React.FC<TaskRelationshipsProps> = ({ plan, task
             noneLabel="Choose a task…"
             onChange={(id) => {
               if (!id) return;
-              onRelate(task, id, adding, addingLag);
+              onRelate(task, id, adding, addingLag, addingUnit);
               setAddingLag(0);
+              setAddingUnit('d');
             }}
           />
           <span style={mutedStyle}>Or drag from the + at an end of a bar on the chart to another bar.</span>
