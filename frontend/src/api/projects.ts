@@ -22,6 +22,8 @@ import type {
   PlanMilestoneInput,
   MasterPlan,
   PlanBaselineInfo,
+  PlanTimeOff,
+  WorkspacePlanCalendar,
   PlanLagUnit,
   PlanRelationshipDirection,
   PlanSettings,
@@ -230,6 +232,12 @@ export const planAPI = {
   /** What a day of a person's or an agent's time costs, and the share of a day they can give. */
   setResource: (projectId: string, type: 'user' | 'agent', id: string, change: { daily_rate: number; capacity: number }) =>
     client.put(`/api/v1/projects/${projectId}/plan/resources/${id}`, { type, ...change }),
+  /** The workspace's plan calendar: its working days and its people's time off. */
+  workspaceCalendar: (orgId: string) => client.get<WorkspacePlanCalendar>(`/api/v1/orgs/${orgId}/plan-calendar`),
+  setWorkspaceWorkingDays: (orgId: string, workingDays: number[]) => client.put<WorkspacePlanCalendar>(`/api/v1/orgs/${orgId}/plan-calendar`, { working_days: workingDays }),
+  addTimeOff: (orgId: string, payload: { assignee_id: string; start: string; end: string; name?: string; type?: 'user' | 'agent' }) =>
+    client.post<PlanTimeOff>(`/api/v1/orgs/${orgId}/plan-calendar/time-off`, payload),
+  removeTimeOff: (orgId: string, id: string) => client.delete(`/api/v1/orgs/${orgId}/plan-calendar/time-off/${id}`),
   /** The plans of every project of the workspace the reader can see. */
   master: () => client.get<MasterPlan>('/api/v1/plan/master'),
   /** Makes a task driven by a task of another project. */

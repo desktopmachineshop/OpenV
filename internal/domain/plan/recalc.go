@@ -97,6 +97,9 @@ func (s *DefaultService) inputs(projectID string) (Inputs, Calendar, Settings, e
 	if in.External, err = s.repo.ListExternalLinks(projectID); err != nil {
 		return in, cal, set, err
 	}
+	if in.TimeOff, err = s.repo.ListTimeOff(projectID); err != nil {
+		return in, cal, set, err
+	}
 	in.WorkingDays, in.Holidays, in.CriticalSlackDays, in.Scheduling = set.WorkingDays, set.Holidays, set.CriticalSlackDays, set.Scheduling
 	in.Currency, in.Budget, in.Tracking = set.Currency, set.Budget, set.Tracking
 	return in, cal, set, nil

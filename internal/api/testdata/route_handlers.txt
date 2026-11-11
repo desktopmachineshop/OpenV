@@ -379,6 +379,10 @@ POST /api/v1/projects/{id}/plan/import -> ImportPlan
 GET /api/v1/plan/master -> GetMasterPlan
 PUT /api/v1/work-items/{id}/external-links/{otherId} -> RelateExternalWorkItems
 DELETE /api/v1/work-items/{id}/external-links/{otherId} -> UnrelateExternalWorkItems
+GET /api/v1/orgs/{id}/plan-calendar -> GetWorkspacePlanCalendar
+PUT /api/v1/orgs/{id}/plan-calendar -> SetWorkspacePlanCalendar
+POST /api/v1/orgs/{id}/plan-calendar/time-off -> AddPlanTimeOff
+DELETE /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId} -> DeletePlanTimeOff
 POST /api/v1/projects/{id}/plan/baselines -> SavePlanBaseline
 DELETE /api/v1/projects/{id}/plan/baselines/{baselineId} -> DeletePlanBaseline
 POST /api/v1/projects/{id}/plan/reschedule-remaining -> RescheduleRemainingPlan

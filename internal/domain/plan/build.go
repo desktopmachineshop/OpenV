@@ -292,8 +292,10 @@ type Inputs struct {
 	// capacities the project keeps; Currency and Budget its money.
 	Assignments []Assignment
 	Resources   []Resource
-	Currency    string
-	Budget      *float64
+	// TimeOff is the days the workspace's people and agents are away.
+	TimeOff  []TimeOff
+	Currency string
+	Budget   *float64
 	// Baselines are the plan's snapshots, oldest first; Tracking says which
 	// one it is compared with, and as of which day.
 	Baselines  []*Baseline
@@ -335,6 +337,9 @@ func (s *DefaultService) Plan(projectID string, ev Evidence, now time.Time) (*Pl
 		return nil, err
 	}
 	if in.External, err = s.repo.ListExternalLinks(projectID); err != nil {
+		return nil, err
+	}
+	if in.TimeOff, err = s.repo.ListTimeOff(projectID); err != nil {
 		return nil, err
 	}
 	if in.Assignments, err = s.repo.ListAssignments(projectID); err != nil {

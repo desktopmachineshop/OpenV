@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/plan"
 	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/domain/todos"
@@ -27,7 +28,7 @@ func writePlanError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, plan.ErrNameRequired), errors.Is(err, plan.ErrInvalidDate), errors.Is(err, plan.ErrDateOrder),
 		errors.Is(err, plan.ErrParentSelf), errors.Is(err, plan.ErrParentCycle), errors.Is(err, plan.ErrOtherProject),
 		errors.Is(err, plan.ErrDependsOnSelf), errors.Is(err, plan.ErrDependencyCycle), errors.Is(err, plan.ErrRelationshipType), errors.Is(err, plan.ErrInvalidDuration), errors.Is(err, plan.ErrInvalidEffort),
-		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrMilestone), errors.Is(err, plan.ErrInvalidLag), errors.Is(err, plan.ErrHoliday), errors.Is(err, plan.ErrCriticalSlack), errors.Is(err, plan.ErrSchedulingMode), errors.Is(err, plan.ErrAssignment), errors.Is(err, plan.ErrTooManyBaselines), errors.Is(err, plan.ErrPercent), errors.Is(err, plan.ErrPosition), errors.Is(err, plan.ErrImport), errors.Is(err, plan.ErrSameProject), errors.Is(err, plan.ErrResource), errors.Is(err, plan.ErrInvalidCost), errors.Is(err, plan.ErrConstraint), errors.Is(err, plan.ErrUnknownMetric),
+		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrMilestone), errors.Is(err, plan.ErrInvalidLag), errors.Is(err, plan.ErrHoliday), errors.Is(err, plan.ErrCriticalSlack), errors.Is(err, plan.ErrSchedulingMode), errors.Is(err, plan.ErrAssignment), errors.Is(err, plan.ErrTooManyBaselines), errors.Is(err, plan.ErrPercent), errors.Is(err, plan.ErrPosition), errors.Is(err, plan.ErrImport), errors.Is(err, plan.ErrSameProject), errors.Is(err, plan.ErrTimeOff), errors.Is(err, plan.ErrResource), errors.Is(err, plan.ErrInvalidCost), errors.Is(err, plan.ErrConstraint), errors.Is(err, plan.ErrUnknownMetric),
 		errors.Is(err, plan.ErrInvalidTarget), errors.Is(err, plan.ErrTooManyCriteria), errors.Is(err, plan.ErrDuplicateMetric),
 		errors.Is(err, plan.ErrReleaseMilestone), errors.Is(err, plan.ErrUnsupportedFormat),
 		errors.Is(err, todos.ErrTextRequired), errors.Is(err, todos.ErrTextTooLong), errors.Is(err, todos.ErrParagraphs):
@@ -124,4 +125,22 @@ func (h *Handler) planTaskRow(w http.ResponseWriter, r *http.Request, projectID,
 		}
 	}
 	writeJSONError(w, http.StatusNotFound, "work item not found")
+}
+
+// workspaceAdmin reports whether the caller administers the workspace: a
+// platform admin, an admin of it, or a workspace key acting for nobody. An
+// agent's run never does.
+func (h *Handler) workspaceAdmin(r *http.Request, orgID string) bool {
+	if CurrentRun(r) != nil {
+		return false
+	}
+	user := CurrentUser(r)
+	if user == nil {
+		return WorkerUser(r) == ""
+	}
+	if user.IsAdmin {
+		return true
+	}
+	role, err := h.OrgService.RoleInOrg(orgID, user.ID)
+	return err == nil && role == orgs.RoleAdmin
 }

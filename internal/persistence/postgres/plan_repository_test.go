@@ -101,6 +101,39 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 	if rows, _ := repo.ListSchedules(project); len(rows) == 0 || rows[0].SortOrder == nil || *rows[0].SortOrder != 2 {
 		t.Fatalf("a task's place: %+v", rows)
 	}
+	// The workspace's working days override a project's own, and its time
+	// off is read through any of its projects.
+	if _, err := db.Exec(`UPDATE projects SET org_id = $2 WHERE id = $1`, project, org); err != nil {
+		t.Fatal(err)
+	}
+	if days, off, err := repo.WorkspaceCalendar(org); err != nil || days != nil || len(off) != 0 {
+		t.Fatalf("a workspace that set nothing: %v %v %v", days, off, err)
+	}
+	if err := repo.SaveProjectWorkingDays(project, []int{1, 2, 3, 6}); err != nil {
+		t.Fatal(err)
+	}
+	if set, _ := repo.Settings(project); len(set.WorkingDays) != 4 || set.WorkingDays[3] != 6 {
+		t.Fatalf("the workspace's days are the plan's: %v", set.WorkingDays)
+	}
+	if err := repo.SaveWorkspaceWorkingDays(org, []int{1, 2, 3, 4, 5}); err != nil {
+		t.Fatal(err)
+	}
+	away := &plan.TimeOff{ID: "44444444-4444-4444-8444-444444444444", Type: "user", AssigneeID: "11111111-1111-4111-8111-111111111111", Start: "2027-08-02", End: "2027-08-13", Name: "Summer"}
+	if err := repo.AddTimeOff(org, away); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := repo.ListTimeOff(project); err != nil || len(got) != 1 || got[0] != *away {
+		t.Fatalf("time off through the project: %+v %v", got, err)
+	}
+	if days, off, _ := repo.WorkspaceCalendar(org); len(days) != 5 || len(off) != 1 {
+		t.Fatalf("the workspace's calendar: %v %v", days, off)
+	}
+	if err := repo.DeleteTimeOff(org, away.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.DeleteTimeOff(org, away.ID); err != plan.ErrNotFound {
+		t.Fatalf("removed twice: %v", err)
+	}
 	// A link to a task of another project is listed from both ends.
 	otherProject, otherTask := "33333333-3333-4333-8333-333333333333", ""
 	seedProjects(t, db, otherProject)

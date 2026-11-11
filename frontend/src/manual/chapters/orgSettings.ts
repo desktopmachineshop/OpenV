@@ -137,6 +137,10 @@ deleting a team also removes its project access grants.
 > Teams are groups of people. They have nothing to do with agents, which
 > are arranged on the *Agents* page.
 
+## Plan calendar
+
+The days of the week every project's plan in the workspace works, and the days each member is away. An admin sets the working days and anyone's time off; a member records their own time off. See *The plan (Gantt)* → *Working days* for what they do to a plan.
+
 ## AI Providers (admin only)
 
 Per-provider configuration for agent runs:

@@ -141,4 +141,5 @@ var migrations = []Migration{
 	{Version: 84, Name: "plan_tracking", Run: m0084PlanTracking},
 	{Version: 85, Name: "plan_task_order", Run: m0085PlanTaskOrder},
 	{Version: 86, Name: "plan_external_links", Run: m0086PlanExternalLinks},
+	{Version: 87, Name: "plan_workspace_calendar", Run: m0087PlanWorkspaceCalendar},
 }

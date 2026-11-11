@@ -204,7 +204,25 @@ export interface PlanResourceLoad {
   /** The most asked of them on any day, a percentage. */
   peak: number;
   /** The runs of working days on which more than their capacity is asked. */
-  overallocations: { start: string; end: string; units: number }[];
+  overallocations: { start: string; end: string; units: number; away: boolean }[];
+  /** The days they are away, from the workspace's calendar. */
+  time_off: PlanTimeOff[];
+}
+
+/** A run of days a person or an agent is away. */
+export interface PlanTimeOff {
+  id: string;
+  type: 'user' | 'agent';
+  assignee_id: string;
+  start: string;
+  end: string;
+  name: string;
+}
+
+/** The workspace's plan calendar: the days every plan works, and its people's time off. */
+export interface WorkspacePlanCalendar {
+  working_days: number[];
+  time_off: PlanTimeOff[];
 }
 
 /** A date constraint: none, as late as possible, start/finish no earlier/later than, must start/finish on. */

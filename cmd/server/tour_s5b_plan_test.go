@@ -290,6 +290,19 @@ func planTour(tr *tour) {
 	tr.step("MVP's stored milestone deleted: its criteria are the defaults again", o, del, at("id", "{{p}}", "milestoneId", "{{mvp_m}}"))
 	tr.step("the plan after the deletes", o, plan, at("id", "{{p}}"))
 
+	calendar := "/api/v1/orgs/{id}/plan-calendar"
+	ws := at("id", "{{owner.workspace}}")
+	tr.step("the workspace's plan calendar", o, "GET "+calendar, ws)
+	tr.step("the workspace works Monday to Friday", o, "PUT "+calendar, ws, jsonBody(`{"working_days":[1,2,3,4,5]}`))
+	tr.step("a workspace that works no days: 400", o, "PUT "+calendar, ws, jsonBody(`{"working_days":[]}`))
+	tr.step("she is away for a fortnight", o, "POST "+calendar+"/time-off", ws,
+		jsonBody(`{"assignee_id":"`+ann+`","start":"2099-08-03","end":"2099-08-14","name":"Summer"}`)).capture("off", "/id")
+	tr.step("time off that ends before it starts: 400", o, "POST "+calendar+"/time-off", ws,
+		jsonBody(`{"assignee_id":"`+ann+`","start":"2099-08-14","end":"2099-08-03"}`))
+	tr.step("the viewer, who is not of the workspace, may not read it", viewer, "GET "+calendar, ws)
+	tr.step("the time off removed", o, "DELETE "+calendar+"/time-off/{timeOffId}", at("id", "{{owner.workspace}}", "timeOffId", "{{off}}"))
+	tr.step("removed again: 404", o, "DELETE "+calendar+"/time-off/{timeOffId}", at("id", "{{owner.workspace}}", "timeOffId", "{{off}}"))
+
 	ext := "PUT /api/v1/work-items/{id}/external-links/{otherId}"
 	tr.step("Order waits on Q's task, of another project", o, ext, at("id", "{{order}}", "otherId", "{{q_task}}"), jsonBody(`{"type":"FS","lag_days":2}`))
 	tr.step("two tasks of one project: 400", o, ext, at("id", "{{order}}", "otherId", "{{frame}}"), jsonBody(`{}`))

@@ -11,8 +11,16 @@ export const ROW_HEIGHT = 34;
 const leftOf = (t: PlanTask, scale: Scale) => scale.x(t.span_start!);
 const rightOf = (t: PlanTask, scale: Scale) => Math.max(scale.x(t.span_end!) + scale.dayWidth, leftOf(t, scale) + 6);
 
+/**
+ * Where a line leaves the driving task's finish: the end of its bar, or,
+ * when its float is drawn after the bar, the tick that ends the float line,
+ * so the two never run over each other.
+ */
+const outOf = (t: PlanTask, scale: Scale, float: boolean) =>
+  float && !t.done && t.float_until && t.float_until > t.span_end! ? Math.max(scale.x(t.float_until) + scale.dayWidth, rightOf(t, scale)) : rightOf(t, scale);
+
 /** The arrow between two rows that both show their own task. */
-const direct = (type: string, on: PlanTask, t: PlanTask, y1: number, y2: number, scale: Scale): string => {
+const direct = (type: string, on: PlanTask, t: PlanTask, y1: number, y2: number, scale: Scale, float: boolean): string => {
   if (type === 'SS') {
     // Out of the driver's start, down a gutter left of both, into the task's start.
     const x1 = leftOf(on, scale);
@@ -29,11 +37,11 @@ const direct = (type: string, on: PlanTask, t: PlanTask, y1: number, y2: number,
   }
   if (type === 'FF') {
     // Out of the driver's end, down a gutter right of both, back into the task's end.
-    const x1 = rightOf(on, scale);
+    const x1 = outOf(on, scale, float);
     const x2 = rightOf(t, scale);
     return `M${x1} ${y1} H${Math.max(x1, x2) + 8} V${y2} H${x2 + 1}`;
   }
-  const x1 = rightOf(on, scale);
+  const x1 = outOf(on, scale, float);
   const x2 = leftOf(t, scale);
   return x2 >= x1 + 14
     ? `M${x1} ${y1} H${x1 + 7} V${y2} H${x2 - 1}`
@@ -90,7 +98,7 @@ export const DependencyLines: React.FC<{
       const hidden2 = shown.get(t.id) !== t.id;
       let d: string;
       if (!hidden1 && !hidden2) {
-        d = direct(rel.type, on, t, y1, y2, scale);
+        d = direct(rel.type, on, t, y1, y2, scale, Boolean(showCritical));
       } else {
         const x1 = rel.type === 'SS' || rel.type === 'SF' ? leftOf(on, scale) : rightOf(on, scale);
         const x2 = rel.type === 'FF' || rel.type === 'SF' ? rightOf(t, scale) : leftOf(t, scale);

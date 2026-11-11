@@ -843,6 +843,13 @@ table plan_milestones rows 0
   index idx_plan_milestones_project CREATE INDEX idx_plan_milestones_project ON public.plan_milestones USING btree (project_id)
   index idx_plan_milestones_release CREATE UNIQUE INDEX idx_plan_milestones_release ON public.plan_milestones USING btree (release_id) WHERE (release_id IS NOT NULL)
   index plan_milestones_pkey CREATE UNIQUE INDEX plan_milestones_pkey ON public.plan_milestones USING btree (id)
+table plan_org_calendar rows 0
+  column org_id uuid NOT NULL
+  column working_days integer NOT NULL
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint plan_org_calendar_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint plan_org_calendar_pkey PRIMARY KEY (org_id)
+  index plan_org_calendar_pkey CREATE UNIQUE INDEX plan_org_calendar_pkey ON public.plan_org_calendar USING btree (org_id)
 table plan_resources rows 0
   column project_id uuid NOT NULL
   column assignee_type character varying(8) NOT NULL
@@ -908,6 +915,19 @@ table plan_tasks rows 0
   index idx_plan_tasks_parent CREATE INDEX idx_plan_tasks_parent ON public.plan_tasks USING btree (parent_id) WHERE (parent_id IS NOT NULL)
   index idx_plan_tasks_project CREATE INDEX idx_plan_tasks_project ON public.plan_tasks USING btree (project_id)
   index plan_tasks_pkey CREATE UNIQUE INDEX plan_tasks_pkey ON public.plan_tasks USING btree (work_item_id)
+table plan_time_off rows 0
+  column id uuid NOT NULL
+  column org_id uuid NOT NULL
+  column assignee_type character varying(16) NOT NULL DEFAULT 'user'::character varying
+  column assignee_id uuid NOT NULL
+  column start_date date NOT NULL
+  column end_date date NOT NULL
+  column name text NOT NULL DEFAULT ''::text
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint plan_time_off_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint plan_time_off_pkey PRIMARY KEY (id)
+  index idx_plan_time_off_org CREATE INDEX idx_plan_time_off_org ON public.plan_time_off USING btree (org_id)
+  index plan_time_off_pkey CREATE UNIQUE INDEX plan_time_off_pkey ON public.plan_time_off USING btree (id)
 table product_profiles rows 0
   column project_id uuid NOT NULL
   column vision text NOT NULL DEFAULT ''::text
@@ -1105,7 +1125,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 86
+table schema_migrations rows 87
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1477,3 +1497,4 @@ ledger 0083 plan_resources
 ledger 0084 plan_tracking
 ledger 0085 plan_task_order
 ledger 0086 plan_external_links
+ledger 0087 plan_workspace_calendar

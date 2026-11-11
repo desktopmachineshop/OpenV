@@ -15,7 +15,6 @@ import { PlanUsage } from './PlanUsage';
 import { PlanViewBar } from './PlanViewBar';
 import { DEFAULT_VIEW, columnsWidth } from './planView';
 import { PlanTracking, type TrackingAction } from './PlanTracking';
-import { WorkingDays } from './WorkingDays';
 import { ZOOMS, Zoom } from './ganttScale';
 
 type PlanMode = 'gantt' | 'network' | 'calendar' | 'usage' | 'timeline' | 'master';
@@ -32,7 +31,6 @@ export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'sho
   plan: ProjectPlan;
   zoom: Zoom;
   onZoom: (zoom: Zoom) => void;
-  onWorkingDays: (days: number[]) => void;
   /** Changes the plan's holidays or critical threshold. */
   onSettings: (change: PlanSettingsChange) => void;
   /** Sets a person's or an agent's day rate and capacity. */
@@ -48,7 +46,7 @@ export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'sho
   history?: PlanHistory;
 }
 
-export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onWorkingDays, onSettings, onResource, onLevel, onTracking, onRecalculate, onSelectMilestone, history, busy, touch, outlineWidth, ...chart }) => {
+export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onSettings, onResource, onLevel, onTracking, onRecalculate, onSelectMilestone, history, busy, touch, outlineWidth, ...chart }) => {
   const [showCritical, setShowCritical] = useState(true);
   const [onlyCritical, setOnlyCritical] = useState(false);
   const [calendar, setCalendar] = useState(false);
@@ -62,14 +60,12 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
   const [todaySignal, setTodaySignal] = useState(0);
   const undated = plan.milestones.filter((m) => !m.date);
   const openMilestone = onSelectMilestone;
-  const coarsePointer = touch;
   return (
         <section aria-label="Plan" style={{ ...panelStyle, flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <PanelHeader
             title="Plan"
             action={
               <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                <WorkingDays days={plan.working_days} busy={busy} onChange={onWorkingDays} />
                 <button type="button" onClick={() => setCalendar(true)} data-help-key="gantt.holidays" title="Holidays, how the plan is scheduled, and when a task counts as critical" style={buttonStyle('secondary', { compact: true })}>
                   Calendar{plan.holidays.length ? ` · ${plan.holidays.length}` : ''}
                   {plan.scheduling_mode === 'auto' ? ' · auto' : ''}
@@ -188,10 +184,6 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
               ))}
             </div>
           )}
-          <p style={{ ...mutedStyle, margin: 0, padding: '8px 12px', borderTop: '1px solid var(--border-soft)' }}>
-            A task's bar fills as its to-dos are ticked off and its sub-tasks finish. A milestone's band fills as its
-            criteria are met. {coarsePointer ? 'Select a task to set its dates.' : 'Drag a bar to move it or an end to resize it, drag the + at an end to another bar to link them, and click or drag across the row of a task with no dates to schedule it. Drag the empty timeline to scroll.'}
-          </p>
         </section>
   );
 };

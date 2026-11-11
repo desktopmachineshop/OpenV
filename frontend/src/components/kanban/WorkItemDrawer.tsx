@@ -19,6 +19,12 @@ interface WorkItemDrawerProps {
   onClose: () => void;
   onChanged: () => void;
   onDeleted: () => void;
+  /**
+   * More about the task, shown beside its details. With it the task opens
+   * as a wide pane in the middle of the window, over everything, instead of
+   * a drawer at the side.
+   */
+  aside?: React.ReactNode;
 }
 
 const activityStyle = (kind: string): React.CSSProperties => {
@@ -38,6 +44,10 @@ const activityStyle = (kind: string): React.CSSProperties => {
   }
 };
 
+/** The card at the side of the page, and as a pane in the middle of the window. */
+const DRAWER_FRAME: React.CSSProperties = { top: 0, right: 0, bottom: 0, width: 'min(420px, 100vw)', boxShadow: '-4px 0 16px rgba(0,0,0,0.15)' };
+const PANE_FRAME: React.CSSProperties = { top: '4vh', left: '50%', transform: 'translateX(-50%)', width: 'min(1180px, 96vw)', height: '92vh', borderRadius: 10, overflow: 'hidden', boxShadow: '0 12px 48px rgba(0,0,0,0.3)' };
+
 export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
   workItemId,
   projectId,
@@ -45,6 +55,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
   onClose,
   onChanged,
   onDeleted,
+  aside,
 }) => {
   const confirm = useConfirm();
   // A card's to-dos count toward its task's progress on the plan.
@@ -146,17 +157,16 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
   };
 
   return (
+    <>
+    {aside && <div aria-hidden onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'var(--overlay)', zIndex: 949 }} />}
     <div
       data-help-pane="board.card"
       data-help-key="board.card"
+      {...(aside ? { role: 'dialog', 'aria-modal': true, 'aria-label': `Task ${item?.title || ''}` } : {})}
       style={{
         position: 'fixed',
-        top: 0,
-        right: 0,
-        bottom: 0,
-        width: 'min(420px, 100vw)',
+        ...(aside ? PANE_FRAME : DRAWER_FRAME),
         background: 'var(--surface)',
-        boxShadow: '-4px 0 16px rgba(0,0,0,0.15)',
         // Above the project nav drawer (900), below dialogs (2000).
         zIndex: 950,
         display: 'flex',
@@ -213,7 +223,8 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
         </button>
       </div>
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: 18 }}>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+      <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: 18 }}>
         <ErrorBanner message={error} onDismiss={() => setError('')} />
 
         <div className="form-group">
@@ -316,6 +327,12 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
           </button>
         </div>
       </div>
+      {aside && (
+        <div data-task-aside style={{ width: 'min(420px, 42%)', flexShrink: 0, overflowY: 'auto', borderLeft: '1px solid var(--neutral-soft)', background: 'var(--surface-alt)' }}>
+          {aside}
+        </div>
+      )}
+      </div>
 
       <div style={{ borderTop: '1px solid var(--neutral-soft)', padding: 14, textAlign: 'right' }}>
         <button
@@ -326,5 +343,6 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
         </button>
       </div>
     </div>
+    </>
   );
 };
