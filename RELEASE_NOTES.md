@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.32.1 — 2026-11-11
+
 ### Security fixes
 
 - **Rebuilt on Go 1.26.11.** The server and the runner are built with Go 1.26.11, which closes an advisory about a crash of the web server under a particular pattern of requests (GO-2026-6859).

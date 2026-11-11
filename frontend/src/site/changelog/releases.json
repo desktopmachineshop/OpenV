@@ -2,6 +2,82 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.32.1",
+   "date": "2026-11-11",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "Security fixes",
+     "notes": [
+      "**Rebuilt on Go 1.26.11.** The server and the runner are built with Go 1.26.11, which closes an advisory about a crash of the web server under a particular pattern of requests (GO-2026-6859)."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Tasks stretch over time off, by who is there.** A task keeps its days of work and ends later when its people are away. With several people on it, a day counts for the share of them who are there, by their percentage on the task, and each person's work and cost count only the days they are there. Recording or removing time off, or reassigning the task, moves it to fit.",
+      "**Time off for each person.** **Workspace settings** → **Plan calendar** records the days each member is away. Members record their own time off; admins anyone's.",
+      "**Working days are a workspace setting.** The days of the week a plan works moved from the Gantt's header to **Workspace settings** → **Plan calendar**, set by a workspace admin and shared by every project in the workspace.",
+      "**A task opens in the middle of the window.** The open button on a Gantt row now opens the task in a wide pane over the page, with its description, to-dos and activity beside everything the plan holds on it.",
+      "**A cleaner Gantt.** The paragraph of instructions under the chart is gone, so the chart has the room; the help and the tooltips say the same. A relationship's line now starts at the end of the driving task's float line instead of running over it.",
+      "**The V&V Assistant plans with you.** Ask the assistant to plan a piece of work and it offers cards that add tasks with dates, durations and the tasks they wait on, add milestones with their criteria, add to-dos to a task and tick them off, update a task's dates or progress, and recalculate, level or baseline the plan. As with its other cards, nothing changes until you apply one.",
+      "**More views of the plan.** The Gantt page can show the plan as a network diagram, a month calendar, each person's work by week, or a one-band timeline.",
+      "**All projects on one chart.** **All projects** shows the plan of every project in the workspace that you can read, each on its own line with its milestones.",
+      "**Links between projects.** A task can wait on a task of another project in the same workspace. It follows that task when the plan is recalculated, and both plans name the link.",
+      "**Microsoft Project files.** Export a plan as Microsoft Project XML, and **Import** one to add its tasks, outline, dates, milestones and relationships to a project.",
+      "**Columns you can edit.** **Columns**, under the Gantt's header, adds start, finish, days, effort, % done, float, cost and who beside the task names. Click a cell to change it in place.",
+      "**Find, filter, sort and group.** Find tasks by name, list only the late, critical or unscheduled ones, sort by date, float or progress, and group by person, milestone or board column.",
+      "**Move, indent and outdent tasks.** Move the selected task up or down among its siblings, make it a sub-task of the task above or move it out a level, or drag it by its outline number onto another task. Tasks keep the order you give them.",
+      "**Undo and redo.** **Undo** (Ctrl+Z) and **Redo** (Ctrl+Y) on the Gantt take back and repeat your edits to tasks.",
+      "**PDF lines across pages, and a legend.** In the plan's PDF, a relationship to a task on another page now runs to the page's edge and names that task and its page, and every chart page ends with a legend.",
+      "**Baselines.** **Tracking**, above the Gantt, saves a baseline of the plan. The chart then shows where each task was as a grey bar under it, and a task's panel says how many working days it has moved.",
+      "**Actual dates, percent complete and cost.** A task's panel has **Tracking**: the days work really started and finished, a percentage complete you type in place of the counted one, and what the task has cost.",
+      "**Status date and earned value.** Report progress as of a status date, see planned, earned and spent value with the schedule and cost indices, and move work that has not started up to the status date with **Reschedule remaining work**.",
+      "**People on tasks.** A task's panel on the Gantt has **Resources**: assign several people or agents, each for a share of their time. **Effort decides the duration** makes a task as long as its effort and its people need.",
+      "**Who is over-allocated, and levelling.** **Resources**, above the chart, lists everyone with work on the plan, their work and the days they are asked for more than their capacity. **Level the plan** delays the tasks with the most float until nobody is.",
+      "**Cost and budget.** Give each person a day rate and a task a fixed cost, and the plan costs every task and itself, against a budget if you set one.",
+      "**Automatic scheduling.** A plan can be scheduled automatically: after every change, each task goes straight after the tasks that drive it. Set it under **Calendar** on the Gantt, with the day the plan starts and the day it must finish by; a task can keep its own mode. Plans stay manual until you change them.",
+      "**Constraints.** A task can be held to a date: start or finish no earlier or no later than, must start or finish on, or as late as possible.",
+      "**Earliest and latest dates, and negative float.** A task's panel shows the earliest and latest it can run and its float, which goes negative, *N working days behind*, when it runs past a deadline, a constraint or the plan's finish.",
+      "**Recalculate, only later.** **Recalculate** can treat relationships as minimums and leave alone a task that already starts late enough. A plan can also have a critical path for each chain of tasks.",
+      "**Holidays.** **Holidays**, beside the Gantt's working days, lists the days the plan does not work whatever the weekday. Durations and float skip them and the chart shades them.",
+      "**Elapsed time and deadlines.** A task can count its duration in calendar days (**Elapsed time**), for a cure or a delivery, and can carry a **Deadline**: a marker on the chart that moves nothing and turns red when the task runs past it.",
+      "**Start to finish, and offsets in other units.** A relationship can be **start to finish**, and its offset can be in working days, elapsed days or a percentage of the driving task's duration.",
+      "**A critical threshold, and only the critical path.** The plan's calendar sets how much float still counts as critical, and **Only critical** lists just the tasks on the path. Every task with room now shows its float line, including tasks nothing depends on.",
+      "**Offsets on relationships.** A relationship on the Gantt takes an **Offset** in working days: start to start with an offset of 5 starts the second task five working days after the first. A negative offset starts it earlier. A relationship whose task does not keep its offset shows as broken.",
+      "**Recalculate the plan.** **Recalculate**, above the Gantt, moves every task that another drives to the dates its relationships and offsets ask for, keeping each task's duration. It asks first and says how many tasks moved; nothing else moves a task.",
+      "**Assign tasks to a milestone.** A task's panel on the Gantt has a **Milestone**, and a milestone's panel lists its **Tasks** and assigns more; a release's milestone takes tasks too. A task with sub-tasks brings them with it. A milestone with tasks counts the share of them done, **Milestone tasks done**, as part of its percentage without being asked, and the criterion can be added with a lower target.",
+      "**Relationships on the Gantt follow the standard types.** A task's **Depends on** is now **Relationships**, and each one is **finish to start**, **start to start** or **finish to finish**. A task can have several, so two tasks can together drive when a third starts, and the arrows on the chart join the ends each type names. Relationships you had already set are finish to start, as before.",
+      "**Find a task by typing.** **Sub-task of** and the task chooser under **Relationships** are searchable: type part of a task's name or its outline number, however long the plan.",
+      "**To-dos are off the chart, and have a deadline.** A bar no longer carries a to-do count. A task's to-dos are listed in its panel beside the chart and on its card on the **Board**; add one with an optional **deadline**, the one date a to-do has, and a deadline that has passed shows in red. They still fill the task's bar.",
+      "**Duration and effort.** A task has a **Duration** in days and keeps it: change its start and the due date moves with it, change its due date and the start moves, change the duration and the due date moves. **Effort** records the work in a task in person-days, separately, and the figures above the chart add it up.",
+      "**The critical path.** The Gantt works out how far each task can slip before the plan ends later, and marks in amber the tasks with no room at all, with the arrows between them. A task's panel says **Critical**, or how many days of float it has. **Critical path** above the chart turns the marks off.",
+      "**A timeline you can scroll.** The Gantt opens on the whole plan when it fits, and otherwise with today a third of the way in from the left. It scrolls past both ends of the plan, further forward than back; drag an empty part of the timeline to move it, and **Today** brings today back.",
+      "**Working days.** **Working days**, above the Gantt, says which days of the week the plan works: Monday to Friday until you change it. Durations and float count those days only, so a three-day task that starts on a Thursday is due on Monday, and the chart shades the days off. Durations already on a plan are counted again in working days; no date moves.",
+      "**A task with sub-tasks takes its dates from them.** It starts with its first sub-task and finishes with its last, its effort is theirs added up, and it has no dates of its own to set: schedule the sub-tasks to move it. Dates such a task had are no longer used.",
+      "**Links in and out of a folded task.** Fold a task and the relationships of its sub-tasks to tasks outside it are still drawn, leaving or landing on its bar at the point along it where the sub-task starts or finishes. If the critical path runs through its sub-tasks, the folded task carries the critical marks.",
+      "**Relationships from either task.** A relationship is listed on both of its tasks, named from the side of the one you have open: **Finish to start** on the task that comes first is **Start to finish** on the one that follows. Add, change or remove it from either.",
+      "**Draw a relationship on the chart.** Point at a bar and drag the **+** at its start or end to another bar. The ends you join decide whether it is finish to start, start to start or finish to finish.",
+      "**Click or drag to schedule.** On the row of a task with no dates, click a date to schedule it for that day, week, month or quarter, by the scale you are at, or drag across the row for the range you want, drawn as you drag.",
+      "**The whole critical path, with its float.** The critical path is now the chain of tasks that decides when the plan ends, shown even where the dates leave room between two of them. After a task's bar, a thin dashed line ended by a tick shows how far it can slip before it pushes the next task.",
+      "**Add a task in the chart.** Type a title in the last row of the Gantt's outline and press Enter.",
+      "**The scroll bar belongs to the timeline.** It sits under the timeline and starts where the task column ends.",
+      "**The Gantt fills the window.** On a computer, the chart and the task or milestone panel beside it reach the bottom of the window, however few tasks the plan has; each scrolls on its own when it is longer.",
+      "**The open button opens the full task.** The small open button on a Gantt row now opens the task in full, with its description, assignee, linked artifacts and activity, as the board does. Selecting the task's title or its bar still shows it in the panel beside the chart, which has **Open the full task** too.",
+      "**Open a task from its row.** Each row of the Gantt, and each milestone, has a small open button.",
+      "**Releases is under Plan.** The **Releases** page has moved from **Verify** to **Plan** in the project menu, beside the Gantt, where each release is a milestone. Links to it are unchanged."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**Today on the Gantt.** **Today** scrolls the timeline so that today sits a third of the way in from the left; it had stopped after a first small step.",
+      "**Lines in the PDF plan.** The PDF export of the plan draws the lines between related tasks, as the chart does."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.32.0",
    "date": "2026-11-10",
    "stableSince": "",
