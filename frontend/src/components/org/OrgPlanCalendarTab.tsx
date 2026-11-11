@@ -70,7 +70,7 @@ export const OrgPlanCalendarTab: React.FC<OrgPlanCalendarTabProps> = ({ org, isA
       <section>
         <h3 style={{ margin: '0 0 6px', fontSize: 15 }}>Time off</h3>
         <p style={{ ...mutedStyle, margin: '0 0 8px' }}>
-          The days a member is away, on every project. A task stretches over the days everyone on it is away: it keeps its days of work and ends later. Adding or removing time off moves the tasks that are not done.
+          The days a member is away, on every project. A task stretches over the days its people are away: it keeps its days of work and ends later, and with several people on it a day counts for the share of them who are there. Adding or removing time off moves the tasks that are not done.
           {isAdmin ? '' : ' You can record your own; a workspace admin records anyone’s.'}
         </p>
         {calendar.time_off.length === 0 ? (

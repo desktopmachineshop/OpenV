@@ -231,8 +231,18 @@ func (b *builder) work(t *Task, get func(kind, id string) *ResourceLoad, days ma
 		l := get(a.Type, a.ID)
 		l.Tasks++
 		// The task's effort shared by units, or else each person's share
-		// of every day it runs.
+		// of every day they are there while it runs.
+		key := a.Type + ":" + a.ID
 		work := float64(duration) * float64(a.Units) / 100
+		if t.SpanStart != nil && len(b.off) > 0 && daysApart(*t.SpanStart, *t.SpanEnd) <= loadHorizon {
+			there := 0
+			for d := parseDay(*t.SpanStart); !d.After(parseDay(*t.SpanEnd)); d = d.AddDate(0, 0, 1) {
+				if cal.works(d) && !b.off[key][d.Format(DateLayout)] {
+					there++
+				}
+			}
+			work = float64(there) * float64(a.Units) / 100
+		}
 		if t.EffortDays != nil {
 			work = *t.EffortDays * float64(a.Units) / float64(units)
 		}
@@ -242,7 +252,6 @@ func (b *builder) work(t *Task, get func(kind, id string) *ResourceLoad, days ma
 		if t.SpanStart == nil || t.Done || daysApart(*t.SpanStart, *t.SpanEnd) > loadHorizon {
 			continue
 		}
-		key := a.Type + ":" + a.ID
 		for d := parseDay(*t.SpanStart); !d.After(parseDay(*t.SpanEnd)); d = d.AddDate(0, 0, 1) {
 			// A day they are away asks nothing of them.
 			if day := d.Format(DateLayout); cal.works(d) && !b.off[key][day] {
