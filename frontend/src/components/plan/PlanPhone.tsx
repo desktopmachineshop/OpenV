@@ -54,15 +54,15 @@ const TaskRow: React.FC<{ task: PlanTask; today: string; onOpen: () => void }> =
     <button type="button" onClick={onOpen} style={{ ...rowButton, paddingLeft: 12 + t.depth * 14 }}>
       <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <span style={{ ...ellipsis, flex: 1, fontWeight: t.subtasks_total > 0 ? 600 : 400 }}>{t.title}</span>
-        {t.late ? <Chip tone="danger">Late</Chip> : t.done ? <Chip tone="success">Done</Chip> : null}
+        {t.late ? <Chip tone="danger">Late</Chip> : t.done ? <Chip tone="success">Done</Chip> : t.critical ? <Chip tone="warning">Critical</Chip> : null}
         <b style={{ fontSize: 13 }}>{t.progress}%</b>
       </span>
       <Bar value={t.progress} color={BAR_COLORS[tone].fill} label={`${t.progress}% complete`} />
       <span style={mutedStyle}>
-        {spanLabel(t.span_start, t.span_end, today)} · {columnLabel(t.column)}
-        {t.todos_total > 0 ? ` · ${t.todos_done}/${t.todos_total} to-dos` : ''}
+        {spanLabel(t.span_start, t.span_end, today)}
+        {t.duration_days ? ` · ${t.duration_days} ${t.duration_days === 1 ? 'day' : 'days'}` : ''} · {columnLabel(t.column)}
         {t.subtasks_total > 0 ? ` · ${t.subtasks_done}/${t.subtasks_total} sub-tasks` : ''}
-        {t.conflicts.length > 0 ? ' · overlaps a task it waits for' : ''}
+        {t.conflicts.length > 0 ? ' · its dates break a relationship' : ''}
       </span>
     </button>
   );

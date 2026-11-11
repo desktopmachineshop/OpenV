@@ -204,6 +204,7 @@ GET /api/v1/todos/{id}: project:viewer
 GET /api/v1/users: session
 GET /api/v1/users/{id}/avatar: user-visible
 GET /api/v1/work-items/{id}: project:viewer
+GET /api/v1/work-items/{id}/todos: project:viewer
 GET /health: -
 GET /mcp: -
 GET /oauth/authorize: -

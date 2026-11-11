@@ -1,6 +1,7 @@
 // The Plan page: a project's plan as a Gantt. Its tasks are the board's
-// cards, drawn on a timeline with their sub-tasks, dependencies and progress
-// (from to-dos ticked off and sub-tasks done); its milestones are the
+// cards, drawn on a timeline with their sub-tasks, their relationships
+// (finish to start, start to start, finish to finish) and progress (from the
+// to-dos ticked off on the card and sub-tasks done); its milestones are the
 // project's releases and the ones the team adds, each with criteria measured
 // from the project's artifacts, and the band between two milestones fills
 // with the later one's progress. See internal/domain/plan.
@@ -56,6 +57,8 @@ const PlanPage: React.FC = () => {
   const [zoom, setZoom] = useState<Zoom | null>(null);
   const [adding, setAdding] = useState<'task' | 'milestone' | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
+  const [showCritical, setShowCritical] = useState(true);
+  const [todaySignal, setTodaySignal] = useState(0);
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -76,7 +79,7 @@ const PlanPage: React.FC = () => {
 
   // The first zoom is the closest one that shows the whole plan.
   useEffect(() => {
-    if (plan && zoom === null) setZoom(fitZoom(plan.start, plan.end, Math.max(width - (isCompact ? 260 : 440), 320)));
+    if (plan && zoom === null) setZoom(fitZoom(plan.start, plan.end, Math.max(width - (isCompact ? 260 : 460), 320)));
   }, [plan, zoom, width, isCompact]);
 
   /** Runs a write, then reads the plan again; the error banner says what failed. */
@@ -208,9 +211,9 @@ const PlanPage: React.FC = () => {
       editable
       busy={busy}
       onSchedule={schedule}
-      onAddTodo={(t, text) => run(() => planAPI.addTodo(t.id, text), 'Failed to add the to-do')}
-      onTickTodo={(id, done) => run(() => todosAPI.setDone(id, done), 'Failed to save the to-do')}
       onAddSubtask={(t, title) => addTask({ title, start: '', end: '' }, t.id)}
+      onAddTodo={(t, text, due) => run(() => planAPI.addTodo(t.id, text, due), 'Failed to add the to-do')}
+      onTickTodo={(id, done) => run(() => todosAPI.setDone(id, done), 'Failed to save the to-do')}
       onSelectTask={openTask}
       onClose={close}
     />
@@ -250,7 +253,9 @@ const PlanPage: React.FC = () => {
           <Figure value={s.tasks} label={s.tasks === 1 ? 'task' : 'tasks'} />
           <Figure value={s.done} label="done" color="var(--success-text)" />
           <Figure value={s.late} label="late" color={s.late ? 'var(--danger-strong)' : undefined} />
+          <Figure value={s.critical} label="on the critical path" color={s.critical ? 'var(--warning-text)' : undefined} />
           {s.unscheduled > 0 && <Figure value={s.unscheduled} label="not scheduled" />}
+          {s.effort_days > 0 && <Figure value={s.effort_days} label={s.effort_days === 1 ? 'day of effort' : 'days of effort'} />}
           <Figure value={`${plan.milestones.filter((m) => m.met).length}/${plan.milestones.length}`} label="milestones met" />
         </div>
         {controls}
@@ -262,13 +267,26 @@ const PlanPage: React.FC = () => {
           <PanelHeader
             title="Plan"
             action={
-              <SegmentedControl
-                aria-label="Zoom"
-                options={ZOOMS}
-                value={zoom || 'weeks'}
-                onChange={setZoom}
-                style={{ fontSize: 12 }}
-              />
+              <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <button
+                  type="button"
+                  aria-pressed={showCritical}
+                  onClick={() => setShowCritical((on) => !on)}
+                  data-help-key="gantt.critical"
+                  title="Mark the tasks with no float: any slip in one moves the end of the plan"
+                  style={{
+                    ...buttonStyle('secondary', { compact: true }),
+                    ...(showCritical ? { background: 'var(--tint-yellow)', borderColor: 'var(--tint-yellow-border)', color: 'var(--warning-text)' } : {}),
+                  }}
+                >
+                  <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--warning)' }} />
+                  Critical path
+                </button>
+                <button type="button" onClick={() => setTodaySignal((n) => n + 1)} style={buttonStyle('secondary', { compact: true })}>
+                  Today
+                </button>
+                <SegmentedControl aria-label="Zoom" options={ZOOMS} value={zoom || 'weeks'} onChange={setZoom} style={{ fontSize: 12 }} />
+              </span>
             }
           />
           <GanttChart
@@ -280,6 +298,8 @@ const PlanPage: React.FC = () => {
             onSelectTask={openTask}
             onSelectMilestone={openMilestone}
             onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
+            showCritical={showCritical}
+            todaySignal={todaySignal}
           />
           {undated.length > 0 && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', borderTop: '1px solid var(--border-soft)' }}>
@@ -293,7 +313,7 @@ const PlanPage: React.FC = () => {
           )}
           <p style={{ ...mutedStyle, margin: 0, padding: '8px 12px', borderTop: '1px solid var(--border-soft)' }}>
             A task's bar fills as its to-dos are ticked off and its sub-tasks finish. A milestone's band fills as its
-            criteria are met. {coarsePointer ? 'Select a task to set its dates.' : 'Drag a bar to move it, or an end to resize it.'}
+            criteria are met. {coarsePointer ? 'Select a task to set its dates.' : 'Drag a bar to move it, an end to resize it, or the empty timeline to scroll.'}
           </p>
         </section>
         {panel && !isCompact && <div style={{ width: 340, flexShrink: 0 }}>{panel}</div>}

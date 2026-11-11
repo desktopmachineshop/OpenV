@@ -3,6 +3,9 @@
 <concept id="progress-from-to-dos-and-sub-tasks">
   <title>Progress from to-dos and sub-tasks</title>
   <shortdesc>A task's progress is worked out, so it never goes stale:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt.todos"/>
+  </prolog>
   <conbody>
     <simpletable>
       <sthead><stentry>The task</stentry><stentry>Its progress</stentry></sthead>
@@ -10,6 +13,6 @@
       <strow><stentry>Has to-dos or sub-tasks</stentry><stentry>The share of its to-dos ticked off, with each sub-task counting by its own progress</stentry></strow>
       <strow><stentry>Has neither</stentry><stentry>0% until it is moved to Done</stentry></strow>
     </simpletable>
-    <p>A to-do added on a task is one of the project's to-dos: the <b>To-dos</b> page lists it with the others, and ticking it off in either place moves the task's bar. A task with two of its four to-dos ticked is 50%; a task with one finished sub-task and one at 50% is 75%.</p>
+    <p>A to-do is a small job, a day or two of work at most, so it has one date only: an optional <b>deadline</b>. It has no start, duration or bar, and is never drawn on the chart. Add a task's to-dos in its panel, under <b>To-dos</b>, with a deadline if you like, and tick them off there; a deadline that has passed is shown in red. The same list is on the task's card on the <b>Board</b>. They are ordinary project to-dos, so the <b>To-dos</b> page lists them with the others, and ticking one off anywhere moves the task's bar. A task with two of its four to-dos ticked is 50%; a task with one finished sub-task and one at 50% is 75%.</p>
   </conbody>
 </concept>

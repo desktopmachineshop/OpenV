@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 333
-  axios instance calls: 323 (DELETE 38, GET 132, HEAD 1, POST 105, PUT 47)
+call sites: 334
+  axios instance calls: 324 (DELETE 38, GET 133, HEAD 1, POST 105, PUT 47)
   helper calls (a function that passes its argument to the instance): 1
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 6 (3 of them axios calls)
-distinct METHOD PATH lines below: 332; server routes reached: 332
+distinct METHOD PATH lines below: 333; server routes reached: 333
 
 GET     /api/v1/admin/metrics/usage                                       adminAPI.usage
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
@@ -339,6 +339,7 @@ PUT     /api/v1/work-items/{id}                                           workIt
 POST    /api/v1/work-items/{id}/comments                                  workItemsAPI.comment
 POST    /api/v1/work-items/{id}/move                                      workItemsAPI.move
 PUT     /api/v1/work-items/{id}/schedule                                  planAPI.schedule
+GET     /api/v1/work-items/{id}/todos                                     planAPI.listTodos
 POST    /api/v1/work-items/{id}/todos                                     planAPI.addTodo
 
 ## Normalised call sites (the path the client writes is not literally a route template)

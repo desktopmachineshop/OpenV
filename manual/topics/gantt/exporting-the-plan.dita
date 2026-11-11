@@ -11,8 +11,11 @@
       <li><b>PDF</b>: the chart on landscape pages, with the outline, dates, bars, milestones and today's line, then the milestones with their criteria.</li>
       <li><b>Excel</b>: the tasks with a timeline of weeks drawn beside them, and the milestones on a second sheet.</li>
       <li><b>CSV</b>: the tasks, then the milestones and their criteria.</li>
+    </ul>
+    <p>In Excel and CSV, the <b>relationships</b> column names each driving task by its outline number and type, as in <i>1.1FS, 2SS</i>, and each task has its duration, effort and float in days and whether it is critical. The PDF and the Excel timeline mark critical tasks in amber.</p>
+    <ul>
       <li><b>JSON</b>: the whole plan as the app reads it.</li>
     </ul>
-    <p>Agents read the plan with the <codeph>get_plan</codeph> tool and place a task with <codeph>schedule_work_item</codeph>.</p>
+    <p>Agents read the plan with the <codeph>get_plan</codeph> tool and place a task, with its relationships, with <codeph>schedule_work_item</codeph>.</p>
   </conbody>
 </concept>

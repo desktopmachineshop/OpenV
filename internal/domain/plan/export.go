@@ -92,6 +92,21 @@ func filename(doc Document, ext string) string {
 	return fmt.Sprintf("plan-%s-%s.%s", name, doc.ExportedAt.UTC().Format(DateLayout), ext)
 }
 
+func optInt(p *int) string {
+	if p == nil {
+		return ""
+	}
+	return strconv.Itoa(*p)
+}
+
+// optNumber writes a number of days without trailing zeros: 2.5, 3.
+func optNumber(p *float64) string {
+	if p == nil {
+		return ""
+	}
+	return strconv.FormatFloat(*p, 'f', -1, 64)
+}
+
 func str(p *string) string {
 	if p == nil {
 		return ""
@@ -126,7 +141,7 @@ func (d Document) assignee(t *Task) string {
 	return *t.AssigneeID
 }
 
-var taskHeader = []string{"wbs", "task", "status", "assignee", "start", "end", "progress_percent", "todos_done", "todos_total", "subtasks_done", "subtasks_total", "depends_on", "late"}
+var taskHeader = []string{"wbs", "task", "status", "assignee", "start", "end", "duration_days", "effort_days", "float_days", "critical", "progress_percent", "todos_done", "todos_total", "subtasks_done", "subtasks_total", "relationships", "late"}
 
 // taskRows is the task table every tabular format writes: one row per task
 // in outline order, the title indented by its depth, what it depends on by
@@ -138,9 +153,11 @@ func taskRows(doc Document, indent bool) [][]string {
 	}
 	rows := [][]string{}
 	for _, t := range doc.Plan.Tasks {
-		deps := make([]string, 0, len(t.DependsOn))
-		for _, d := range t.DependsOn {
-			deps = append(deps, wbs[d])
+		// The outline number with the type after it, as a Gantt writes a
+		// predecessor: "1.1FS, 2SS".
+		deps := make([]string, 0, len(t.Relationships))
+		for _, r := range t.Relationships {
+			deps = append(deps, wbs[r.TaskID]+r.Type)
 		}
 		title := t.Title
 		if indent {
@@ -148,6 +165,7 @@ func taskRows(doc Document, indent bool) [][]string {
 		}
 		rows = append(rows, []string{
 			t.WBS, title, columnLabel(t.Column), doc.assignee(t), str(t.SpanStart), str(t.SpanEnd),
+			optInt(t.DurationDays), optNumber(t.EffortDays), optInt(t.FloatDays), strconv.FormatBool(t.Critical),
 			strconv.Itoa(t.Progress), strconv.Itoa(t.TodosDone), strconv.Itoa(t.TodosTotal),
 			strconv.Itoa(t.SubtasksDone), strconv.Itoa(t.SubtasksTotal), strings.Join(deps, ", "),
 			strconv.FormatBool(t.Late),
@@ -245,6 +263,10 @@ func renderExcel(doc Document) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	criticalStyle, err := fill("F39C12")
+	if err != nil {
+		return nil, err
+	}
 
 	writeTable := func(sheet string, head []string, rows [][]string) error {
 		for i, row := range append([][]string{head}, rows...) {
@@ -278,39 +300,48 @@ func renderExcel(doc Document) ([]byte, error) {
 	_ = f.SetColWidth(milestonesSheet, "A", "A", 32)
 	_ = f.SetColWidth(milestonesSheet, "F", "F", 34)
 
-	// The timeline: one narrow column a week, right of the table.
-	if weeks := weeksOf(doc.Plan); len(weeks) > 0 {
-		first := len(taskHeader) + 2
-		for i, w := range weeks {
-			cell, _ := excelize.CoordinatesToCellName(first+i, 1)
-			_ = f.SetCellValue(tasksSheet, cell, w.Format("02 Jan"))
-		}
-		from, _ := excelize.ColumnNumberToName(first)
-		to, _ := excelize.ColumnNumberToName(first + len(weeks) - 1)
-		_ = f.SetColWidth(tasksSheet, from, to, 7)
-		_ = f.SetCellStyle(tasksSheet, from+"1", to+"1", header)
-		for row, t := range doc.Plan.Tasks {
-			if t.SpanStart == nil || t.SpanEnd == nil {
-				continue
-			}
-			a, b := weekIndex(weeks, *t.SpanStart), weekIndex(weeks, *t.SpanEnd)
-			style := barStyle
-			if t.Done {
-				style = doneStyle
-			} else if t.Late {
-				style = lateStyle
-			}
-			c1, _ := excelize.CoordinatesToCellName(first+a, row+2)
-			c2, _ := excelize.CoordinatesToCellName(first+b, row+2)
-			_ = f.SetCellStyle(tasksSheet, c1, c2, style)
-		}
-	}
+	excelTimeline(f, tasksSheet, doc.Plan, header, [4]int{barStyle, doneStyle, lateStyle, criticalStyle})
 	f.SetActiveSheet(0)
 	buf, err := f.WriteToBuffer()
 	if err != nil {
 		return nil, fmt.Errorf("failed to write the plan workbook: %w", err)
 	}
 	return buf.Bytes(), nil
+}
+
+// excelTimeline draws the timeline right of the task table: one narrow
+// column a week, each task's weeks filled in its state's colour (styles:
+// open, done, late, critical).
+func excelTimeline(f *excelize.File, sheet string, p *Plan, header int, styles [4]int) {
+	if weeks := weeksOf(p); len(weeks) > 0 {
+		first := len(taskHeader) + 2
+		for i, w := range weeks {
+			cell, _ := excelize.CoordinatesToCellName(first+i, 1)
+			_ = f.SetCellValue(sheet, cell, w.Format("02 Jan"))
+		}
+		from, _ := excelize.ColumnNumberToName(first)
+		to, _ := excelize.ColumnNumberToName(first + len(weeks) - 1)
+		_ = f.SetColWidth(sheet, from, to, 7)
+		_ = f.SetCellStyle(sheet, from+"1", to+"1", header)
+		for row, t := range p.Tasks {
+			if t.SpanStart == nil || t.SpanEnd == nil {
+				continue
+			}
+			a, b := weekIndex(weeks, *t.SpanStart), weekIndex(weeks, *t.SpanEnd)
+			style := styles[0]
+			if t.Critical {
+				style = styles[3]
+			}
+			if t.Done {
+				style = styles[1]
+			} else if t.Late {
+				style = styles[2]
+			}
+			c1, _ := excelize.CoordinatesToCellName(first+a, row+2)
+			c2, _ := excelize.CoordinatesToCellName(first+b, row+2)
+			_ = f.SetCellStyle(sheet, c1, c2, style)
+		}
+	}
 }
 
 // maxWeeks caps the drawn timeline of a workbook: five years.

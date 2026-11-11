@@ -77,7 +77,7 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"today\":\"<date>\",\"start\":null,\"end\":null,\"tasks\":[],\"milestones\":[],\"dependencies\":[],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":0,\"total\":0,\"percent\":0}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":0,\"done\":0,\"late\":0,\"unscheduled\":0,\"progress\":0}}"
+        "{\"project_id\":\"<p>\",\"today\":\"<date>\",\"start\":null,\"end\":null,\"tasks\":[],\"milestones\":[],\"dependencies\":[],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":0,\"total\":0,\"percent\":0}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":0,\"done\":0,\"late\":0,\"unscheduled\":0,\"progress\":0,\"critical\":0,\"effort_days\":0}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -193,7 +193,9 @@
           "done": 0,
           "late": 0,
           "unscheduled": 0,
-          "progress": 0
+          "progress": 0,
+          "critical": 0,
+          "effort_days": 0
         }
       },
       "gzip": {
@@ -219,10 +221,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 442,
+      "content_length": 531,
       "kind": "json",
       "body": [
-        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"conflicts\":[]}"
+        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -238,6 +240,10 @@
         "end": "<date>",
         "span_start": "<date>",
         "span_end": "<date>",
+        "duration_days": 10,
+        "effort_days": null,
+        "float_days": 0,
+        "critical": false,
         "progress": 100,
         "done": true,
         "late": false,
@@ -247,6 +253,7 @@
         "subtasks_total": 0,
         "todos": [],
         "depends_on": [],
+        "relationships": [],
         "conflicts": []
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -279,10 +286,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 477,
+      "content_length": 644,
       "kind": "json",
       "body": [
-        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"conflicts\":[]}"
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":null,\"float_days\":0,\"critical\":true,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -298,6 +305,10 @@
         "end": "<date>",
         "span_start": "<date>",
         "span_end": "<date>",
+        "duration_days": 11,
+        "effort_days": null,
+        "float_days": 0,
+        "critical": true,
         "progress": 0,
         "done": false,
         "late": false,
@@ -308,6 +319,13 @@
         "todos": [],
         "depends_on": [
           "<frame>"
+        ],
+        "relationships": [
+          {
+            "task_id": "<frame>",
+            "type": "FS",
+            "conflict": false
+          }
         ],
         "conflicts": []
       },
@@ -341,10 +359,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 397,
+      "content_length": 489,
       "kind": "json",
       "body": [
-        "{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"conflicts\":[]}"
+        "{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":28919,\"critical\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -360,6 +378,10 @@
         "end": "<date>",
         "span_start": "<date>",
         "span_end": "<date>",
+        "duration_days": 1,
+        "effort_days": null,
+        "float_days": 28919,
+        "critical": false,
         "progress": 0,
         "done": false,
         "late": true,
@@ -369,6 +391,7 @@
         "subtasks_total": 0,
         "todos": [],
         "depends_on": [],
+        "relationships": [],
         "conflicts": []
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -401,10 +424,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 480,
+      "content_length": 648,
       "kind": "json",
       "body": [
-        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"conflicts\":[]}"
+        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -420,6 +443,10 @@
         "end": "<date>",
         "span_start": "<date>",
         "span_end": "<date>",
+        "duration_days": 10,
+        "effort_days": null,
+        "float_days": 0,
+        "critical": false,
         "progress": 100,
         "done": true,
         "late": false,
@@ -431,6 +458,13 @@
         "depends_on": [
           "<order>"
         ],
+        "relationships": [
+          {
+            "task_id": "<order>",
+            "type": "FS",
+            "conflict": false
+          }
+        ],
         "conflicts": []
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -438,7 +472,7 @@
     },
     {
       "n": 6,
-      "title": "a start after the due date: 400",
+      "title": "a start after the due date, both sent: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
       "request": {
@@ -447,7 +481,7 @@
         "headers": [
           "Content-Type: application/json"
         ],
-        "body": "{\"start_date\":\"<date>\"}"
+        "body": "{\"start_date\":\"<date>\",\"due_date\":\"<date>\"}"
       },
       "status": 400,
       "content_type": "application/json",
@@ -467,6 +501,356 @@
     },
     {
       "n": 7,
+      "title": "Frame's start moved alone: its due date moves with it, the 10 days kept",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/schedule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<frame>/schedule",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"start_date\":\"<date>\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 648,
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<frame>",
+        "title": "Weld the frame",
+        "column": "done",
+        "assignee_type": "user",
+        "assignee_id": null,
+        "parent_id": "<build>",
+        "depth": 1,
+        "wbs": "2.1",
+        "start": "<date>",
+        "end": "<date>",
+        "span_start": "<date>",
+        "span_end": "<date>",
+        "duration_days": 10,
+        "effort_days": null,
+        "float_days": 0,
+        "critical": false,
+        "progress": 100,
+        "done": true,
+        "late": false,
+        "todos_done": 0,
+        "todos_total": 0,
+        "subtasks_done": 0,
+        "subtasks_total": 0,
+        "todos": [],
+        "depends_on": [
+          "<order>"
+        ],
+        "relationships": [
+          {
+            "task_id": "<order>",
+            "type": "FS",
+            "conflict": false
+          }
+        ],
+        "conflicts": []
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "workitem.updated",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<frame>",
+          "payload": {
+            "title": "string \"Weld the frame\""
+          }
+        }
+      ]
+    },
+    {
+      "n": 8,
+      "title": "Frame's due date moved back alone: its start moves with it",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/schedule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<frame>/schedule",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"due_date\":\"<date>\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 648,
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<frame>",
+        "title": "Weld the frame",
+        "column": "done",
+        "assignee_type": "user",
+        "assignee_id": null,
+        "parent_id": "<build>",
+        "depth": 1,
+        "wbs": "2.1",
+        "start": "<date>",
+        "end": "<date>",
+        "span_start": "<date>",
+        "span_end": "<date>",
+        "duration_days": 10,
+        "effort_days": null,
+        "float_days": 0,
+        "critical": false,
+        "progress": 100,
+        "done": true,
+        "late": false,
+        "todos_done": 0,
+        "todos_total": 0,
+        "subtasks_done": 0,
+        "subtasks_total": 0,
+        "todos": [],
+        "depends_on": [
+          "<order>"
+        ],
+        "relationships": [
+          {
+            "task_id": "<order>",
+            "type": "FS",
+            "conflict": false
+          }
+        ],
+        "conflicts": []
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "workitem.updated",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<frame>",
+          "payload": {
+            "title": "string \"Weld the frame\""
+          }
+        }
+      ]
+    },
+    {
+      "n": 9,
+      "title": "Wiring's duration set to 5 days, with 7.5 days of effort: its due date moves",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/schedule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<wiring>/schedule",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"duration_days\":5,\"effort_days\":7.5}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 642,
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":5,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<wiring>",
+        "title": "Wire the rig",
+        "column": "todo",
+        "assignee_type": "user",
+        "assignee_id": null,
+        "parent_id": "<build>",
+        "depth": 1,
+        "wbs": "2.2",
+        "start": "<date>",
+        "end": "<date>",
+        "span_start": "<date>",
+        "span_end": "<date>",
+        "duration_days": 5,
+        "effort_days": 7.5,
+        "float_days": 0,
+        "critical": true,
+        "progress": 0,
+        "done": false,
+        "late": false,
+        "todos_done": 0,
+        "todos_total": 0,
+        "subtasks_done": 0,
+        "subtasks_total": 0,
+        "todos": [],
+        "depends_on": [
+          "<frame>"
+        ],
+        "relationships": [
+          {
+            "task_id": "<frame>",
+            "type": "FS",
+            "conflict": false
+          }
+        ],
+        "conflicts": []
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "workitem.updated",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<wiring>",
+          "payload": {
+            "title": "string \"Wire the rig\""
+          }
+        }
+      ]
+    },
+    {
+      "n": 10,
+      "title": "Wiring back to 11 days",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/schedule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<wiring>/schedule",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"duration_days\":11}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 643,
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<wiring>",
+        "title": "Wire the rig",
+        "column": "todo",
+        "assignee_type": "user",
+        "assignee_id": null,
+        "parent_id": "<build>",
+        "depth": 1,
+        "wbs": "2.2",
+        "start": "<date>",
+        "end": "<date>",
+        "span_start": "<date>",
+        "span_end": "<date>",
+        "duration_days": 11,
+        "effort_days": 7.5,
+        "float_days": 0,
+        "critical": true,
+        "progress": 0,
+        "done": false,
+        "late": false,
+        "todos_done": 0,
+        "todos_total": 0,
+        "subtasks_done": 0,
+        "subtasks_total": 0,
+        "todos": [],
+        "depends_on": [
+          "<frame>"
+        ],
+        "relationships": [
+          {
+            "task_id": "<frame>",
+            "type": "FS",
+            "conflict": false
+          }
+        ],
+        "conflicts": []
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": [
+        {
+          "type": "workitem.updated",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<wiring>",
+          "payload": {
+            "title": "string \"Wire the rig\""
+          }
+        }
+      ]
+    },
+    {
+      "n": 11,
+      "title": "a negative duration: 400",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/schedule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<wiring>/schedule",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"duration_days\":-1}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 60,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"a duration is a whole number of days, 1 or more\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "a duration is a whole number of days, 1 or more"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 12,
+      "title": "negative effort: 400",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/schedule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<wiring>/schedule",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"effort_days\":-1}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 50,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"effort is a number of days, 0 or more\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "effort is a number of days, 0 or more"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 13,
       "title": "a date not written YYYY-MM-DD: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -495,7 +879,7 @@
       "events": []
     },
     {
-      "n": 8,
+      "n": 14,
       "title": "its own parent: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -524,7 +908,7 @@
       "events": []
     },
     {
-      "n": 9,
+      "n": 15,
       "title": "a parent that is its sub-task: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -553,7 +937,7 @@
       "events": []
     },
     {
-      "n": 10,
+      "n": 16,
       "title": "Q's task as parent: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -582,7 +966,7 @@
       "events": []
     },
     {
-      "n": 11,
+      "n": 17,
       "title": "Q's task as dependency: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -611,7 +995,7 @@
       "events": []
     },
     {
-      "n": 12,
+      "n": 18,
       "title": "a loop of dependencies: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -640,7 +1024,231 @@
       "events": []
     },
     {
-      "n": 13,
+      "n": 19,
+      "title": "Wiring is driven by two tasks: it finishes no earlier than Frame (FF) and starts no earlier than Order (SS)",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/schedule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<wiring>/schedule",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FF\"},{\"task_id\":\"<order>\",\"type\":\"SS\"}]}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 762,
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\",\"<frame>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"SS\",\"conflict\":false},{\"task_id\":\"<frame>\",\"type\":\"FF\",\"conflict\":false}],\"conflicts\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<wiring>",
+        "title": "Wire the rig",
+        "column": "todo",
+        "assignee_type": "user",
+        "assignee_id": null,
+        "parent_id": "<build>",
+        "depth": 1,
+        "wbs": "2.2",
+        "start": "<date>",
+        "end": "<date>",
+        "span_start": "<date>",
+        "span_end": "<date>",
+        "duration_days": 11,
+        "effort_days": 7.5,
+        "float_days": 0,
+        "critical": true,
+        "progress": 0,
+        "done": false,
+        "late": false,
+        "todos_done": 0,
+        "todos_total": 0,
+        "subtasks_done": 0,
+        "subtasks_total": 0,
+        "todos": [],
+        "depends_on": [
+          "<order>",
+          "<frame>"
+        ],
+        "relationships": [
+          {
+            "task_id": "<order>",
+            "type": "SS",
+            "conflict": false
+          },
+          {
+            "task_id": "<frame>",
+            "type": "FF",
+            "conflict": false
+          }
+        ],
+        "conflicts": []
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 20,
+      "title": "an unknown relationship type: 400",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/schedule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<wiring>/schedule",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"SF\"}]}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 97,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"a relationship is FS (finish to start), SS (start to start) or FF (finish to finish)\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "a relationship is FS (finish to start), SS (start to start) or FF (finish to finish)"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 21,
+      "title": "depends_on, the earlier form: Frame keeps FF, and Order is dropped",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/schedule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<wiring>/schedule",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"depends_on\":[\"<frame>\"]}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 643,
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FF\",\"conflict\":false}],\"conflicts\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<wiring>",
+        "title": "Wire the rig",
+        "column": "todo",
+        "assignee_type": "user",
+        "assignee_id": null,
+        "parent_id": "<build>",
+        "depth": 1,
+        "wbs": "2.2",
+        "start": "<date>",
+        "end": "<date>",
+        "span_start": "<date>",
+        "span_end": "<date>",
+        "duration_days": 11,
+        "effort_days": 7.5,
+        "float_days": 0,
+        "critical": true,
+        "progress": 0,
+        "done": false,
+        "late": false,
+        "todos_done": 0,
+        "todos_total": 0,
+        "subtasks_done": 0,
+        "subtasks_total": 0,
+        "todos": [],
+        "depends_on": [
+          "<frame>"
+        ],
+        "relationships": [
+          {
+            "task_id": "<frame>",
+            "type": "FF",
+            "conflict": false
+          }
+        ],
+        "conflicts": []
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 22,
+      "title": "Wiring back to finish to start on Frame",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/schedule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<wiring>/schedule",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"relationships\":[{\"task_id\":\"<frame>\"}]}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 643,
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<wiring>",
+        "title": "Wire the rig",
+        "column": "todo",
+        "assignee_type": "user",
+        "assignee_id": null,
+        "parent_id": "<build>",
+        "depth": 1,
+        "wbs": "2.2",
+        "start": "<date>",
+        "end": "<date>",
+        "span_start": "<date>",
+        "span_end": "<date>",
+        "duration_days": 11,
+        "effort_days": 7.5,
+        "float_days": 0,
+        "critical": true,
+        "progress": 0,
+        "done": false,
+        "late": false,
+        "todos_done": 0,
+        "todos_total": 0,
+        "subtasks_done": 0,
+        "subtasks_total": 0,
+        "todos": [],
+        "depends_on": [
+          "<frame>"
+        ],
+        "relationships": [
+          {
+            "task_id": "<frame>",
+            "type": "FS",
+            "conflict": false
+          }
+        ],
+        "conflicts": []
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 23,
       "title": "the viewer may not schedule: 403",
       "actor": "viewer",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -669,7 +1277,7 @@
       "events": []
     },
     {
-      "n": 14,
+      "n": 24,
       "title": "a to-do on Wiring",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -688,7 +1296,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 14>\",\"updated_at\":\"<time@step 14>\"}"
+        "{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -705,15 +1313,15 @@
         "source_chatter_id": null,
         "promoted_work_item_id": null,
         "created_by": "<owner>",
-        "created_at": "<time@step 14>",
-        "updated_at": "<time@step 14>"
+        "created_at": "<time@step 24>",
+        "updated_at": "<time@step 24>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 15,
-      "title": "a second to-do on Wiring",
+      "n": 25,
+      "title": "a second to-do on Wiring, with its deadline",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
       "request": {
@@ -722,7 +1330,7 @@
         "headers": [
           "Content-Type: application/json"
         ],
-        "body": "{\"text\":\"Label the loom\"}"
+        "body": "{\"text\":\"Label the loom\",\"due_date\":\"<date>\"}"
       },
       "status": 201,
       "content_type": "application/json",
@@ -731,7 +1339,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 15>\",\"updated_at\":\"<time@step 15>\"}"
+        "{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 25>\",\"updated_at\":\"<time@step 25>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -743,19 +1351,48 @@
         "done_at": null,
         "done_note": "",
         "assignee_id": null,
-        "due_date": null,
+        "due_date": "<time>",
         "source_artifact_id": null,
         "source_chatter_id": null,
         "promoted_work_item_id": null,
         "created_by": "<owner>",
-        "created_at": "<time@step 15>",
-        "updated_at": "<time@step 15>"
+        "created_at": "<time@step 25>",
+        "updated_at": "<time@step 25>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 16,
+      "n": 26,
+      "title": "a deadline not written YYYY-MM-DD: 400",
+      "actor": "owner",
+      "route": "POST /api/v1/work-items/{id}/todos",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/work-items/<wiring>/todos",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"text\":\"x\",\"due_date\":\"15/03/2099\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 46,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"a date must be written YYYY-MM-DD\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "a date must be written YYYY-MM-DD"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 27,
       "title": "no text: 400",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -784,7 +1421,7 @@
       "events": []
     },
     {
-      "n": 17,
+      "n": 28,
       "title": "the viewer may not add one: 403",
       "actor": "viewer",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -813,7 +1450,86 @@
       "events": []
     },
     {
-      "n": 18,
+      "n": 29,
+      "title": "Wiring's to-dos, to the viewer: both open",
+      "actor": "viewer",
+      "route": "GET /api/v1/work-items/{id}/todos",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/work-items/<wiring>/todos"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "[{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 25>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"}]"
+      ],
+      "trailing_newline": true,
+      "parsed": [
+        {
+          "id": "<t2>",
+          "org_id": "<owner.workspace>",
+          "project_id": "<p>",
+          "text": "Label the loom",
+          "done": false,
+          "done_at": null,
+          "done_note": "",
+          "assignee_id": null,
+          "due_date": "<time>",
+          "source_artifact_id": null,
+          "source_chatter_id": null,
+          "promoted_work_item_id": null,
+          "created_by": "<owner>",
+          "created_at": "<time@step 25>",
+          "updated_at": "<time@step 25>"
+        },
+        {
+          "id": "<t1>",
+          "org_id": "<owner.workspace>",
+          "project_id": "<p>",
+          "text": "Crimp the connectors",
+          "done": false,
+          "done_at": null,
+          "done_note": "",
+          "assignee_id": null,
+          "due_date": null,
+          "source_artifact_id": null,
+          "source_chatter_id": null,
+          "promoted_work_item_id": null,
+          "created_by": "<owner>",
+          "created_at": "<time@step 24>",
+          "updated_at": "<time@step 24>"
+        }
+      ],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 30,
+      "title": "Frame has none: []",
+      "actor": "owner",
+      "route": "GET /api/v1/work-items/{id}/todos",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/work-items/<frame>/todos"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 3,
+      "kind": "json",
+      "body": [
+        "[]"
+      ],
+      "trailing_newline": true,
+      "parsed": [],
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 31,
       "title": "a milestone: every user need addressed by 1 February 2020",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -832,7 +1548,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<m1>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[{\"metric\":\"needs_addressed\",\"target\":100},{\"metric\":\"tasks_done\",\"target\":100}],\"created_at\":\"<time@step 18>\",\"updated_at\":\"<time@step 18>\"}"
+        "{\"id\":\"<m1>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[{\"metric\":\"needs_addressed\",\"target\":100},{\"metric\":\"tasks_done\",\"target\":100}],\"created_at\":\"<time@step 31>\",\"updated_at\":\"<time@step 31>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -852,14 +1568,14 @@
             "target": 100
           }
         ],
-        "created_at": "<time@step 18>",
-        "updated_at": "<time@step 18>"
+        "created_at": "<time@step 31>",
+        "updated_at": "<time@step 31>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 19,
+      "n": 32,
       "title": "a milestone with no date and no criteria",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -878,7 +1594,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 19>\"}"
+        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 32>\",\"updated_at\":\"<time@step 32>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -889,14 +1605,14 @@
         "description": "",
         "target_date": null,
         "criteria": [],
-        "created_at": "<time@step 19>",
-        "updated_at": "<time@step 19>"
+        "created_at": "<time@step 32>",
+        "updated_at": "<time@step 32>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 20,
+      "n": 33,
       "title": "Q's milestone",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -915,7 +1631,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<q_m>\",\"project_id\":\"<q>\",\"release_id\":null,\"name\":\"Elsewhere\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 20>\",\"updated_at\":\"<time@step 20>\"}"
+        "{\"id\":\"<q_m>\",\"project_id\":\"<q>\",\"release_id\":null,\"name\":\"Elsewhere\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 33>\",\"updated_at\":\"<time@step 33>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -926,14 +1642,14 @@
         "description": "",
         "target_date": null,
         "criteria": [],
-        "created_at": "<time@step 20>",
-        "updated_at": "<time@step 20>"
+        "created_at": "<time@step 33>",
+        "updated_at": "<time@step 33>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 21,
+      "n": 34,
       "title": "no name: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -962,7 +1678,7 @@
       "events": []
     },
     {
-      "n": 22,
+      "n": 35,
       "title": "an unknown metric: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -991,7 +1707,7 @@
       "events": []
     },
     {
-      "n": 23,
+      "n": 36,
       "title": "a target of 0: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -1020,7 +1736,7 @@
       "events": []
     },
     {
-      "n": 24,
+      "n": 37,
       "title": "the viewer may not add one: 403",
       "actor": "viewer",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -1049,7 +1765,7 @@
       "events": []
     },
     {
-      "n": 25,
+      "n": 38,
       "title": "Kick-off gets a date; its name stays",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -1068,7 +1784,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[],\"created_at\":\"<time@step 19>\",\"updated_at\":\"<time@step 25>\"}"
+        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[],\"created_at\":\"<time@step 32>\",\"updated_at\":\"<time@step 38>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1079,14 +1795,14 @@
         "description": "",
         "target_date": "<date>",
         "criteria": [],
-        "created_at": "<time@step 19>",
-        "updated_at": "<time@step 25>"
+        "created_at": "<time@step 32>",
+        "updated_at": "<time@step 38>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 26,
+      "n": 39,
       "title": "Q's milestone through P: 404",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -1115,7 +1831,7 @@
       "events": []
     },
     {
-      "n": 27,
+      "n": 40,
       "title": "the plan with MVP on its default criteria",
       "actor": "viewer",
       "route": "GET /api/v1/projects/{id}/plan",
@@ -1130,7 +1846,7 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"conflicts\":[]},{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"conflicts\":[]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true}],\"depends_on\":[\"<frame>\"],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":25,\"met\":false,\"late\":true},{\"key\":\"<m2>\",\"kind\":\"custom\",\"id\":\"<m2>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[],\"progress\":0,\"met\":false,\"late\":false},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":true,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\"},{\"work_item_id\":\"<wiring>\",\"depends_on_id\":\"<frame>\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":1,\"unscheduled\":0,\"progress\":38}}"
+        "{\"project_id\":\"<p>\",\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":28899,\"critical\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]},{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":20,\"effort_days\":null,\"float_days\":0,\"critical\":true,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":25,\"met\":false,\"late\":true},{\"key\":\"<m2>\",\"kind\":\"custom\",\"id\":\"<m2>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[],\"progress\":0,\"met\":false,\"late\":false},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":true,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\"},{\"work_item_id\":\"<wiring>\",\"depends_on_id\":\"<frame>\",\"type\":\"FS\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":1,\"unscheduled\":0,\"progress\":38,\"critical\":2,\"effort_days\":7.5}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1152,6 +1868,10 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
+            "duration_days": 1,
+            "effort_days": null,
+            "float_days": 28899,
+            "critical": false,
             "progress": 0,
             "done": false,
             "late": true,
@@ -1161,6 +1881,7 @@
             "subtasks_total": 0,
             "todos": [],
             "depends_on": [],
+            "relationships": [],
             "conflicts": []
           },
           {
@@ -1176,6 +1897,10 @@
             "end": null,
             "span_start": "<date>",
             "span_end": "<date>",
+            "duration_days": 20,
+            "effort_days": null,
+            "float_days": 0,
+            "critical": true,
             "progress": 75,
             "done": false,
             "late": false,
@@ -1185,6 +1910,7 @@
             "subtasks_total": 2,
             "todos": [],
             "depends_on": [],
+            "relationships": [],
             "conflicts": []
           },
           {
@@ -1200,6 +1926,10 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
+            "duration_days": 10,
+            "effort_days": null,
+            "float_days": 0,
+            "critical": false,
             "progress": 100,
             "done": true,
             "late": false,
@@ -1210,6 +1940,13 @@
             "todos": [],
             "depends_on": [
               "<order>"
+            ],
+            "relationships": [
+              {
+                "task_id": "<order>",
+                "type": "FS",
+                "conflict": false
+              }
             ],
             "conflicts": []
           },
@@ -1226,6 +1963,10 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
+            "duration_days": 11,
+            "effort_days": 7.5,
+            "float_days": 0,
+            "critical": true,
             "progress": 50,
             "done": false,
             "late": false,
@@ -1237,16 +1978,25 @@
               {
                 "id": "<t2>",
                 "text": "Label the loom",
-                "done": false
+                "done": false,
+                "due_date": "<date>"
               },
               {
                 "id": "<t1>",
                 "text": "Crimp the connectors",
-                "done": true
+                "done": true,
+                "due_date": null
               }
             ],
             "depends_on": [
               "<frame>"
+            ],
+            "relationships": [
+              {
+                "task_id": "<frame>",
+                "type": "FS",
+                "conflict": false
+              }
             ],
             "conflicts": []
           }
@@ -1341,11 +2091,13 @@
         "dependencies": [
           {
             "work_item_id": "<frame>",
-            "depends_on_id": "<order>"
+            "depends_on_id": "<order>",
+            "type": "FS"
           },
           {
             "work_item_id": "<wiring>",
-            "depends_on_id": "<frame>"
+            "depends_on_id": "<frame>",
+            "type": "FS"
           }
         ],
         "metrics": [
@@ -1453,7 +2205,9 @@
           "done": 1,
           "late": 1,
           "unscheduled": 0,
-          "progress": 38
+          "progress": 38,
+          "critical": 2,
+          "effort_days": 7.5
         }
       },
       "gzip": {
@@ -1463,7 +2217,7 @@
       }
     },
     {
-      "n": 28,
+      "n": 41,
       "title": "MVP's own criteria: requirements approved, 80%",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}",
@@ -1482,7 +2236,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<mvp_m>\",\"project_id\":\"<p>\",\"release_id\":\"<mvp>\",\"name\":\"\",\"description\":\"\",\"target_date\":null,\"criteria\":[{\"metric\":\"requirements_approved\",\"target\":80}],\"created_at\":\"<time@step 28>\",\"updated_at\":\"<time@step 28>\"}"
+        "{\"id\":\"<mvp_m>\",\"project_id\":\"<p>\",\"release_id\":\"<mvp>\",\"name\":\"\",\"description\":\"\",\"target_date\":null,\"criteria\":[{\"metric\":\"requirements_approved\",\"target\":80}],\"created_at\":\"<time@step 41>\",\"updated_at\":\"<time@step 41>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1498,14 +2252,14 @@
             "target": 80
           }
         ],
-        "created_at": "<time@step 28>",
-        "updated_at": "<time@step 28>"
+        "created_at": "<time@step 41>",
+        "updated_at": "<time@step 41>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 29,
+      "n": 42,
       "title": "Q's release through P: 404",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}",
@@ -1534,7 +2288,7 @@
       "events": []
     },
     {
-      "n": 30,
+      "n": 43,
       "title": "a release milestone's name is the release's: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -1563,7 +2317,7 @@
       "events": []
     },
     {
-      "n": 31,
+      "n": 44,
       "title": "the plan: MVP now carries its own criterion",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan",
@@ -1578,7 +2332,7 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"conflicts\":[]},{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"conflicts\":[]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true}],\"depends_on\":[\"<frame>\"],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":25,\"met\":false,\"late\":true},{\"key\":\"<m2>\",\"kind\":\"custom\",\"id\":\"<m2>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[],\"progress\":0,\"met\":false,\"late\":false},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"<mvp_m>\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":80,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\"},{\"work_item_id\":\"<wiring>\",\"depends_on_id\":\"<frame>\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":1,\"unscheduled\":0,\"progress\":38}}"
+        "{\"project_id\":\"<p>\",\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":28899,\"critical\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]},{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":20,\"effort_days\":null,\"float_days\":0,\"critical\":true,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":25,\"met\":false,\"late\":true},{\"key\":\"<m2>\",\"kind\":\"custom\",\"id\":\"<m2>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[],\"progress\":0,\"met\":false,\"late\":false},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"<mvp_m>\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":80,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\"},{\"work_item_id\":\"<wiring>\",\"depends_on_id\":\"<frame>\",\"type\":\"FS\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":1,\"unscheduled\":0,\"progress\":38,\"critical\":2,\"effort_days\":7.5}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1600,6 +2354,10 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
+            "duration_days": 1,
+            "effort_days": null,
+            "float_days": 28899,
+            "critical": false,
             "progress": 0,
             "done": false,
             "late": true,
@@ -1609,6 +2367,7 @@
             "subtasks_total": 0,
             "todos": [],
             "depends_on": [],
+            "relationships": [],
             "conflicts": []
           },
           {
@@ -1624,6 +2383,10 @@
             "end": null,
             "span_start": "<date>",
             "span_end": "<date>",
+            "duration_days": 20,
+            "effort_days": null,
+            "float_days": 0,
+            "critical": true,
             "progress": 75,
             "done": false,
             "late": false,
@@ -1633,6 +2396,7 @@
             "subtasks_total": 2,
             "todos": [],
             "depends_on": [],
+            "relationships": [],
             "conflicts": []
           },
           {
@@ -1648,6 +2412,10 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
+            "duration_days": 10,
+            "effort_days": null,
+            "float_days": 0,
+            "critical": false,
             "progress": 100,
             "done": true,
             "late": false,
@@ -1658,6 +2426,13 @@
             "todos": [],
             "depends_on": [
               "<order>"
+            ],
+            "relationships": [
+              {
+                "task_id": "<order>",
+                "type": "FS",
+                "conflict": false
+              }
             ],
             "conflicts": []
           },
@@ -1674,6 +2449,10 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
+            "duration_days": 11,
+            "effort_days": 7.5,
+            "float_days": 0,
+            "critical": true,
             "progress": 50,
             "done": false,
             "late": false,
@@ -1685,16 +2464,25 @@
               {
                 "id": "<t2>",
                 "text": "Label the loom",
-                "done": false
+                "done": false,
+                "due_date": "<date>"
               },
               {
                 "id": "<t1>",
                 "text": "Crimp the connectors",
-                "done": true
+                "done": true,
+                "due_date": null
               }
             ],
             "depends_on": [
               "<frame>"
+            ],
+            "relationships": [
+              {
+                "task_id": "<frame>",
+                "type": "FS",
+                "conflict": false
+              }
             ],
             "conflicts": []
           }
@@ -1779,11 +2567,13 @@
         "dependencies": [
           {
             "work_item_id": "<frame>",
-            "depends_on_id": "<order>"
+            "depends_on_id": "<order>",
+            "type": "FS"
           },
           {
             "work_item_id": "<wiring>",
-            "depends_on_id": "<frame>"
+            "depends_on_id": "<frame>",
+            "type": "FS"
           }
         ],
         "metrics": [
@@ -1891,7 +2681,9 @@
           "done": 1,
           "late": 1,
           "unscheduled": 0,
-          "progress": 38
+          "progress": 38,
+          "critical": 2,
+          "effort_days": 7.5
         }
       },
       "gzip": {
@@ -1901,7 +2693,7 @@
       }
     },
     {
-      "n": 32,
+      "n": 45,
       "title": "the plan as CSV",
       "actor": "viewer",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -1916,14 +2708,14 @@
         "Content-Disposition: attachment; filename=\"plan-Tour plan-<date>.csv\""
       ],
       "security_headers": "standard",
-      "content_length": 767,
+      "content_length": 872,
       "kind": "csv",
       "body": [
-        "wbs,task,status,assignee,start,end,progress_percent,todos_done,todos_total,subtasks_done,subtasks_total,depends_on,late",
-        "1,Order the parts,To Do,,<date>,<date>,0,0,0,0,0,,true",
-        "2,Build the rig,In Progress,,<date>,<date>,75,0,0,1,2,,false",
-        "2.1,Weld the frame,Done,,<date>,<date>,100,0,0,0,0,1,false",
-        "2.2,Wire the rig,To Do,,<date>,<date>,50,1,2,0,0,2.1,false",
+        "wbs,task,status,assignee,start,end,duration_days,effort_days,float_days,critical,progress_percent,todos_done,todos_total,subtasks_done,subtasks_total,relationships,late",
+        "1,Order the parts,To Do,,<date>,<date>,1,,28899,false,0,0,0,0,0,,true",
+        "2,Build the rig,In Progress,,<date>,<date>,20,,0,true,75,0,0,1,2,,false",
+        "2.1,Weld the frame,Done,,<date>,<date>,10,,0,false,100,0,0,0,0,1FS,false",
+        "2.2,Wire the rig,To Do,,<date>,<date>,11,7.5,0,true,50,1,2,0,0,2.1FS,false",
         "",
         "milestone,kind,date,progress_percent,met,criterion,target_percent,actual_percent,count,total,criterion_met",
         "Definition complete,custom,<date>,25,false,User needs addressed,100,50,1,2,false",
@@ -1940,12 +2732,16 @@
           "assignee",
           "start",
           "end",
+          "duration_days",
+          "effort_days",
+          "float_days",
+          "critical",
           "progress_percent",
           "todos_done",
           "todos_total",
           "subtasks_done",
           "subtasks_total",
-          "depends_on",
+          "relationships",
           "late"
         ],
         [
@@ -1955,6 +2751,10 @@
           "",
           "<date>",
           "<date>",
+          "1",
+          "",
+          "28899",
+          "false",
           "0",
           "0",
           "0",
@@ -1970,6 +2770,10 @@
           "",
           "<date>",
           "<date>",
+          "20",
+          "",
+          "0",
+          "true",
           "75",
           "0",
           "0",
@@ -1985,12 +2789,16 @@
           "",
           "<date>",
           "<date>",
+          "10",
+          "",
+          "0",
+          "false",
           "100",
           "0",
           "0",
           "0",
           "0",
-          "1",
+          "1FS",
           "false"
         ],
         [
@@ -2000,12 +2808,16 @@
           "",
           "<date>",
           "<date>",
+          "11",
+          "7.5",
+          "0",
+          "true",
           "50",
           "1",
           "2",
           "0",
           "0",
-          "2.1",
+          "2.1FS",
           "false"
         ],
         [
@@ -2077,7 +2889,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 33,
+      "n": 46,
       "title": "the plan as JSON",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -2097,7 +2909,7 @@
       "body": [
         "{",
         "  \"project_name\": \"Tour plan\",",
-        "  \"exported_at\": \"<time@step 33>\",",
+        "  \"exported_at\": \"<time@step 46>\",",
         "  \"plan\": {",
         "    \"project_id\": \"<p>\",",
         "    \"today\": \"<date>\",",
@@ -2117,6 +2929,10 @@
         "        \"end\": \"<date>\",",
         "        \"span_start\": \"<date>\",",
         "        \"span_end\": \"<date>\",",
+        "        \"duration_days\": 1,",
+        "        \"effort_days\": null,",
+        "        \"float_days\": 28899,",
+        "        \"critical\": false,",
         "        \"progress\": 0,",
         "        \"done\": false,",
         "        \"late\": true,",
@@ -2126,6 +2942,7 @@
         "        \"subtasks_total\": 0,",
         "        \"todos\": [],",
         "        \"depends_on\": [],",
+        "        \"relationships\": [],",
         "        \"conflicts\": []",
         "      },",
         "      {",
@@ -2141,6 +2958,10 @@
         "        \"end\": null,",
         "        \"span_start\": \"<date>\",",
         "        \"span_end\": \"<date>\",",
+        "        \"duration_days\": 20,",
+        "        \"effort_days\": null,",
+        "        \"float_days\": 0,",
+        "        \"critical\": true,",
         "        \"progress\": 75,",
         "        \"done\": false,",
         "        \"late\": false,",
@@ -2150,6 +2971,7 @@
         "        \"subtasks_total\": 2,",
         "        \"todos\": [],",
         "        \"depends_on\": [],",
+        "        \"relationships\": [],",
         "        \"conflicts\": []",
         "      },",
         "      {",
@@ -2165,6 +2987,10 @@
         "        \"end\": \"<date>\",",
         "        \"span_start\": \"<date>\",",
         "        \"span_end\": \"<date>\",",
+        "        \"duration_days\": 10,",
+        "        \"effort_days\": null,",
+        "        \"float_days\": 0,",
+        "        \"critical\": false,",
         "        \"progress\": 100,",
         "        \"done\": true,",
         "        \"late\": false,",
@@ -2175,6 +3001,13 @@
         "        \"todos\": [],",
         "        \"depends_on\": [",
         "          \"<order>\"",
+        "        ],",
+        "        \"relationships\": [",
+        "          {",
+        "            \"task_id\": \"<order>\",",
+        "            \"type\": \"FS\",",
+        "            \"conflict\": false",
+        "          }",
         "        ],",
         "        \"conflicts\": []",
         "      },",
@@ -2191,6 +3024,10 @@
         "        \"end\": \"<date>\",",
         "        \"span_start\": \"<date>\",",
         "        \"span_end\": \"<date>\",",
+        "        \"duration_days\": 11,",
+        "        \"effort_days\": 7.5,",
+        "        \"float_days\": 0,",
+        "        \"critical\": true,",
         "        \"progress\": 50,",
         "        \"done\": false,",
         "        \"late\": false,",
@@ -2202,16 +3039,25 @@
         "          {",
         "            \"id\": \"<t2>\",",
         "            \"text\": \"Label the loom\",",
-        "            \"done\": false",
+        "            \"done\": false,",
+        "            \"due_date\": \"<date>\"",
         "          },",
         "          {",
         "            \"id\": \"<t1>\",",
         "            \"text\": \"Crimp the connectors\",",
-        "            \"done\": true",
+        "            \"done\": true,",
+        "            \"due_date\": null",
         "          }",
         "        ],",
         "        \"depends_on\": [",
         "          \"<frame>\"",
+        "        ],",
+        "        \"relationships\": [",
+        "          {",
+        "            \"task_id\": \"<frame>\",",
+        "            \"type\": \"FS\",",
+        "            \"conflict\": false",
+        "          }",
         "        ],",
         "        \"conflicts\": []",
         "      }",
@@ -2296,11 +3142,13 @@
         "    \"dependencies\": [",
         "      {",
         "        \"work_item_id\": \"<frame>\",",
-        "        \"depends_on_id\": \"<order>\"",
+        "        \"depends_on_id\": \"<order>\",",
+        "        \"type\": \"FS\"",
         "      },",
         "      {",
         "        \"work_item_id\": \"<wiring>\",",
-        "        \"depends_on_id\": \"<frame>\"",
+        "        \"depends_on_id\": \"<frame>\",",
+        "        \"type\": \"FS\"",
         "      }",
         "    ],",
         "    \"metrics\": [",
@@ -2408,7 +3256,9 @@
         "      \"done\": 1,",
         "      \"late\": 1,",
         "      \"unscheduled\": 0,",
-        "      \"progress\": 38",
+        "      \"progress\": 38,",
+        "      \"critical\": 2,",
+        "      \"effort_days\": 7.5",
         "    }",
         "  },",
         "  \"assignees\": {}",
@@ -2422,7 +3272,7 @@
       }
     },
     {
-      "n": 34,
+      "n": 47,
       "title": "the plan as Excel",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -2543,7 +3393,7 @@
               "</col>",
               "<col customWidth=\"true\" max=\"6\" min=\"3\" width=\"14\">",
               "</col>",
-              "<col customWidth=\"true\" max=\"274\" min=\"15\" width=\"7\">",
+              "<col customWidth=\"true\" max=\"278\" min=\"19\" width=\"7\">",
               "</col>",
               "</cols>",
               "<sheetData>(the cells below)</sheetData>",
@@ -2556,329 +3406,349 @@
               "D1 s=1 t=s: \"assignee\"",
               "E1 s=1 t=s: \"start\"",
               "F1 s=1 t=s: \"end\"",
-              "G1 s=1 t=s: \"progress_percent\"",
-              "H1 s=1 t=s: \"todos_done\"",
-              "I1 s=1 t=s: \"todos_total\"",
-              "J1 s=1 t=s: \"subtasks_done\"",
-              "K1 s=1 t=s: \"subtasks_total\"",
-              "L1 s=1 t=s: \"depends_on\"",
-              "M1 s=1 t=s: \"late\"",
-              "O1 s=1 t=s: \"13 Jan\"",
-              "P1 s=1 t=s: \"20 Jan\"",
-              "Q1 s=1 t=s: \"27 Jan\"",
-              "R1 s=1 t=s: \"03 Feb\"",
-              "S1 s=1 t=s: \"10 Feb\"",
-              "T1 s=1 t=s: \"17 Feb\"",
-              "U1 s=1 t=s: \"24 Feb\"",
-              "V1 s=1 t=s: \"02 Mar\"",
-              "W1 s=1 t=s: \"09 Mar\"",
-              "X1 s=1 t=s: \"16 Mar\"",
-              "Y1 s=1 t=s: \"23 Mar\"",
-              "Z1 s=1 t=s: \"30 Mar\"",
-              "AA1 s=1 t=s: \"06 Apr\"",
-              "AB1 s=1 t=s: \"13 Apr\"",
-              "AC1 s=1 t=s: \"20 Apr\"",
-              "AD1 s=1 t=s: \"27 Apr\"",
-              "AE1 s=1 t=s: \"04 May\"",
-              "AF1 s=1 t=s: \"11 May\"",
-              "AG1 s=1 t=s: \"18 May\"",
-              "AH1 s=1 t=s: \"25 May\"",
-              "AI1 s=1 t=s: \"01 Jun\"",
-              "AJ1 s=1 t=s: \"08 Jun\"",
-              "AK1 s=1 t=s: \"15 Jun\"",
-              "AL1 s=1 t=s: \"22 Jun\"",
-              "AM1 s=1 t=s: \"29 Jun\"",
-              "AN1 s=1 t=s: \"06 Jul\"",
-              "AO1 s=1 t=s: \"13 Jul\"",
-              "AP1 s=1 t=s: \"20 Jul\"",
-              "AQ1 s=1 t=s: \"27 Jul\"",
-              "AR1 s=1 t=s: \"03 Aug\"",
-              "AS1 s=1 t=s: \"10 Aug\"",
-              "AT1 s=1 t=s: \"17 Aug\"",
-              "AU1 s=1 t=s: \"24 Aug\"",
-              "AV1 s=1 t=s: \"31 Aug\"",
-              "AW1 s=1 t=s: \"07 Sep\"",
-              "AX1 s=1 t=s: \"14 Sep\"",
-              "AY1 s=1 t=s: \"21 Sep\"",
-              "AZ1 s=1 t=s: \"28 Sep\"",
-              "BA1 s=1 t=s: \"05 Oct\"",
-              "BB1 s=1 t=s: \"12 Oct\"",
-              "BC1 s=1 t=s: \"19 Oct\"",
-              "BD1 s=1 t=s: \"26 Oct\"",
-              "BE1 s=1 t=s: \"02 Nov\"",
-              "BF1 s=1 t=s: \"09 Nov\"",
-              "BG1 s=1 t=s: \"16 Nov\"",
-              "BH1 s=1 t=s: \"23 Nov\"",
-              "BI1 s=1 t=s: \"30 Nov\"",
-              "BJ1 s=1 t=s: \"07 Dec\"",
-              "BK1 s=1 t=s: \"14 Dec\"",
-              "BL1 s=1 t=s: \"21 Dec\"",
-              "BM1 s=1 t=s: \"28 Dec\"",
-              "BN1 s=1 t=s: \"04 Jan\"",
-              "BO1 s=1 t=s: \"11 Jan\"",
-              "BP1 s=1 t=s: \"18 Jan\"",
-              "BQ1 s=1 t=s: \"25 Jan\"",
-              "BR1 s=1 t=s: \"01 Feb\"",
-              "BS1 s=1 t=s: \"08 Feb\"",
-              "BT1 s=1 t=s: \"15 Feb\"",
-              "BU1 s=1 t=s: \"22 Feb\"",
-              "BV1 s=1 t=s: \"01 Mar\"",
-              "BW1 s=1 t=s: \"08 Mar\"",
-              "BX1 s=1 t=s: \"15 Mar\"",
-              "BY1 s=1 t=s: \"22 Mar\"",
-              "BZ1 s=1 t=s: \"29 Mar\"",
-              "CA1 s=1 t=s: \"05 Apr\"",
-              "CB1 s=1 t=s: \"12 Apr\"",
-              "CC1 s=1 t=s: \"19 Apr\"",
-              "CD1 s=1 t=s: \"26 Apr\"",
-              "CE1 s=1 t=s: \"03 May\"",
-              "CF1 s=1 t=s: \"10 May\"",
-              "CG1 s=1 t=s: \"17 May\"",
-              "CH1 s=1 t=s: \"24 May\"",
-              "CI1 s=1 t=s: \"31 May\"",
-              "CJ1 s=1 t=s: \"07 Jun\"",
-              "CK1 s=1 t=s: \"14 Jun\"",
-              "CL1 s=1 t=s: \"21 Jun\"",
-              "CM1 s=1 t=s: \"28 Jun\"",
-              "CN1 s=1 t=s: \"05 Jul\"",
-              "CO1 s=1 t=s: \"12 Jul\"",
-              "CP1 s=1 t=s: \"19 Jul\"",
-              "CQ1 s=1 t=s: \"26 Jul\"",
-              "CR1 s=1 t=s: \"02 Aug\"",
-              "CS1 s=1 t=s: \"09 Aug\"",
-              "CT1 s=1 t=s: \"16 Aug\"",
-              "CU1 s=1 t=s: \"23 Aug\"",
-              "CV1 s=1 t=s: \"30 Aug\"",
-              "CW1 s=1 t=s: \"06 Sep\"",
-              "CX1 s=1 t=s: \"13 Sep\"",
-              "CY1 s=1 t=s: \"20 Sep\"",
-              "CZ1 s=1 t=s: \"27 Sep\"",
-              "DA1 s=1 t=s: \"04 Oct\"",
-              "DB1 s=1 t=s: \"11 Oct\"",
-              "DC1 s=1 t=s: \"18 Oct\"",
-              "DD1 s=1 t=s: \"25 Oct\"",
-              "DE1 s=1 t=s: \"01 Nov\"",
-              "DF1 s=1 t=s: \"08 Nov\"",
-              "DG1 s=1 t=s: \"15 Nov\"",
-              "DH1 s=1 t=s: \"22 Nov\"",
-              "DI1 s=1 t=s: \"29 Nov\"",
-              "DJ1 s=1 t=s: \"06 Dec\"",
-              "DK1 s=1 t=s: \"13 Dec\"",
-              "DL1 s=1 t=s: \"20 Dec\"",
-              "DM1 s=1 t=s: \"27 Dec\"",
-              "DN1 s=1 t=s: \"03 Jan\"",
-              "DO1 s=1 t=s: \"10 Jan\"",
-              "DP1 s=1 t=s: \"17 Jan\"",
-              "DQ1 s=1 t=s: \"24 Jan\"",
-              "DR1 s=1 t=s: \"31 Jan\"",
-              "DS1 s=1 t=s: \"07 Feb\"",
-              "DT1 s=1 t=s: \"14 Feb\"",
-              "DU1 s=1 t=s: \"21 Feb\"",
-              "DV1 s=1 t=s: \"28 Feb\"",
-              "DW1 s=1 t=s: \"07 Mar\"",
-              "DX1 s=1 t=s: \"14 Mar\"",
-              "DY1 s=1 t=s: \"21 Mar\"",
-              "DZ1 s=1 t=s: \"28 Mar\"",
-              "EA1 s=1 t=s: \"04 Apr\"",
-              "EB1 s=1 t=s: \"11 Apr\"",
-              "EC1 s=1 t=s: \"18 Apr\"",
-              "ED1 s=1 t=s: \"25 Apr\"",
-              "EE1 s=1 t=s: \"02 May\"",
-              "EF1 s=1 t=s: \"09 May\"",
-              "EG1 s=1 t=s: \"16 May\"",
-              "EH1 s=1 t=s: \"23 May\"",
-              "EI1 s=1 t=s: \"30 May\"",
-              "EJ1 s=1 t=s: \"06 Jun\"",
-              "EK1 s=1 t=s: \"13 Jun\"",
-              "EL1 s=1 t=s: \"20 Jun\"",
-              "EM1 s=1 t=s: \"27 Jun\"",
-              "EN1 s=1 t=s: \"04 Jul\"",
-              "EO1 s=1 t=s: \"11 Jul\"",
-              "EP1 s=1 t=s: \"18 Jul\"",
-              "EQ1 s=1 t=s: \"25 Jul\"",
-              "ER1 s=1 t=s: \"01 Aug\"",
-              "ES1 s=1 t=s: \"08 Aug\"",
-              "ET1 s=1 t=s: \"15 Aug\"",
-              "EU1 s=1 t=s: \"22 Aug\"",
-              "EV1 s=1 t=s: \"29 Aug\"",
-              "EW1 s=1 t=s: \"05 Sep\"",
-              "EX1 s=1 t=s: \"12 Sep\"",
-              "EY1 s=1 t=s: \"19 Sep\"",
-              "EZ1 s=1 t=s: \"26 Sep\"",
-              "FA1 s=1 t=s: \"03 Oct\"",
-              "FB1 s=1 t=s: \"10 Oct\"",
-              "FC1 s=1 t=s: \"17 Oct\"",
-              "FD1 s=1 t=s: \"24 Oct\"",
-              "FE1 s=1 t=s: \"31 Oct\"",
-              "FF1 s=1 t=s: \"07 Nov\"",
-              "FG1 s=1 t=s: \"14 Nov\"",
-              "FH1 s=1 t=s: \"21 Nov\"",
-              "FI1 s=1 t=s: \"28 Nov\"",
-              "FJ1 s=1 t=s: \"05 Dec\"",
-              "FK1 s=1 t=s: \"12 Dec\"",
-              "FL1 s=1 t=s: \"19 Dec\"",
-              "FM1 s=1 t=s: \"26 Dec\"",
-              "FN1 s=1 t=s: \"02 Jan\"",
-              "FO1 s=1 t=s: \"09 Jan\"",
-              "FP1 s=1 t=s: \"16 Jan\"",
-              "FQ1 s=1 t=s: \"23 Jan\"",
-              "FR1 s=1 t=s: \"30 Jan\"",
-              "FS1 s=1 t=s: \"06 Feb\"",
-              "FT1 s=1 t=s: \"13 Feb\"",
-              "FU1 s=1 t=s: \"20 Feb\"",
-              "FV1 s=1 t=s: \"27 Feb\"",
-              "FW1 s=1 t=s: \"06 Mar\"",
-              "FX1 s=1 t=s: \"13 Mar\"",
-              "FY1 s=1 t=s: \"20 Mar\"",
-              "FZ1 s=1 t=s: \"27 Mar\"",
-              "GA1 s=1 t=s: \"03 Apr\"",
-              "GB1 s=1 t=s: \"10 Apr\"",
-              "GC1 s=1 t=s: \"17 Apr\"",
-              "GD1 s=1 t=s: \"24 Apr\"",
-              "GE1 s=1 t=s: \"01 May\"",
-              "GF1 s=1 t=s: \"08 May\"",
-              "GG1 s=1 t=s: \"15 May\"",
-              "GH1 s=1 t=s: \"22 May\"",
-              "GI1 s=1 t=s: \"29 May\"",
-              "GJ1 s=1 t=s: \"05 Jun\"",
-              "GK1 s=1 t=s: \"12 Jun\"",
-              "GL1 s=1 t=s: \"19 Jun\"",
-              "GM1 s=1 t=s: \"26 Jun\"",
-              "GN1 s=1 t=s: \"03 Jul\"",
-              "GO1 s=1 t=s: \"10 Jul\"",
-              "GP1 s=1 t=s: \"17 Jul\"",
-              "GQ1 s=1 t=s: \"24 Jul\"",
-              "GR1 s=1 t=s: \"31 Jul\"",
-              "GS1 s=1 t=s: \"07 Aug\"",
-              "GT1 s=1 t=s: \"14 Aug\"",
-              "GU1 s=1 t=s: \"21 Aug\"",
-              "GV1 s=1 t=s: \"28 Aug\"",
-              "GW1 s=1 t=s: \"04 Sep\"",
-              "GX1 s=1 t=s: \"11 Sep\"",
-              "GY1 s=1 t=s: \"18 Sep\"",
-              "GZ1 s=1 t=s: \"25 Sep\"",
-              "HA1 s=1 t=s: \"02 Oct\"",
-              "HB1 s=1 t=s: \"09 Oct\"",
-              "HC1 s=1 t=s: \"16 Oct\"",
-              "HD1 s=1 t=s: \"23 Oct\"",
-              "HE1 s=1 t=s: \"30 Oct\"",
-              "HF1 s=1 t=s: \"06 Nov\"",
-              "HG1 s=1 t=s: \"13 Nov\"",
-              "HH1 s=1 t=s: \"20 Nov\"",
-              "HI1 s=1 t=s: \"27 Nov\"",
-              "HJ1 s=1 t=s: \"04 Dec\"",
-              "HK1 s=1 t=s: \"11 Dec\"",
-              "HL1 s=1 t=s: \"18 Dec\"",
-              "HM1 s=1 t=s: \"25 Dec\"",
-              "HN1 s=1 t=s: \"01 Jan\"",
-              "HO1 s=1 t=s: \"08 Jan\"",
-              "HP1 s=1 t=s: \"15 Jan\"",
-              "HQ1 s=1 t=s: \"22 Jan\"",
-              "HR1 s=1 t=s: \"29 Jan\"",
-              "HS1 s=1 t=s: \"05 Feb\"",
-              "HT1 s=1 t=s: \"12 Feb\"",
-              "HU1 s=1 t=s: \"19 Feb\"",
-              "HV1 s=1 t=s: \"26 Feb\"",
-              "HW1 s=1 t=s: \"04 Mar\"",
-              "HX1 s=1 t=s: \"11 Mar\"",
-              "HY1 s=1 t=s: \"18 Mar\"",
-              "HZ1 s=1 t=s: \"25 Mar\"",
-              "IA1 s=1 t=s: \"01 Apr\"",
-              "IB1 s=1 t=s: \"08 Apr\"",
-              "IC1 s=1 t=s: \"15 Apr\"",
-              "ID1 s=1 t=s: \"22 Apr\"",
-              "IE1 s=1 t=s: \"29 Apr\"",
-              "IF1 s=1 t=s: \"06 May\"",
-              "IG1 s=1 t=s: \"13 May\"",
-              "IH1 s=1 t=s: \"20 May\"",
-              "II1 s=1 t=s: \"27 May\"",
-              "IJ1 s=1 t=s: \"03 Jun\"",
-              "IK1 s=1 t=s: \"10 Jun\"",
-              "IL1 s=1 t=s: \"17 Jun\"",
-              "IM1 s=1 t=s: \"24 Jun\"",
-              "IN1 s=1 t=s: \"01 Jul\"",
-              "IO1 s=1 t=s: \"08 Jul\"",
-              "IP1 s=1 t=s: \"15 Jul\"",
-              "IQ1 s=1 t=s: \"22 Jul\"",
-              "IR1 s=1 t=s: \"29 Jul\"",
-              "IS1 s=1 t=s: \"05 Aug\"",
-              "IT1 s=1 t=s: \"12 Aug\"",
-              "IU1 s=1 t=s: \"19 Aug\"",
-              "IV1 s=1 t=s: \"26 Aug\"",
-              "IW1 s=1 t=s: \"02 Sep\"",
-              "IX1 s=1 t=s: \"09 Sep\"",
-              "IY1 s=1 t=s: \"16 Sep\"",
-              "IZ1 s=1 t=s: \"23 Sep\"",
-              "JA1 s=1 t=s: \"30 Sep\"",
-              "JB1 s=1 t=s: \"07 Oct\"",
-              "JC1 s=1 t=s: \"14 Oct\"",
-              "JD1 s=1 t=s: \"21 Oct\"",
-              "JE1 s=1 t=s: \"28 Oct\"",
-              "JF1 s=1 t=s: \"04 Nov\"",
-              "JG1 s=1 t=s: \"11 Nov\"",
-              "JH1 s=1 t=s: \"18 Nov\"",
-              "JI1 s=1 t=s: \"25 Nov\"",
-              "JJ1 s=1 t=s: \"02 Dec\"",
-              "JK1 s=1 t=s: \"09 Dec\"",
-              "JL1 s=1 t=s: \"16 Dec\"",
-              "JM1 s=1 t=s: \"23 Dec\"",
-              "JN1 s=1 t=s: \"30 Dec\"",
+              "G1 s=1 t=s: \"duration_days\"",
+              "H1 s=1 t=s: \"effort_days\"",
+              "I1 s=1 t=s: \"float_days\"",
+              "J1 s=1 t=s: \"critical\"",
+              "K1 s=1 t=s: \"progress_percent\"",
+              "L1 s=1 t=s: \"todos_done\"",
+              "M1 s=1 t=s: \"todos_total\"",
+              "N1 s=1 t=s: \"subtasks_done\"",
+              "O1 s=1 t=s: \"subtasks_total\"",
+              "P1 s=1 t=s: \"relationships\"",
+              "Q1 s=1 t=s: \"late\"",
+              "S1 s=1 t=s: \"13 Jan\"",
+              "T1 s=1 t=s: \"20 Jan\"",
+              "U1 s=1 t=s: \"27 Jan\"",
+              "V1 s=1 t=s: \"03 Feb\"",
+              "W1 s=1 t=s: \"10 Feb\"",
+              "X1 s=1 t=s: \"17 Feb\"",
+              "Y1 s=1 t=s: \"24 Feb\"",
+              "Z1 s=1 t=s: \"02 Mar\"",
+              "AA1 s=1 t=s: \"09 Mar\"",
+              "AB1 s=1 t=s: \"16 Mar\"",
+              "AC1 s=1 t=s: \"23 Mar\"",
+              "AD1 s=1 t=s: \"30 Mar\"",
+              "AE1 s=1 t=s: \"06 Apr\"",
+              "AF1 s=1 t=s: \"13 Apr\"",
+              "AG1 s=1 t=s: \"20 Apr\"",
+              "AH1 s=1 t=s: \"27 Apr\"",
+              "AI1 s=1 t=s: \"04 May\"",
+              "AJ1 s=1 t=s: \"11 May\"",
+              "AK1 s=1 t=s: \"18 May\"",
+              "AL1 s=1 t=s: \"25 May\"",
+              "AM1 s=1 t=s: \"01 Jun\"",
+              "AN1 s=1 t=s: \"08 Jun\"",
+              "AO1 s=1 t=s: \"15 Jun\"",
+              "AP1 s=1 t=s: \"22 Jun\"",
+              "AQ1 s=1 t=s: \"29 Jun\"",
+              "AR1 s=1 t=s: \"06 Jul\"",
+              "AS1 s=1 t=s: \"13 Jul\"",
+              "AT1 s=1 t=s: \"20 Jul\"",
+              "AU1 s=1 t=s: \"27 Jul\"",
+              "AV1 s=1 t=s: \"03 Aug\"",
+              "AW1 s=1 t=s: \"10 Aug\"",
+              "AX1 s=1 t=s: \"17 Aug\"",
+              "AY1 s=1 t=s: \"24 Aug\"",
+              "AZ1 s=1 t=s: \"31 Aug\"",
+              "BA1 s=1 t=s: \"07 Sep\"",
+              "BB1 s=1 t=s: \"14 Sep\"",
+              "BC1 s=1 t=s: \"21 Sep\"",
+              "BD1 s=1 t=s: \"28 Sep\"",
+              "BE1 s=1 t=s: \"05 Oct\"",
+              "BF1 s=1 t=s: \"12 Oct\"",
+              "BG1 s=1 t=s: \"19 Oct\"",
+              "BH1 s=1 t=s: \"26 Oct\"",
+              "BI1 s=1 t=s: \"02 Nov\"",
+              "BJ1 s=1 t=s: \"09 Nov\"",
+              "BK1 s=1 t=s: \"16 Nov\"",
+              "BL1 s=1 t=s: \"23 Nov\"",
+              "BM1 s=1 t=s: \"30 Nov\"",
+              "BN1 s=1 t=s: \"07 Dec\"",
+              "BO1 s=1 t=s: \"14 Dec\"",
+              "BP1 s=1 t=s: \"21 Dec\"",
+              "BQ1 s=1 t=s: \"28 Dec\"",
+              "BR1 s=1 t=s: \"04 Jan\"",
+              "BS1 s=1 t=s: \"11 Jan\"",
+              "BT1 s=1 t=s: \"18 Jan\"",
+              "BU1 s=1 t=s: \"25 Jan\"",
+              "BV1 s=1 t=s: \"01 Feb\"",
+              "BW1 s=1 t=s: \"08 Feb\"",
+              "BX1 s=1 t=s: \"15 Feb\"",
+              "BY1 s=1 t=s: \"22 Feb\"",
+              "BZ1 s=1 t=s: \"01 Mar\"",
+              "CA1 s=1 t=s: \"08 Mar\"",
+              "CB1 s=1 t=s: \"15 Mar\"",
+              "CC1 s=1 t=s: \"22 Mar\"",
+              "CD1 s=1 t=s: \"29 Mar\"",
+              "CE1 s=1 t=s: \"05 Apr\"",
+              "CF1 s=1 t=s: \"12 Apr\"",
+              "CG1 s=1 t=s: \"19 Apr\"",
+              "CH1 s=1 t=s: \"26 Apr\"",
+              "CI1 s=1 t=s: \"03 May\"",
+              "CJ1 s=1 t=s: \"10 May\"",
+              "CK1 s=1 t=s: \"17 May\"",
+              "CL1 s=1 t=s: \"24 May\"",
+              "CM1 s=1 t=s: \"31 May\"",
+              "CN1 s=1 t=s: \"07 Jun\"",
+              "CO1 s=1 t=s: \"14 Jun\"",
+              "CP1 s=1 t=s: \"21 Jun\"",
+              "CQ1 s=1 t=s: \"28 Jun\"",
+              "CR1 s=1 t=s: \"05 Jul\"",
+              "CS1 s=1 t=s: \"12 Jul\"",
+              "CT1 s=1 t=s: \"19 Jul\"",
+              "CU1 s=1 t=s: \"26 Jul\"",
+              "CV1 s=1 t=s: \"02 Aug\"",
+              "CW1 s=1 t=s: \"09 Aug\"",
+              "CX1 s=1 t=s: \"16 Aug\"",
+              "CY1 s=1 t=s: \"23 Aug\"",
+              "CZ1 s=1 t=s: \"30 Aug\"",
+              "DA1 s=1 t=s: \"06 Sep\"",
+              "DB1 s=1 t=s: \"13 Sep\"",
+              "DC1 s=1 t=s: \"20 Sep\"",
+              "DD1 s=1 t=s: \"27 Sep\"",
+              "DE1 s=1 t=s: \"04 Oct\"",
+              "DF1 s=1 t=s: \"11 Oct\"",
+              "DG1 s=1 t=s: \"18 Oct\"",
+              "DH1 s=1 t=s: \"25 Oct\"",
+              "DI1 s=1 t=s: \"01 Nov\"",
+              "DJ1 s=1 t=s: \"08 Nov\"",
+              "DK1 s=1 t=s: \"15 Nov\"",
+              "DL1 s=1 t=s: \"22 Nov\"",
+              "DM1 s=1 t=s: \"29 Nov\"",
+              "DN1 s=1 t=s: \"06 Dec\"",
+              "DO1 s=1 t=s: \"13 Dec\"",
+              "DP1 s=1 t=s: \"20 Dec\"",
+              "DQ1 s=1 t=s: \"27 Dec\"",
+              "DR1 s=1 t=s: \"03 Jan\"",
+              "DS1 s=1 t=s: \"10 Jan\"",
+              "DT1 s=1 t=s: \"17 Jan\"",
+              "DU1 s=1 t=s: \"24 Jan\"",
+              "DV1 s=1 t=s: \"31 Jan\"",
+              "DW1 s=1 t=s: \"07 Feb\"",
+              "DX1 s=1 t=s: \"14 Feb\"",
+              "DY1 s=1 t=s: \"21 Feb\"",
+              "DZ1 s=1 t=s: \"28 Feb\"",
+              "EA1 s=1 t=s: \"07 Mar\"",
+              "EB1 s=1 t=s: \"14 Mar\"",
+              "EC1 s=1 t=s: \"21 Mar\"",
+              "ED1 s=1 t=s: \"28 Mar\"",
+              "EE1 s=1 t=s: \"04 Apr\"",
+              "EF1 s=1 t=s: \"11 Apr\"",
+              "EG1 s=1 t=s: \"18 Apr\"",
+              "EH1 s=1 t=s: \"25 Apr\"",
+              "EI1 s=1 t=s: \"02 May\"",
+              "EJ1 s=1 t=s: \"09 May\"",
+              "EK1 s=1 t=s: \"16 May\"",
+              "EL1 s=1 t=s: \"23 May\"",
+              "EM1 s=1 t=s: \"30 May\"",
+              "EN1 s=1 t=s: \"06 Jun\"",
+              "EO1 s=1 t=s: \"13 Jun\"",
+              "EP1 s=1 t=s: \"20 Jun\"",
+              "EQ1 s=1 t=s: \"27 Jun\"",
+              "ER1 s=1 t=s: \"04 Jul\"",
+              "ES1 s=1 t=s: \"11 Jul\"",
+              "ET1 s=1 t=s: \"18 Jul\"",
+              "EU1 s=1 t=s: \"25 Jul\"",
+              "EV1 s=1 t=s: \"01 Aug\"",
+              "EW1 s=1 t=s: \"08 Aug\"",
+              "EX1 s=1 t=s: \"15 Aug\"",
+              "EY1 s=1 t=s: \"22 Aug\"",
+              "EZ1 s=1 t=s: \"29 Aug\"",
+              "FA1 s=1 t=s: \"05 Sep\"",
+              "FB1 s=1 t=s: \"12 Sep\"",
+              "FC1 s=1 t=s: \"19 Sep\"",
+              "FD1 s=1 t=s: \"26 Sep\"",
+              "FE1 s=1 t=s: \"03 Oct\"",
+              "FF1 s=1 t=s: \"10 Oct\"",
+              "FG1 s=1 t=s: \"17 Oct\"",
+              "FH1 s=1 t=s: \"24 Oct\"",
+              "FI1 s=1 t=s: \"31 Oct\"",
+              "FJ1 s=1 t=s: \"07 Nov\"",
+              "FK1 s=1 t=s: \"14 Nov\"",
+              "FL1 s=1 t=s: \"21 Nov\"",
+              "FM1 s=1 t=s: \"28 Nov\"",
+              "FN1 s=1 t=s: \"05 Dec\"",
+              "FO1 s=1 t=s: \"12 Dec\"",
+              "FP1 s=1 t=s: \"19 Dec\"",
+              "FQ1 s=1 t=s: \"26 Dec\"",
+              "FR1 s=1 t=s: \"02 Jan\"",
+              "FS1 s=1 t=s: \"09 Jan\"",
+              "FT1 s=1 t=s: \"16 Jan\"",
+              "FU1 s=1 t=s: \"23 Jan\"",
+              "FV1 s=1 t=s: \"30 Jan\"",
+              "FW1 s=1 t=s: \"06 Feb\"",
+              "FX1 s=1 t=s: \"13 Feb\"",
+              "FY1 s=1 t=s: \"20 Feb\"",
+              "FZ1 s=1 t=s: \"27 Feb\"",
+              "GA1 s=1 t=s: \"06 Mar\"",
+              "GB1 s=1 t=s: \"13 Mar\"",
+              "GC1 s=1 t=s: \"20 Mar\"",
+              "GD1 s=1 t=s: \"27 Mar\"",
+              "GE1 s=1 t=s: \"03 Apr\"",
+              "GF1 s=1 t=s: \"10 Apr\"",
+              "GG1 s=1 t=s: \"17 Apr\"",
+              "GH1 s=1 t=s: \"24 Apr\"",
+              "GI1 s=1 t=s: \"01 May\"",
+              "GJ1 s=1 t=s: \"08 May\"",
+              "GK1 s=1 t=s: \"15 May\"",
+              "GL1 s=1 t=s: \"22 May\"",
+              "GM1 s=1 t=s: \"29 May\"",
+              "GN1 s=1 t=s: \"05 Jun\"",
+              "GO1 s=1 t=s: \"12 Jun\"",
+              "GP1 s=1 t=s: \"19 Jun\"",
+              "GQ1 s=1 t=s: \"26 Jun\"",
+              "GR1 s=1 t=s: \"03 Jul\"",
+              "GS1 s=1 t=s: \"10 Jul\"",
+              "GT1 s=1 t=s: \"17 Jul\"",
+              "GU1 s=1 t=s: \"24 Jul\"",
+              "GV1 s=1 t=s: \"31 Jul\"",
+              "GW1 s=1 t=s: \"07 Aug\"",
+              "GX1 s=1 t=s: \"14 Aug\"",
+              "GY1 s=1 t=s: \"21 Aug\"",
+              "GZ1 s=1 t=s: \"28 Aug\"",
+              "HA1 s=1 t=s: \"04 Sep\"",
+              "HB1 s=1 t=s: \"11 Sep\"",
+              "HC1 s=1 t=s: \"18 Sep\"",
+              "HD1 s=1 t=s: \"25 Sep\"",
+              "HE1 s=1 t=s: \"02 Oct\"",
+              "HF1 s=1 t=s: \"09 Oct\"",
+              "HG1 s=1 t=s: \"16 Oct\"",
+              "HH1 s=1 t=s: \"23 Oct\"",
+              "HI1 s=1 t=s: \"30 Oct\"",
+              "HJ1 s=1 t=s: \"06 Nov\"",
+              "HK1 s=1 t=s: \"13 Nov\"",
+              "HL1 s=1 t=s: \"20 Nov\"",
+              "HM1 s=1 t=s: \"27 Nov\"",
+              "HN1 s=1 t=s: \"04 Dec\"",
+              "HO1 s=1 t=s: \"11 Dec\"",
+              "HP1 s=1 t=s: \"18 Dec\"",
+              "HQ1 s=1 t=s: \"25 Dec\"",
+              "HR1 s=1 t=s: \"01 Jan\"",
+              "HS1 s=1 t=s: \"08 Jan\"",
+              "HT1 s=1 t=s: \"15 Jan\"",
+              "HU1 s=1 t=s: \"22 Jan\"",
+              "HV1 s=1 t=s: \"29 Jan\"",
+              "HW1 s=1 t=s: \"05 Feb\"",
+              "HX1 s=1 t=s: \"12 Feb\"",
+              "HY1 s=1 t=s: \"19 Feb\"",
+              "HZ1 s=1 t=s: \"26 Feb\"",
+              "IA1 s=1 t=s: \"04 Mar\"",
+              "IB1 s=1 t=s: \"11 Mar\"",
+              "IC1 s=1 t=s: \"18 Mar\"",
+              "ID1 s=1 t=s: \"25 Mar\"",
+              "IE1 s=1 t=s: \"01 Apr\"",
+              "IF1 s=1 t=s: \"08 Apr\"",
+              "IG1 s=1 t=s: \"15 Apr\"",
+              "IH1 s=1 t=s: \"22 Apr\"",
+              "II1 s=1 t=s: \"29 Apr\"",
+              "IJ1 s=1 t=s: \"06 May\"",
+              "IK1 s=1 t=s: \"13 May\"",
+              "IL1 s=1 t=s: \"20 May\"",
+              "IM1 s=1 t=s: \"27 May\"",
+              "IN1 s=1 t=s: \"03 Jun\"",
+              "IO1 s=1 t=s: \"10 Jun\"",
+              "IP1 s=1 t=s: \"17 Jun\"",
+              "IQ1 s=1 t=s: \"24 Jun\"",
+              "IR1 s=1 t=s: \"01 Jul\"",
+              "IS1 s=1 t=s: \"08 Jul\"",
+              "IT1 s=1 t=s: \"15 Jul\"",
+              "IU1 s=1 t=s: \"22 Jul\"",
+              "IV1 s=1 t=s: \"29 Jul\"",
+              "IW1 s=1 t=s: \"05 Aug\"",
+              "IX1 s=1 t=s: \"12 Aug\"",
+              "IY1 s=1 t=s: \"19 Aug\"",
+              "IZ1 s=1 t=s: \"26 Aug\"",
+              "JA1 s=1 t=s: \"02 Sep\"",
+              "JB1 s=1 t=s: \"09 Sep\"",
+              "JC1 s=1 t=s: \"16 Sep\"",
+              "JD1 s=1 t=s: \"23 Sep\"",
+              "JE1 s=1 t=s: \"30 Sep\"",
+              "JF1 s=1 t=s: \"07 Oct\"",
+              "JG1 s=1 t=s: \"14 Oct\"",
+              "JH1 s=1 t=s: \"21 Oct\"",
+              "JI1 s=1 t=s: \"28 Oct\"",
+              "JJ1 s=1 t=s: \"04 Nov\"",
+              "JK1 s=1 t=s: \"11 Nov\"",
+              "JL1 s=1 t=s: \"18 Nov\"",
+              "JM1 s=1 t=s: \"25 Nov\"",
+              "JN1 s=1 t=s: \"02 Dec\"",
+              "JO1 s=1 t=s: \"09 Dec\"",
+              "JP1 s=1 t=s: \"16 Dec\"",
+              "JQ1 s=1 t=s: \"23 Dec\"",
+              "JR1 s=1 t=s: \"30 Dec\"",
               "A2 s= t=s: \"1\"",
               "B2 s= t=s: \"Order the parts\"",
               "C2 s= t=s: \"To Do\"",
               "D2 s= t=s: \"\"",
               "E2 s= t=s: \"<date>\"",
               "F2 s= t=s: \"<date>\"",
-              "G2 s= t=: \"0\"",
-              "H2 s= t=: \"0\"",
-              "I2 s= t=: \"0\"",
-              "J2 s= t=: \"0\"",
+              "G2 s= t=: \"1\"",
+              "H2 s= t=s: \"\"",
+              "I2 s= t=: \"28899\"",
+              "J2 s= t=s: \"false\"",
               "K2 s= t=: \"0\"",
-              "L2 s= t=s: \"\"",
-              "M2 s= t=s: \"true\"",
-              "O2 s=4 t=: \"\"",
+              "L2 s= t=: \"0\"",
+              "M2 s= t=: \"0\"",
+              "N2 s= t=: \"0\"",
+              "O2 s= t=: \"0\"",
+              "P2 s= t=s: \"\"",
+              "Q2 s= t=s: \"true\"",
+              "S2 s=4 t=: \"\"",
               "A3 s= t=s: \"2\"",
               "B3 s= t=s: \"Build the rig\"",
               "C3 s= t=s: \"In Progress\"",
               "D3 s= t=s: \"\"",
               "E3 s= t=s: \"<date>\"",
               "F3 s= t=s: \"<date>\"",
-              "G3 s= t=: \"75\"",
-              "H3 s= t=: \"0\"",
+              "G3 s= t=: \"20\"",
+              "H3 s= t=s: \"\"",
               "I3 s= t=: \"0\"",
-              "J3 s= t=: \"1\"",
-              "K3 s= t=: \"2\"",
-              "L3 s= t=s: \"\"",
-              "M3 s= t=s: \"false\"",
-              "JN3 s=2 t=: \"\"",
+              "J3 s= t=s: \"true\"",
+              "K3 s= t=: \"75\"",
+              "L3 s= t=: \"0\"",
+              "M3 s= t=: \"0\"",
+              "N3 s= t=: \"1\"",
+              "O3 s= t=: \"2\"",
+              "P3 s= t=s: \"\"",
+              "Q3 s= t=s: \"false\"",
+              "JR3 s=5 t=: \"\"",
               "A4 s= t=s: \"2.1\"",
               "B4 s= t=s: \"  Weld the frame\"",
               "C4 s= t=s: \"Done\"",
               "D4 s= t=s: \"\"",
               "E4 s= t=s: \"<date>\"",
               "F4 s= t=s: \"<date>\"",
-              "G4 s= t=: \"100\"",
-              "H4 s= t=: \"0\"",
+              "G4 s= t=: \"10\"",
+              "H4 s= t=s: \"\"",
               "I4 s= t=: \"0\"",
-              "J4 s= t=: \"0\"",
-              "K4 s= t=: \"0\"",
-              "L4 s= t=: \"1\"",
-              "M4 s= t=s: \"false\"",
-              "JN4 s=3 t=: \"\"",
+              "J4 s= t=s: \"false\"",
+              "K4 s= t=: \"100\"",
+              "L4 s= t=: \"0\"",
+              "M4 s= t=: \"0\"",
+              "N4 s= t=: \"0\"",
+              "O4 s= t=: \"0\"",
+              "P4 s= t=s: \"1FS\"",
+              "Q4 s= t=s: \"false\"",
+              "JR4 s=3 t=: \"\"",
               "A5 s= t=s: \"2.2\"",
               "B5 s= t=s: \"  Wire the rig\"",
               "C5 s= t=s: \"To Do\"",
               "D5 s= t=s: \"\"",
               "E5 s= t=s: \"<date>\"",
               "F5 s= t=s: \"<date>\"",
-              "G5 s= t=: \"50\"",
-              "H5 s= t=: \"1\"",
-              "I5 s= t=: \"2\"",
-              "J5 s= t=: \"0\"",
-              "K5 s= t=: \"0\"",
-              "L5 s= t=s: \"2.1\"",
-              "M5 s= t=s: \"false\"",
-              "JN5 s=2 t=: \"\""
+              "G5 s= t=: \"11\"",
+              "H5 s= t=s: \"7.5\"",
+              "I5 s= t=: \"0\"",
+              "J5 s= t=s: \"true\"",
+              "K5 s= t=: \"50\"",
+              "L5 s= t=: \"1\"",
+              "M5 s= t=: \"2\"",
+              "N5 s= t=: \"0\"",
+              "O5 s= t=: \"0\"",
+              "P5 s= t=s: \"2.1FS\"",
+              "Q5 s= t=s: \"false\"",
+              "JR5 s=5 t=: \"\""
             ]
           },
           {
@@ -3272,7 +4142,7 @@
               "</family>",
               "</font>",
               "</fonts>",
-              "<fills count=\"5\">",
+              "<fills count=\"6\">",
               "<fill>",
               "<patternFill patternType=\"none\">",
               "</patternFill>",
@@ -3299,6 +4169,12 @@
               "</fgColor>",
               "</patternFill>",
               "</fill>",
+              "<fill>",
+              "<patternFill patternType=\"solid\">",
+              "<fgColor rgb=\"FFF39C12\">",
+              "</fgColor>",
+              "</patternFill>",
+              "</fill>",
               "</fills>",
               "<borders count=\"1\">",
               "<border>",
@@ -3318,7 +4194,7 @@
               "<xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\">",
               "</xf>",
               "</cellStyleXfs>",
-              "<cellXfs count=\"5\">",
+              "<cellXfs count=\"6\">",
               "<xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\">",
               "</xf>",
               "<xf numFmtId=\"0\" fontId=\"1\" fillId=\"0\" borderId=\"0\" xfId=\"0\" applyFont=\"true\" applyAlignment=\"true\">",
@@ -3334,6 +4210,10 @@
               "</alignment>",
               "</xf>",
               "<xf numFmtId=\"0\" fontId=\"0\" fillId=\"4\" borderId=\"0\" xfId=\"0\" applyFill=\"true\" applyAlignment=\"false\">",
+              "<alignment>",
+              "</alignment>",
+              "</xf>",
+              "<xf numFmtId=\"0\" fontId=\"0\" fillId=\"5\" borderId=\"0\" xfId=\"0\" applyFill=\"true\" applyAlignment=\"false\">",
               "<alignment>",
               "</alignment>",
               "</xf>",
@@ -3456,7 +4336,7 @@
       }
     },
     {
-      "n": 35,
+      "n": 48,
       "title": "the plan as PDF, the default",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -3484,7 +4364,7 @@
         "pages": 2,
         "page_text": [
           {
-            "text": "Tour plan · Plan 4 tasks · 1 done · 1 late · 38% complete · as of <date> TASK START – END 2018 2025 2032 2039 2046 2053 2060 2067 2074 2081 2088 2095 Milestones Definition complete 25% 1 Order the parts 0% <date> 2 Build the rig 75% <date> – 03-20 2.1 Weld the frame 100% <date> – 03-10 2.2 Wire the rig 50% <date> – 03-20 OpenV · <date> Page 1"
+            "text": "Tour plan · Plan 4 tasks · 1 done · 1 late · 2 critical (amber outline) · 38% complete · as of <date> TASK START – END 2018 2025 2032 2039 2046 2053 2060 2067 2074 2081 2088 2095 Milestones Definition complete 25% 1 Order the parts 0% <date> 2 Build the rig 75% <date> – 03-20 2.1 Weld the frame 100% <date> – 03-10 2.2 Wire the rig 50% <date> – 03-20 OpenV · <date> Page 1"
           },
           {
             "text": "Tour plan · Milestones MILESTONE DATE PROGRESS CRITERION TARGET ACTUAL MET Definition complete <date> 25% User needs addressed 100% 50% (1 of 2) No Plan tasks done 100% 0% (0 of 1) No Kick-off <date> 0% No criteria set No MVP (release) <date> 0% Requirements approved 80% 0% (0 of 0) No OpenV · <date> Page 2"
@@ -3501,7 +4381,7 @@
       }
     },
     {
-      "n": 36,
+      "n": 49,
       "title": "ReqIF is not a plan format: 400",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -3526,7 +4406,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 37,
+      "n": 50,
       "title": "the viewer may not delete one: 403",
       "actor": "viewer",
       "route": "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -3551,7 +4431,7 @@
       "events": []
     },
     {
-      "n": 38,
+      "n": 51,
       "title": "Kick-off deleted: 204",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -3569,7 +4449,7 @@
       "events": []
     },
     {
-      "n": 39,
+      "n": 52,
       "title": "Kick-off after the delete: 404",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -3598,7 +4478,7 @@
       "events": []
     },
     {
-      "n": 40,
+      "n": 53,
       "title": "MVP's stored milestone deleted: its criteria are the defaults again",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -3616,7 +4496,7 @@
       "events": []
     },
     {
-      "n": 41,
+      "n": 54,
       "title": "the plan after the deletes",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan",
@@ -3631,7 +4511,7 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"conflicts\":[]},{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"conflicts\":[]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true}],\"depends_on\":[\"<frame>\"],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":25,\"met\":false,\"late\":true},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":true,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\"},{\"work_item_id\":\"<wiring>\",\"depends_on_id\":\"<frame>\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":1,\"unscheduled\":0,\"progress\":38}}"
+        "{\"project_id\":\"<p>\",\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":28899,\"critical\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]},{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":20,\"effort_days\":null,\"float_days\":0,\"critical\":true,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":25,\"met\":false,\"late\":true},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":true,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\"},{\"work_item_id\":\"<wiring>\",\"depends_on_id\":\"<frame>\",\"type\":\"FS\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":1,\"unscheduled\":0,\"progress\":38,\"critical\":2,\"effort_days\":7.5}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3653,6 +4533,10 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
+            "duration_days": 1,
+            "effort_days": null,
+            "float_days": 28899,
+            "critical": false,
             "progress": 0,
             "done": false,
             "late": true,
@@ -3662,6 +4546,7 @@
             "subtasks_total": 0,
             "todos": [],
             "depends_on": [],
+            "relationships": [],
             "conflicts": []
           },
           {
@@ -3677,6 +4562,10 @@
             "end": null,
             "span_start": "<date>",
             "span_end": "<date>",
+            "duration_days": 20,
+            "effort_days": null,
+            "float_days": 0,
+            "critical": true,
             "progress": 75,
             "done": false,
             "late": false,
@@ -3686,6 +4575,7 @@
             "subtasks_total": 2,
             "todos": [],
             "depends_on": [],
+            "relationships": [],
             "conflicts": []
           },
           {
@@ -3701,6 +4591,10 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
+            "duration_days": 10,
+            "effort_days": null,
+            "float_days": 0,
+            "critical": false,
             "progress": 100,
             "done": true,
             "late": false,
@@ -3711,6 +4605,13 @@
             "todos": [],
             "depends_on": [
               "<order>"
+            ],
+            "relationships": [
+              {
+                "task_id": "<order>",
+                "type": "FS",
+                "conflict": false
+              }
             ],
             "conflicts": []
           },
@@ -3727,6 +4628,10 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
+            "duration_days": 11,
+            "effort_days": 7.5,
+            "float_days": 0,
+            "critical": true,
             "progress": 50,
             "done": false,
             "late": false,
@@ -3738,16 +4643,25 @@
               {
                 "id": "<t2>",
                 "text": "Label the loom",
-                "done": false
+                "done": false,
+                "due_date": "<date>"
               },
               {
                 "id": "<t1>",
                 "text": "Crimp the connectors",
-                "done": true
+                "done": true,
+                "due_date": null
               }
             ],
             "depends_on": [
               "<frame>"
+            ],
+            "relationships": [
+              {
+                "task_id": "<frame>",
+                "type": "FS",
+                "conflict": false
+              }
             ],
             "conflicts": []
           }
@@ -3828,11 +4742,13 @@
         "dependencies": [
           {
             "work_item_id": "<frame>",
-            "depends_on_id": "<order>"
+            "depends_on_id": "<order>",
+            "type": "FS"
           },
           {
             "work_item_id": "<wiring>",
-            "depends_on_id": "<frame>"
+            "depends_on_id": "<frame>",
+            "type": "FS"
           }
         ],
         "metrics": [
@@ -3940,7 +4856,9 @@
           "done": 1,
           "late": 1,
           "unscheduled": 0,
-          "progress": 38
+          "progress": 38,
+          "critical": 2,
+          "effort_days": 7.5
         }
       },
       "gzip": {

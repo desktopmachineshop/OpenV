@@ -778,6 +778,7 @@ table plan_dependencies rows 0
   column work_item_id uuid NOT NULL
   column depends_on_id uuid NOT NULL
   column project_id uuid NOT NULL
+  column kind character varying(2) NOT NULL DEFAULT 'FS'::character varying
   constraint plan_dependencies_depends_on_id_fkey FOREIGN KEY (depends_on_id) REFERENCES work_items(id) ON DELETE CASCADE
   constraint plan_dependencies_pkey PRIMARY KEY (work_item_id, depends_on_id)
   constraint plan_dependencies_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -818,6 +819,8 @@ table plan_tasks rows 0
   column start_date date
   column parent_id uuid
   column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column duration_days integer
+  column effort_days numeric(9,2)
   constraint plan_tasks_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES work_items(id) ON DELETE SET NULL
   constraint plan_tasks_pkey PRIMARY KEY (work_item_id)
   constraint plan_tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -1022,7 +1025,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 75
+table schema_migrations rows 77
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1383,3 +1386,5 @@ ledger 0072 workspace_notices
 ledger 0073 comment_reads
 ledger 0074 agents_archived
 ledger 0075 plan
+ledger 0076 plan_relationship_types
+ledger 0077 plan_duration_effort

@@ -3,8 +3,8 @@ const content = `
 # The plan (Gantt)
 
 The **Gantt** page, under **Plan** in the project menu, draws the project's
-plan on a timeline: its tasks as bars, what each waits for as arrows, and
-its milestones as diamonds. Nothing on it is typed in as a percentage. A
+plan on a timeline: its tasks as bars, the relationships between them as
+arrows, and its milestones as diamonds. Nothing on it is typed in as a percentage. A
 task's progress comes from the to-dos ticked off on it and from its
 sub-tasks, and a milestone's from criteria measured against the project's
 artifacts, such as *every user need addressed*.
@@ -12,13 +12,15 @@ artifacts, such as *every user need addressed*.
 The tasks are the cards of the **Board**. A card added on the board is a
 task here, and a task added here is a card there: one title, one assignee,
 one due date. The plan adds what a schedule needs and a board does not: a
-start date, sub-tasks, and what a task depends on.
+start date, sub-tasks, and the relationships between tasks.
 
 ## Reading the chart
 
 The outline on the left lists the tasks, numbered as an outline (1, 1.1,
 1.2, 2). A task with sub-tasks has an arrow that folds them away. The
-figure at the end of each row is the task's progress.
+figure at the end of each row is the task's progress, and the small
+**open** button after it opens the task beside the chart. Each milestone
+carries the same button.
 
 On the timeline, each task is a bar from its start to its due date:
 
@@ -27,9 +29,11 @@ On the timeline, each task is a bar from its start to its due date:
   its due date and not done.
 - A task with sub-tasks is drawn as a thinner, darker bar that spans all of
   them.
-- An **arrow** runs from a task to each task that waits for it. A dashed
-  red arrow means the waiting task starts before the other one ends; the
-  outline marks that task with a warning sign.
+- An **arrow** joins two related tasks, from the task that drives to the
+  task it drives. Where it leaves and arrives shows the type of the
+  relationship: see [Relationships between tasks](#relationships-between-tasks).
+  A dashed red arrow is a relationship the dates break; the outline marks
+  that task with a warning sign.
 - A task with no dates yet shows **+ Schedule** at today.
 
 The row of **Milestones** above the tasks holds a diamond for each
@@ -38,9 +42,17 @@ diamond, from the milestone before it, fills as that milestone's criteria
 are met. The red vertical line is today.
 
 **Days**, **Weeks**, **Months** and **Quarters** change the scale. The page
-opens at the scale that shows the whole plan. The figures above the chart
-count the plan: how far it is complete, its tasks, those done, late and
-not yet scheduled, and the milestones met.
+opens at the scale that shows the whole plan, on the whole plan. A plan too
+long to fit opens with today a third of the way in from the left, so that
+most of what you see is ahead of you.
+
+The timeline scrolls sideways past both ends of the plan, further forward
+than back: use the scroll bar, a trackpad or a wheel, or drag an empty part
+of the timeline. **Today** brings today back into view.
+
+The figures above the chart count the plan: how far it is complete, its
+tasks, those done, late, on the critical path and not yet scheduled, the
+effort in it, and the milestones met.
 
 ## Scheduling tasks
 
@@ -52,17 +64,93 @@ bar. Both move in whole days. To place a task that has no dates, choose
 **+ Schedule** in its row: it gets a week from today, which you then drag
 to where it belongs.
 
-Select a task to open it beside the chart. There you can:
+Open a task, with the button on its row or by selecting its bar, to see it
+beside the chart. There you can:
 
-- set or clear its **Start** and **Due** dates. The due date is the card's
-  own, so the board shows the same day;
+- set its **Start** and **Due** dates, its **Duration** and its **Effort**:
+  see [Duration and effort](#duration-and-effort). The due date is the
+  card's own, so the board shows the same day;
 - make it a **sub-task of** another task, or a top-level task again;
-- choose the tasks it **depends on**: it should not start before they end;
+- set its **relationships** to the tasks that drive it;
 - add **to-dos** and tick them off;
 - add **sub-tasks**.
 
-A task cannot start after it is due, be a sub-task of one of its own
-sub-tasks, or depend on a task that already waits for it.
+**Sub-task of** and the task chooser under **Relationships** are searchable:
+open one and type part of a task's name or its outline number to narrow a
+long plan to the task you want.
+
+A task cannot start after it is due, or be a sub-task of one of its own
+sub-tasks.
+
+## Duration and effort
+
+A task has a **duration**: how many days it runs, counting its first and its
+last. A task from 1 March to 5 March has a duration of 5 days. The task
+keeps its duration, so its dates move together:
+
+| You change | What follows |
+| --- | --- |
+| **Start** | The due date moves, the same number of days later or earlier |
+| **Due** | The start moves with it |
+| **Duration** | The due date moves; the start stays |
+| The bar, by dragging it | Both dates move |
+| One end of the bar, by dragging it | The duration changes |
+
+A task with no dates yet can still be given a duration: it takes effect when
+the task gets a start or a due date. If a card's due date is changed on the
+board, the task's duration becomes what its two dates now span.
+
+**Effort** is the work in the task, in days of one person's time, and may be
+a part of a day. It is separate from the duration: three people working for
+two days is a duration of 2 and an effort of 6. The figures above the chart
+add up the effort of every task.
+
+## The critical path
+
+The **critical path** is the chain of tasks that decides when the plan ends:
+each has no room to slip, so a day lost on any of them is a day lost at the
+end. OpenV works out, for every task with dates, its **float**: how many
+days it could slip before the plan's last task would end later. A task can
+slip until the plan's last day, or until it would push a task it drives:
+
+- a **finish to start** relationship lets it slip until the day before the
+  other task starts;
+- a **start to start** relationship lets its start slip until the other
+  task's start;
+- a **finish to finish** relationship lets its end slip until the other
+  task's end.
+
+A task with no float, and not yet done, is **critical**. With **Critical
+path** on, which it is when the page opens, critical tasks have an amber
+outline and an amber dot in the outline, and the arrows between them are
+amber and heavier. A task's panel says **Critical**, or how many days of
+float it has. The float is worked out from the dates as they stand: OpenV
+does not move tasks for you. A task with no relationships has float up to
+the plan's last day, so only relationships make a path longer than one task.
+
+## Relationships between tasks
+
+A relationship says how one task drives another. Each has one of the three
+types project plans use:
+
+| Type | Meaning | The arrow |
+| --- | --- | --- |
+| **Finish to start** (FS) | The task starts after the other finishes | From the other's end to the task's start |
+| **Start to start** (SS) | The task starts no earlier than the other starts | Joins the two starts |
+| **Finish to finish** (FF) | The task finishes no earlier than the other finishes | Joins the two ends |
+
+Under **Relationships** in a task's panel, choose a type and then the task
+that drives this one. A task can have several relationships, one to each
+task that drives it, so two tasks can together decide when a third starts:
+*Build the prototype* can wait for *Wheel guard design* and for
+*Electronics* to finish. Change a relationship's type in its row, or remove
+it with the cross.
+
+OpenV does not move a task when its dates break a relationship. It marks
+the relationship **Broken**, draws its arrow dashed and red, and leaves the
+dates to you. A relationship to a task that is done is never broken. A
+relationship cannot be added to a task that this one already drives, since
+the two would wait on each other.
 
 ## Progress from to-dos and sub-tasks
 
@@ -74,8 +162,13 @@ A task's progress is worked out, so it never goes stale:
 | Has to-dos or sub-tasks | The share of its to-dos ticked off, with each sub-task counting by its own progress |
 | Has neither | 0% until it is moved to Done |
 
-A to-do added on a task is one of the project's to-dos: the **To-dos**
-page lists it with the others, and ticking it off in either place moves the
+A to-do is a small job, a day or two of work at most, so it has one date
+only: an optional **deadline**. It has no start, duration or bar, and is
+never drawn on the chart. Add a task's to-dos in its panel, under
+**To-dos**, with a deadline if you like, and tick them off there; a
+deadline that has passed is shown in red. The same list is on the task's
+card on the **Board**. They are ordinary project to-dos, so the **To-dos**
+page lists them with the others, and ticking one off anywhere moves the
 task's bar. A task with two of its four to-dos ticked is 50%; a task with
 one finished sub-task and one at 50% is 75%.
 
@@ -129,17 +222,23 @@ that release. A release marked **Released** is met.
 - **Excel**: the tasks with a timeline of weeks drawn beside them, and the
   milestones on a second sheet.
 - **CSV**: the tasks, then the milestones and their criteria.
+
+In Excel and CSV, the **relationships** column names each driving task by
+its outline number and type, as in *1.1FS, 2SS*, and each task has its
+duration, effort and float in days and whether it is critical. The PDF and
+the Excel timeline mark critical tasks in amber.
 - **JSON**: the whole plan as the app reads it.
 
-Agents read the plan with the \`get_plan\` tool and place a task with
-\`schedule_work_item\`.
+Agents read the plan with the \`get_plan\` tool and place a task, with its
+relationships, with \`schedule_work_item\`.
 
 ## On a phone
 
 A timeline needs more width than a phone has, so the phone shows the same
 plan as a schedule. Four tiles give the figures. Under **Schedule**, the
 tasks are grouped by the milestone they are due before, each with its
-dates and a progress bar; **Milestones** lists the milestones with their
+dates, duration and a progress bar, and **Critical** on a task with no
+float; **Milestones** lists the milestones with their
 progress. Tap a task or a milestone to open it and make the same edits as
 on a computer, by setting dates rather than dragging.
 

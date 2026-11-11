@@ -9,6 +9,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Security fixes
+
+- **Rebuilt on Go 1.26.11.** The server and the runner are built with Go 1.26.11, which closes an advisory about a crash of the web server under a particular pattern of requests (GO-2026-6859).
+
+### Maintenance updates
+
+- **Relationships on the Gantt follow the standard types.** A task's **Depends on** is now **Relationships**, and each one is **finish to start**, **start to start** or **finish to finish**. A task can have several, so two tasks can together drive when a third starts, and the arrows on the chart join the ends each type names. Relationships you had already set are finish to start, as before.
+- **Find a task by typing.** **Sub-task of** and the task chooser under **Relationships** are searchable: type part of a task's name or its outline number, however long the plan.
+- **To-dos are off the chart, and have a deadline.** A bar no longer carries a to-do count. A task's to-dos are listed in its panel beside the chart and on its card on the **Board**; add one with an optional **deadline**, the one date a to-do has, and a deadline that has passed shows in red. They still fill the task's bar.
+- **Duration and effort.** A task has a **Duration** in days and keeps it: change its start and the due date moves with it, change its due date and the start moves, change the duration and the due date moves. **Effort** records the work in a task in person-days, separately, and the figures above the chart add it up.
+- **The critical path.** The Gantt works out how far each task can slip before the plan ends later, and marks in amber the tasks with no room at all, with the arrows between them. A task's panel says **Critical**, or how many days of float it has. **Critical path** above the chart turns the marks off.
+- **A timeline you can scroll.** The Gantt opens on the whole plan when it fits, and otherwise with today a third of the way in from the left. It scrolls past both ends of the plan, further forward than back; drag an empty part of the timeline to move it, and **Today** brings today back.
+- **Open a task from its row.** Each row of the Gantt, and each milestone, has a small open button.
+- **Releases is under Plan.** The **Releases** page has moved from **Verify** to **Plan** in the project menu, beside the Gantt, where each release is a milestone. Links to it are unchanged.
+
 ## 0.32.0 — 2026-11-10
 
 ### New features

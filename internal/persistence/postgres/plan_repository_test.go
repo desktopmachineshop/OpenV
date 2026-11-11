@@ -13,8 +13,8 @@ import (
 )
 
 // TestPlanRepositoryRoundTrip pins the plan repository: a schedule read
-// back as written and replaced by a second save, dependencies replaced as a
-// set, a to-do moved between tasks, a milestone's fields and criteria, the
+// back as written and replaced by a second save, relationships with their
+// types replaced as a set (a row written without one is finish to start), a to-do moved between tasks, a milestone's fields and criteria, the
 // not-found answers, and a deleted work item, release or project taking its
 // rows with it.
 func TestPlanRepositoryRoundTrip(t *testing.T) {
@@ -56,14 +56,17 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 		t.Fatalf("a second save replaces the first: %+v", list[0])
 	}
 
-	if err := repo.SetDependencies(project, c, []string{a, b}); err != nil {
+	if err := repo.SetDependencies(project, c, []plan.Dependency{{DependsOnID: a, Type: plan.RelStartToStart}, {DependsOnID: b}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := repo.SetDependencies(project, c, []string{b}); err != nil {
+	if deps, _ := repo.ListDependencies(project); len(deps) != 2 {
+		t.Fatalf("a task has several relationships: %+v", deps)
+	}
+	if err := repo.SetDependencies(project, c, []plan.Dependency{{DependsOnID: b, Type: plan.RelFinishToFinish}}); err != nil {
 		t.Fatal(err)
 	}
 	deps, err := repo.ListDependencies(project)
-	if err != nil || len(deps) != 1 || deps[0] != (plan.Dependency{WorkItemID: c, DependsOnID: b}) {
+	if err != nil || len(deps) != 1 || deps[0] != (plan.Dependency{WorkItemID: c, DependsOnID: b, Type: plan.RelFinishToFinish}) {
 		t.Fatalf("dependencies: %+v %v", deps, err)
 	}
 

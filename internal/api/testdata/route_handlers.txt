@@ -374,3 +374,4 @@ DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId} -> DeletePlanMileston
 PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId} -> SetReleaseMilestoneCriteria
 PUT /api/v1/work-items/{id}/schedule -> ScheduleWorkItem
 POST /api/v1/work-items/{id}/todos -> AddWorkItemTodo
+GET /api/v1/work-items/{id}/todos -> ListWorkItemTodos

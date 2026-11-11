@@ -327,6 +327,8 @@ export interface PlanTaskTodo {
   id: string;
   text: string;
   done: boolean;
+  /** The to-do's one date, its deadline (YYYY-MM-DD). */
+  due_date: string | null;
 }
 
 /** One row of the plan: a board task with its schedule and progress. */
@@ -345,6 +347,14 @@ export interface PlanTask {
   /** What the chart draws: the own dates widened to cover the sub-tasks. */
   span_start: string | null;
   span_end: string | null;
+  /** The task's length in days, counting its first and last; kept while it has no dates. */
+  duration_days: number | null;
+  /** The work in the task, in person-days. */
+  effort_days: number | null;
+  /** How many days it can slip before the plan's last task ends later; null with no dates. */
+  float_days: number | null;
+  /** No float and not done: any slip moves the plan's end. */
+  critical: boolean;
   /** A whole percentage, from the to-dos ticked off and the sub-tasks. */
   progress: number;
   done: boolean;
@@ -355,8 +365,19 @@ export interface PlanTask {
   subtasks_total: number;
   todos: PlanTaskTodo[];
   depends_on: string[];
-  /** The tasks it depends on that end on or after the day it starts. */
+  /** The tasks that drive this one, each with its type and whether the dates break it. */
+  relationships: PlanRelationship[];
+  /** The driving tasks whose relationship the dates break. */
   conflicts: string[];
+}
+
+/** FS: finish to start. SS: start to start. FF: finish to finish. */
+export type PlanRelationshipType = 'FS' | 'SS' | 'FF';
+
+export interface PlanRelationship {
+  task_id: string;
+  type: PlanRelationshipType;
+  conflict: boolean;
 }
 
 export interface PlanCriterion {
@@ -414,17 +435,24 @@ export interface ProjectPlan {
   end: string | null;
   tasks: PlanTask[];
   milestones: PlanMilestone[];
-  dependencies: { work_item_id: string; depends_on_id: string }[];
+  dependencies: { work_item_id: string; depends_on_id: string; type: PlanRelationshipType }[];
   metrics: PlanMetricValue[];
   metric_catalogue: PlanMetric[];
-  summary: { tasks: number; done: number; late: number; unscheduled: number; progress: number };
+  summary: { tasks: number; done: number; late: number; unscheduled: number; progress: number; critical: number; effort_days: number };
 }
 
 /** A field left out stays as it is; an empty date or parent clears it. */
 export interface PlanScheduleInput {
   start_date?: string;
   due_date?: string;
+  /** A task keeps its duration: one date sent alone moves the other. 0 clears it. */
+  duration_days?: number;
+  /** Person-days; 0 clears it. */
+  effort_days?: number;
   parent_id?: string;
+  /** Replaces the task's relationships to the tasks that drive it. */
+  relationships?: { task_id: string; type: PlanRelationshipType }[];
+  /** The earlier form: ids, each keeping the type it has. */
   depends_on?: string[];
 }
 

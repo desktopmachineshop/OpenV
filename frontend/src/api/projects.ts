@@ -209,8 +209,10 @@ export const planAPI = {
   schedule: (workItemId: string, payload: PlanScheduleInput) =>
     client.put<PlanTask>(`/api/v1/work-items/${workItemId}/schedule`, payload),
   /** A to-do raised on a task, which counts toward its progress. */
-  addTodo: (workItemId: string, text: string) =>
-    client.post<Todo>(`/api/v1/work-items/${workItemId}/todos`, { text }),
+  addTodo: (workItemId: string, text: string, dueDate?: string) =>
+    client.post<Todo>(`/api/v1/work-items/${workItemId}/todos`, { text, ...(dueDate ? { due_date: dueDate } : {}) }),
+  /** The to-dos on a task, open ones first: what its board card lists. */
+  listTodos: (workItemId: string) => client.get<Todo[]>(`/api/v1/work-items/${workItemId}/todos`),
   createMilestone: (projectId: string, payload: PlanMilestoneInput) =>
     client.post<StoredPlanMilestone>(`/api/v1/projects/${projectId}/plan/milestones`, payload),
   updateMilestone: (projectId: string, milestoneId: string, payload: PlanMilestoneInput) =>
