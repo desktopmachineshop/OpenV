@@ -15,6 +15,7 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **The V&V Assistant plans with you.** Ask the assistant to plan a piece of work and it offers cards that add tasks with dates, durations and the tasks they wait on, add milestones with their criteria, add to-dos to a task and tick them off, update a task's dates or progress, and recalculate, level or baseline the plan. As with its other cards, nothing changes until you apply one.
 - **More views of the plan.** The Gantt page can show the plan as a network diagram, a month calendar, each person's work by week, or a one-band timeline.
 - **All projects on one chart.** **All projects** shows the plan of every project in the workspace that you can read, each on its own line with its milestones.
 - **Links between projects.** A task can wait on a task of another project in the same workspace. It follows that task when the plan is recalculated, and both plans name the link.

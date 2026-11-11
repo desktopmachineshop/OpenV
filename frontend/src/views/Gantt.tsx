@@ -39,6 +39,7 @@ import { PlanPhone } from '../components/plan/PlanPhone';
 import { PlanChartPanel } from '../components/plan/PlanChartPanel';
 import type { TrackingAction } from '../components/plan/PlanTracking';
 import { usePlanHistory } from '../components/plan/planHistory';
+import { useAssistantPageContext } from '../components/wizard/assistantStore';
 import { TaskPanel } from '../components/plan/TaskPanel';
 import { money, type RelationshipView } from '../components/plan/planModel';
 import { ErrorBanner, FeatureGate, Sheet, buttonStyle, mutedStyle, pageType, useConfirm } from '../components/ui';
@@ -96,6 +97,12 @@ const importPlan = async (projectId: string, file: File): Promise<string> => {
   return `Imported ${n.tasks} ${n.tasks === 1 ? 'task' : 'tasks'}, ${n.milestones} ${n.milestones === 1 ? 'milestone' : 'milestones'} and ${n.relationships} ${n.relationships === 1 ? 'relationship' : 'relationships'}.`;
 };
 
+/** Recalculates the plan; answers what to tell the user. */
+const recalculatePlan = async (projectId: string, onlyLater: boolean): Promise<string> => {
+  const n = (await planAPI.recalculate(projectId, onlyLater)).data.moved;
+  return n === 0 ? 'Nothing moved: every task already sits where its relationships ask.' : `${n} ${n === 1 ? 'task' : 'tasks'} moved.`;
+};
+
 /** Levels the plan; answers what to tell the user. */
 const levelPlan = async (projectId: string): Promise<string> => {
   const n = (await planAPI.level(projectId)).data.moved;
@@ -147,6 +154,9 @@ const PlanPage: React.FC = () => {
     void load();
   }, [load]);
 
+  // A plan card the assistant's panel applies shows here at once.
+  useAssistantPageContext({ label: 'The plan (Gantt)' }, () => void load());
+
   // The first zoom is the closest one that shows the whole plan.
   useEffect(() => {
     if (plan && zoom === null) setZoom(fitZoom(plan.start, plan.end, Math.max(width - (isCompact ? 260 : 460), 320)));
@@ -175,14 +185,7 @@ const PlanPage: React.FC = () => {
   const relate = (taskId: string, otherId: string, view: RelationshipView, lagDays = 0, lagUnit: PlanLagUnit = 'd') =>
     run(() => planAPI.relate(taskId, otherId, view.type, view.direction, lagDays, lagUnit), 'Failed to relate the tasks');
 
-  /** Moves the placed tasks to what their relationships and constraints ask, and says how many moved. */
-  const recalculate = async (onlyLater: boolean) => {
-    setNote('');
-    await run(async () => {
-      const n = (await planAPI.recalculate(projectId, onlyLater)).data.moved;
-      setNote(n === 0 ? 'Nothing moved: every task already sits where its relationships ask.' : `${n} ${n === 1 ? 'task' : 'tasks'} moved.`);
-    }, 'Failed to recalculate the plan');
-  };
+  const recalculate = (onlyLater: boolean) => run(async () => setNote(await recalculatePlan(projectId, onlyLater)), 'Failed to recalculate the plan');
 
   const addTask = async (t: NewTask, parentId?: string, inline = false) => {
     const ok = await run(async () => {

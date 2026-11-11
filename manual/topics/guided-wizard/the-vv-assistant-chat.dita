@@ -34,6 +34,11 @@
         <li><b>Comment</b>: post a comment on an artifact, in your name.</li>
         <li><b>To-do</b> and <b>Board task</b>: raise a to-do or add a task to the board, assigned to a member and with a due date if the card names them.</li>
         <li><b>Baseline</b>, <b>Review round</b> and <b>Test run</b>: capture a baseline, send every draft for review, or record a test run's results.</li>
+        <li><b>Board task</b> can also place the task on the plan: a start date, a duration, the task it is a sub-task of, its milestone and the tasks it waits on. Ask the assistant to plan a piece of work and it proposes the tasks in order, each waiting on the one before.</li>
+        <li><b>Plan task</b>: change a task that exists, named by its title or outline number: its dates, duration, effort, percentage complete, deadline, parent task, milestone, the tasks it waits on, its title or its board column.</li>
+        <li><b>Milestone</b>: add a milestone with a date and completion criteria, or change one. A release's milestone takes its name and date from the release.</li>
+        <li><b>Task to-do</b> and <b>To-do</b>: add a to-do to a task, which counts toward its progress, and tick a to-do off or open it again.</li>
+        <li><b>Plan</b>: recalculate the plan, level it, save a baseline of it, or move work that has not started up to the status date.</li>
       </ul>
       <p>Each card does what the same action on its page would, with your access: a change you could not make there is refused on the card too. Project settings, members, uploads and evidence files stay on their own pages. Other pages can start a turn for you: <b>Draft tests</b> on the V&amp;V dashboard's <i>Top gaps</i> card opens the panel and asks for test cases for those gaps (see <i>V&amp;V</i> → <i>Gaps</i>).</p>
       <p>Starting a conversation needs editor access to the project, and a workspace its plan has made read-only cannot start one. In either case the panel says so and what to do instead of a chat.</p>
