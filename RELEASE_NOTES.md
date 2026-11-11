@@ -9,6 +9,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Security fixes
+
+- **Rebuilt on Go 1.26.11.** The server and the runner are built with Go 1.26.11, which closes an advisory about a crash of the web server under a particular pattern of requests (GO-2026-6859).
+
 ### Maintenance updates
 
 - **Relationships on the Gantt follow the standard types.** A task's **Depends on** is now **Relationships**, and each one is **finish to start**, **start to start** or **finish to finish**. A task can have several, so two tasks can together drive when a third starts, and the arrows on the chart join the ends each type names. Relationships you had already set are finish to start, as before.
