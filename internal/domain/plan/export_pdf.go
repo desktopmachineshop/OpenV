@@ -46,6 +46,9 @@ type pdfChart struct {
 	start, end time.Time
 	dated      bool
 	x0, x1     float64 // the timeline's left and right edges
+	// rows is where each scheduled task's bar was drawn on the page being
+	// filled, for the lines between related tasks.
+	rows map[string]pdfBar
 }
 
 func rgb(set func(r, g, b int), c [3]int) { set(c[0], c[1], c[2]) }
@@ -78,6 +81,7 @@ func renderPDF(doc Document) ([]byte, error) {
 	y := c.newPage()
 	for _, t := range doc.Plan.Tasks {
 		if y+pdfRowH > pdfH-pdfMargin-4 {
+			c.links()
 			c.footer()
 			y = c.newPage()
 		}
@@ -89,6 +93,7 @@ func renderPDF(doc Document) ([]byte, error) {
 		rgb(pdf.SetTextColor, pdfMuted)
 		pdf.Text(pdfMargin, y+5, "No tasks on the board yet.")
 	}
+	c.links()
 	c.footer()
 	c.milestoneTable()
 	if err := pdf.Error(); err != nil {
@@ -311,6 +316,10 @@ func (c *pdfChart) taskRow(t *Task, y float64) {
 	}
 	pdf.RoundedRect(a, top, b-a, h, 0.8, "1234", "D")
 	pdf.SetLineWidth(0.2)
+	if c.rows == nil {
+		c.rows = map[string]pdfBar{}
+	}
+	c.rows[t.ID] = pdfBar{left: a, right: b, y: y + pdfRowH/2, critical: t.Critical}
 }
 
 // milestoneTable writes the milestones and their criteria on pages of

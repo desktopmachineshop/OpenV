@@ -134,4 +134,5 @@ var migrations = []Migration{
 	{Version: 77, Name: "plan_duration_effort", Run: m0077PlanDurationEffort},
 	{Version: 78, Name: "plan_settings", Run: m0078PlanSettings},
 	{Version: 79, Name: "plan_task_milestone", Run: m0079PlanTaskMilestone},
+	{Version: 80, Name: "plan_dependency_lag", Run: m0080PlanDependencyLag},
 }

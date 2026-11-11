@@ -29,6 +29,9 @@ type TaskTodo struct {
 type TaskRelationship struct {
 	TaskID string `json:"task_id"`
 	Type   string `json:"type"`
+	// LagDays is the relationship's offset in working days: the driven task
+	// keeps that many after what the type asks for, or before when negative.
+	LagDays int `json:"lag_days"`
 	// Conflict: the dates break the relationship. Finish to start: this
 	// task starts on or before the day the other ends. Start to start: it
 	// starts before the other starts. Finish to finish: it ends before the
@@ -469,10 +472,10 @@ func (b *builder) dependencies(p *Plan) {
 		if !ValidRelationshipType(d.Type) {
 			d.Type = RelFinishToStart
 		}
-		conflict := relationshipBroken(d.Type, t, on)
+		conflict := b.broken(d, t, on)
 		t.DependsOn = append(t.DependsOn, on.ID)
-		t.Relationships = append(t.Relationships, TaskRelationship{TaskID: on.ID, Type: d.Type, Conflict: conflict})
-		on.Drives = append(on.Drives, TaskRelationship{TaskID: t.ID, Type: d.Type, Conflict: conflict})
+		t.Relationships = append(t.Relationships, TaskRelationship{TaskID: on.ID, Type: d.Type, LagDays: d.LagDays, Conflict: conflict})
+		on.Drives = append(on.Drives, TaskRelationship{TaskID: t.ID, Type: d.Type, LagDays: d.LagDays, Conflict: conflict})
 		p.Dependencies = append(p.Dependencies, d)
 		if conflict {
 			t.Conflicts = append(t.Conflicts, on.ID)
@@ -500,6 +503,18 @@ func (b *builder) dependencies(p *Plan) {
 			sort.SliceStable(rels, func(i, j int) bool { return row[rels[i].TaskID] < row[rels[j].TaskID] })
 		}
 	}
+}
+
+// broken reports whether t's dates break the relationship d to on: with an
+// offset, whether t keeps fewer working days than it asks for.
+func (b *builder) broken(d Dependency, t, on *Task) bool {
+	if d.LagDays == 0 {
+		return relationshipBroken(d.Type, t, on)
+	}
+	if on.Done || t.SpanStart == nil || on.SpanStart == nil {
+		return false
+	}
+	return b.gap(on, drive{t, d.Type, d.LagDays}) < 0
 }
 
 // relationshipBroken reports whether t's dates break its relationship of

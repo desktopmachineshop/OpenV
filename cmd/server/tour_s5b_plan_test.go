@@ -31,6 +31,9 @@ import (
 //     plan reports each task's float and marks the critical path;
 //   - a relationship is made, retyped, turned round and removed from either
 //     task; a task with sub-tasks takes no dates of its own (400);
+//   - a relationship carries an offset in working days, and the plan is
+//     recalculated: the driven tasks move to what their relationships ask,
+//     and a second recalculation moves nothing;
 //   - a task is assigned to a milestone or to a release's, and taken off
 //     it; the milestone then counts its tasks done among its criteria;
 //     another project's milestone or release is a 400;
@@ -131,6 +134,16 @@ func planTour(tr *tour) {
 	tr.step("Q's task: 400", o, rel, at("id", "{{order}}", "otherId", "{{q_task}}"), jsonBody(`{"type":"FS"}`))
 	tr.step("the viewer may not relate tasks: 403", viewer, rel, at("id", "{{order}}", "otherId", "{{wiring}}"), jsonBody(`{"type":"FS"}`))
 	tr.step("the relationship removed from Order's end: 204", o, "DELETE /api/v1/work-items/{id}/relationships/{otherId}",
+		at("id", "{{order}}", "otherId", "{{wiring}}"))
+	tr.step("an offset: Order drives Wiring start to start, 5 working days later", o, rel,
+		at("id", "{{order}}", "otherId", "{{wiring}}"), jsonBody(`{"type":"SS","direction":"drives","lag_days":5}`))
+	tr.step("an offset beyond ten years: 400", o, rel, at("id", "{{order}}", "otherId", "{{wiring}}"),
+		jsonBody(`{"type":"SS","direction":"drives","lag_days":99999}`))
+	recalculate := "POST /api/v1/projects/{id}/plan/recalculate"
+	tr.step("the plan recalculated: the driven tasks move to what their relationships ask", o, recalculate, at("id", "{{p}}"))
+	tr.step("recalculated again: nothing moves", o, recalculate, at("id", "{{p}}"))
+	tr.step("the viewer may not recalculate: 403", viewer, recalculate, at("id", "{{p}}"))
+	tr.setup("Order and Wiring unrelated again", o, "DELETE /api/v1/work-items/{id}/relationships/{otherId}",
 		at("id", "{{order}}", "otherId", "{{wiring}}"))
 	tr.step("dates on Build, which has sub-tasks: 400", o, schedule, at("id", "{{build}}"), jsonBody(`{"start_date":"2099-03-01"}`))
 

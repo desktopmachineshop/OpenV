@@ -157,7 +157,14 @@ func taskRows(doc Document, indent bool) [][]string {
 		// predecessor: "1.1FS, 2SS".
 		deps := make([]string, 0, len(t.Relationships))
 		for _, r := range t.Relationships {
-			deps = append(deps, wbs[r.TaskID]+r.Type)
+			rel := wbs[r.TaskID] + r.Type
+			// An offset follows the type: 1.1SS+5, 2FS-2.
+			if r.LagDays > 0 {
+				rel += "+" + strconv.Itoa(r.LagDays)
+			} else if r.LagDays < 0 {
+				rel += strconv.Itoa(r.LagDays)
+			}
+			deps = append(deps, rel)
 		}
 		title := t.Title
 		if indent {

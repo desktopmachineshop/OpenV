@@ -297,6 +297,7 @@ POST /api/v1/projects/{id}/evidence-bundles: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/projects/{id}/interviews: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/projects/{id}/members: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/projects/{id}/plan/milestones: s5b, s5e; 2xx or 3xx in s5b
+POST /api/v1/projects/{id}/plan/recalculate: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/projects/{id}/reindex-embeddings: s5a, s5e; 2xx or 3xx in s5a
 POST /api/v1/projects/{id}/releases: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/projects/{id}/repo-connections: s5d, s5e; 2xx or 3xx in s5d
@@ -389,4 +390,4 @@ PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}/relationships/{otherId}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}/schedule: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 378 of 378 routes reached (100.0%), 364 with a 2xx or 3xx answer (96.3%); the floor is 90%, 341 routes
+the tour: 379 of 379 routes reached (100.0%), 365 with a 2xx or 3xx answer (96.3%); the floor is 90%, 342 routes

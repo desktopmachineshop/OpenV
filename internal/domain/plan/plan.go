@@ -52,6 +52,7 @@ var (
 	ErrInvalidDuration   = errors.New("a duration is a whole number of days, 1 or more")
 	ErrInvalidEffort     = errors.New("effort is a number of days, 0 or more")
 	ErrWorkingDays       = errors.New("working days are weekday numbers from 1 (Monday) to 7 (Sunday), at least one")
+	ErrInvalidLag        = errors.New("a relationship's offset is a whole number of working days, at most 3650 either way")
 	ErrMilestone         = errors.New("the milestone is not one of this project's")
 	ErrParentDates       = errors.New("a task with sub-tasks takes its dates, duration and effort from them")
 	ErrRelationshipType  = errors.New("a relationship is FS (finish to start), SS (start to start) or FF (finish to finish)")
@@ -108,6 +109,9 @@ type Dependency struct {
 	WorkItemID  string `json:"work_item_id"`
 	DependsOnID string `json:"depends_on_id"`
 	Type        string `json:"type"`
+	// LagDays is the offset: the working days the driven task keeps after
+	// what the type asks for, or before it when negative.
+	LagDays int `json:"lag_days"`
 }
 
 // Relationship names, in a schedule request, a task this one is driven by
@@ -115,6 +119,8 @@ type Dependency struct {
 type Relationship struct {
 	TaskID string `json:"task_id"`
 	Type   string `json:"type"`
+	// LagDays is the relationship's offset in working days; negative leads.
+	LagDays int `json:"lag_days"`
 }
 
 // Criterion is one completion criterion of a milestone: a metric and the
@@ -228,7 +234,10 @@ type Service interface {
 	// Relate makes a relationship between two tasks of one project, from
 	// either end: drives says the task drives the other one (else it is
 	// driven by it). Any relationship the pair already has is replaced.
-	Relate(taskID, otherID, kind string, drives bool) error
+	Relate(taskID, otherID, kind string, drives bool, lagDays int) error
+	// Recalculate moves each task that another drives to the dates its
+	// relationships ask for, and answers how many tasks it moved.
+	Recalculate(projectID, actor string, now time.Time) (int, error)
 	// Unrelate removes the relationship between two tasks, whichever way
 	// it runs.
 	Unrelate(taskID, otherID string) error
@@ -552,22 +561,25 @@ func checkParent(id, want string, parents map[string]string, onBoard map[string]
 	return &p, nil
 }
 
+// MaxLagDays bounds a relationship's offset, either way.
+const MaxLagDays = 3650
+
 // wantedRelationships reads the relationships a request asks for: its
 // Relationships, or its DependsOn with each task keeping the type it has now.
 func wantedRelationships(id string, req ScheduleRequest, existing []Dependency) []Relationship {
 	if req.Relationships != nil {
 		return *req.Relationships
 	}
-	has := map[string]string{}
+	has := map[string]Dependency{}
 	for _, d := range existing {
 		if d.WorkItemID == id {
-			has[d.DependsOnID] = d.Type
+			has[d.DependsOnID] = d
 		}
 	}
 	out := make([]Relationship, 0, len(*req.DependsOn))
 	for _, dep := range *req.DependsOn {
 		dep = strings.TrimSpace(dep)
-		out = append(out, Relationship{TaskID: dep, Type: has[dep]})
+		out = append(out, Relationship{TaskID: dep, Type: has[dep].Type, LagDays: has[dep].LagDays})
 	}
 	return out
 }
@@ -600,9 +612,11 @@ func checkDependencies(id string, want []Relationship, existing []Dependency, on
 			return nil, ErrOtherProject
 		case !ValidRelationshipType(kind):
 			return nil, ErrRelationshipType
+		case rel.LagDays > MaxLagDays || rel.LagDays < -MaxLagDays:
+			return nil, ErrInvalidLag
 		}
 		seen[dep] = true
-		out = append(out, Dependency{WorkItemID: id, DependsOnID: dep, Type: kind})
+		out = append(out, Dependency{WorkItemID: id, DependsOnID: dep, Type: kind, LagDays: rel.LagDays})
 	}
 	visited := map[string]bool{}
 	stack := make([]string, 0, len(out))

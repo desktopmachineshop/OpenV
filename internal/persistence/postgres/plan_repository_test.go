@@ -78,11 +78,11 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 		t.Fatalf("a second save replaces the first: %+v", list[0])
 	}
 
-	if err := repo.SetDependencies(project, c, []plan.Dependency{{DependsOnID: a, Type: plan.RelStartToStart}, {DependsOnID: b}}); err != nil {
+	if err := repo.SetDependencies(project, c, []plan.Dependency{{DependsOnID: a, Type: plan.RelStartToStart, LagDays: 5}, {DependsOnID: b}}); err != nil {
 		t.Fatal(err)
 	}
-	if deps, _ := repo.ListDependencies(project); len(deps) != 2 {
-		t.Fatalf("a task has several relationships: %+v", deps)
+	if deps, _ := repo.ListDependencies(project); len(deps) != 2 || deps[0].LagDays+deps[1].LagDays != 5 {
+		t.Fatalf("a task has several relationships, one with its offset: %+v", deps)
 	}
 	if err := repo.SetDependencies(project, c, []plan.Dependency{{DependsOnID: b, Type: plan.RelFinishToFinish}}); err != nil {
 		t.Fatal(err)

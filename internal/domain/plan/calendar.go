@@ -133,3 +133,22 @@ func (c Calendar) Start(due string, duration int) string {
 	}
 	return d.Format(DateLayout)
 }
+
+// Add is the day n working days after day, or before it when n is negative;
+// day itself when n is 0. A calendar that works no day answers day.
+func (c Calendar) Add(day string, n int) string {
+	if c.perWeek() == 0 || n == 0 {
+		return day
+	}
+	d, step := parseDay(day), 1
+	if n < 0 {
+		step, n = -1, -n
+	}
+	for n > 0 {
+		d = d.AddDate(0, 0, step)
+		if c.work[d.Weekday()] {
+			n--
+		}
+	}
+	return d.Format(DateLayout)
+}

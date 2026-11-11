@@ -110,7 +110,7 @@ func (r *PlanRepository) SetWorkingDays(projectID string, days []int) error {
 // ListDependencies lists the project's dependencies.
 func (r *PlanRepository) ListDependencies(projectID string) ([]plan.Dependency, error) {
 	rows, err := r.db.Query(`
-		SELECT work_item_id, depends_on_id, kind FROM plan_dependencies
+		SELECT work_item_id, depends_on_id, kind, lag_days FROM plan_dependencies
 		WHERE project_id = $1 ORDER BY work_item_id, depends_on_id`, projectID)
 	if err != nil {
 		return nil, err
@@ -119,7 +119,7 @@ func (r *PlanRepository) ListDependencies(projectID string) ([]plan.Dependency, 
 	out := []plan.Dependency{}
 	for rows.Next() {
 		var d plan.Dependency
-		if err := rows.Scan(&d.WorkItemID, &d.DependsOnID, &d.Type); err != nil {
+		if err := rows.Scan(&d.WorkItemID, &d.DependsOnID, &d.Type, &d.LagDays); err != nil {
 			return nil, err
 		}
 		out = append(out, d)
@@ -139,8 +139,8 @@ func (r *PlanRepository) SetDependencies(projectID, workItemID string, relations
 				kind = plan.RelFinishToStart
 			}
 			if _, err := tx.Exec(`
-				INSERT INTO plan_dependencies (work_item_id, depends_on_id, project_id, kind)
-				VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`, workItemID, rel.DependsOnID, projectID, kind); err != nil {
+				INSERT INTO plan_dependencies (work_item_id, depends_on_id, project_id, kind, lag_days)
+				VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`, workItemID, rel.DependsOnID, projectID, kind, rel.LagDays); err != nil {
 				return err
 			}
 		}
