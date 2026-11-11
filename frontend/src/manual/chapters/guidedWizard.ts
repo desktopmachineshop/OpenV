@@ -120,6 +120,20 @@ you could make yourself and the assistant answers with a card for it:
   assigned to a member and with a due date if the card names them.
 - **Baseline**, **Review round** and **Test run**: capture a baseline, send
   every draft for review, or record a test run's results.
+- **Board task** can also place the task on the plan: a start date, a
+  duration, the task it is a sub-task of, its milestone and the tasks it
+  waits on. Ask the assistant to plan a piece of work and it proposes the
+  tasks in order, each waiting on the one before.
+- **Plan task**: change a task that exists, named by its title or outline
+  number: its dates, duration, effort, percentage complete, deadline, parent
+  task, milestone, the tasks it waits on, its title or its board column.
+- **Milestone**: add a milestone with a date and completion criteria, or
+  change one. A release's milestone takes its name and date from the
+  release.
+- **Task to-do** and **To-do**: add a to-do to a task, which counts toward
+  its progress, and tick a to-do off or open it again.
+- **Plan**: recalculate the plan, level it, save a baseline of it, or move
+  work that has not started up to the status date.
 
 Each card does what the same action on its page would, with your access: a
 change you could not make there is refused on the card too. Project
