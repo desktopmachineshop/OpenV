@@ -1,7 +1,7 @@
 // What the plan's views share beyond the API's answer: which rows a folded
 // outline shows, a task's descendants, the colours of a bar and a milestone,
 // and the phone's grouping of tasks under the milestone they lead to.
-import type { PlanMilestone, PlanTask } from '../../api/client';
+import type { PlanMilestone, PlanRelationshipType, PlanTask } from '../../api/client';
 import type { ChipTone } from '../ui';
 import { BOARD_COLUMNS } from '../kanban/columns';
 
@@ -27,7 +27,24 @@ export const descendants = (tasks: PlanTask[], id: string): Set<string> => {
   return out;
 };
 
-/** The tasks that would make a loop if `id` depended on them: itself and whatever waits on it. */
+/** The relationship types, in the order a chooser shows them, as a Gantt names them. */
+export const RELATIONSHIP_TYPES: { value: PlanRelationshipType; label: string; hint: string }[] = [
+  { value: 'FS', label: 'Finish to start', hint: 'Starts after that task finishes' },
+  { value: 'SS', label: 'Start to start', hint: 'Starts no earlier than that task starts' },
+  { value: 'FF', label: 'Finish to finish', hint: 'Finishes no earlier than that task finishes' },
+];
+
+export const relationshipLabel = (type: PlanRelationshipType): string =>
+  RELATIONSHIP_TYPES.find((r) => r.value === type)?.label ?? type;
+
+/** What a broken relationship of each type means, for the chip's tooltip. */
+export const RELATIONSHIP_BROKEN: Record<PlanRelationshipType, string> = {
+  FS: 'This task starts before that one finishes',
+  SS: 'This task starts before that one starts',
+  FF: 'This task finishes before that one finishes',
+};
+
+/** The tasks that would make a loop if `id` were driven by them: itself and whatever it drives. */
 export const dependents = (tasks: PlanTask[], id: string): Set<string> => {
   const out = new Set<string>([id]);
   for (let grew = true; grew; ) {

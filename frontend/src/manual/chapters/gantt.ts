@@ -3,16 +3,16 @@ const content = `
 # The plan (Gantt)
 
 The **Gantt** page, under **Plan** in the project menu, draws the project's
-plan on a timeline: its tasks as bars, what each waits for as arrows, and
-its milestones as diamonds. Nothing on it is typed in as a percentage. A
-task's progress comes from the to-dos ticked off on it and from its
-sub-tasks, and a milestone's from criteria measured against the project's
+plan on a timeline: its tasks as bars, the relationships between them as
+arrows, and its milestones as diamonds. Nothing on it is typed in as a percentage. A
+task's progress comes from the to-dos ticked off on its board card and from
+its sub-tasks, and a milestone's from criteria measured against the project's
 artifacts, such as *every user need addressed*.
 
 The tasks are the cards of the **Board**. A card added on the board is a
 task here, and a task added here is a card there: one title, one assignee,
 one due date. The plan adds what a schedule needs and a board does not: a
-start date, sub-tasks, and what a task depends on.
+start date, sub-tasks, and the relationships between tasks.
 
 ## Reading the chart
 
@@ -27,9 +27,11 @@ On the timeline, each task is a bar from its start to its due date:
   its due date and not done.
 - A task with sub-tasks is drawn as a thinner, darker bar that spans all of
   them.
-- An **arrow** runs from a task to each task that waits for it. A dashed
-  red arrow means the waiting task starts before the other one ends; the
-  outline marks that task with a warning sign.
+- An **arrow** joins two related tasks, from the task that drives to the
+  task it drives. Where it leaves and arrives shows the type of the
+  relationship: see [Relationships between tasks](#relationships-between-tasks).
+  A dashed red arrow is a relationship the dates break; the outline marks
+  that task with a warning sign.
 - A task with no dates yet shows **+ Schedule** at today.
 
 The row of **Milestones** above the tasks holds a diamond for each
@@ -57,12 +59,39 @@ Select a task to open it beside the chart. There you can:
 - set or clear its **Start** and **Due** dates. The due date is the card's
   own, so the board shows the same day;
 - make it a **sub-task of** another task, or a top-level task again;
-- choose the tasks it **depends on**: it should not start before they end;
-- add **to-dos** and tick them off;
+- set its **relationships** to the tasks that drive it;
 - add **sub-tasks**.
 
-A task cannot start after it is due, be a sub-task of one of its own
-sub-tasks, or depend on a task that already waits for it.
+**Sub-task of** and the task chooser under **Relationships** are searchable:
+open one and type part of a task's name or its outline number to narrow a
+long plan to the task you want.
+
+A task cannot start after it is due, or be a sub-task of one of its own
+sub-tasks.
+
+## Relationships between tasks
+
+A relationship says how one task drives another. Each has one of the three
+types project plans use:
+
+| Type | Meaning | The arrow |
+| --- | --- | --- |
+| **Finish to start** (FS) | The task starts after the other finishes | From the other's end to the task's start |
+| **Start to start** (SS) | The task starts no earlier than the other starts | Joins the two starts |
+| **Finish to finish** (FF) | The task finishes no earlier than the other finishes | Joins the two ends |
+
+Under **Relationships** in a task's panel, choose a type and then the task
+that drives this one. A task can have several relationships, one to each
+task that drives it, so two tasks can together decide when a third starts:
+*Build the prototype* can wait for *Wheel guard design* and for
+*Electronics* to finish. Change a relationship's type in its row, or remove
+it with the cross.
+
+OpenV does not move a task when its dates break a relationship. It marks
+the relationship **Broken**, draws its arrow dashed and red, and leaves the
+dates to you. A relationship to a task that is done is never broken. A
+relationship cannot be added to a task that this one already drives, since
+the two would wait on each other.
 
 ## Progress from to-dos and sub-tasks
 
@@ -74,9 +103,10 @@ A task's progress is worked out, so it never goes stale:
 | Has to-dos or sub-tasks | The share of its to-dos ticked off, with each sub-task counting by its own progress |
 | Has neither | 0% until it is moved to Done |
 
-A to-do added on a task is one of the project's to-dos: the **To-dos**
-page lists it with the others, and ticking it off in either place moves the
-task's bar. A task with two of its four to-dos ticked is 50%; a task with
+To-dos are not shown on the Gantt. Add and tick off a task's to-dos on its
+card: open the card on the **Board** and use **To-dos**. They are ordinary
+project to-dos, so the **To-dos** page lists them with the others, and
+ticking one off in either place moves the task's bar. A task with two of its four to-dos ticked is 50%; a task with
 one finished sub-task and one at 50% is 75%.
 
 ## Milestones and their criteria
@@ -129,10 +159,13 @@ that release. A release marked **Released** is met.
 - **Excel**: the tasks with a timeline of weeks drawn beside them, and the
   milestones on a second sheet.
 - **CSV**: the tasks, then the milestones and their criteria.
+
+In Excel and CSV, the **relationships** column names each driving task by
+its outline number and type, as in *1.1FS, 2SS*.
 - **JSON**: the whole plan as the app reads it.
 
-Agents read the plan with the \`get_plan\` tool and place a task with
-\`schedule_work_item\`.
+Agents read the plan with the \`get_plan\` tool and place a task, with its
+relationships, with \`schedule_work_item\`.
 
 ## On a phone
 

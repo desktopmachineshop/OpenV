@@ -8,5 +8,6 @@
   </prolog>
   <conbody>
     <p>Every card is also a task of the project's plan: the <b>Gantt</b> page draws the cards on a timeline, with start dates, sub-tasks and dependencies. See <xref href="https://openv.app/manual/gantt" scope="external" format="html">The plan (Gantt)</xref>.</p>
+    <p>A card can carry <b>To-dos</b>: open the card, type one under <b>To-dos</b> and press <b>Add</b>, and tick it off when it is done. They are what fills the task's bar on the Gantt, and the <b>To-dos</b> page lists them with the project's others.</p>
   </conbody>
 </concept>

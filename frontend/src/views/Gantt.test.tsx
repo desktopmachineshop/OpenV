@@ -4,11 +4,11 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { mockApi } from '../test/mockApi';
 import { Gantt } from './Gantt';
 import { DialogProvider } from '../components/ui';
-import { planAPI, todosAPI, type PlanMilestone, type PlanTask, type ProjectPlan } from '../api/client';
+import { planAPI, type PlanMilestone, type PlanTask, type ProjectPlan } from '../api/client';
 import { useAppStore } from '../state/store';
 
 // The Plan page: the chart's rows, bars and milestones from the plan the API
-// answers, a task's panel with its schedule and to-dos, a milestone's
+// answers, a task's panel with its schedule and its typed relationships, a milestone's
 // criteria, the phone's schedule list, and the feature gate.
 
 const ok = (data: unknown) => Promise.resolve({ data });
@@ -35,6 +35,7 @@ const task = (id: string, title: string, extra: Partial<PlanTask> = {}): PlanTas
   subtasks_total: 0,
   todos: [],
   depends_on: [],
+  relationships: [],
   conflicts: [],
   ...extra,
 });
@@ -105,12 +106,13 @@ const plan: ProjectPlan = {
         { id: 't1', text: 'Crimp the connectors', done: true },
       ],
       depends_on: ['frame'],
+      relationships: [{ task_id: 'frame', type: 'FS', conflict: true }],
       conflicts: ['frame'],
     }),
     task('loose', 'Packaging concept', { wbs: '2' }),
   ],
   milestones: [definition, mvp],
-  dependencies: [{ work_item_id: 'wiring', depends_on_id: 'frame' }],
+  dependencies: [{ work_item_id: 'wiring', depends_on_id: 'frame', type: 'FS' }],
   metrics: [{ metric: 'needs_addressed', label: 'User needs addressed', count: 1, total: 2, percent: 50 }],
   metric_catalogue: [
     { key: 'needs_addressed', label: 'User needs addressed', description: 'User needs that at least one requirement derives from.' },
@@ -126,7 +128,6 @@ vi.mock('../api/client', async (orig) =>
       schedule: () => ok(plan.tasks[2]),
       setReleaseCriteria: () => ok({}),
     },
-    todosAPI: { setDone: () => ok({}) },
   })
 );
 
@@ -195,6 +196,8 @@ describe('Plan page', () => {
       'Weld the frame: 1 Mar – 9 Mar, 100% complete',
       'Wire the rig: 8 Mar – 20 Mar, 50% complete',
     ]);
+    // To-dos are not on the Gantt: no bar carries their count.
+    expect(container.querySelector('[role="table"]')?.textContent).not.toContain('to-dos');
     expect(button('+ Schedule')?.getAttribute('aria-label')).toBe('Schedule Packaging concept for a week from today');
     const diamonds = Array.from(container.querySelectorAll('[data-milestone]')).map((b) => b.getAttribute('aria-label'));
     expect(diamonds).toEqual(['Milestone Definition complete, 5 Mar, 50%, late', 'Release milestone MVP, 1 Apr, 0%']);
@@ -212,24 +215,51 @@ describe('Plan page', () => {
     expect(container.querySelector('button[aria-label="Unfold Build the rig"]')?.getAttribute('aria-expanded')).toBe('false');
   });
 
-  it('opens a task with its schedule, what it depends on and its to-dos, and ticks one off', async () => {
+  it('opens a task with its schedule and its relationships, and has no to-do list', async () => {
     await mount();
     await click(container.querySelector('[data-task-bar="wiring"]'));
     const panel = container.querySelector('aside[aria-label="Task Wire the rig"]')!;
-    expect(panel.textContent).toContain('1 of 2 to-dos ticked off');
-    expect(panel.textContent).toContain('1.1 Weld the frame');
-    expect(panel.textContent).toContain('Overlaps');
+    expect(panel.textContent).toContain('1 of 2 to-dos ticked off on its board card');
+    expect(panel.querySelector('input[type="checkbox"]')).toBeNull();
     expect((panel.querySelector('input[type="date"]') as HTMLInputElement).value).toBe('2027-03-08');
-    // A task may not go under itself, and may not wait on one that waits on it.
-    const selects = Array.from(panel.querySelectorAll('select'));
-    expect(Array.from(selects[0].options).map((o) => o.value)).toEqual(['', 'build', 'frame', 'loose']);
-    expect(Array.from(selects[1].options).map((o) => o.value)).toEqual(['', 'build', 'loose']);
+    // A task may not go under itself, and may not be driven by one it drives.
+    const parent = panel.querySelector('#gantt-parent') as HTMLSelectElement;
+    expect(Array.from(parent.options).map((o) => o.value)).toEqual(['', 'build', 'frame', 'loose']);
+    const add = panel.querySelector('#gantt-relationship-add') as HTMLSelectElement;
+    expect(Array.from(add.options).map((o) => o.value)).toEqual(['', 'build', 'loose']);
 
-    const boxes = panel.querySelectorAll('input[type="checkbox"]');
-    expect(Array.from(boxes).map((b) => (b as HTMLInputElement).checked)).toEqual([false, true]);
-    await click(boxes[0]);
-    expect(vi.mocked(todosAPI.setDone)).toHaveBeenCalledWith('t2', true);
-    expect(vi.mocked(planAPI.get)).toHaveBeenCalledTimes(2);
+    const section = panel.querySelector('[data-help-key="gantt.relationships"]')!;
+    expect(section.querySelector('h3')?.textContent).toBe('Relationships · 1');
+    expect(section.textContent).toContain('1.1 Weld the frame');
+    expect(section.querySelector('.ov-chip')?.getAttribute('title')).toBe('This task starts before that one finishes');
+    const type = section.querySelector('select[aria-label="Type of the relationship to Weld the frame"]') as HTMLSelectElement;
+    expect(Array.from(type.options).map((o) => o.textContent)).toEqual(['Finish to start (FS)', 'Start to start (SS)', 'Finish to finish (FF)']);
+    expect(type.value).toBe('FS');
+  });
+
+  it('changes a relationship to start to start, and adds a second task that drives the same one', async () => {
+    await mount();
+    await click(container.querySelector('[data-task-bar="wiring"]'));
+    const change = async (el: Element | null, value: string) => {
+      expect(el).toBeTruthy();
+      await act(async () => {
+        const select = el as HTMLSelectElement;
+        Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!.call(select, value);
+        select.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      await flush();
+    };
+    await change(container.querySelector('select[aria-label="Type of the relationship to Weld the frame"]'), 'SS');
+    expect(vi.mocked(planAPI.schedule)).toHaveBeenLastCalledWith('wiring', { relationships: [{ task_id: 'frame', type: 'SS' }] });
+
+    await change(container.querySelector('select[aria-label="Type of the new relationship"]'), 'FF');
+    await change(container.querySelector('#gantt-relationship-add'), 'loose');
+    expect(vi.mocked(planAPI.schedule)).toHaveBeenLastCalledWith('wiring', {
+      relationships: [
+        { task_id: 'frame', type: 'FS' },
+        { task_id: 'loose', type: 'FF' },
+      ],
+    });
   });
 
   it("shows a milestone's criteria, and saves a release milestone's through the release", async () => {

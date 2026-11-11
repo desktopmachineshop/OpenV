@@ -9,6 +9,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Relationships on the Gantt follow the standard types.** A task's **Depends on** is now **Relationships**, and each one is **finish to start**, **start to start** or **finish to finish**. A task can have several, so two tasks can together drive when a third starts, and the arrows on the chart join the ends each type names. Relationships you had already set are finish to start, as before.
+- **Find a task by typing.** **Sub-task of** and the task chooser under **Relationships** are searchable: type part of a task's name or its outline number, however long the plan.
+- **To-dos have moved off the Gantt.** The bars no longer carry a to-do count and the task's panel no longer lists them. Add and tick off a task's to-dos on its card on the **Board**, under **To-dos**; they still fill the task's bar.
+
 ## 0.32.0 — 2026-11-10
 
 ### New features

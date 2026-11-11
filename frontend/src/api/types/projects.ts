@@ -355,8 +355,19 @@ export interface PlanTask {
   subtasks_total: number;
   todos: PlanTaskTodo[];
   depends_on: string[];
-  /** The tasks it depends on that end on or after the day it starts. */
+  /** The tasks that drive this one, each with its type and whether the dates break it. */
+  relationships: PlanRelationship[];
+  /** The driving tasks whose relationship the dates break. */
   conflicts: string[];
+}
+
+/** FS: finish to start. SS: start to start. FF: finish to finish. */
+export type PlanRelationshipType = 'FS' | 'SS' | 'FF';
+
+export interface PlanRelationship {
+  task_id: string;
+  type: PlanRelationshipType;
+  conflict: boolean;
 }
 
 export interface PlanCriterion {
@@ -414,7 +425,7 @@ export interface ProjectPlan {
   end: string | null;
   tasks: PlanTask[];
   milestones: PlanMilestone[];
-  dependencies: { work_item_id: string; depends_on_id: string }[];
+  dependencies: { work_item_id: string; depends_on_id: string; type: PlanRelationshipType }[];
   metrics: PlanMetricValue[];
   metric_catalogue: PlanMetric[];
   summary: { tasks: number; done: number; late: number; unscheduled: number; progress: number };
@@ -425,6 +436,9 @@ export interface PlanScheduleInput {
   start_date?: string;
   due_date?: string;
   parent_id?: string;
+  /** Replaces the task's relationships to the tasks that drive it. */
+  relationships?: { task_id: string; type: PlanRelationshipType }[];
+  /** The earlier form: ids, each keeping the type it has. */
   depends_on?: string[];
 }
 

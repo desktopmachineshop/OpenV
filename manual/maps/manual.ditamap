@@ -123,6 +123,7 @@
   <topicref href="../topics/gantt/index.dita">
     <topicref href="../topics/gantt/reading-the-chart.dita"/>
     <topicref href="../topics/gantt/scheduling-tasks.dita"/>
+    <topicref href="../topics/gantt/relationships-between-tasks.dita"/>
     <topicref href="../topics/gantt/progress-from-to-dos-and-sub-tasks.dita"/>
     <topicref href="../topics/gantt/milestones-and-their-criteria.dita"/>
     <topicref href="../topics/gantt/release-milestones.dita"/>

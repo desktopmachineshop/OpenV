@@ -60,9 +60,8 @@ const TaskRow: React.FC<{ task: PlanTask; today: string; onOpen: () => void }> =
       <Bar value={t.progress} color={BAR_COLORS[tone].fill} label={`${t.progress}% complete`} />
       <span style={mutedStyle}>
         {spanLabel(t.span_start, t.span_end, today)} · {columnLabel(t.column)}
-        {t.todos_total > 0 ? ` · ${t.todos_done}/${t.todos_total} to-dos` : ''}
         {t.subtasks_total > 0 ? ` · ${t.subtasks_done}/${t.subtasks_total} sub-tasks` : ''}
-        {t.conflicts.length > 0 ? ' · overlaps a task it waits for' : ''}
+        {t.conflicts.length > 0 ? ' · its dates break a relationship' : ''}
       </span>
     </button>
   );

@@ -10,6 +10,11 @@ Every card is also a task of the project's plan: the **Gantt** page draws
 the cards on a timeline, with start dates, sub-tasks and dependencies. See
 [The plan (Gantt)](/manual/gantt).
 
+A card can carry **To-dos**: open the card, type one under **To-dos** and
+press **Add**, and tick it off when it is done. They are what fills the
+task's bar on the Gantt, and the **To-dos** page lists them with the
+project's others.
+
 ## Columns
 
 Backlog · To Do · In Progress · Review · Done. Each column shows its card

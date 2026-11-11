@@ -10,6 +10,6 @@
       <strow><stentry>Has to-dos or sub-tasks</stentry><stentry>The share of its to-dos ticked off, with each sub-task counting by its own progress</stentry></strow>
       <strow><stentry>Has neither</stentry><stentry>0% until it is moved to Done</stentry></strow>
     </simpletable>
-    <p>A to-do added on a task is one of the project's to-dos: the <b>To-dos</b> page lists it with the others, and ticking it off in either place moves the task's bar. A task with two of its four to-dos ticked is 50%; a task with one finished sub-task and one at 50% is 75%.</p>
+    <p>To-dos are not shown on the Gantt. Add and tick off a task's to-dos on its card: open the card on the <b>Board</b> and use <b>To-dos</b>. They are ordinary project to-dos, so the <b>To-dos</b> page lists them with the others, and ticking one off in either place moves the task's bar. A task with two of its four to-dos ticked is 50%; a task with one finished sub-task and one at 50% is 75%.</p>
   </conbody>
 </concept>

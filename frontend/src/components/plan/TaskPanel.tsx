@@ -1,12 +1,23 @@
 // One task of the plan, opened beside the chart (or in a sheet on a phone):
-// its dates, the task it is a sub-task of, what it depends on, and its
-// to-dos, whose ticks are what moves its progress.
-import React, { useEffect, useState } from 'react';
+// its dates, the task it is a sub-task of, its relationships to the tasks
+// that drive it, and its sub-tasks. Its to-dos are not here: they are ticked
+// off on the board's card, and the plan only counts them.
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { PlanScheduleInput, PlanTask, ProjectPlan } from '../../api/client';
-import { Chip, Meter, PanelHeader, buttonStyle, eyebrowStyle, mutedStyle, panelStyle } from '../ui';
+import type { PlanRelationshipType, PlanScheduleInput, PlanTask, ProjectPlan } from '../../api/client';
+import { Chip, Meter, PanelHeader, Picker, buttonStyle, eyebrowStyle, mutedStyle, panelStyle, type PickerOption } from '../ui';
 import { spanLabel } from './ganttScale';
-import { BAR_COLORS, TASK_TONE, barTone, columnLabel, dependents, descendants } from './planModel';
+import {
+  BAR_COLORS,
+  RELATIONSHIP_BROKEN,
+  RELATIONSHIP_TYPES,
+  TASK_TONE,
+  barTone,
+  columnLabel,
+  dependents,
+  descendants,
+  relationshipLabel,
+} from './planModel';
 
 export const fieldStyle: React.CSSProperties = {
   display: 'flex',
@@ -29,6 +40,14 @@ export const sectionStyle: React.CSSProperties = {
   borderBottom: '1px solid var(--border-soft)',
 };
 
+/** A task as a row of a searchable picker: found by its outline number or its title. */
+export const taskOption = (t: PlanTask, today: string): PickerOption => ({
+  value: t.id,
+  label: `${t.wbs} ${t.title}`,
+  meta: t.span_start ? spanLabel(t.span_start, t.span_end, today) : 'Not scheduled',
+  depth: t.depth,
+});
+
 export interface TaskPanelProps {
   plan: ProjectPlan;
   task: PlanTask;
@@ -37,8 +56,6 @@ export interface TaskPanelProps {
   editable: boolean;
   busy: boolean;
   onSchedule: (task: PlanTask, change: PlanScheduleInput) => void;
-  onAddTodo: (task: PlanTask, text: string) => void;
-  onTickTodo: (todoId: string, done: boolean) => void;
   onAddSubtask: (task: PlanTask, title: string) => void;
   onSelectTask: (task: PlanTask) => void;
   onClose: () => void;
@@ -70,34 +87,123 @@ const QuickAdd: React.FC<{ label: string; placeholder: string; busy: boolean; on
   );
 };
 
-export const TaskPanel: React.FC<TaskPanelProps> = ({
+/**
+ * A task's relationships: the tasks that drive it, each with its type (finish
+ * to start, start to start, finish to finish), and a searchable picker that
+ * adds another. Several may drive one task.
+ */
+const Relationships: React.FC<Pick<TaskPanelProps, 'plan' | 'task' | 'editable' | 'busy' | 'onSchedule' | 'onSelectTask'>> = ({
   plan,
   task,
-  projectId,
   editable,
   busy,
   onSchedule,
-  onAddTodo,
-  onTickTodo,
-  onAddSubtask,
   onSelectTask,
-  onClose,
 }) => {
+  const [type, setType] = useState<PlanRelationshipType>('FS');
+  const byId = useMemo(() => new Map(plan.tasks.map((t) => [t.id, t])), [plan.tasks]);
+  const current = task.relationships.map(({ task_id, type: kind }) => ({ task_id, type: kind }));
+  const candidates = useMemo(() => {
+    const loop = dependents(plan.tasks, task.id);
+    const has = new Set(task.depends_on);
+    return plan.tasks.filter((t) => !loop.has(t.id) && !has.has(t.id)).map((t) => taskOption(t, plan.today));
+  }, [plan.tasks, plan.today, task.id, task.depends_on]);
+  const save = (relationships: PlanScheduleInput['relationships']) => onSchedule(task, { relationships });
+
+  return (
+    <div style={sectionStyle} data-help-key="gantt.relationships">
+      <h3 style={eyebrowStyle}>Relationships · {task.relationships.length}</h3>
+      {task.relationships.length === 0 && <span style={mutedStyle}>None: no other task drives when this one starts or finishes.</span>}
+      {task.relationships.map((rel) => {
+        const on = byId.get(rel.task_id);
+        if (!on) return null;
+        return (
+          <div key={rel.task_id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button
+                type="button"
+                onClick={() => onSelectTask(on)}
+                style={{ flex: 1, minWidth: 0, padding: 0, border: 'none', background: 'none', font: 'inherit', color: 'var(--accent-text)', textAlign: 'left', cursor: 'pointer', overflowWrap: 'anywhere' }}
+              >
+                {on.wbs} {on.title}
+              </button>
+              {rel.conflict && (
+                <Chip tone="danger" title={RELATIONSHIP_BROKEN[rel.type]}>
+                  Broken
+                </Chip>
+              )}
+              {editable && (
+                <button
+                  type="button"
+                  disabled={busy}
+                  aria-label={`Remove the relationship to ${on.title}`}
+                  onClick={() => save(current.filter((r) => r.task_id !== rel.task_id))}
+                  style={buttonStyle('ghost', { compact: true, disabled: busy })}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+            {editable ? (
+              <select
+                value={rel.type}
+                disabled={busy}
+                aria-label={`Type of the relationship to ${on.title}`}
+                onChange={(e) => save(current.map((r) => (r.task_id === rel.task_id ? { ...r, type: e.target.value as PlanRelationshipType } : r)))}
+                style={inputStyle}
+              >
+                {RELATIONSHIP_TYPES.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label} ({r.value})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span style={mutedStyle}>{relationshipLabel(rel.type)}</span>
+            )}
+          </div>
+        );
+      })}
+      {editable && candidates.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 4 }}>
+          <label htmlFor="gantt-relationship-add" style={fieldStyle}>
+            Add a relationship
+          </label>
+          <select value={type} onChange={(e) => setType(e.target.value as PlanRelationshipType)} aria-label="Type of the new relationship" style={inputStyle}>
+            {RELATIONSHIP_TYPES.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label} ({r.value}): {r.hint.toLowerCase()}
+              </option>
+            ))}
+          </select>
+          <Picker
+            id="gantt-relationship-add"
+            value=""
+            options={candidates}
+            searchable
+            disabled={busy}
+            placeholder="Search for the task that drives this one…"
+            noneLabel="Choose a task…"
+            onChange={(id) => id && save([...current, { task_id: id, type }])}
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export const TaskPanel: React.FC<TaskPanelProps> = ({ plan, task, projectId, editable, busy, onSchedule, onAddSubtask, onSelectTask, onClose }) => {
   const [start, setStart] = useState(task.start || '');
   const [end, setEnd] = useState(task.end || '');
   useEffect(() => {
     setStart(task.start || '');
     setEnd(task.end || '');
   }, [task.id, task.start, task.end]);
-  // A tick shows at once; the plan's answer then replaces it.
-  const [ticked, setTicked] = useState<Record<string, boolean>>({});
-  useEffect(() => setTicked({}), [task.todos]);
 
-  const byId = new Map(plan.tasks.map((t) => [t.id, t]));
-  const below = descendants(plan.tasks, task.id);
-  const parents = plan.tasks.filter((t) => t.id !== task.id && !below.has(t.id));
-  const loop = dependents(plan.tasks, task.id);
-  const candidates = plan.tasks.filter((t) => !loop.has(t.id) && !task.depends_on.includes(t.id));
+  const parents = useMemo(() => {
+    const below = descendants(plan.tasks, task.id);
+    return plan.tasks.filter((t) => t.id !== task.id && !below.has(t.id)).map((t) => taskOption(t, plan.today));
+  }, [plan.tasks, plan.today, task.id]);
   const subtasks = plan.tasks.filter((t) => t.parent_id === task.id);
   const tone = barTone(task);
   const datesChanged = start !== (task.start || '') || end !== (task.end || '');
@@ -127,8 +233,13 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
           {task.done
             ? 'In Done on the board: 100%.'
             : task.todos_total + task.subtasks_total === 0
-              ? 'Progress comes from to-dos and sub-tasks: add some below, or move the card to Done.'
-              : `${task.todos_done} of ${task.todos_total} to-dos ticked off${task.subtasks_total ? `, ${task.subtasks_done} of ${task.subtasks_total} sub-tasks done` : ''}.`}
+              ? 'Progress comes from the to-dos on its board card and from its sub-tasks, or from moving the card to Done.'
+              : [
+                  task.todos_total ? `${task.todos_done} of ${task.todos_total} to-dos ticked off on its board card` : '',
+                  task.subtasks_total ? `${task.subtasks_done} of ${task.subtasks_total} sub-tasks done` : '',
+                ]
+                  .filter(Boolean)
+                  .join(', ') + '.'}
         </span>
       </div>
 
@@ -168,87 +279,22 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
             </button>
           </div>
         )}
-        <label style={fieldStyle}>
+        <label htmlFor="gantt-parent" style={fieldStyle}>
           Sub-task of
-          <select value={task.parent_id || ''} disabled={!editable || busy} onChange={(e) => onSchedule(task, { parent_id: e.target.value })} style={inputStyle}>
-            <option value="">No parent: a top-level task</option>
-            {parents.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.wbs} {t.title}
-              </option>
-            ))}
-          </select>
         </label>
+        <Picker
+          id="gantt-parent"
+          value={task.parent_id || ''}
+          options={parents}
+          searchable
+          disabled={!editable || busy}
+          noneLabel="No parent: a top-level task"
+          placeholder="Search for a task…"
+          onChange={(id) => onSchedule(task, { parent_id: id })}
+        />
       </div>
 
-      <div style={sectionStyle}>
-        <h3 style={eyebrowStyle}>Depends on · {task.depends_on.length}</h3>
-        {task.depends_on.length === 0 && <span style={mutedStyle}>Nothing: it can start at any time.</span>}
-        {task.depends_on.map((id) => {
-          const on = byId.get(id);
-          if (!on) return null;
-          const conflict = task.conflicts.includes(id);
-          return (
-            <div key={id} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <button
-                type="button"
-                onClick={() => onSelectTask(on)}
-                style={{ flex: 1, minWidth: 0, padding: 0, border: 'none', background: 'none', font: 'inherit', color: 'var(--accent-text)', textAlign: 'left', cursor: 'pointer', overflowWrap: 'anywhere' }}
-              >
-                {on.wbs} {on.title}
-              </button>
-              {conflict && <Chip tone="danger" title="This task starts before that one ends">Overlaps</Chip>}
-              {editable && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  aria-label={`Stop depending on ${on.title}`}
-                  onClick={() => onSchedule(task, { depends_on: task.depends_on.filter((d) => d !== id) })}
-                  style={buttonStyle('ghost', { compact: true, disabled: busy })}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-          );
-        })}
-        {editable && candidates.length > 0 && (
-          <select
-            value=""
-            disabled={busy}
-            aria-label="Add a task this one depends on"
-            style={inputStyle}
-            onChange={(e) => e.target.value && onSchedule(task, { depends_on: [...task.depends_on, e.target.value] })}
-          >
-            <option value="">Add a task this one waits for…</option>
-            {candidates.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.wbs} {t.title}
-              </option>
-            ))}
-          </select>
-        )}
-      </div>
-
-      <div style={sectionStyle}>
-        <h3 style={eyebrowStyle}>
-          To-dos · {task.todos_done}/{task.todos_total}
-        </h3>
-        {task.todos.map((td) => (
-          <label key={td.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', minHeight: 28, fontSize: 13, color: td.done ? 'var(--text-muted)' : 'var(--text)', cursor: editable ? 'pointer' : 'default' }}>
-            <input
-              type="checkbox"
-              checked={ticked[td.id] ?? td.done}
-              disabled={!editable || busy}
-              onChange={(e) => {
-                setTicked((t) => ({ ...t, [td.id]: e.target.checked }));
-                onTickTodo(td.id, e.target.checked);
-              }} style={{ width: 'auto', flex: 'none', margin: '3px 0 0' }} />
-            <span style={{ textDecoration: td.done ? 'line-through' : undefined, overflowWrap: 'anywhere' }}>{td.text}</span>
-          </label>
-        ))}
-        {editable && <QuickAdd label="New to-do" placeholder="Add a to-do to tick off" busy={busy} onAdd={(text) => onAddTodo(task, text)} />}
-      </div>
+      <Relationships plan={plan} task={task} editable={editable} busy={busy} onSchedule={onSchedule} onSelectTask={onSelectTask} />
 
       <div style={{ ...sectionStyle, borderBottom: 'none' }}>
         <h3 style={eyebrowStyle}>

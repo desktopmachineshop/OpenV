@@ -13,10 +13,10 @@
     <ul>
       <li>set or clear its <b>Start</b> and <b>Due</b> dates. The due date is the card's own, so the board shows the same day;</li>
       <li>make it a <b>sub-task of</b> another task, or a top-level task again;</li>
-      <li>choose the tasks it <b>depends on</b>: it should not start before they end;</li>
-      <li>add <b>to-dos</b> and tick them off;</li>
+      <li>set its <b>relationships</b> to the tasks that drive it;</li>
       <li>add <b>sub-tasks</b>.</li>
     </ul>
-    <p>A task cannot start after it is due, be a sub-task of one of its own sub-tasks, or depend on a task that already waits for it.</p>
+    <p><b>Sub-task of</b> and the task chooser under <b>Relationships</b> are searchable: open one and type part of a task's name or its outline number to narrow a long plan to the task you want.</p>
+    <p>A task cannot start after it is due, or be a sub-task of one of its own sub-tasks.</p>
   </conbody>
 </concept>

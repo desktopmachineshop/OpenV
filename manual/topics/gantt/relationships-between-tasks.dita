@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="relationships-between-tasks">
+  <title>Relationships between tasks</title>
+  <shortdesc>A relationship says how one task drives another. Each has one of the three types project plans use:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt.relationships"/>
+  </prolog>
+  <conbody>
+    <simpletable>
+      <sthead><stentry>Type</stentry><stentry>Meaning</stentry><stentry>The arrow</stentry></sthead>
+      <strow><stentry><b>Finish to start</b> (FS)</stentry><stentry>The task starts after the other finishes</stentry><stentry>From the other's end to the task's start</stentry></strow>
+      <strow><stentry><b>Start to start</b> (SS)</stentry><stentry>The task starts no earlier than the other starts</stentry><stentry>Joins the two starts</stentry></strow>
+      <strow><stentry><b>Finish to finish</b> (FF)</stentry><stentry>The task finishes no earlier than the other finishes</stentry><stentry>Joins the two ends</stentry></strow>
+    </simpletable>
+    <p>Under <b>Relationships</b> in a task's panel, choose a type and then the task that drives this one. A task can have several relationships, one to each task that drives it, so two tasks can together decide when a third starts: <i>Build the prototype</i> can wait for <i>Wheel guard design</i> and for <i>Electronics</i> to finish. Change a relationship's type in its row, or remove it with the cross.</p>
+    <p>OpenV does not move a task when its dates break a relationship. It marks the relationship <b>Broken</b>, draws its arrow dashed and red, and leaves the dates to you. A relationship to a task that is done is never broken. A relationship cannot be added to a task that this one already drives, since the two would wait on each other.</p>
+  </conbody>
+</concept>

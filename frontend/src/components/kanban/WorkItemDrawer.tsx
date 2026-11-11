@@ -7,6 +7,9 @@ import {
   workItemsAPI,
 } from '../../api/client';
 import { ExpandableText } from '../ExpandableText';
+import { GANTT_PLAN_FEATURE } from '../../features';
+import { useFeature } from '../../hooks/useFeature';
+import { WorkItemTodos } from './WorkItemTodos';
 import { ErrorBanner, buttonStyle, chipStyle, useConfirm } from '../ui';
 
 interface WorkItemDrawerProps {
@@ -44,6 +47,8 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
   onDeleted,
 }) => {
   const confirm = useConfirm();
+  // A card's to-dos count toward its task's progress on the plan.
+  const ganttPlan = useFeature(GANTT_PLAN_FEATURE);
   const [item, setItem] = useState<WorkItem | null>(null);
   const [activity, setActivity] = useState<WorkItemActivity[]>([]);
   const [error, setError] = useState('');
@@ -258,6 +263,8 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
             </Link>
           </div>
         )}
+
+        {ganttPlan && item && <WorkItemTodos workItemId={item.id} />}
 
         <label>Activity</label>
         <div style={{ marginBottom: 12 }}>

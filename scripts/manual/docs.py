@@ -167,6 +167,7 @@ SECTION_KEYS = {
     ('releases', 'the-burn-up'): ['releases.burnup'],
     ('gantt', 'reading-the-chart'): ['gantt.chart', 'gantt.summary'],
     ('gantt', 'scheduling-tasks'): ['gantt.task', 'gantt.add-task'],
+    ('gantt', 'relationships-between-tasks'): ['gantt.relationships'],
     ('gantt', 'milestones-and-their-criteria'): ['gantt.milestone', 'gantt.add-milestone'],
     ('gantt', 'exporting-the-plan'): ['gantt.export'],
     ('project-pages', 'home'): ['home', 'home.figures', 'home.needs', 'home.activity', 'home.projects', 'home.proposals'],

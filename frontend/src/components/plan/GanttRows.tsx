@@ -81,7 +81,7 @@ export const OutlineCell: React.FC<{
         {task.title}
       </button>
       <span
-        title={task.late ? 'Late' : task.conflicts.length > 0 ? 'Starts before a task it depends on ends' : undefined}
+        title={task.late ? 'Late' : task.conflicts.length > 0 ? 'Its dates break a relationship' : undefined}
         style={{ fontSize: 11, flexShrink: 0, color: task.late || task.conflicts.length > 0 ? 'var(--danger-strong)' : BAR_COLORS[tone].fill === 'var(--success)' ? 'var(--success-text)' : 'var(--text-muted)' }}
       >
         {task.conflicts.length > 0 && !task.late ? '⚠ ' : ''}
@@ -225,30 +225,53 @@ export const TaskBar: React.FC<{
         aria-hidden
         style={{ position: 'absolute', left: left + width + 6, top: 0, lineHeight: `${ROW_HEIGHT}px`, fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', pointerEvents: 'none' }}
       >
-        {drag ? spanLabel(start, end, today) : task.todos_total > 0 ? `${task.todos_done}/${task.todos_total} to-dos` : ''}
+        {drag ? spanLabel(start, end, today) : ''}
       </span>
     </>
   );
 };
 
-/** The arrows from each task to the tasks that wait on it, drawn over the rows. */
+/**
+ * The arrows between related tasks, drawn over the rows, each from the end
+ * of the driving task its type names to the end it drives: finish to start
+ * leaves the driver's right edge for the task's left edge, start to start
+ * joins the two left edges, finish to finish the two right edges. A broken
+ * relationship is dashed red.
+ */
 export const DependencyLines: React.FC<{ tasks: PlanTask[]; scale: Scale }> = ({ tasks, scale }) => {
   const row = new Map(tasks.map((t, i) => [t.id, i]));
   const byId = new Map(tasks.map((t) => [t.id, t]));
   const paths: { key: string; d: string; conflict: boolean }[] = [];
   for (const t of tasks) {
-    for (const dep of t.depends_on) {
-      const on = byId.get(dep);
-      if (!on || !on.span_end || !t.span_start) continue;
-      const x1 = scale.x(on.span_end) + scale.dayWidth;
+    for (const rel of t.relationships) {
+      const on = byId.get(rel.task_id);
+      if (!on || !on.span_start || !on.span_end || !t.span_start || !t.span_end) continue;
       const y1 = row.get(on.id)! * ROW_HEIGHT + ROW_HEIGHT / 2;
-      const x2 = scale.x(t.span_start);
       const y2 = row.get(t.id)! * ROW_HEIGHT + ROW_HEIGHT / 2;
-      const d =
-        x2 >= x1 + 14
-          ? `M${x1} ${y1} H${x1 + 7} V${y2} H${x2 - 1}`
-          : `M${x1} ${y1} H${x1 + 7} V${y1 + (y2 > y1 ? 1 : -1) * (ROW_HEIGHT / 2)} H${x2 - 9} V${y2} H${x2 - 1}`;
-      paths.push({ key: `${dep}>${t.id}`, d, conflict: t.conflicts.includes(dep) });
+      const left = (task: PlanTask) => scale.x(task.span_start!);
+      const right = (task: PlanTask) => Math.max(scale.x(task.span_end!) + scale.dayWidth, left(task) + 6);
+      let d: string;
+      if (rel.type === 'SS') {
+        // Out of the driver's start, down a gutter left of both, into the task's start.
+        const x1 = left(on);
+        const x2 = left(t);
+        const gutter = Math.min(x1, x2) - 8;
+        d = `M${x1} ${y1} H${gutter} V${y2} H${x2 - 1}`;
+      } else if (rel.type === 'FF') {
+        // Out of the driver's end, down a gutter right of both, back into the task's end.
+        const x1 = right(on);
+        const x2 = right(t);
+        const gutter = Math.max(x1, x2) + 8;
+        d = `M${x1} ${y1} H${gutter} V${y2} H${x2 + 1}`;
+      } else {
+        const x1 = right(on);
+        const x2 = left(t);
+        d =
+          x2 >= x1 + 14
+            ? `M${x1} ${y1} H${x1 + 7} V${y2} H${x2 - 1}`
+            : `M${x1} ${y1} H${x1 + 7} V${y1 + (y2 > y1 ? 1 : -1) * (ROW_HEIGHT / 2)} H${x2 - 9} V${y2} H${x2 - 1}`;
+      }
+      paths.push({ key: `${rel.task_id}>${t.id}`, d, conflict: rel.conflict });
     }
   }
   if (paths.length === 0) return null;

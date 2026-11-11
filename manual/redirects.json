@@ -105,6 +105,7 @@
   "/manual/gantt": "topics/gantt/index",
   "/manual/gantt#reading-the-chart": "topics/gantt/reading-the-chart",
   "/manual/gantt#scheduling-tasks": "topics/gantt/scheduling-tasks",
+  "/manual/gantt#relationships-between-tasks": "topics/gantt/relationships-between-tasks",
   "/manual/gantt#progress-from-to-dos-and-sub-tasks": "topics/gantt/progress-from-to-dos-and-sub-tasks",
   "/manual/gantt#milestones-and-their-criteria": "topics/gantt/milestones-and-their-criteria",
   "/manual/gantt#release-milestones": "topics/gantt/release-milestones",

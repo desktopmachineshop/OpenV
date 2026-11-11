@@ -211,6 +211,8 @@ export const planAPI = {
   /** A to-do raised on a task, which counts toward its progress. */
   addTodo: (workItemId: string, text: string) =>
     client.post<Todo>(`/api/v1/work-items/${workItemId}/todos`, { text }),
+  /** The to-dos on a task, open ones first: what its board card lists. */
+  listTodos: (workItemId: string) => client.get<Todo[]>(`/api/v1/work-items/${workItemId}/todos`),
   createMilestone: (projectId: string, payload: PlanMilestoneInput) =>
     client.post<StoredPlanMilestone>(`/api/v1/projects/${projectId}/plan/milestones`, payload),
   updateMilestone: (projectId: string, milestoneId: string, payload: PlanMilestoneInput) =>

@@ -28,6 +28,7 @@ const task = (id: string, extra: Partial<PlanTask> = {}): PlanTask => ({
   subtasks_total: 0,
   todos: [],
   depends_on: [],
+  relationships: [],
   conflicts: [],
   ...extra,
 });

@@ -1,6 +1,7 @@
 // The Plan page: a project's plan as a Gantt. Its tasks are the board's
-// cards, drawn on a timeline with their sub-tasks, dependencies and progress
-// (from to-dos ticked off and sub-tasks done); its milestones are the
+// cards, drawn on a timeline with their sub-tasks, their relationships
+// (finish to start, start to start, finish to finish) and progress (from the
+// to-dos ticked off on the card and sub-tasks done); its milestones are the
 // project's releases and the ones the team adds, each with criteria measured
 // from the project's artifacts, and the band between two milestones fills
 // with the later one's progress. See internal/domain/plan.
@@ -21,7 +22,6 @@ import {
   PlanScheduleInput,
   PlanTask,
   ProjectPlan,
-  todosAPI,
   workItemsAPI,
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
@@ -208,8 +208,6 @@ const PlanPage: React.FC = () => {
       editable
       busy={busy}
       onSchedule={schedule}
-      onAddTodo={(t, text) => run(() => planAPI.addTodo(t.id, text), 'Failed to add the to-do')}
-      onTickTodo={(id, done) => run(() => todosAPI.setDone(id, done), 'Failed to save the to-do')}
       onAddSubtask={(t, title) => addTask({ title, start: '', end: '' }, t.id)}
       onSelectTask={openTask}
       onClose={close}
@@ -292,7 +290,7 @@ const PlanPage: React.FC = () => {
             </div>
           )}
           <p style={{ ...mutedStyle, margin: 0, padding: '8px 12px', borderTop: '1px solid var(--border-soft)' }}>
-            A task's bar fills as its to-dos are ticked off and its sub-tasks finish. A milestone's band fills as its
+            A task's bar fills as the to-dos on its board card are ticked off and its sub-tasks finish. A milestone's band fills as its
             criteria are met. {coarsePointer ? 'Select a task to set its dates.' : 'Drag a bar to move it, or an end to resize it.'}
           </p>
         </section>
