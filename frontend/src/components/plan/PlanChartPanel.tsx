@@ -2,10 +2,10 @@
 // working days, the critical path switch, Today and the zoom; the chart; the
 // milestones that have no date yet; and a line on how to use it.
 import React, { useState } from 'react';
-import type { PlanMilestone, PlanSettings, ProjectPlan } from '../../api/client';
-import { PanelHeader, SegmentedControl, buttonStyle, mutedStyle, panelStyle } from '../ui';
+import type { PlanMilestone, ProjectPlan } from '../../api/client';
+import { Modal, PanelHeader, SegmentedControl, buttonStyle, mutedStyle, panelStyle } from '../ui';
 import { GanttChart, type GanttChartProps } from './GanttChart';
-import { PlanCalendar } from './PlanCalendar';
+import { PlanCalendar, type PlanSettingsChange } from './PlanCalendar';
 import { WorkingDays } from './WorkingDays';
 import { ZOOMS, Zoom } from './ganttScale';
 
@@ -15,9 +15,9 @@ export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'sho
   onZoom: (zoom: Zoom) => void;
   onWorkingDays: (days: number[]) => void;
   /** Changes the plan's holidays or critical threshold. */
-  onSettings: (change: Partial<PlanSettings>) => void;
-  /** Moves the driven tasks to the dates their relationships ask for. */
-  onRecalculate: () => void;
+  onSettings: (change: PlanSettingsChange) => void;
+  /** Moves the placed tasks to the dates their relationships and constraints ask for; onlyLater never moves one earlier. */
+  onRecalculate: (onlyLater: boolean) => void;
   onSelectMilestone: (m: PlanMilestone) => void;
 }
 
@@ -25,6 +25,8 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
   const [showCritical, setShowCritical] = useState(true);
   const [onlyCritical, setOnlyCritical] = useState(false);
   const [calendar, setCalendar] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
+  const [onlyLater, setOnlyLater] = useState(false);
   const [todaySignal, setTodaySignal] = useState(0);
   const undated = plan.milestones.filter((m) => !m.date);
   const openMilestone = onSelectMilestone;
@@ -36,13 +38,14 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
             action={
               <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <WorkingDays days={plan.working_days} busy={busy} onChange={onWorkingDays} />
-                <button type="button" onClick={() => setCalendar(true)} data-help-key="gantt.holidays" title="Holidays, and when a task counts as critical" style={buttonStyle('secondary', { compact: true })}>
-                  Holidays{plan.holidays.length ? ` · ${plan.holidays.length}` : ''}
+                <button type="button" onClick={() => setCalendar(true)} data-help-key="gantt.holidays" title="Holidays, how the plan is scheduled, and when a task counts as critical" style={buttonStyle('secondary', { compact: true })}>
+                  Calendar{plan.holidays.length ? ` · ${plan.holidays.length}` : ''}
+                  {plan.scheduling_mode === 'auto' ? ' · auto' : ''}
                 </button>
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={onRecalculate}
+                  onClick={() => setRecalculating(true)}
                   data-help-key="gantt.recalculate"
                   title="Move each task that another drives to the dates its relationships and their offsets ask for"
                   style={buttonStyle('secondary', { compact: true, disabled: busy })}
@@ -82,6 +85,38 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
             }
           />
           <GanttChart {...chart} plan={plan} zoom={zoom} busy={busy} touch={touch} onSelectMilestone={onSelectMilestone} showCritical={showCritical} onlyCritical={showCritical && onlyCritical} todaySignal={todaySignal} />
+          {recalculating && (
+            <Modal title="Recalculate the plan" width={440} onClose={() => setRecalculating(false)}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13 }}>
+                <span>
+                  Move every task that another task drives, or that a constraint holds to a date, to the dates those ask for? Each keeps its duration. Tasks nothing places, and tasks that are done, stay where they are.
+                </span>
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                  <input type="checkbox" checked={onlyLater} onChange={(e) => setOnlyLater(e.target.checked)} style={{ width: 'auto', flex: 'none', margin: '3px 0 0' }} />
+                  <span>
+                    Only move tasks later
+                    <span style={{ ...mutedStyle, display: 'block' }}>Relationships are minimums: a task that already starts on or after the day asked is left where it is.</span>
+                  </span>
+                </label>
+                <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={() => setRecalculating(false)} style={buttonStyle('secondary')}>
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    data-recalculate-confirm
+                    onClick={() => {
+                      setRecalculating(false);
+                      onRecalculate(onlyLater);
+                    }}
+                    style={buttonStyle('primary')}
+                  >
+                    Recalculate
+                  </button>
+                </div>
+              </div>
+            </Modal>
+          )}
           {calendar && <PlanCalendar plan={plan} busy={busy} onChange={onSettings} onClose={() => setCalendar(false)} />}
           {undated.length > 0 && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', borderTop: '1px solid var(--border-soft)' }}>

@@ -149,19 +149,11 @@ const PlanPage: React.FC = () => {
   const relate = (taskId: string, otherId: string, view: RelationshipView, lagDays = 0, lagUnit: PlanLagUnit = 'd') =>
     run(() => planAPI.relate(taskId, otherId, view.type, view.direction, lagDays, lagUnit), 'Failed to relate the tasks');
 
-  /** Moves the driven tasks to what their relationships ask, once the reader agrees, and says how many moved. */
-  const recalculate = async () => {
-    const ok = await confirm({
-      title: 'Recalculate the plan',
-      message:
-        'Move every task that another task drives to the dates its relationships and their offsets ask for? Each keeps its duration. Tasks nothing drives, and tasks that are done, stay where they are.',
-      confirmLabel: 'Recalculate',
-    });
-    if (!ok) return;
+  /** Moves the placed tasks to what their relationships and constraints ask, and says how many moved. */
+  const recalculate = async (onlyLater: boolean) => {
     setNote('');
     await run(async () => {
-      const res = await planAPI.recalculate(projectId);
-      const n = res.data.moved;
+      const n = (await planAPI.recalculate(projectId, onlyLater)).data.moved;
       setNote(n === 0 ? 'Nothing moved: every task already sits where its relationships ask.' : `${n} ${n === 1 ? 'task' : 'tasks'} moved.`);
     }, 'Failed to recalculate the plan');
   };

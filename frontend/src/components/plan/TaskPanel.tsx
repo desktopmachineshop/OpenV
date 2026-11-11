@@ -9,6 +9,7 @@ import type { PlanScheduleInput, PlanTask, ProjectPlan } from '../../api/client'
 import { Chip, Meter, PanelHeader, Picker, buttonStyle, eyebrowStyle, mutedStyle, panelStyle, type PickerOption } from '../ui';
 import { shortDate, spanLabel } from './ganttScale';
 import { TaskRelationships, type TaskRelationshipsProps } from './TaskRelationships';
+import { TaskScheduling } from './TaskScheduling';
 import { BAR_COLORS, TASK_TONE, WEEKDAYS, barTone, columnLabel, descendants, workEnd, workSpan, workStart } from './planModel';
 
 export const fieldStyle: React.CSSProperties = {
@@ -380,7 +381,9 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
         </span>
         {task.float_days !== null && !task.done && task.subtasks_total === 0 && (
           <span style={mutedStyle}>
-            {task.critical && task.float_days > 0
+            {task.float_days < 0
+              ? `${plural(-task.float_days, 'working day')} behind: it runs past its deadline, its constraint, the plan's finish or a relationship it drives.`
+              : task.critical && task.float_days > 0
               ? `On the critical path, with ${plural(task.float_days, 'working day')} of float before it pushes the next task.`
               : task.critical
               ? "No float: it is on the critical path, so a day's slip moves the end of the plan by a day."
@@ -418,6 +421,8 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
           onChange={(id) => onSchedule(task, { parent_id: id })}
         />
       </div>
+
+      {task.subtasks_total === 0 && <TaskScheduling plan={plan} task={task} editable={editable} busy={busy} onSchedule={onSchedule} />}
 
       <div style={sectionStyle} data-help-key="gantt.task-milestone">
         <label htmlFor="gantt-task-milestone" style={fieldStyle}>
