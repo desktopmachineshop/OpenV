@@ -26,7 +26,7 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 		SELECT work_item_id, project_id, to_char(start_date, 'YYYY-MM-DD'), parent_id, duration_days, effort_days, milestone_key,
 			elapsed, to_char(deadline, 'YYYY-MM-DD'), mode, constraint_type, to_char(constraint_date, 'YYYY-MM-DD'),
 			fixed_cost, effort_driven, to_char(actual_start, 'YYYY-MM-DD'), to_char(actual_finish, 'YYYY-MM-DD'),
-			percent_complete, actual_cost
+			percent_complete, actual_cost, sort_order
 		FROM plan_tasks WHERE project_id = $1 ORDER BY work_item_id`, projectID)
 	if err != nil {
 		return nil, err
@@ -36,12 +36,12 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 	for rows.Next() {
 		s := &plan.TaskSchedule{}
 		var start, parent, milestone, deadline, constraint, actualStart, actualFinish sql.NullString
-		var percent sql.NullInt64
+		var percent, order sql.NullInt64
 		var actualCost sql.NullFloat64
 		var duration sql.NullInt64
 		var effort sql.NullFloat64
 		if err := rows.Scan(&s.WorkItemID, &s.ProjectID, &start, &parent, &duration, &effort, &milestone, &s.Elapsed, &deadline, &s.Mode, &s.ConstraintType, &constraint, &s.FixedCost, &s.EffortDriven,
-			&actualStart, &actualFinish, &percent, &actualCost); err != nil {
+			&actualStart, &actualFinish, &percent, &actualCost, &order); err != nil {
 			return nil, err
 		}
 		if duration.Valid {
@@ -76,6 +76,10 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 		if actualCost.Valid {
 			s.ActualCost = &actualCost.Float64
 		}
+		if order.Valid {
+			n := int(order.Int64)
+			s.SortOrder = &n
+		}
 		if milestone.Valid && milestone.String != "" {
 			s.MilestoneKey = &milestone.String
 		}
@@ -105,6 +109,21 @@ func (r *PlanRepository) SaveSchedule(s *plan.TaskSchedule) error {
 		nullableString(s.ConstraintDate), s.FixedCost, s.EffortDriven,
 		nullableString(s.ActualStart), nullableString(s.ActualFinish), optInt(s.PercentComplete), optFloat(s.ActualCost))
 	return err
+}
+
+// SetOrder numbers tasks among their siblings; 0 clears a task's place. A
+// task with no row of the plan yet gets one.
+func (r *PlanRepository) SetOrder(projectID string, order map[string]int) error {
+	return withTx(context.Background(), r.db, nil, func(tx *sql.Tx) error {
+		for id, n := range order {
+			if _, err := tx.Exec(`
+				INSERT INTO plan_tasks (work_item_id, project_id, sort_order, updated_at) VALUES ($1, $2, $3, NOW())
+				ON CONFLICT (work_item_id) DO UPDATE SET sort_order = EXCLUDED.sort_order`, id, projectID, sql.NullInt64{Int64: int64(n), Valid: n > 0}); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
 }
 
 // Settings returns the plan's calendar, critical threshold and scheduling

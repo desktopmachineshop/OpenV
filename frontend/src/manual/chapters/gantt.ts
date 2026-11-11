@@ -130,6 +130,18 @@ under it:
 - If the critical path runs through its sub-tasks, the folded task carries
   the amber critical marks.
 
+## Listing, ordering and editing tasks
+
+The bar under the chart's header changes how the tasks are listed. It changes nothing in the plan itself.
+
+- **Find a task** lists the tasks whose name contains what you type.
+- The **filter** lists only tasks that are not done, late, critical, behind the status date, not scheduled or over-allocated. In the outline, a task that matches keeps the tasks it sits under.
+- **Sort** lists the tasks by start, finish, name, float or progress instead of the outline, and **Group** gathers them under who does them, their milestone or their board column. A sorted or grouped list is flat: it shows the tasks that have no sub-tasks.
+- **Columns** adds columns beside the task names: start, finish, days, effort, % done, float, cost and who. Click a start, finish, days, effort or % done cell to change it in place; press Enter to save or Escape to give up. A task with sub-tasks takes these from them, so its cells are not edited.
+
+**Moving a task.** Sub-tasks and top-level tasks are listed by start date until you move one; from then on its siblings keep the order you give them. Select a task and use the arrows: **↑** and **↓** move it among its siblings, **⇥** makes it a sub-task of the task above, and **⇤** moves it out a level, after its parent. You can also drag a task by its outline number onto another task to put it straight after that one. Moving needs the outline, so the arrows are off while the list is sorted or grouped.
+
+**Undo and redo.** **Undo** (Ctrl+Z) takes back your last edit to a task: its dates, duration, effort, progress, parent, order and the other fields of its panel. **Redo** (Ctrl+Y) makes it again. Up to 50 edits are kept until you leave the page. Relationships drawn on the chart, milestones and the plan's settings are not undone this way, and on an automatic plan the tasks an edit moved are placed again from where they now stand. 
 ## Working days
 
 **Working days**, above the chart, has a button for each day of the week.
@@ -412,38 +424,17 @@ in red when it is over.
 
 ## Tracking progress against a baseline
 
-**Tracking**, above the chart, is where you compare the plan with what
-was agreed and with what has happened.
+**Tracking**, above the chart, is where you compare the plan with what was agreed and with what has happened.
 
-**Baselines.** **Save a baseline** records every task's dates, duration,
-effort and cost as they stand. Save one when the plan is agreed. The
-chart then draws a thin grey bar under each task where the baseline had
-it, and the task's panel says how many working days later or earlier it
-now starts and finishes. A plan keeps up to 11 baselines. Pick the one
-to measure against in the list; the newest is used until you do.
-**Show on the chart** hides the grey bars.
+**Baselines.** **Save a baseline** records every task's dates, duration, effort and cost as they stand. Save one when the plan is agreed. The chart then draws a thin grey bar under each task where the baseline had it, and the task's panel says how many working days later or earlier it now starts and finishes. A plan keeps up to 11 baselines. Pick the one to measure against in the list; the newest is used until you do. **Show on the chart** hides the grey bars.
 
-**What happened.** A task's panel has a **Tracking** section. **Actual
-start** and **Actual finish** record the days work really began and
-ended. **% complete** replaces the progress counted from to-dos and
-sub-tasks with a figure you type; clear it to go back to the counted
-one. **Actual cost** records what the task has cost so far; left empty,
-the task is taken to have cost its earned share of the planned cost.
+**What happened.** A task's panel has a **Tracking** section. **Actual start** and **Actual finish** record the days work really began and ended. **% complete** replaces the progress counted from to-dos and sub-tasks with a figure you type; clear it to go back to the counted one. **Actual cost** records what the task has cost so far; left empty, the task is taken to have cost its earned share of the planned cost.
 
-**The status date.** Progress is reported as of today unless you set a
-**Status date**. A dashed line marks it on the chart. A task that has
-done less than the status date asks is marked *Behind* in its panel.
+**The status date.** Progress is reported as of today unless you set a **Status date**. A dashed line marks it on the chart. A task that has done less than the status date asks is marked *Behind* in its panel.
 
-**Earned value.** With a baseline and costs on the plan, Tracking shows
-the baseline's budget, what was planned and earned by the status date,
-what was spent, the schedule and cost variances, the two indices (below
-1 is behind, or over cost) and the forecast cost at the present rate.
+**Earned value.** With a baseline and costs on the plan, Tracking shows the baseline's budget, what was planned and earned by the status date, what was spent, the schedule and cost variances, the two indices (below 1 is behind, or over cost) and the forecast cost at the present rate.
 
-**Reschedule remaining work** moves every task that should have started
-by the status date and has not to that date, keeping its duration, and
-moves the tasks those drive after them. Tasks with progress or an
-actual start stay where they are.
-
+**Reschedule remaining work** moves every task that should have started by the status date and has not to that date, keeping its duration, and moves the tasks those drive after them. Tasks with progress or an actual start stay where they are. 
 ## Progress from to-dos and sub-tasks
 
 A task's progress is worked out, so it never goes stale:
@@ -539,7 +530,9 @@ that release. A release marked **Released** is met.
 
 - **PDF**: the chart on landscape pages, with the outline, dates, bars,
   the lines between related tasks, milestones and today's line, then the
-  milestones with their criteria.
+  milestones with their criteria. Each page ends with a legend. A line
+  to a task on another page runs to the edge of the page and names that
+  task's number and page, as in *→ 2.1 p.2*.
 - **Excel**: the tasks with a timeline of weeks drawn beside them, and the
   milestones on a second sheet.
 - **CSV**: the tasks, then the milestones and their criteria.

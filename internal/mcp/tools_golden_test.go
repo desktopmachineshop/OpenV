@@ -161,7 +161,7 @@ func toolGoldenArgs() map[string]map[string]interface{} {
 		"reschedule_remaining_work": {"project_id": goldenProjectID},
 		"set_plan_working_days":     {"project_id": goldenProjectID, "working_days": []interface{}{"1", "2", "3", "4", "6"}},
 		"schedule_work_item": {"id": goldenWorkItemID, "start_date": "2027-01-11", "due_date": "2027-01-31", "duration_days": "21", "effort_days": "7.5", "parent_id": goldenDelegateRunID, "milestone": "release:" + goldenDelegateRunID, "deadline": "2027-02-15", "elapsed": "true", "mode": "auto", "constraint_type": "snet", "constraint_date": "2027-01-11",
-			"assignments": []interface{}{"user:" + goldenAgentID + ":50", "agent:" + goldenDelegateRunID}, "fixed_cost": "250", "effort_driven": "true", "actual_start": "2027-01-12", "actual_finish": "2027-02-01", "percent_complete": "40", "actual_cost": "1200",
+			"assignments": []interface{}{"user:" + goldenAgentID + ":50", "agent:" + goldenDelegateRunID}, "fixed_cost": "250", "effort_driven": "true", "actual_start": "2027-01-12", "actual_finish": "2027-02-01", "percent_complete": "40", "actual_cost": "1200", "after_id": goldenAgentID,
 			"relationships": []interface{}{goldenDelegateRunID + ":SS:5ed", goldenAgentID + ":SF:50%"},
 			"depends_on":    []interface{}{goldenDelegateRunID}},
 	}

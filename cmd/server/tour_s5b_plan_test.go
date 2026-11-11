@@ -189,6 +189,9 @@ func planTour(tr *tour) {
 	tr.step("the viewer may not level: 403", viewer, level, at("id", "{{p}}"))
 	tr.setup("Wiring unassigned, with no fixed cost, its duration its own again", o, schedule, at("id", "{{wiring}}"),
 		jsonBody(`{"assignments":[],"fixed_cost":0,"effort_driven":false}`))
+	tr.step("Wiring moved to the top of Build's sub-tasks", o, schedule, at("id", "{{wiring}}"), jsonBody(`{"after_id":""}`))
+	tr.step("after a task that is not its sibling: 400", o, schedule, at("id", "{{wiring}}"), jsonBody(`{"after_id":"{{order}}"}`))
+	tr.setup("Wiring after Frame again", o, schedule, at("id", "{{wiring}}"), jsonBody(`{"after_id":"{{frame}}"}`))
 	baselines := "POST /api/v1/projects/{id}/plan/baselines"
 	tr.step("a baseline of the plan as it stands", o, baselines, at("id", "{{p}}"), jsonBody(`{"name":"As approved"}`)).capture("bl", "/id")
 	tr.step("the viewer may not save one: 403", viewer, baselines, at("id", "{{p}}"), jsonBody(`{}`))

@@ -1,5 +1,8 @@
 import type { PlanMilestone, PlanTask } from '../../api/client';
 import { FIT_MARGIN, buildScale, buildTicks, fitZoom, fromDay, isoWeekday, openingScroll, shortDate, spanLabel, toDay, todayScroll, unitSpan } from './ganttScale';
+import { inverseOf } from './planHistory';
+import { DEFAULT_VIEW, arrange, moveChange } from './planView';
+import type { ProjectPlan } from '../../api/client';
 import { barTone, dependents, descendants, lagText, linkBetween, phoneGroups, shownAs, visibleTasks, workEnd, workSpan, workStart, worksOn } from './planModel';
 
 // The plan's pure parts: the time scale the chart draws on, and what the
@@ -263,5 +266,44 @@ describe('the plan model', () => {
     // A milestone with nothing due before it still shows; an empty tail does not.
     expect(phoneGroups([], [milestone('m1', '2027-03-01')]).map((g) => g.key)).toEqual(['m1']);
     expect(phoneGroups([task('x', { span_end: '2027-01-01' })], [])[0].title).toBe('Scheduled');
+  });
+});
+
+describe('the chart\'s view of the plan', () => {
+  const tasks = [
+    task('a', { title: 'Alpha', wbs: '1', subtasks_total: 2 }),
+    task('a1', { title: 'Cut', wbs: '1.1', parent_id: 'a', depth: 1, span_start: '2027-03-08', span_end: '2027-03-09', late: true, column: 'done' }),
+    task('a2', { title: 'Weld', wbs: '1.2', parent_id: 'a', depth: 1, span_start: '2027-03-01', span_end: '2027-03-02' }),
+    task('b', { title: 'Beta', wbs: '2' }),
+  ];
+  const plan = { tasks, people: [], milestones: [] } as unknown as ProjectPlan;
+  const ids = (view: Partial<typeof DEFAULT_VIEW>, folded: string[] = []) => arrange(plan, new Set(folded), { ...DEFAULT_VIEW, ...view }).map((r) => r.id);
+
+  it('is the outline until it is sorted or grouped, and a match keeps the tasks it sits under', () => {
+    expect(ids({})).toEqual(['a', 'a1', 'a2', 'b']);
+    expect(ids({}, ['a'])).toEqual(['a', 'b']);
+    expect(ids({ filter: 'late' })).toEqual(['a', 'a1']);
+    expect(ids({ search: 'wel' })).toEqual(['a', 'a2']);
+  });
+
+  it('lists the tasks without sub-tasks flat when sorted, and under headings when grouped', () => {
+    expect(ids({ sort: 'start' })).toEqual(['a2', 'a1', 'b']);
+    expect(ids({ group: 'status' })).toEqual(['group:Done', 'a1', 'group:To Do', 'a2', 'b']);
+  });
+
+  it('moves a task among its siblings, in and out', () => {
+    expect(moveChange(tasks, 'a2', 'up')).toEqual({ after_id: '' });
+    expect(moveChange(tasks, 'a1', 'down')).toEqual({ after_id: 'a2' });
+    expect(moveChange(tasks, 'a1', 'up')).toBeNull();
+    expect(moveChange(tasks, 'b', 'indent')).toEqual({ parent_id: 'a' });
+    expect(moveChange(tasks, 'a2', 'outdent')).toEqual({ parent_id: '', after_id: 'a' });
+    expect(moveChange(tasks, 'b', 'outdent')).toBeNull();
+  });
+
+  it('knows what puts a task back', () => {
+    const t = task('t', { start: '2027-03-01', end: '2027-03-05', percent_complete: null, parent_id: 'a' });
+    expect(inverseOf([...tasks, t], t, { start_date: '2027-03-08' })).toEqual({ start_date: '2027-03-01', due_date: '2027-03-05' });
+    expect(inverseOf([...tasks, t], t, { percent_complete: 50 })).toEqual({ percent_complete: -1 });
+    expect(inverseOf([...tasks, t], t, { parent_id: '' })).toEqual({ parent_id: 'a', after_id: 'a2' });
   });
 });

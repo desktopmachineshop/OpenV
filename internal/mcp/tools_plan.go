@@ -58,6 +58,7 @@ func planTools() []Tool {
 				"actual_finish":    str("The day work really finished, YYYY-MM-DD; an empty string clears it"),
 				"percent_complete": str("How complete the task is, \"0\" to \"100\", in place of the progress counted from its to-dos and sub-tasks; \"-1\" goes back to the counted progress"),
 				"actual_cost":      str("What the task has really cost so far; \"-1\" goes back to its earned share of the planned cost"),
+				"after_id":         str("Work item ID of the sibling task this one goes straight after in the outline; an empty string makes it the first of its siblings. Siblings are otherwise listed by start date"),
 				"milestone":        str("Key of the milestone the task is assigned to, as get_plan lists it (a milestone's id, or \"release:<release id>\"); an empty string takes it off. The milestone then counts the task among its tasks done"),
 				"relationships":    strList("The tasks that drive this one, each \"<work item id>:FS\", \":SS\", \":FF\" or \":SF\", with an optional offset after it as in \"<id>:SS:5\" (working days; negative leads), \"<id>:FS:3ed\" (elapsed days) or \"<id>:SS:50%\" (of the driving task's duration); replaces the task's relationships"),
 				"depends_on":       strList("Earlier form of relationships: work item IDs, each finish to start unless it already has a type"),
@@ -111,7 +112,7 @@ func planTools() []Tool {
 // as the schedule route reads them.
 func scheduleWorkItem(c *Client, args map[string]interface{}) (string, error) {
 	body := map[string]interface{}{}
-	for _, key := range []string{"start_date", "due_date", "parent_id", "milestone", "deadline", "mode", "constraint_type", "constraint_date", "actual_start", "actual_finish"} {
+	for _, key := range []string{"start_date", "due_date", "parent_id", "milestone", "deadline", "mode", "constraint_type", "constraint_date", "actual_start", "actual_finish", "after_id"} {
 		if _, set := args[key]; set {
 			body[key] = strArg(args, key)
 		}

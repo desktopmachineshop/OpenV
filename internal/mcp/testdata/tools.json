@@ -760,6 +760,10 @@
             "description": "The day work really started, YYYY-MM-DD; an empty string clears it",
             "type": "string"
           },
+          "after_id": {
+            "description": "Work item ID of the sibling task this one goes straight after in the outline; an empty string makes it the first of its siblings. Siblings are otherwise listed by start date",
+            "type": "string"
+          },
           "assignments": {
             "description": "Who the task is assigned to on the plan, each \"user:<id>\" or \"agent:<id>\", with an optional share of their time after it as in \"user:<id>:50\" (percent; 100 when left out); replaces the task's assignments, and an empty list leaves it to the board's assignee",
             "items": {"type": "string"},
@@ -835,7 +839,7 @@
       },
       "calls": ["PUT /api/v1/work-items/{id}/schedule"],
       "requests": [
-        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"actual_cost\":1200,\"actual_finish\":\"2027-02-01\",\"actual_start\":\"2027-01-12\",\"assignments\":[{\"id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"user\",\"units\":50},{\"id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"agent\"}],\"constraint_date\":\"2027-01-11\",\"constraint_type\":\"snet\",\"deadline\":\"2027-02-15\",\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"duration_days\":21,\"effort_days\":7.5,\"effort_driven\":true,\"elapsed\":true,\"fixed_cost\":250,\"milestone\":\"release:99999999-9999-4999-8999-999999999999\",\"mode\":\"auto\",\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"percent_complete\":40,\"relationships\":[{\"lag_days\":5,\"lag_unit\":\"ed\",\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"lag_days\":50,\"lag_unit\":\"%\",\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"SF\"}],\"start_date\":\"2027-01-11\"}"
+        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"actual_cost\":1200,\"actual_finish\":\"2027-02-01\",\"actual_start\":\"2027-01-12\",\"after_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"assignments\":[{\"id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"user\",\"units\":50},{\"id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"agent\"}],\"constraint_date\":\"2027-01-11\",\"constraint_type\":\"snet\",\"deadline\":\"2027-02-15\",\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"duration_days\":21,\"effort_days\":7.5,\"effort_driven\":true,\"elapsed\":true,\"fixed_cost\":250,\"milestone\":\"release:99999999-9999-4999-8999-999999999999\",\"mode\":\"auto\",\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"percent_complete\":40,\"relationships\":[{\"lag_days\":5,\"lag_unit\":\"ed\",\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"lag_days\":50,\"lag_unit\":\"%\",\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"SF\"}],\"start_date\":\"2027-01-11\"}"
       ]
     },
     {

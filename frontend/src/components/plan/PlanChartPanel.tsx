@@ -6,12 +6,15 @@ import type { PlanMilestone, PlanResourceLoad, ProjectPlan } from '../../api/cli
 import { Modal, PanelHeader, SegmentedControl, buttonStyle, mutedStyle, panelStyle } from '../ui';
 import { GanttChart, type GanttChartProps } from './GanttChart';
 import { PlanCalendar, type PlanSettingsChange } from './PlanCalendar';
+import type { PlanHistory } from './planHistory';
 import { PlanResources } from './PlanResources';
+import { PlanViewBar } from './PlanViewBar';
+import { DEFAULT_VIEW, columnsWidth } from './planView';
 import { PlanTracking, type TrackingAction } from './PlanTracking';
 import { WorkingDays } from './WorkingDays';
 import { ZOOMS, Zoom } from './ganttScale';
 
-export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'showCritical' | 'todaySignal' | 'onSelectMilestone' | 'showBaseline'> {
+export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'showCritical' | 'todaySignal' | 'onSelectMilestone' | 'showBaseline' | 'view'> {
   plan: ProjectPlan;
   zoom: Zoom;
   onZoom: (zoom: Zoom) => void;
@@ -27,15 +30,18 @@ export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'sho
   /** Moves the placed tasks to the dates their relationships and constraints ask for; onlyLater never moves one earlier. */
   onRecalculate: (onlyLater: boolean) => void;
   onSelectMilestone: (m: PlanMilestone) => void;
+  /** Undo and redo of the edits to tasks. */
+  history?: PlanHistory;
 }
 
-export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onWorkingDays, onSettings, onResource, onLevel, onTracking, onRecalculate, onSelectMilestone, busy, touch, ...chart }) => {
+export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onWorkingDays, onSettings, onResource, onLevel, onTracking, onRecalculate, onSelectMilestone, history, busy, touch, outlineWidth, ...chart }) => {
   const [showCritical, setShowCritical] = useState(true);
   const [onlyCritical, setOnlyCritical] = useState(false);
   const [calendar, setCalendar] = useState(false);
   const [resources, setResources] = useState(false);
   const [tracking, setTracking] = useState(false);
   const [showBaseline, setShowBaseline] = useState(true);
+  const [view, setView] = useState(DEFAULT_VIEW);
   const [recalculating, setRecalculating] = useState(false);
   const [onlyLater, setOnlyLater] = useState(false);
   const [todaySignal, setTodaySignal] = useState(0);
@@ -110,7 +116,8 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
               </span>
             }
           />
-          <GanttChart {...chart} plan={plan} zoom={zoom} busy={busy} touch={touch} onSelectMilestone={onSelectMilestone} showBaseline={showBaseline && Boolean(plan.baseline_id)} showCritical={showCritical} onlyCritical={showCritical && onlyCritical} todaySignal={todaySignal} />
+          {!touch && <PlanViewBar plan={plan} view={view} onView={setView} selectedTaskId={chart.selectedTaskId} busy={busy} onEdit={chart.onEdit} history={chart.onEdit && history} />}
+          <GanttChart {...chart} view={view} outlineWidth={outlineWidth + columnsWidth(view)} plan={plan} zoom={zoom} busy={busy} touch={touch} onSelectMilestone={onSelectMilestone} showBaseline={showBaseline && Boolean(plan.baseline_id)} showCritical={showCritical} onlyCritical={showCritical && onlyCritical} todaySignal={todaySignal} />
           {recalculating && (
             <Modal title="Recalculate the plan" width={440} onClose={() => setRecalculating(false)}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13 }}>

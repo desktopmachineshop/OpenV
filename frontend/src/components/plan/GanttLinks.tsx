@@ -67,7 +67,7 @@ const viaFolded = (type: string, x1: number, y1: number, hidden1: boolean, x2: n
 export const DependencyLines: React.FC<{
   /** Every task of the plan, and the rows the outline shows. */
   tasks: PlanTask[];
-  rows: PlanTask[];
+  rows: { id: string }[];
   folded: ReadonlySet<string>;
   scale: Scale;
   showCritical?: boolean;

@@ -56,6 +56,7 @@ var (
 	ErrResource          = errors.New("a resource is a user or an agent with a daily rate of 0 or more and a capacity of 1 to 1000 percent")
 	ErrInvalidCost       = errors.New("a cost or a budget is 0 or more, and a currency is at most three letters")
 	ErrTooManyBaselines  = errors.New("a plan keeps at most 11 baselines")
+	ErrPosition          = errors.New("a task is placed after one of its sibling tasks")
 	ErrPercent           = errors.New("a percentage complete is a whole number from 0 to 100, or -1 to go back to the computed one")
 	ErrSchedulingMode    = errors.New("a scheduling mode is manual or auto, and a plan is scheduled from its start or its finish")
 	ErrConstraint        = errors.New("a constraint is asap, alap, snet, snlt, fnet, fnlt, mso or mfo, and every one but asap and alap needs a date")
@@ -114,6 +115,9 @@ type TaskSchedule struct {
 	// MilestoneKey is the milestone the task is assigned to, by the key the
 	// plan gives it: a stored milestone's id, or "release:<id>".
 	MilestoneKey *string
+	// SortOrder is the task's place among its siblings, once one of them
+	// has been moved; SaveSchedule leaves it alone, SetOrder writes it.
+	SortOrder *int
 }
 
 // The types of a relationship between two tasks, as a Gantt names them.
@@ -214,6 +218,9 @@ type ScheduleRequest struct {
 	// Milestone is the key of the milestone the task is assigned to; empty
 	// takes it off its milestone.
 	Milestone *string `json:"milestone"`
+	// AfterID places the task straight after that sibling in the outline;
+	// empty makes it the first of its siblings.
+	AfterID *string `json:"after_id"`
 	// Elapsed makes the duration count calendar days.
 	Elapsed *bool `json:"elapsed"`
 	// Deadline is YYYY-MM-DD; empty clears it.
@@ -261,6 +268,9 @@ type Repository interface {
 	// ListBaselines lists the project's baselines with their tasks, oldest
 	// first; DeleteBaseline answers ErrNotFound for one it has not.
 	ListBaselines(projectID string) ([]*Baseline, error)
+	// SetOrder numbers tasks among their siblings: work item id to place,
+	// where 0 clears it.
+	SetOrder(projectID string, order map[string]int) error
 	CreateBaseline(b *Baseline) error
 	DeleteBaseline(projectID, id string) error
 	// SetDependencies replaces a task's relationships; each entry's
@@ -416,6 +426,13 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 	}
 	if err := s.schedule(workItemID, req, actor); err != nil {
 		return err
+	}
+	// A task given a new parent goes last among its new siblings unless
+	// the request says where.
+	if req.AfterID != nil || req.ParentID != nil {
+		if err := s.reorder(item.ProjectID, workItemID, req.AfterID); err != nil {
+			return err
+		}
 	}
 	return s.autoSchedule(item.ProjectID, actor)
 }

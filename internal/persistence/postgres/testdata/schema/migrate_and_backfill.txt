@@ -889,6 +889,7 @@ table plan_tasks rows 0
   column actual_finish date
   column percent_complete integer
   column actual_cost numeric(14,2)
+  column sort_order integer
   constraint plan_tasks_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES work_items(id) ON DELETE SET NULL
   constraint plan_tasks_pkey PRIMARY KEY (work_item_id)
   constraint plan_tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -1093,7 +1094,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 84
+table schema_migrations rows 85
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1463,3 +1464,4 @@ ledger 0081 plan_scheduling_basics
 ledger 0082 plan_scheduling_engine
 ledger 0083 plan_resources
 ledger 0084 plan_tracking
+ledger 0085 plan_task_order

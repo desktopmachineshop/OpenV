@@ -49,6 +49,9 @@ type pdfChart struct {
 	// rows is where each scheduled task's bar was drawn on the page being
 	// filled, for the lines between related tasks.
 	rows map[string]pdfBar
+	// placed is where every scheduled task's bar goes, on whichever page,
+	// so a line can say where a task on another page is.
+	placed map[string]pdfBar
 }
 
 func rgb(set func(r, g, b int), c [3]int) { set(c[0], c[1], c[2]) }
@@ -78,6 +81,7 @@ func renderPDF(doc Document) ([]byte, error) {
 		}
 	}
 
+	c.placed = c.layout()
 	y := c.newPage()
 	for _, t := range doc.Plan.Tasks {
 		if y+pdfRowH > pdfH-pdfMargin-4 {
@@ -255,6 +259,9 @@ func (c *pdfChart) footer() {
 	pdf.Text(pdfMargin, pdfH-pdfMargin+2, "OpenV · "+c.doc.ExportedAt.UTC().Format(DateLayout))
 	page := fmt.Sprintf("Page %d", pdf.PageNo())
 	pdf.Text(pdfW-pdfMargin-pdf.GetStringWidth(page), pdfH-pdfMargin+2, page)
+	if c.dated && len(c.doc.Plan.Tasks) > 0 {
+		c.legend(pdfMargin+42, pdfH-pdfMargin+2)
+	}
 }
 
 func (c *pdfChart) taskRow(t *Task, y float64) {
@@ -285,12 +292,7 @@ func (c *pdfChart) taskRow(t *Task, y float64) {
 	if t.SpanStart == nil || !c.dated {
 		return
 	}
-	a, _ := c.x(*t.SpanStart)
-	end, _ := time.Parse(DateLayout, *t.SpanEnd)
-	b, _ := c.x(end.AddDate(0, 0, 1).Format(DateLayout))
-	if b-a < 1.2 {
-		b = a + 1.2
-	}
+	a, b := c.span(t)
 	top, h := y+1.4, pdfRowH-2.8
 	if t.SubtasksTotal > 0 {
 		top, h = y+2.2, pdfRowH-4.4
@@ -319,7 +321,7 @@ func (c *pdfChart) taskRow(t *Task, y float64) {
 	if c.rows == nil {
 		c.rows = map[string]pdfBar{}
 	}
-	c.rows[t.ID] = pdfBar{left: a, right: b, y: y + pdfRowH/2, critical: t.Critical}
+	c.rows[t.ID] = pdfBar{left: a, right: b, y: y + pdfRowH/2, critical: t.Critical, page: pdf.PageNo(), wbs: t.WBS}
 }
 
 // milestoneTable writes the milestones and their criteria on pages of
@@ -402,4 +404,87 @@ func (c *pdfChart) milestoneTable() {
 		}
 	}
 	c.footer()
+}
+
+// span is the left and right edges of a scheduled task's bar.
+func (c *pdfChart) span(t *Task) (float64, float64) {
+	a, _ := c.x(*t.SpanStart)
+	end, _ := time.Parse(DateLayout, *t.SpanEnd)
+	b, _ := c.x(end.AddDate(0, 0, 1).Format(DateLayout))
+	if b-a < 1.2 {
+		b = a + 1.2
+	}
+	return a, b
+}
+
+// pdfFirstRow is the y of a chart page's first task row.
+const pdfFirstRow = pdfMargin + 8 + pdfHeadH + pdfRowH
+
+// pdfLastRow is where a chart page's rows end.
+const pdfLastRow = pdfH - pdfMargin - 4
+
+// layout works out, before anything is drawn, the page and place of every
+// scheduled task's bar, as renderPDF fills the pages.
+func (c *pdfChart) layout() map[string]pdfBar {
+	placed := map[string]pdfBar{}
+	page, y := 1, float64(pdfFirstRow)
+	for _, t := range c.doc.Plan.Tasks {
+		if y+pdfRowH > pdfLastRow {
+			page, y = page+1, pdfFirstRow
+		}
+		if t.SpanStart != nil && c.dated {
+			a, b := c.span(t)
+			placed[t.ID] = pdfBar{left: a, right: b, y: y + pdfRowH/2, critical: t.Critical, page: page, wbs: t.WBS}
+		}
+		y += pdfRowH
+	}
+	return placed
+}
+
+// legend explains the chart's marks, on one line starting at x.
+func (c *pdfChart) legend(x, y float64) {
+	pdf := c.pdf
+	pdf.SetFont("Go", "", pdfTextSize-1)
+	label := func(s string) {
+		rgb(pdf.SetTextColor, pdfMuted)
+		pdf.Text(x, y, s)
+		x += pdf.GetStringWidth(s) + 5
+	}
+	bar := func(fill [3]int, outline *[3]int, name string) {
+		rgb(pdf.SetFillColor, fill)
+		pdf.RoundedRect(x, y-2.2, 5, 2.4, 0.6, "1234", "F")
+		if outline != nil {
+			rgb(pdf.SetDrawColor, *outline)
+			pdf.SetLineWidth(0.5)
+			pdf.RoundedRect(x, y-2.2, 5, 2.4, 0.6, "1234", "D")
+			pdf.SetLineWidth(0.2)
+		}
+		x += 6.2
+		label(name)
+	}
+	line := func(color [3]int, dashed bool, name string) {
+		rgb(pdf.SetDrawColor, color)
+		rgb(pdf.SetFillColor, color)
+		if dashed {
+			pdf.SetDashPattern([]float64{0.8, 0.6}, 0)
+		}
+		pdf.Line(x, y-1, x+5, y-1)
+		pdf.SetDashPattern([]float64{}, 0)
+		pdf.Polygon([]gofpdf.PointType{{X: x + 5, Y: y - 1}, {X: x + 3.9, Y: y - 1.6}, {X: x + 3.9, Y: y - 0.4}}, "F")
+		x += 6.2
+		label(name)
+	}
+	bar(pdfAccent, nil, "In progress")
+	bar(pdfSuccess, nil, "Done")
+	bar(pdfDanger, nil, "Late")
+	bar(pdfTrack, &pdfWarning, "Critical")
+	line(pdfMuted, false, "Drives")
+	line(pdfDanger, true, "Broken")
+	rgb(pdf.SetDrawColor, pdfDanger)
+	pdf.SetLineWidth(0.3)
+	pdf.Line(x+0.5, y-2.4, x+0.5, y+0.2)
+	pdf.SetLineWidth(0.2)
+	x += 2.2
+	label("Today")
+	label("→ 2.1 p.2: continues to task 2.1 on page 2")
 }

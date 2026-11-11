@@ -95,6 +95,12 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 	if set, _ := repo.Settings(project); set.Currency != "GBP" || set.Budget == nil || *set.Budget != 25000 {
 		t.Fatalf("currency and budget: %+v", set)
 	}
+	if err := repo.SetOrder(project, map[string]int{a: 2}); err != nil {
+		t.Fatal(err)
+	}
+	if rows, _ := repo.ListSchedules(project); len(rows) == 0 || rows[0].SortOrder == nil || *rows[0].SortOrder != 2 {
+		t.Fatalf("a task's place: %+v", rows)
+	}
 	started, pct, spent := "2027-03-01", 40, 120.5
 	if err := repo.SaveSchedule(&plan.TaskSchedule{WorkItemID: a, ProjectID: project, ActualStart: &started, PercentComplete: &pct, ActualCost: &spent}); err != nil {
 		t.Fatal(err)

@@ -326,10 +326,12 @@ export interface PlanScheduleInput {
   /** -1 clears it. */
   actual_cost?: number;
   parent_id?: string;
+  /** The sibling the task goes straight after in the outline; empty makes it the first. */
+  after_id?: string;
   /** The key of the milestone the task is assigned to; empty takes it off. */
   milestone?: string;
   /** Replaces the task's relationships to the tasks that drive it. */
-  relationships?: { task_id: string; type: PlanRelationshipType }[];
+  relationships?: { task_id: string; type: PlanRelationshipType; lag_days?: number; lag_unit?: PlanLagUnit }[];
   /** The earlier form: ids, each keeping the type it has. */
   depends_on?: string[];
 }
