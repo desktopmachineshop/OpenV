@@ -13,7 +13,29 @@
       <strow><stentry><b>Start to start</b> (SS)</stentry><stentry>The task starts no earlier than the other starts</stentry><stentry>Joins the two starts</stentry></strow>
       <strow><stentry><b>Finish to finish</b> (FF)</stentry><stentry>The task finishes no earlier than the other finishes</stentry><stentry>Joins the two ends</stentry></strow>
     </simpletable>
-    <p>Under <b>Relationships</b> in a task's panel, choose a type and then the task that drives this one. A task can have several relationships, one to each task that drives it, so two tasks can together decide when a third starts: <i>Build the prototype</i> can wait for <i>Wheel guard design</i> and for <i>Electronics</i> to finish. Change a relationship's type in its row, or remove it with the cross.</p>
-    <p>OpenV does not move a task when its dates break a relationship. It marks the relationship <b>Broken</b>, draws its arrow dashed and red, and leaves the dates to you. A relationship to a task that is done is never broken. A relationship cannot be added to a task that this one already drives, since the two would wait on each other.</p>
+    <p>A relationship belongs to both of its tasks, and each one's panel lists it under <b>Relationships</b>, worded from that task's side. Open <i>Write the requirements</i> and its relationship to <i>Design</i> reads <b>Finishes before it starts</b>; open <i>Design</i> and the same relationship reads <b>Starts after it finishes</b>. You can add, change or remove it from either one:</p>
+    <simpletable>
+      <sthead><stentry>This task…</stentry><stentry>Type</stentry><stentry>Which drives</stentry></sthead>
+      <strow><stentry>Starts after it finishes</stentry><stentry>FS</stentry><stentry>The other task</stentry></strow>
+      <strow><stentry>Starts no earlier than it starts</stentry><stentry>SS</stentry><stentry>The other task</stentry></strow>
+      <strow><stentry>Finishes no earlier than it finishes</stentry><stentry>FF</stentry><stentry>The other task</stentry></strow>
+      <strow><stentry>Finishes before it starts</stentry><stentry>FS</stentry><stentry>This task</stentry></strow>
+      <strow><stentry>Starts no later than it starts</stentry><stentry>SS</stentry><stentry>This task</stentry></strow>
+      <strow><stentry>Finishes no later than it finishes</stentry><stentry>FF</stentry><stentry>This task</stentry></strow>
+    </simpletable>
+    <p>To add one, choose how this task relates to the other, then the other task. A task can have several relationships, so two tasks can together decide when a third starts: <i>Build the prototype</i> can wait for <i>Wheel guard design</i> and for <i>Electronics</i> to finish. Two tasks have one relationship between them: setting another replaces it. Change a relationship in its row, or remove it with the cross.</p>
+    <section id="drawing-a-relationship-on-the-chart">
+      <title>Drawing a relationship on the chart</title>
+      <p>Point at a bar, or select its task, and a small <b>+</b> appears at each end. Press one and drag to another bar: a line follows the pointer, and a label says what releasing would make. Which ends you join decides the type:</p>
+      <simpletable>
+        <sthead><stentry>From</stentry><stentry>To</stentry><stentry>Makes</stentry></sthead>
+        <strow><stentry>The <b>+</b> at a bar's end</stentry><stentry>The start of another bar</stentry><stentry>Finish to start: the other task starts after this one finishes</stentry></strow>
+        <strow><stentry>The <b>+</b> at a bar's start</stentry><stentry>The start of another bar</stentry><stentry>Start to start</stentry></strow>
+        <strow><stentry>The <b>+</b> at a bar's end</stentry><stentry>The end of another bar</stentry><stentry>Finish to finish</stentry></strow>
+        <strow><stentry>The <b>+</b> at a bar's start</stentry><stentry>The end of another bar</stentry><stentry>Finish to start, the other way round: this task starts after the other finishes</stentry></strow>
+      </simpletable>
+      <p>Release over the left half of a bar for its start, the right half for its end. Release anywhere else, or press Escape, to abandon the line.</p>
+      <p>OpenV does not move a task when its dates break a relationship. It marks the relationship <b>Broken</b>, draws its arrow dashed and red, and leaves the dates to you. A relationship to a task that is done is never broken. A relationship that would make a loop, where two tasks end up waiting on each other, is refused.</p>
+    </section>
   </conbody>
 </concept>

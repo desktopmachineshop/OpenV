@@ -8,12 +8,17 @@
   </prolog>
   <conbody>
     <p><b>Add task</b> makes a card in the board's To Do column and places it on the plan, with a start and a due date if you give them.</p>
-    <p>To move a task, drag its bar. To change one date, drag that end of the bar. Both move in whole days. To place a task that has no dates, choose <b>+ Schedule</b> in its row: it gets a week from today, which you then drag to where it belongs.</p>
+    <p>To move a task, drag its bar. To change one date, drag that end of the bar. Both move in whole days.</p>
+    <p>To place a task that has no dates, use its empty row on the timeline:</p>
+    <ul>
+      <li><b>Click</b> a date, and the task is scheduled for the period of the scale that holds it: that day at <b>Days</b>, that week at <b>Weeks</b>, that month at <b>Months</b>, that quarter at <b>Quarters</b>. The row shows the period as you point at it.</li>
+      <li><b>Drag</b> across the row, and the task is scheduled for the range you drag over, drawn as it grows with its dates beside it.</li>
+    </ul>
     <p>Open a task, with the button on its row or by selecting its bar, to see it beside the chart. There you can:</p>
     <ul>
       <li>set its <b>Start</b> and <b>Due</b> dates, its <b>Duration</b> and its <b>Effort</b>: see <xref href="#duration-and-effort" scope="external" format="html">Duration and effort</xref>. The due date is the card's own, so the board shows the same day;</li>
       <li>make it a <b>sub-task of</b> another task, or a top-level task again;</li>
-      <li>set its <b>relationships</b> to the tasks that drive it;</li>
+      <li>set its <b>relationships</b> to other tasks, whichever of the two drives;</li>
       <li>add <b>to-dos</b> and tick them off;</li>
       <li>add <b>sub-tasks</b>.</li>
     </ul>

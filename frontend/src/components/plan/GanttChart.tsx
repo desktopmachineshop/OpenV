@@ -6,8 +6,10 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlanMilestone, PlanTask, ProjectPlan } from '../../api/client';
 import { ellipsis, eyebrowStyle, mutedStyle } from '../ui';
-import { DependencyLines, OpenIcon, OutlineCell, ROW_HEIGHT, TaskBar } from './GanttRows';
-import { Scale, Tick, Zoom, addDays, buildScale, buildTicks, openingScroll, shortDate, todayScroll } from './ganttScale';
+import { DependencyLines, LinkBand, OnLink, ROW_HEIGHT, useLinkDrag } from './GanttLinks';
+import { OpenIcon, OutlineCell, TaskBar } from './GanttRows';
+import { ScheduleTrack } from './GanttSchedule';
+import { Scale, Tick, Zoom, buildScale, buildTicks, openingScroll, shortDate, todayScroll } from './ganttScale';
 import { milestoneColor, visibleTasks } from './planModel';
 
 const HEAD_ROW = 24;
@@ -137,7 +139,7 @@ const MilestoneLane: React.FC<{
   );
 };
 
-/** The vertical guides behind the bars: weekends and period lines, each milestone, and today. */
+/** The vertical guides behind the bars: days off and period lines, each milestone, and today. */
 const Guides: React.FC<{ scale: Scale; ticks: Tick[]; milestones: PlanMilestone[]; today: string; height: number }> = ({
   scale,
   ticks,
@@ -170,8 +172,10 @@ export interface GanttChartProps {
   selectedMilestoneKey: string;
   onSelectTask: (t: PlanTask) => void;
   onSelectMilestone: (m: PlanMilestone) => void;
-  /** Set where the reader may edit with a pointer: bars drag, and an unscheduled row offers Schedule. */
+  /** Set where the reader may edit with a pointer: bars drag, and an unscheduled row is clicked or dragged across to schedule it. */
   onReschedule?: (t: PlanTask, start: string, end: string) => void;
+  /** Set where links can be drawn: a drag from the "+" at an end of a bar to another bar relates the two. */
+  onLink?: OnLink;
   /** Marks the tasks with no float, and the arrows between them. */
   showCritical: boolean;
   /** Counts presses of Today: each one scrolls today back to a third of the way in. */
@@ -187,12 +191,16 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   onSelectTask,
   onSelectMilestone,
   onReschedule,
+  onLink,
   showCritical,
   todaySignal,
 }) => {
   const scroller = useRef<HTMLDivElement>(null);
   const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
   const [viewWidth, setViewWidth] = useState(0);
+  const [pointed, setPointed] = useState('');
+  const body = useRef<HTMLDivElement>(null);
+  const { link, begin: beginLink } = useLinkDrag(body, onLink);
 
   useLayoutEffect(() => {
     const el = scroller.current;
@@ -209,7 +217,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     () => buildScale(zoom, plan.start, plan.end, plan.today, Math.max(viewWidth - outlineWidth, 0)),
     [zoom, plan.start, plan.end, plan.today, viewWidth, outlineWidth],
   );
-  const ticks = useMemo(() => buildTicks(scale), [scale]);
+  const ticks = useMemo(() => buildTicks(scale, plan.working_days), [scale, plan.working_days]);
   const rows = useMemo(() => visibleTasks(plan.tasks, folded), [plan.tasks, folded]);
 
   const timelineWidth = Math.max(viewWidth - outlineWidth, 0);
@@ -244,7 +252,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const startPan = (e: React.PointerEvent) => {
     const el = scroller.current;
     if (!el || e.button !== 0 || e.pointerType !== 'mouse') return;
-    if ((e.target as HTMLElement).closest('button, a, input, select, [role="rowheader"]')) return;
+    if ((e.target as HTMLElement).closest('button, a, input, select, [role="rowheader"], [role="button"], [data-link-handle]')) return;
     pan.current = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop };
     el.setPointerCapture(e.pointerId);
     setPanning(true);
@@ -285,8 +293,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         maxHeight: 'calc(100dvh - 210px)',
         minHeight: 180,
         overscrollBehaviorX: 'contain',
-        cursor: panning ? 'grabbing' : 'grab',
-        userSelect: panning ? 'none' : undefined,
+        cursor: link ? 'crosshair' : panning ? 'grabbing' : 'grab',
+        userSelect: panning || link ? 'none' : undefined,
       }}
     >
       <div style={{ width: outlineWidth + scale.width, minWidth: '100%' }}>
@@ -313,64 +321,58 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           />
         </div>
 
-        <div style={{ position: 'relative' }}>
+        <div ref={body} style={{ position: 'relative' }}>
           <div style={{ position: 'absolute', left: outlineWidth, top: 0, width: scale.width, height: bodyHeight }}>
             <Guides scale={scale} ticks={ticks.lower} milestones={plan.milestones} today={plan.today} height={bodyHeight} />
           </div>
-          {rows.map((t) => (
-            <div role="row" key={t.id} style={{ display: 'flex', height: ROW_HEIGHT }}>
-              <OutlineCell
-                task={t}
-                width={outlineWidth}
-                selected={t.id === selectedTaskId}
-                folded={folded.has(t.id)}
-                onToggle={() => toggle(t.id)}
-                onSelect={() => onSelectTask(t)}
-                critical={showCritical && t.critical}
-              />
-              <div
-                role="cell"
-                style={{ position: 'relative', width: scale.width, height: ROW_HEIGHT, boxSizing: 'border-box', borderBottom: '1px solid var(--border-soft)', background: t.id === selectedTaskId ? 'color-mix(in srgb, var(--tint-blue) 45%, transparent)' : undefined }}
-              >
-                {t.span_start ? (
-                  <TaskBar
-                    task={t}
-                    scale={scale}
-                    today={plan.today}
-                    selected={t.id === selectedTaskId}
-                    critical={showCritical && t.critical}
-                    onSelect={() => onSelectTask(t)}
-                    onReschedule={onReschedule ? (start, end) => onReschedule(t, start, end) : undefined}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => (onReschedule ? onReschedule(t, plan.today, addDays(plan.today, 6)) : onSelectTask(t))}
-                    aria-label={onReschedule ? `Schedule ${t.title} for a week from today` : `${t.title}: not scheduled`}
-                    style={{
-                      position: 'absolute',
-                      left: scale.x(plan.today),
-                      top: 7,
-                      height: ROW_HEIGHT - 14,
-                      padding: '0 8px',
-                      border: '1px dashed var(--neutral-mid)',
-                      borderRadius: 4,
-                      background: 'var(--surface)',
-                      color: 'var(--text-muted)',
-                      fontSize: 11,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {onReschedule ? '+ Schedule' : 'Not scheduled'}
-                  </button>
-                )}
+          {rows.map((t) => {
+            // A folded task stands for its sub-tasks: it carries their critical mark.
+            const critical = showCritical && (t.critical || (folded.has(t.id) && t.critical_subtasks));
+            return (
+              <div role="row" key={t.id} style={{ display: 'flex', height: ROW_HEIGHT }}>
+                <OutlineCell
+                  task={t}
+                  width={outlineWidth}
+                  selected={t.id === selectedTaskId}
+                  folded={folded.has(t.id)}
+                  onToggle={() => toggle(t.id)}
+                  onSelect={() => onSelectTask(t)}
+                  critical={critical}
+                />
+                <div
+                  role="cell"
+                  onPointerEnter={() => setPointed(t.id)}
+                  onPointerLeave={() => setPointed((id) => (id === t.id ? '' : id))}
+                  style={{ position: 'relative', width: scale.width, height: ROW_HEIGHT, boxSizing: 'border-box', borderBottom: '1px solid var(--border-soft)', background: t.id === selectedTaskId ? 'color-mix(in srgb, var(--tint-blue) 45%, transparent)' : undefined }}
+                >
+                  {t.span_start ? (
+                    <TaskBar
+                      task={t}
+                      scale={scale}
+                      today={plan.today}
+                      selected={t.id === selectedTaskId}
+                      critical={critical}
+                      onSelect={() => onSelectTask(t)}
+                      onReschedule={onReschedule ? (start, end) => onReschedule(t, start, end) : undefined}
+                      onLinkStart={onLink && !link && (pointed === t.id || t.id === selectedTaskId) ? (end, e) => beginLink(t.id, end, e) : undefined}
+                    />
+                  ) : (
+                    <ScheduleTrack
+                      task={t}
+                      scale={scale}
+                      today={plan.today}
+                      onSchedule={onReschedule ? (start, end) => onReschedule(t, start, end) : undefined}
+                      onSelect={() => onSelectTask(t)}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div style={{ position: 'absolute', left: outlineWidth, top: 0, width: scale.width, height: bodyHeight, pointerEvents: 'none', zIndex: 1 }}>
-            <DependencyLines tasks={rows} scale={scale} showCritical={showCritical} />
+            <DependencyLines tasks={plan.tasks} rows={rows} folded={folded} scale={scale} showCritical={showCritical} />
           </div>
+          {link && <LinkBand link={link} />}
           {rows.length === 0 && (
             <p style={{ ...mutedStyle, margin: 0, padding: 16, position: 'sticky', left: 0, maxWidth: 520 }}>
               No tasks yet. Add one here, or on the Board: every card on the board is a task of the plan.

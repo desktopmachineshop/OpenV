@@ -1,6 +1,6 @@
 import type { PlanMilestone, PlanTask } from '../../api/client';
-import { FIT_MARGIN, buildScale, buildTicks, fitZoom, fromDay, openingScroll, shortDate, spanLabel, toDay, todayScroll } from './ganttScale';
-import { barTone, dependents, descendants, phoneGroups, visibleTasks } from './planModel';
+import { FIT_MARGIN, buildScale, buildTicks, fitZoom, fromDay, isoWeekday, openingScroll, shortDate, spanLabel, toDay, todayScroll, unitSpan } from './ganttScale';
+import { barTone, dependents, descendants, linkBetween, phoneGroups, shownAs, visibleTasks, workEnd, workSpan, workStart, worksOn } from './planModel';
 
 // The plan's pure parts: the time scale the chart draws on, and what the
 // views derive from the plan (folded rows, loops to refuse, the phone's
@@ -23,6 +23,7 @@ const task = (id: string, extra: Partial<PlanTask> = {}): PlanTask => ({
   effort_days: null,
   float_days: null,
   critical: false,
+  critical_subtasks: false,
   progress: 0,
   done: false,
   late: false,
@@ -33,6 +34,7 @@ const task = (id: string, extra: Partial<PlanTask> = {}): PlanTask => ({
   todos: [],
   depends_on: [],
   relationships: [],
+  drives: [],
   conflicts: [],
   ...extra,
 });
@@ -97,6 +99,18 @@ describe('the Gantt scale', () => {
     expect(lower.find((t) => t.left === scale.x('2027-03-03'))?.weekend).toBeUndefined();
   });
 
+  it('shades the days the plan does not work, and schedules a click as one period of the zoom', () => {
+    const scale = buildScale('days', '2027-03-01', '2027-03-07', '2027-03-03');
+    const off = (days: number[]) => buildTicks(scale, days).lower.filter((t) => t.weekend && t.left >= scale.x('2027-03-01') && t.left <= scale.x('2027-03-07')).length;
+    expect(off([1, 2, 3, 4, 5])).toBe(2);
+    expect(off([1, 2, 3, 4, 5, 6])).toBe(1);
+    expect(off([1, 2, 3, 4, 5, 6, 7])).toBe(0);
+    expect(unitSpan('days', '2027-03-10')).toEqual({ start: '2027-03-10', end: '2027-03-10' });
+    expect(unitSpan('weeks', '2027-03-10')).toEqual({ start: '2027-03-08', end: '2027-03-14' });
+    expect(unitSpan('months', '2027-02-10')).toEqual({ start: '2027-02-01', end: '2027-02-28' });
+    expect(unitSpan('quarters', '2027-05-10')).toEqual({ start: '2027-04-01', end: '2027-06-30' });
+  });
+
   it('heads months with quarters and quarters with years, without a gap', () => {
     const months = buildTicks(buildScale('months', '2027-01-10', '2027-08-01', '2027-03-03'));
     expect(months.upper.map((t) => t.label)).toEqual(expect.arrayContaining(['Q1 2027', 'Q2 2027', 'Q3 2027']));
@@ -145,6 +159,36 @@ describe('the plan model', () => {
     // a1 may not depend on itself, on a2 (which waits for it) or on b (which waits for a2).
     expect([...dependents(tasks, 'a1')].sort()).toEqual(['a1', 'a2', 'b']);
     expect([...dependents(tasks, 'b')]).toEqual(['b']);
+  });
+
+  it('stands a folded task in for the sub-tasks under it, at any depth', () => {
+    expect(Object.fromEntries(shownAs(tasks, new Set(['a'])))).toEqual({ a: 'a', a1: 'a', a1x: 'a', a2: 'a', b: 'b' });
+    expect(Object.fromEntries(shownAs(tasks, new Set(['a1'])))).toEqual({ a: 'a', a1: 'a1', a1x: 'a1', a2: 'a2', b: 'b' });
+  });
+
+  it('reads a link drawn between two bar ends as a relationship', () => {
+    expect(linkBetween('end', 'start')).toEqual({ direction: 'drives', type: 'FS' });
+    expect(linkBetween('start', 'start')).toEqual({ direction: 'drives', type: 'SS' });
+    expect(linkBetween('end', 'end')).toEqual({ direction: 'drives', type: 'FF' });
+    // From a start to a finish is finish to start the other way round.
+    expect(linkBetween('start', 'end')).toEqual({ direction: 'driven_by', type: 'FS' });
+  });
+
+  it('counts a duration in working days', () => {
+    const week = [1, 2, 3, 4, 5];
+    // 1 March 2027 is a Monday.
+    expect(isoWeekday('2027-03-01')).toBe(1);
+    expect(isoWeekday('2027-03-07')).toBe(7);
+    expect(worksOn(week, '2027-03-06')).toBe(false);
+    expect(workSpan(week, '2027-03-01', '2027-03-12')).toBe(10);
+    expect(workSpan(week, '2027-03-06', '2027-03-07')).toBe(1);
+    expect(workEnd(week, '2027-03-01', 5)).toBe('2027-03-05');
+    expect(workEnd(week, '2027-03-04', 3)).toBe('2027-03-08');
+    // A start on a day off counts from the next working day.
+    expect(workEnd(week, '2027-03-06', 1)).toBe('2027-03-08');
+    expect(workStart(week, '2027-03-08', 3)).toBe('2027-03-04');
+    expect(workStart(week, '2027-03-07', 2)).toBe('2027-03-04');
+    expect(workEnd([1, 2, 3, 4, 5, 6, 7], '2027-03-04', 3)).toBe('2027-03-06');
   });
 
   it('colours a bar by its state', () => {

@@ -1,0 +1,121 @@
+// A task's relationships, in its panel (TaskPanel.tsx): every task it is
+// related to, whichever of the two drives the other, each worded from this
+// task's side ("starts after it finishes", "finishes before it starts"), so
+// a relationship is read, changed and removed from either task.
+import React, { useMemo, useState } from 'react';
+import type { PlanRelationship, PlanTask, ProjectPlan } from '../../api/client';
+import { Chip, Picker, buttonStyle, eyebrowStyle, mutedStyle, type PickerOption } from '../ui';
+import { spanLabel } from './ganttScale';
+import { RELATIONSHIP_BROKEN, RELATIONSHIP_VIEWS, RelationshipView, relationshipViewLabel, viewKey } from './planModel';
+
+const fieldStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', minWidth: 0 };
+const inputStyle: React.CSSProperties = { padding: '5px 8px', minHeight: 32, boxSizing: 'border-box' };
+
+const fromKey = (key: string): RelationshipView => RELATIONSHIP_VIEWS.find((v) => viewKey(v) === key) ?? RELATIONSHIP_VIEWS[0];
+
+const ViewSelect: React.FC<{ value: RelationshipView; label: string; disabled?: boolean; onChange: (v: RelationshipView) => void }> = ({
+  value,
+  label,
+  disabled,
+  onChange,
+}) => (
+  <select value={viewKey(value)} disabled={disabled} aria-label={label} onChange={(e) => onChange(fromKey(e.target.value))} style={inputStyle}>
+    <optgroup label="That task drives this one">
+      {RELATIONSHIP_VIEWS.filter((v) => v.direction === 'driven_by').map((v) => (
+        <option key={viewKey(v)} value={viewKey(v)}>
+          {v.label} ({v.type})
+        </option>
+      ))}
+    </optgroup>
+    <optgroup label="This task drives that one">
+      {RELATIONSHIP_VIEWS.filter((v) => v.direction === 'drives').map((v) => (
+        <option key={viewKey(v)} value={viewKey(v)}>
+          {v.label} ({v.type})
+        </option>
+      ))}
+    </optgroup>
+  </select>
+);
+
+export interface TaskRelationshipsProps {
+  plan: ProjectPlan;
+  task: PlanTask;
+  editable: boolean;
+  busy: boolean;
+  onRelate: (task: PlanTask, otherId: string, view: RelationshipView) => void;
+  onUnrelate: (task: PlanTask, otherId: string) => void;
+  onSelectTask: (task: PlanTask) => void;
+}
+
+export const TaskRelationships: React.FC<TaskRelationshipsProps> = ({ plan, task, editable, busy, onRelate, onUnrelate, onSelectTask }) => {
+  const [adding, setAdding] = useState<RelationshipView>(RELATIONSHIP_VIEWS[0]);
+  const byId = useMemo(() => new Map(plan.tasks.map((t) => [t.id, t])), [plan.tasks]);
+  const rows: { rel: PlanRelationship; view: RelationshipView }[] = [
+    ...task.relationships.map((rel) => ({ rel, view: { direction: 'driven_by' as const, type: rel.type } })),
+    ...task.drives.map((rel) => ({ rel, view: { direction: 'drives' as const, type: rel.type } })),
+  ];
+  const candidates = useMemo<PickerOption[]>(() => {
+    const has = new Set([task.id, ...task.relationships.map((r) => r.task_id), ...task.drives.map((r) => r.task_id)]);
+    return plan.tasks
+      .filter((t) => !has.has(t.id))
+      .map((t) => ({ value: t.id, label: `${t.wbs} ${t.title}`, meta: t.span_start ? spanLabel(t.span_start, t.span_end, plan.today) : 'Not scheduled', depth: t.depth }));
+  }, [plan.tasks, plan.today, task.id, task.relationships, task.drives]);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12, borderBottom: '1px solid var(--border-soft)' }} data-help-key="gantt.relationships">
+      <h3 style={eyebrowStyle}>Relationships · {rows.length}</h3>
+      {rows.length === 0 && <span style={mutedStyle}>None: this task neither waits on another nor holds one up.</span>}
+      {rows.map(({ rel, view }) => {
+        const other = byId.get(rel.task_id);
+        if (!other) return null;
+        return (
+          <div key={rel.task_id} data-relationship={rel.task_id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <button
+                type="button"
+                onClick={() => onSelectTask(other)}
+                style={{ flex: 1, minWidth: 0, padding: 0, border: 'none', background: 'none', font: 'inherit', color: 'var(--accent-text)', textAlign: 'left', cursor: 'pointer', overflowWrap: 'anywhere' }}
+              >
+                {other.wbs} {other.title}
+              </button>
+              {rel.conflict && (
+                <Chip tone="danger" title={view.direction === 'driven_by' ? RELATIONSHIP_BROKEN[rel.type] : `The dates break it: this task does not yet do what "${relationshipViewLabel(view).toLowerCase()}" says`}>
+                  Broken
+                </Chip>
+              )}
+              {editable && (
+                <button type="button" disabled={busy} aria-label={`Remove the relationship to ${other.title}`} onClick={() => onUnrelate(task, other.id)} style={buttonStyle('ghost', { compact: true, disabled: busy })}>
+                  ✕
+                </button>
+              )}
+            </div>
+            {editable ? (
+              <ViewSelect value={view} disabled={busy} label={`How this task relates to ${other.title}`} onChange={(v) => onRelate(task, other.id, v)} />
+            ) : (
+              <span style={mutedStyle}>{relationshipViewLabel(view)}</span>
+            )}
+          </div>
+        );
+      })}
+      {editable && candidates.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 4 }}>
+          <label htmlFor="gantt-relationship-add" style={fieldStyle}>
+            Add a relationship: this task…
+          </label>
+          <ViewSelect value={adding} label="How this task relates to the task chosen" onChange={setAdding} />
+          <Picker
+            id="gantt-relationship-add"
+            value=""
+            options={candidates}
+            searchable
+            disabled={busy}
+            placeholder="Search for the other task…"
+            noneLabel="Choose a task…"
+            onChange={(id) => id && onRelate(task, id, adding)}
+          />
+          <span style={mutedStyle}>Or drag from the + at an end of a bar on the chart to another bar.</span>
+        </div>
+      )}
+    </div>
+  );
+};

@@ -28,13 +28,16 @@ On the timeline, each task is a bar from its start to its due date:
 - A **green** bar is a task in **Done**. A **red** bar is late: it is past
   its due date and not done.
 - A task with sub-tasks is drawn as a thinner, darker bar that spans all of
-  them.
+  them: see [Tasks with sub-tasks](#tasks-with-sub-tasks).
 - An **arrow** joins two related tasks, from the task that drives to the
   task it drives. Where it leaves and arrives shows the type of the
   relationship: see [Relationships between tasks](#relationships-between-tasks).
   A dashed red arrow is a relationship the dates break; the outline marks
   that task with a warning sign.
-- A task with no dates yet shows **+ Schedule** at today.
+- A task with no dates yet has an empty row that you click, or drag across,
+  to schedule it.
+- Days the plan does not work are shaded at the **Days** scale: see
+  [Working days](#working-days).
 
 The row of **Milestones** above the tasks holds a diamond for each
 milestone, with its name and progress. The thin band leading up to a
@@ -60,9 +63,16 @@ effort in it, and the milestones met.
 plan, with a start and a due date if you give them.
 
 To move a task, drag its bar. To change one date, drag that end of the
-bar. Both move in whole days. To place a task that has no dates, choose
-**+ Schedule** in its row: it gets a week from today, which you then drag
-to where it belongs.
+bar. Both move in whole days.
+
+To place a task that has no dates, use its empty row on the timeline:
+
+- **Click** a date, and the task is scheduled for the period of the scale
+  that holds it: that day at **Days**, that week at **Weeks**, that month at
+  **Months**, that quarter at **Quarters**. The row shows the period as you
+  point at it.
+- **Drag** across the row, and the task is scheduled for the range you drag
+  over, drawn as it grows with its dates beside it.
 
 Open a task, with the button on its row or by selecting its bar, to see it
 beside the chart. There you can:
@@ -71,7 +81,7 @@ beside the chart. There you can:
   see [Duration and effort](#duration-and-effort). The due date is the
   card's own, so the board shows the same day;
 - make it a **sub-task of** another task, or a top-level task again;
-- set its **relationships** to the tasks that drive it;
+- set its **relationships** to other tasks, whichever of the two drives;
 - add **to-dos** and tick them off;
 - add **sub-tasks**.
 
@@ -82,15 +92,51 @@ long plan to the task you want.
 A task cannot start after it is due, or be a sub-task of one of its own
 sub-tasks.
 
+## Tasks with sub-tasks
+
+A task with sub-tasks is a folder for them, and has no dates of its own. It
+starts when its first sub-task starts and finishes when its last one
+finishes; its duration is the working days between the two, and its effort
+is its sub-tasks' effort added up. Its panel shows these, with no fields to
+set, and its bar does not drag: schedule the sub-tasks to move it. Dates a
+task had before it was given sub-tasks are no longer used.
+
+Fold a task with the arrow in the outline and its bar stands for everything
+under it:
+
+- A relationship between one of its sub-tasks and a task outside it is still
+  drawn. The arrow leaves or lands on the folded bar at the point along it
+  where the sub-task's own start or finish falls, marked with a small dot,
+  so an arrow from a sub-task that finishes halfway through leaves the bar
+  halfway along.
+- A relationship between two of its own sub-tasks is hidden with them.
+- If the critical path runs through its sub-tasks, the folded task carries
+  the amber critical marks.
+
+## Working days
+
+**Working days**, above the chart, has a button for each day of the week.
+The days switched on are the days the plan works: Monday to Friday until
+you change it. Switch on Saturday for a six-day week, or switch a day off
+that your team never works. A plan works at least one day.
+
+Durations and float count working days only. With Monday to Friday, a task
+that starts on a Thursday and lasts 3 days is due the following Monday, and
+a task from a Monday to the Friday of the next week has a duration of 10.
+A start that falls on a day off counts from the next working day. The
+chart shades the days off at the **Days** scale. Changing the working days
+does not move any task's dates: durations and float are counted again.
+
 ## Duration and effort
 
-A task has a **duration**: how many days it runs, counting its first and its
-last. A task from 1 March to 5 March has a duration of 5 days. The task
+A task has a **duration**: how many [working days](#working-days) it runs,
+counting its first and its last. A task from Monday 1 March to Friday
+5 March has a duration of 5 days. The task
 keeps its duration, so its dates move together:
 
 | You change | What follows |
 | --- | --- |
-| **Start** | The due date moves, the same number of days later or earlier |
+| **Start** | The due date moves, the same number of working days later or earlier |
 | **Due** | The start moves with it |
 | **Duration** | The due date moves; the start stays |
 | The bar, by dragging it | Both dates move |
@@ -110,7 +156,7 @@ add up the effort of every task.
 The **critical path** is the chain of tasks that decides when the plan ends:
 each has no room to slip, so a day lost on any of them is a day lost at the
 end. OpenV works out, for every task with dates, its **float**: how many
-days it could slip before the plan's last task would end later. A task can
+working days it could slip before the plan's last task would end later. A task can
 slip until the plan's last day, or until it would push a task it drives:
 
 - a **finish to start** relationship lets it slip until the day before the
@@ -124,7 +170,9 @@ A task with no float, and not yet done, is **critical**. With **Critical
 path** on, which it is when the page opens, critical tasks have an amber
 outline and an amber dot in the outline, and the arrows between them are
 amber and heavier. A task's panel says **Critical**, or how many days of
-float it has. The float is worked out from the dates as they stand: OpenV
+float it has. A task with sub-tasks is never critical itself: its panel
+says **Critical sub-tasks** when the path runs through them, and it carries
+the amber marks on the chart while it is folded. The float is worked out from the dates as they stand: OpenV
 does not move tasks for you. A task with no relationships has float up to
 the plan's last day, so only relationships make a path longer than one task.
 
@@ -139,18 +187,49 @@ types project plans use:
 | **Start to start** (SS) | The task starts no earlier than the other starts | Joins the two starts |
 | **Finish to finish** (FF) | The task finishes no earlier than the other finishes | Joins the two ends |
 
-Under **Relationships** in a task's panel, choose a type and then the task
-that drives this one. A task can have several relationships, one to each
-task that drives it, so two tasks can together decide when a third starts:
-*Build the prototype* can wait for *Wheel guard design* and for
-*Electronics* to finish. Change a relationship's type in its row, or remove
-it with the cross.
+A relationship belongs to both of its tasks, and each one's panel lists it
+under **Relationships**, worded from that task's side. Open *Write the
+requirements* and its relationship to *Design* reads **Finishes before it
+starts**; open *Design* and the same relationship reads **Starts after it
+finishes**. You can add, change or remove it from either one:
+
+| This task… | Type | Which drives |
+| --- | --- | --- |
+| Starts after it finishes | FS | The other task |
+| Starts no earlier than it starts | SS | The other task |
+| Finishes no earlier than it finishes | FF | The other task |
+| Finishes before it starts | FS | This task |
+| Starts no later than it starts | SS | This task |
+| Finishes no later than it finishes | FF | This task |
+
+To add one, choose how this task relates to the other, then the other task.
+A task can have several relationships, so two tasks can together decide
+when a third starts: *Build the prototype* can wait for *Wheel guard
+design* and for *Electronics* to finish. Two tasks have one relationship
+between them: setting another replaces it. Change a relationship in its
+row, or remove it with the cross.
+
+### Drawing a relationship on the chart
+
+Point at a bar, or select its task, and a small **+** appears at each end.
+Press one and drag to another bar: a line follows the pointer, and a label
+says what releasing would make. Which ends you join decides the type:
+
+| From | To | Makes |
+| --- | --- | --- |
+| The **+** at a bar's end | The start of another bar | Finish to start: the other task starts after this one finishes |
+| The **+** at a bar's start | The start of another bar | Start to start |
+| The **+** at a bar's end | The end of another bar | Finish to finish |
+| The **+** at a bar's start | The end of another bar | Finish to start, the other way round: this task starts after the other finishes |
+
+Release over the left half of a bar for its start, the right half for its
+end. Release anywhere else, or press Escape, to abandon the line.
 
 OpenV does not move a task when its dates break a relationship. It marks
 the relationship **Broken**, draws its arrow dashed and red, and leaves the
 dates to you. A relationship to a task that is done is never broken. A
-relationship cannot be added to a task that this one already drives, since
-the two would wait on each other.
+relationship that would make a loop, where two tasks end up waiting on each
+other, is refused.
 
 ## Progress from to-dos and sub-tasks
 
@@ -225,12 +304,13 @@ that release. A release marked **Released** is met.
 
 In Excel and CSV, the **relationships** column names each driving task by
 its outline number and type, as in *1.1FS, 2SS*, and each task has its
-duration, effort and float in days and whether it is critical. The PDF and
+duration and float in working days, its effort and whether it is critical. The PDF and
 the Excel timeline mark critical tasks in amber.
 - **JSON**: the whole plan as the app reads it.
 
-Agents read the plan with the \`get_plan\` tool and place a task, with its
-relationships, with \`schedule_work_item\`.
+Agents read the plan with the \`get_plan\` tool, place a task, with its
+relationships, with \`schedule_work_item\`, and set the working days with
+\`set_plan_working_days\`.
 
 ## On a phone
 
@@ -242,8 +322,8 @@ float; **Milestones** lists the milestones with their
 progress. Tap a task or a milestone to open it and make the same edits as
 on a computer, by setting dates rather than dragging.
 
-On a tablet the chart is shown. With a touch screen, bars do not drag: set
-a task's dates in its panel.
+On a tablet the chart is shown. With a touch screen, bars do not drag and
+links are not drawn: set a task's dates and relationships in its panel.
 `;
 
 export default content;

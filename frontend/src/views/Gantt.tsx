@@ -11,7 +11,9 @@
 // panel beside it. On a phone the same plan is a schedule list
 // (components/plan/PlanPhone.tsx) and the selection opens in a sheet: a
 // timeline needs width a phone does not have. On a touch tablet the chart
-// shows but bars do not drag; dates are set in the task's panel.
+// shows but bars do not drag; dates and relationships are set in the task's
+// panel. The plan's working days (Monday to Friday until set) decide which
+// days a duration counts and which the chart shades.
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -32,6 +34,8 @@ import { MilestonePanel } from '../components/plan/MilestonePanel';
 import { AddMilestoneForm, AddTaskForm, ExportControl, NewTask } from '../components/plan/PlanForms';
 import { PlanPhone } from '../components/plan/PlanPhone';
 import { TaskPanel } from '../components/plan/TaskPanel';
+import { WorkingDays } from '../components/plan/WorkingDays';
+import type { RelationshipView } from '../components/plan/planModel';
 import { ErrorBanner, FeatureGate, PanelHeader, SegmentedControl, Sheet, buttonStyle, mutedStyle, pageType, panelStyle, useConfirm } from '../components/ui';
 import { GANTT_PLAN_FEATURE } from '../features';
 import { useViewport } from '../hooks/useViewport';
@@ -100,6 +104,9 @@ const PlanPage: React.FC = () => {
   };
 
   const schedule = (t: PlanTask, change: PlanScheduleInput) => run(() => planAPI.schedule(t.id, change), 'Failed to schedule the task');
+
+  const relate = (taskId: string, otherId: string, view: RelationshipView) =>
+    run(() => planAPI.relate(taskId, otherId, view.type, view.direction), 'Failed to relate the tasks');
 
   const addTask = async (t: NewTask, parentId?: string) => {
     const ok = await run(async () => {
@@ -211,6 +218,8 @@ const PlanPage: React.FC = () => {
       editable
       busy={busy}
       onSchedule={schedule}
+      onRelate={(t, otherId, view) => relate(t.id, otherId, view)}
+      onUnrelate={(t, otherId) => run(() => planAPI.unrelate(t.id, otherId), 'Failed to remove the relationship')}
       onAddSubtask={(t, title) => addTask({ title, start: '', end: '' }, t.id)}
       onAddTodo={(t, text, due) => run(() => planAPI.addTodo(t.id, text, due), 'Failed to add the to-do')}
       onTickTodo={(id, done) => run(() => todosAPI.setDone(id, done), 'Failed to save the to-do')}
@@ -268,6 +277,11 @@ const PlanPage: React.FC = () => {
             title="Plan"
             action={
               <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                <WorkingDays
+                  days={plan.working_days}
+                  busy={busy}
+                  onChange={(days) => run(() => planAPI.setWorkingDays(projectId, days), 'Failed to set the working days')}
+                />
                 <button
                   type="button"
                   aria-pressed={showCritical}
@@ -298,6 +312,7 @@ const PlanPage: React.FC = () => {
             onSelectTask={openTask}
             onSelectMilestone={openMilestone}
             onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
+            onLink={coarsePointer ? undefined : relate}
             showCritical={showCritical}
             todaySignal={todaySignal}
           />
@@ -313,7 +328,7 @@ const PlanPage: React.FC = () => {
           )}
           <p style={{ ...mutedStyle, margin: 0, padding: '8px 12px', borderTop: '1px solid var(--border-soft)' }}>
             A task's bar fills as its to-dos are ticked off and its sub-tasks finish. A milestone's band fills as its
-            criteria are met. {coarsePointer ? 'Select a task to set its dates.' : 'Drag a bar to move it, an end to resize it, or the empty timeline to scroll.'}
+            criteria are met. {coarsePointer ? 'Select a task to set its dates.' : 'Drag a bar to move it or an end to resize it, drag the + at an end to another bar to link them, and click or drag across the row of a task with no dates to schedule it. Drag the empty timeline to scroll.'}
           </p>
         </section>
         {panel && !isCompact && <div style={{ width: 340, flexShrink: 0 }}>{panel}</div>}
