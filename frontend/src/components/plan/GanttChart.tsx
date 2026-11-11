@@ -171,6 +171,8 @@ export interface GanttChartProps {
   selectedTaskId: string;
   selectedMilestoneKey: string;
   onSelectTask: (t: PlanTask) => void;
+  /** Opens the task in full: its description, assignee, linked artifacts and activity. */
+  onOpenTask: (t: PlanTask) => void;
   onSelectMilestone: (m: PlanMilestone) => void;
   /** Set where the reader may edit with a pointer: bars drag, and an unscheduled row is clicked or dragged across to schedule it. */
   onReschedule?: (t: PlanTask, start: string, end: string) => void;
@@ -198,6 +200,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   selectedTaskId,
   selectedMilestoneKey,
   onSelectTask,
+  onOpenTask,
   onSelectMilestone,
   onReschedule,
   onLink,
@@ -360,6 +363,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   folded={folded.has(t.id)}
                   onToggle={() => toggle(t.id)}
                   onSelect={() => onSelectTask(t)}
+                  onOpen={() => onOpenTask(t)}
                   critical={critical}
                 />
                 <div

@@ -17,6 +17,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
+  Artifact,
+  artifactAPI,
   planAPI,
   PlanExportFormat,
   PlanMilestone,
@@ -28,6 +30,7 @@ import {
   workItemsAPI,
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
+import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
 import { GanttChart } from '../components/plan/GanttChart';
 import { ZOOMS, Zoom, fitZoom } from '../components/plan/ganttScale';
 import { MilestonePanel } from '../components/plan/MilestonePanel';
@@ -88,6 +91,16 @@ const PlanPage: React.FC = () => {
   const [selection, setSelection] = useState<Selection>(null);
   const [showCritical, setShowCritical] = useState(true);
   const [todaySignal, setTodaySignal] = useState(0);
+  // The task opened in full, in the board's drawer, and the artifacts it names.
+  const [fullTaskId, setFullTaskId] = useState('');
+  const [artifactMap, setArtifactMap] = useState<Record<string, Artifact> | null>(null);
+  useEffect(() => {
+    if (!fullTaskId || artifactMap || !projectId) return;
+    artifactAPI
+      .list(projectId)
+      .then((res) => setArtifactMap(Object.fromEntries((res.data || []).map((a) => [a.id, a]))))
+      .catch(() => setArtifactMap({}));
+  }, [fullTaskId, artifactMap, projectId]);
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -203,6 +216,21 @@ const PlanPage: React.FC = () => {
   const openTask = (t: PlanTask) => setSelection({ kind: 'task', id: t.id });
   const openMilestone = (m: PlanMilestone) => setSelection({ kind: 'milestone', key: m.key });
   const close = () => setSelection(null);
+  const openFull = (t: PlanTask) => setFullTaskId(t.id);
+  const fullTask = fullTaskId ? (
+    <WorkItemDrawer
+      workItemId={fullTaskId}
+      projectId={projectId}
+      artifactMap={artifactMap || {}}
+      onClose={() => setFullTaskId('')}
+      onChanged={() => void load()}
+      onDeleted={() => {
+        setFullTaskId('');
+        setSelection(null);
+        void load();
+      }}
+    />
+  ) : null;
 
   const errorBanner = <ErrorBanner message={error} onDismiss={() => setError('')} />;
   if (!plan) {
@@ -249,6 +277,7 @@ const PlanPage: React.FC = () => {
       onAddTodo={(t, text, due) => run(() => planAPI.addTodo(t.id, text, due), 'Failed to add the to-do')}
       onTickTodo={(id, done) => run(() => todosAPI.setDone(id, done), 'Failed to save the to-do')}
       onSelectTask={openTask}
+      onOpenTask={openFull}
       onClose={close}
     />
   ) : selectedMilestone ? (
@@ -273,6 +302,7 @@ const PlanPage: React.FC = () => {
             {panel}
           </Sheet>
         )}
+        {fullTask}
       </>
     );
   }
@@ -335,6 +365,7 @@ const PlanPage: React.FC = () => {
             selectedTaskId={selectedTask?.id || ''}
             selectedMilestoneKey={selectedMilestone?.key || ''}
             onSelectTask={openTask}
+            onOpenTask={openFull}
             onSelectMilestone={openMilestone}
             onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
             onLink={coarsePointer ? undefined : relate}
@@ -368,6 +399,7 @@ const PlanPage: React.FC = () => {
           {panel}
         </Sheet>
       )}
+      {fullTask}
     </div>
   );
 };

@@ -136,9 +136,14 @@ const plan: ProjectPlan = {
   summary: { tasks: 4, done: 1, late: 0, unscheduled: 1, progress: 38, critical: 1, effort_days: 6.5 },
 };
 
+vi.mock('../components/kanban/WorkItemDrawer', () => ({
+  WorkItemDrawer: ({ workItemId }: { workItemId: string }) => <div data-full-task={workItemId} />,
+}));
+
 vi.mock('../api/client', async (orig) =>
   mockApi(await orig(), {
     workItemsAPI: { create: () => ok({ id: 'new' }) },
+    artifactAPI: { list: () => ok([]) },
     planAPI: {
       get: () => ok(plan),
       schedule: () => ok(plan.tasks[2]),
@@ -257,7 +262,7 @@ describe('Plan page', () => {
 
   it('opens a task from its row, with its schedule, float, to-dos and relationships', async () => {
     await mount();
-    await click(container.querySelector('[data-open-task="wiring"]'));
+    await click(container.querySelector('[data-task-bar="wiring"]'));
     const panel = container.querySelector('aside[aria-label="Task Wire the rig"]')!;
     expect(panel.textContent).toContain('1 of 2 to-dos ticked off');
     expect(panel.textContent).toContain('No float: it is on the critical path');
@@ -296,7 +301,7 @@ describe('Plan page', () => {
 
   it('keeps the duration: a new start moves the due date, a new due date the start, a new duration the due date', async () => {
     await mount();
-    await click(container.querySelector('[data-open-task="wiring"]'));
+    await click(container.querySelector('[data-task-bar="wiring"]'));
     const panel = container.querySelector('aside[aria-label="Task Wire the rig"]')!;
     const type = async (el: Element, value: string) => {
       await act(async () => {
@@ -332,7 +337,7 @@ describe('Plan page', () => {
     expect(container.querySelector('[data-task-bar="wiring"]')?.getAttribute('style')).not.toContain('var(--warning)');
     expect(container.querySelector('[role="img"][aria-label="Critical"]')).toBeNull();
 
-    await click(container.querySelector('[data-open-task="wiring"]'));
+    await click(container.querySelector('[data-task-bar="wiring"]'));
     const todos = container.querySelector('[data-help-key="gantt.todos"]')!;
     const set = async (el: Element | null, value: string) => {
       await act(async () => {
@@ -372,7 +377,7 @@ describe('Plan page', () => {
 
   it('shows a relationship on the task that drives too, worded from its side, and edits it there', async () => {
     await mount();
-    await click(container.querySelector('[data-open-task="frame"]'));
+    await click(container.querySelector('[data-task-bar="frame"]'));
     const section = container.querySelector('[data-help-key="gantt.relationships"]')!;
     expect(section.querySelector('h3')?.textContent).toBe('Relationships · 1');
     expect(section.textContent).toContain('1.2 Wire the rig');
@@ -406,9 +411,20 @@ describe('Plan page', () => {
     expect((container.querySelector('[role="table"]') as HTMLElement).style.overflowX).toBe('hidden');
   });
 
+  it('opens the full task from the open button on a row, and only selects it from its title or bar', async () => {
+    await mount();
+    await click(container.querySelector('[role="rowheader"] button[title="Wire the rig"]'));
+    expect(container.querySelector('aside[aria-label="Task Wire the rig"]')).toBeTruthy();
+    expect(container.querySelector('[data-full-task]')).toBeNull();
+    await click(container.querySelector('[data-open-task="frame"]'));
+    expect(container.querySelector('[data-full-task="frame"]')).toBeTruthy();
+    // The panel beside the chart stays on the task that was selected.
+    expect(container.querySelector('aside[aria-label="Task Wire the rig"]')).toBeTruthy();
+  });
+
   it('gives a task with sub-tasks no dates of its own, and no bar to drag', async () => {
     await mount();
-    await click(container.querySelector('[data-open-task="build"]'));
+    await click(container.querySelector('[data-task-bar="build"]'));
     const section = container.querySelector('[data-help-key="gantt.schedule"]')!;
     expect(section.querySelector('input')).toBeNull();
     expect(section.textContent).toContain('1 Mar – 20 Mar · 20 working days · 6.5 days of effort');

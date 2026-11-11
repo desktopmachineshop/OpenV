@@ -27,7 +27,11 @@ export const OpenIcon: React.FC = () => (
   </svg>
 );
 
-/** A task in the outline: its fold control, outline number, title, progress and the button that opens it. */
+/**
+ * A task in the outline: its fold control, outline number, title and
+ * progress. The title selects the task, showing it in the panel beside the
+ * chart; the small open button opens the task in full, as the board does.
+ */
 export const OutlineCell: React.FC<{
   task: PlanTask;
   width: number;
@@ -37,7 +41,8 @@ export const OutlineCell: React.FC<{
   critical?: boolean;
   onToggle: () => void;
   onSelect: () => void;
-}> = ({ task, width, selected, folded, critical, onToggle, onSelect }) => {
+  onOpen: () => void;
+}> = ({ task, width, selected, folded, critical, onToggle, onSelect, onOpen }) => {
   return (
     <div
       role="rowheader"
@@ -99,9 +104,9 @@ export const OutlineCell: React.FC<{
       </span>
       <button
         type="button"
-        onClick={onSelect}
+        onClick={onOpen}
         aria-label={`Open ${task.title}`}
-        title="Open task"
+        title="Open the full task"
         data-open-task={task.id}
         style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, padding: 0, flexShrink: 0, border: '1px solid transparent', borderRadius: 4, background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
       >

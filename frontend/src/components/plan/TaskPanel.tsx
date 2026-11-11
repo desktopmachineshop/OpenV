@@ -54,6 +54,8 @@ export interface TaskPanelProps {
   onAddTodo: (task: PlanTask, text: string, dueDate: string) => void;
   onTickTodo: (todoId: string, done: boolean) => void;
   onSelectTask: (task: PlanTask) => void;
+  /** Opens the task in full: its description, assignee, linked artifacts and activity. */
+  onOpenTask?: (task: PlanTask) => void;
   onClose: () => void;
 }
 
@@ -279,6 +281,7 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
   onAddTodo,
   onTickTodo,
   onSelectTask,
+  onOpenTask,
   onClose,
 }) => {
   const parents = useMemo(() => {
@@ -313,9 +316,15 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
             </Chip>
           )}
           <span style={mutedStyle}>{spanLabel(task.span_start, task.span_end, plan.today)}</span>
-          <Link to={`/projects/${projectId}/board`} style={{ fontSize: 12, marginLeft: 'auto' }}>
-            Open the board
-          </Link>
+          {onOpenTask ? (
+            <button type="button" onClick={() => onOpenTask(task)} style={{ marginLeft: 'auto', padding: 0, border: 'none', background: 'none', font: 'inherit', fontSize: 12, color: 'var(--accent-text)', textDecoration: 'underline', cursor: 'pointer' }}>
+              Open the full task
+            </button>
+          ) : (
+            <Link to={`/projects/${projectId}/board`} style={{ fontSize: 12, marginLeft: 'auto' }}>
+              Open the board
+            </Link>
+          )}
         </div>
         <Meter label="Done" value={task.progress} color={BAR_COLORS[tone].fill} />
         <span style={mutedStyle}>

@@ -18,9 +18,11 @@ start date, sub-tasks, and the relationships between tasks.
 
 The outline on the left lists the tasks, numbered as an outline (1, 1.1,
 1.2, 2). A task with sub-tasks has an arrow that folds them away. The
-figure at the end of each row is the task's progress, and the small
-**open** button after it opens the task beside the chart. Each milestone
-carries the same button.
+figure at the end of each row is the task's progress. Select a task's
+title, or its bar, to show it in the panel beside the chart. The small
+**open** button at the end of the row opens the task in full, as the board
+does: its description, assignee, linked artifacts, to-dos and activity. A
+milestone's open button shows the milestone beside the chart.
 
 On the timeline, each task is a bar from its start to its due date:
 
@@ -86,8 +88,9 @@ To place a task that has no dates, use its empty row on the timeline:
 - **Drag** across the row, and the task is scheduled for the range you drag
   over, drawn as it grows with its dates beside it.
 
-Open a task, with the button on its row or by selecting its bar, to see it
-beside the chart. There you can:
+Select a task, by its title in the outline or by its bar, to see it beside
+the chart. **Open the full task** in that panel, like the open button on
+the row, shows everything else about it. In the panel you can:
 
 - set its **Start** and **Due** dates, its **Duration** and its **Effort**:
   see [Duration and effort](#duration-and-effort). The due date is the

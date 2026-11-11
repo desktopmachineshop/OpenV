@@ -31,6 +31,7 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 - **Add a task in the chart.** Type a title in the last row of the Gantt's outline and press Enter.
 - **The scroll bar belongs to the timeline.** It sits under the timeline and starts where the task column ends.
 - **The Gantt fills the window.** On a computer, the chart and the task or milestone panel beside it reach the bottom of the window, however few tasks the plan has; each scrolls on its own when it is longer.
+- **The open button opens the full task.** The small open button on a Gantt row now opens the task in full, with its description, assignee, linked artifacts and activity, as the board does. Selecting the task's title or its bar still shows it in the panel beside the chart, which has **Open the full task** too.
 - **Open a task from its row.** Each row of the Gantt, and each milestone, has a small open button.
 - **Releases is under Plan.** The **Releases** page has moved from **Verify** to **Plan** in the project menu, beside the Gantt, where each release is a milestone. Links to it are unchanged.
 
