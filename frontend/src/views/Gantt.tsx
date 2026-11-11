@@ -38,6 +38,7 @@ import { AddMilestoneForm, AddTaskForm, ExportControl, NewTask } from '../compon
 import { PlanPhone } from '../components/plan/PlanPhone';
 import { PlanChartPanel } from '../components/plan/PlanChartPanel';
 import type { TrackingAction } from '../components/plan/PlanTracking';
+import { usePlanHistory } from '../components/plan/planHistory';
 import { TaskPanel } from '../components/plan/TaskPanel';
 import { money, type RelationshipView } from '../components/plan/planModel';
 import { ErrorBanner, FeatureGate, Sheet, buttonStyle, mutedStyle, pageType, useConfirm } from '../components/ui';
@@ -162,7 +163,8 @@ const PlanPage: React.FC = () => {
     }
   };
 
-  const schedule = (t: PlanTask, change: PlanScheduleInput) => run(() => planAPI.schedule(t.id, change), 'Failed to schedule the task');
+  const history = usePlanHistory(plan?.tasks, (id, change) => run(() => planAPI.schedule(id, change), 'Failed to schedule the task'));
+  const schedule = history.schedule;
 
   const relate = (taskId: string, otherId: string, view: RelationshipView, lagDays = 0, lagUnit: PlanLagUnit = 'd') =>
     run(() => planAPI.relate(taskId, otherId, view.type, view.direction, lagDays, lagUnit), 'Failed to relate the tasks');
@@ -378,6 +380,8 @@ const PlanPage: React.FC = () => {
           onSelectTask={openTask}
           onOpenTask={openFull}
           onSelectMilestone={openMilestone}
+          onEdit={coarsePointer ? undefined : schedule}
+          history={history}
           onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
           onLink={coarsePointer ? undefined : relate}
           onRecalculate={recalculate}

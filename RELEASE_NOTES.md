@@ -15,6 +15,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Columns you can edit.** **Columns**, under the Gantt's header, adds start, finish, days, effort, % done, float, cost and who beside the task names. Click a cell to change it in place.
+- **Find, filter, sort and group.** Find tasks by name, list only the late, critical or unscheduled ones, sort by date, float or progress, and group by person, milestone or board column.
+- **Move, indent and outdent tasks.** Move the selected task up or down among its siblings, make it a sub-task of the task above or move it out a level, or drag it by its outline number onto another task. Tasks keep the order you give them.
+- **Undo and redo.** **Undo** (Ctrl+Z) and **Redo** (Ctrl+Y) on the Gantt take back and repeat your edits to tasks.
+- **PDF lines across pages, and a legend.** In the plan's PDF, a relationship to a task on another page now runs to the page's edge and names that task and its page, and every chart page ends with a legend.
 - **Baselines.** **Tracking**, above the Gantt, saves a baseline of the plan. The chart then shows where each task was as a grey bar under it, and a task's panel says how many working days it has moved.
 - **Actual dates, percent complete and cost.** A task's panel has **Tracking**: the days work really started and finished, a percentage complete you type in place of the counted one, and what the task has cost.
 - **Status date and earned value.** Report progress as of a status date, see planned, earned and spent value with the schedule and cost indices, and move work that has not started up to the status date with **Reschedule remaining work**.

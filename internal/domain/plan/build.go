@@ -377,7 +377,7 @@ func Build(in Inputs, now time.Time) *Plan {
 	today := now.UTC().Format(DateLayout)
 	p := &Plan{ProjectID: in.ProjectID, Today: today, Tasks: []*Task{}, Milestones: []MilestoneProgress{},
 		Dependencies: []Dependency{}, Catalogue: Metrics}
-	b := &builder{in: in, today: today, cal: NewCalendar(in.WorkingDays).WithHolidays(in.Holidays), byID: map[string]*Task{}, created: map[string]time.Time{}, children: map[string][]*Task{}}
+	b := &builder{in: in, today: today, cal: NewCalendar(in.WorkingDays).WithHolidays(in.Holidays), byID: map[string]*Task{}, created: map[string]time.Time{}, order: map[string]int{}, children: map[string][]*Task{}}
 	p.WorkingDays, p.Holidays, p.CriticalSlackDays = DefaultWorkingDays, []Holiday{}, in.CriticalSlackDays
 	p.Scheduling = in.Scheduling
 	if p.Mode == "" {
@@ -454,11 +454,13 @@ func Build(in Inputs, now time.Time) *Plan {
 
 // builder holds a plan's tasks while Build works them out.
 type builder struct {
-	in       Inputs
-	today    string
-	cal      Calendar
-	byID     map[string]*Task
-	created  map[string]time.Time
+	in      Inputs
+	today   string
+	cal     Calendar
+	byID    map[string]*Task
+	created map[string]time.Time
+	// order is a task's place among its siblings, where one was moved.
+	order    map[string]int
 	children map[string][]*Task
 	roots    []*Task
 }
@@ -487,6 +489,9 @@ func (b *builder) tasks() {
 			continue
 		}
 		t.Start = sc.StartDate
+		if sc.SortOrder != nil {
+			b.order[sc.WorkItemID] = *sc.SortOrder
+		}
 		t.DurationDays, t.EffortDays = sc.DurationDays, sc.EffortDays
 		t.Elapsed, t.Deadline = sc.Elapsed, sc.Deadline
 		t.ModeOwn, t.ConstraintType, t.ConstraintDate = sc.Mode, sc.ConstraintType, sc.ConstraintDate
@@ -592,12 +597,19 @@ func (b *builder) settle(t *Task) {
 	t.Late = !t.Done && t.SpanEnd != nil && *t.SpanEnd < b.today
 }
 
-// outline lists the tasks as a tree: by start, the unscheduled last, then
+// outline lists the tasks as a tree: siblings in the order they were put
+// in, where one was moved; otherwise by start, the unscheduled last, then
 // by age.
 func (b *builder) outline(p *Plan, list []*Task, depth int, prefix string) {
 	sort.SliceStable(list, func(i, j int) bool {
 		x, y := list[i], list[j]
+		ox, placedX := b.order[x.ID]
+		oy, placedY := b.order[y.ID]
 		switch {
+		case placedX != placedY:
+			return placedX
+		case placedX && ox != oy:
+			return ox < oy
 		case x.SpanStart != nil && y.SpanStart == nil:
 			return true
 		case x.SpanStart == nil && y.SpanStart != nil:

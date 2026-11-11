@@ -4,13 +4,15 @@
 // between one milestone and the next a band fills with the later one's
 // progress against its criteria. A line marks today.
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import type { PlanMilestone, PlanTask, ProjectPlan } from '../../api/client';
+import type { PlanMilestone, PlanScheduleInput, PlanTask, ProjectPlan } from '../../api/client';
 import { ellipsis, eyebrowStyle, mutedStyle } from '../ui';
 import { DependencyLines, LinkBand, OnLink, ROW_HEIGHT, useLinkDrag } from './GanttLinks';
 import { AddTaskRow, OpenIcon, OutlineCell, TaskBar, BaselineBar } from './GanttRows';
+import { GridCells, GridHead, GroupRow } from './GanttGrid';
+import { DEFAULT_VIEW, PlanView, arrange, isOutline, shownColumns } from './planView';
 import { ScheduleTrack } from './GanttSchedule';
 import { Scale, Tick, Zoom, buildScale, buildTicks, openingScroll, shortDate, todayScroll } from './ganttScale';
-import { milestoneColor, visibleTasks } from './planModel';
+import { descendants, milestoneColor } from './planModel';
 
 const HEAD_ROW = 24;
 const LANE_HEIGHT = 38;
@@ -197,6 +199,10 @@ export interface GanttChartProps {
   todaySignal: number;
   /** Draws where the baseline had each task, under its bar. */
   showBaseline?: boolean;
+  /** Which tasks are listed, in what order and groups, with which columns. */
+  view?: PlanView;
+  /** Set where the reader may edit: a column's cell is edited in place, and a row dragged by its number is moved. */
+  onEdit?: (t: PlanTask, change: PlanScheduleInput) => void;
 }
 
 export const GanttChart: React.FC<GanttChartProps> = ({
@@ -217,6 +223,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   onlyCritical,
   todaySignal,
   showBaseline,
+  view = DEFAULT_VIEW,
+  onEdit,
 }) => {
   const scroller = useRef<HTMLDivElement>(null);
   const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
@@ -247,11 +255,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   );
   const holidays = useMemo(() => plan.holidays.map((h) => h.date), [plan.holidays]);
   const ticks = useMemo(() => buildTicks(scale, plan.working_days, holidays), [scale, plan.working_days, holidays]);
-  const rows = useMemo(() => {
-    const shown = visibleTasks(plan.tasks, folded);
-    // Only the critical path: its tasks, and the tasks they sit under.
-    return onlyCritical ? shown.filter((t) => t.critical || t.critical_subtasks) : shown;
-  }, [plan.tasks, folded, onlyCritical]);
+  // Only the critical path: its tasks, and the tasks they sit under.
+  const rows = useMemo(() => arrange(plan, folded, onlyCritical ? { ...view, filter: 'critical' } : view), [plan, folded, onlyCritical, view]);
+  const columns = shownColumns(view);
+  const dropRow = (id: string, onto: PlanTask) => {
+    const moved = plan.tasks.find((x) => x.id === id);
+    if (moved && onEdit && id !== onto.id && !descendants(plan.tasks, id).has(onto.id)) onEdit(moved, { parent_id: onto.parent_id || '', after_id: onto.id });
+  };
 
   const timelineWidth = Math.max(viewWidth - outlineWidth, 0);
 
@@ -351,7 +361,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       <div style={{ width: outlineWidth + scale.width, minWidth: '100%' }}>
         <div role="row" style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', background: 'var(--surface-alt)' }}>
           <div style={corner(outlineWidth, HEAD_ROW * 2)}>
-            <span style={eyebrowStyle}>Task</span>
+            <span style={{ ...eyebrowStyle, flex: 1 }}>Task</span>
+            <GridHead columns={columns} />
           </div>
           <div style={{ borderBottom: '1px solid var(--border)' }}>
             <TickRow ticks={ticks.upper} width={scale.width} strong />
@@ -376,11 +387,13 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           <div style={{ position: 'absolute', left: outlineWidth, top: 0, width: scale.width, height: bodyHeight }}>
             <Guides scale={scale} ticks={ticks.lower} milestones={plan.milestones} today={plan.today} status={plan.status_day} height={bodyHeight} />
           </div>
-          {rows.map((t) => {
+          {rows.map((r) => {
+            if (!r.task) return <GroupRow key={r.id} label={r.label} count={r.count} width={outlineWidth} timeline={scale.width} />;
+            const t = r.task;
             // A folded task stands for its sub-tasks: it carries their critical mark.
             const critical = showCritical && (t.critical || (folded.has(t.id) && t.critical_subtasks));
             return (
-              <div role="row" key={t.id} style={{ display: 'flex', height: ROW_HEIGHT }}>
+              <div role="row" key={r.id} style={{ display: 'flex', height: ROW_HEIGHT }}>
                 <OutlineCell
                   task={t}
                   width={outlineWidth}
@@ -390,6 +403,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   onSelect={() => onSelectTask(t)}
                   onOpen={() => onOpenTask(t)}
                   critical={critical}
+                  flat={r.flat}
+                  cells={columns.length > 0 && <GridCells plan={plan} task={t} columns={columns} onEdit={onEdit} />}
+                  onDropRow={onEdit && isOutline(view) ? (id) => dropRow(id, t) : undefined}
                 />
                 <div
                   role="cell"

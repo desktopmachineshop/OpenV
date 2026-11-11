@@ -124,6 +124,7 @@
     <topicref href="../topics/gantt/reading-the-chart.dita"/>
     <topicref href="../topics/gantt/scheduling-tasks.dita"/>
     <topicref href="../topics/gantt/tasks-with-sub-tasks.dita"/>
+    <topicref href="../topics/gantt/listing-ordering-and-editing-tasks.dita"/>
     <topicref href="../topics/gantt/working-days.dita"/>
     <topicref href="../topics/gantt/duration-and-effort.dita"/>
     <topicref href="../topics/gantt/the-critical-path.dita"/>

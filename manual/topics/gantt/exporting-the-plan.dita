@@ -8,7 +8,7 @@
   <conbody>
     <p><b>Export</b> saves the plan as a file:</p>
     <ul>
-      <li><b>PDF</b>: the chart on landscape pages, with the outline, dates, bars, the lines between related tasks, milestones and today's line, then the milestones with their criteria.</li>
+      <li><b>PDF</b>: the chart on landscape pages, with the outline, dates, bars, the lines between related tasks, milestones and today's line, then the milestones with their criteria. Each page ends with a legend. A line to a task on another page runs to the edge of the page and names that task's number and page, as in <i>→ 2.1 p.2</i>.</li>
       <li><b>Excel</b>: the tasks with a timeline of weeks drawn beside them, and the milestones on a second sheet.</li>
       <li><b>CSV</b>: the tasks, then the milestones and their criteria.</li>
     </ul>

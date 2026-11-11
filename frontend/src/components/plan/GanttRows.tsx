@@ -42,10 +42,18 @@ export const OutlineCell: React.FC<{
   onToggle: () => void;
   onSelect: () => void;
   onOpen: () => void;
-}> = ({ task, width, selected, folded, critical, onToggle, onSelect, onOpen }) => {
+  /** In a sorted or grouped list: no indent and no fold control. */
+  flat?: boolean;
+  /** The cells of the chosen columns, after the name. */
+  cells?: React.ReactNode;
+  /** Set where rows can be reordered: the outline number is a grip, and a row dropped here goes straight after this task. */
+  onDropRow?: (draggedId: string) => void;
+}> = ({ task, width, selected, folded, critical, onToggle, onSelect, onOpen, flat, cells, onDropRow }) => {
   return (
     <div
       role="rowheader"
+      onDragOver={onDropRow ? (e) => e.preventDefault() : undefined}
+      onDrop={onDropRow ? (e) => (e.preventDefault(), onDropRow(e.dataTransfer.getData('text/plain'))) : undefined}
       style={{
         position: 'sticky',
         left: 0,
@@ -57,21 +65,28 @@ export const OutlineCell: React.FC<{
         alignItems: 'center',
         gap: 4,
         height: ROW_HEIGHT,
-        padding: `0 8px 0 ${8 + task.depth * 14}px`,
+        padding: `0 8px 0 ${8 + (flat ? 0 : task.depth * 14)}px`,
         borderRight: '1px solid var(--border)',
         borderBottom: '1px solid var(--border-soft)',
         background: selected ? 'var(--tint-blue)' : 'var(--surface)',
         boxShadow: selected ? 'inset 3px 0 0 var(--accent)' : undefined,
       }}
     >
-      {task.subtasks_total > 0 ? (
+      {task.subtasks_total > 0 && !flat ? (
         <button type="button" onClick={onToggle} aria-expanded={!folded} aria-label={`${folded ? 'Unfold' : 'Fold'} ${task.title}`} style={caret}>
           {folded ? '▶' : '▼'}
         </button>
       ) : (
         <span style={{ width: 20, flexShrink: 0 }} />
       )}
-      <span style={{ fontFamily: MONO, fontSize: 11, color: 'var(--text-muted)', flexShrink: 0 }}>{task.wbs}</span>
+      <span
+        draggable={Boolean(onDropRow)}
+        onDragStart={(e) => e.dataTransfer.setData('text/plain', task.id)}
+        title={onDropRow ? 'Drag onto another task to move this one after it' : undefined}
+        style={{ fontFamily: MONO, fontSize: 11, color: 'var(--text-muted)', flexShrink: 0, cursor: onDropRow ? 'grab' : undefined }}
+      >
+        {task.wbs}
+      </span>
       <button
         type="button"
         onClick={onSelect}
@@ -112,6 +127,7 @@ export const OutlineCell: React.FC<{
       >
         <OpenIcon />
       </button>
+      {cells}
     </div>
   );
 };

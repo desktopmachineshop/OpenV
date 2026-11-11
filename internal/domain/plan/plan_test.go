@@ -3,6 +3,8 @@ package plan
 import (
 	"bytes"
 	"errors"
+	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -276,6 +278,19 @@ func (r *fakeRepo) SaveResource(_ string, res Resource) error {
 	r.resources = append(r.resources, res)
 	return nil
 }
+func (r *fakeRepo) SetOrder(_ string, order map[string]int) error {
+	for id, n := range order {
+		n := n
+		if r.schedules[id] == nil {
+			r.schedules[id] = &TaskSchedule{WorkItemID: id, ProjectID: "p"}
+		}
+		r.schedules[id].SortOrder = &n
+		if n == 0 {
+			r.schedules[id].SortOrder = nil
+		}
+	}
+	return nil
+}
 func (r *fakeRepo) ListBaselines(string) ([]*Baseline, error) { return r.baselines, nil }
 func (r *fakeRepo) CreateBaseline(b *Baseline) error {
 	r.baselines = append(r.baselines, b)
@@ -290,7 +305,14 @@ func (r *fakeRepo) DeleteBaseline(_, id string) error {
 	}
 	return ErrNotFound
 }
-func (r *fakeRepo) SaveSchedule(s *TaskSchedule) error { r.schedules[s.WorkItemID] = s; return nil }
+func (r *fakeRepo) SaveSchedule(s *TaskSchedule) error {
+	// As the table does, a save leaves the task's place alone.
+	if old := r.schedules[s.WorkItemID]; old != nil && old != s {
+		s.SortOrder = old.SortOrder
+	}
+	r.schedules[s.WorkItemID] = s
+	return nil
+}
 func (r *fakeRepo) ListDependencies(string) ([]Dependency, error) {
 	out := []Dependency{}
 	for _, on := range r.deps {
@@ -1531,5 +1553,89 @@ func TestBaselinesVarianceActualsAndEarnedValue(t *testing.T) {
 	}
 	if err := svc.DeleteBaseline("p", b.ID); err != nil || len(repo.baselines) != 0 {
 		t.Fatalf("deleted: %v", err)
+	}
+}
+
+func TestTasksKeepTheOrderTheyArePutIn(t *testing.T) {
+	svc, repo, _, _ := newService()
+	outline := func() string {
+		p, err := svc.Plan("p", Evidence{}, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := ""
+		for _, task := range p.Tasks {
+			out += task.WBS + task.ID + " "
+		}
+		return out
+	}
+	// By start, then by age: A has dates, B and C none.
+	if got := outline(); got != "1a 2b 3c " {
+		t.Fatalf("to begin with: %s", got)
+	}
+	if err := svc.Schedule("c", ScheduleRequest{AfterID: sp("")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if got := outline(); got != "1c 2a 3b " {
+		t.Fatalf("C first: %s", got)
+	}
+	if err := svc.Schedule("a", ScheduleRequest{AfterID: sp("b")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	// A new start date does not move a task once its siblings are ordered.
+	if err := svc.Schedule("b", ScheduleRequest{StartDate: sp("2020-01-01"), DueDate: sp("2020-01-02")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if got := outline(); got != "1c 2b 3a " {
+		t.Fatalf("A after B: %s", got)
+	}
+	if err := svc.Schedule("a", ScheduleRequest{AfterID: sp("nope")}, "tester"); !errors.Is(err, ErrPosition) {
+		t.Fatalf("after a task that is not a sibling: %v", err)
+	}
+	// Indented under C, A loses its place among the top-level tasks; B
+	// follows it there and goes after it.
+	if err := svc.Schedule("a", ScheduleRequest{ParentID: sp("c")}, "tester"); err != nil || repo.schedules["a"].SortOrder != nil {
+		t.Fatalf("indented: %v %v", err, repo.schedules["a"].SortOrder)
+	}
+	if err := svc.Schedule("b", ScheduleRequest{ParentID: sp("c"), AfterID: sp("a")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if got := outline(); got != "1c 1.1a 1.2b " {
+		t.Fatalf("both under C: %s", got)
+	}
+	// Outdented again, after C.
+	if err := svc.Schedule("a", ScheduleRequest{ParentID: sp(""), AfterID: sp("c")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if got := outline(); got != "1c 1.1b 2a " {
+		t.Fatalf("A outdented: %s", got)
+	}
+}
+
+func TestPDFLinksCrossPages(t *testing.T) {
+	// Sixty tasks, each driven by the one before and every tenth by the
+	// first: more than a page, so some lines leave one page for another.
+	in := Inputs{ProjectID: "p", WorkingDays: everyDay}
+	for i := 0; i < 60; i++ {
+		id := fmt.Sprintf("t%02d", i)
+		start := now.AddDate(0, 0, i*2)
+		due := start.AddDate(0, 0, 3)
+		s := start.Format(DateLayout)
+		in.Items = append(in.Items, item(id, "Task "+id, workitems.ColumnTodo, &due, i))
+		in.Schedules = append(in.Schedules, &TaskSchedule{WorkItemID: id, ProjectID: "p", StartDate: &s})
+		if i > 0 {
+			in.Dependencies = append(in.Dependencies, Dependency{WorkItemID: id, DependsOnID: fmt.Sprintf("t%02d", i-1), Type: RelFinishToStart})
+		}
+		if i > 0 && i%10 == 0 {
+			in.Dependencies = append(in.Dependencies, Dependency{WorkItemID: id, DependsOnID: "t00", Type: RelStartToStart})
+		}
+	}
+	doc := Document{ProjectName: "Long", ExportedAt: now, Plan: Build(in, now)}
+	out, err := renderPDF(doc)
+	if err != nil || len(out) < 1000 {
+		t.Fatalf("render: %d bytes, %v", len(out), err)
+	}
+	if path := os.Getenv("PLAN_PDF_OUT"); path != "" {
+		_ = os.WriteFile(path, out, 0o644)
 	}
 }

@@ -170,6 +170,7 @@ SECTION_KEYS = {
     ('gantt', 'relationships-between-tasks'): ['gantt.relationships', 'gantt.recalculate'],
     ('gantt', 'duration-and-effort'): ['gantt.schedule'],
     ('gantt', 'the-critical-path'): ['gantt.critical'],
+    ('gantt', 'listing-ordering-and-editing-tasks'): ['gantt.view'],
     ('gantt', 'working-days'): ['gantt.working-days', 'gantt.holidays'],
     ('gantt', 'automatic-scheduling-and-constraints'): ['gantt.scheduling'],
     ('gantt', 'resources-cost-and-levelling'): ['gantt.resources'],

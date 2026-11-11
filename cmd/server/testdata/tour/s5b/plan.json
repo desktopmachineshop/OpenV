@@ -3341,6 +3341,140 @@
     },
     {
       "n": 52,
+      "title": "Wiring moved to the top of Build's sub-tasks",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/schedule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<wiring>/schedule",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"after_id\":\"\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 1386,
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":7.5,\"float_days\":20630,\"critical\":true,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":20630,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":true,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false}],\"conflicts\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<wiring>",
+        "title": "Wire the rig",
+        "column": "todo",
+        "assignee_type": "user",
+        "assignee_id": null,
+        "parent_id": "<build>",
+        "depth": 1,
+        "wbs": "2.1",
+        "start": "<date>",
+        "end": "<date>",
+        "span_start": "<date>",
+        "span_end": "<date>",
+        "duration_days": 8,
+        "effort_days": 7.5,
+        "float_days": 20630,
+        "critical": true,
+        "elapsed": false,
+        "deadline": null,
+        "deadline_missed": false,
+        "mode_own": "",
+        "mode": "manual",
+        "constraint_type": "asap",
+        "constraint_date": null,
+        "constraint_violated": false,
+        "early_start": "<date>",
+        "early_finish": "<date>",
+        "late_start": "<date>",
+        "late_finish": "<date>",
+        "free_float_days": 20630,
+        "assignments": [],
+        "fixed_cost": 0,
+        "cost": 0,
+        "effort_driven": false,
+        "overallocated": false,
+        "actual_start": null,
+        "actual_finish": null,
+        "percent_complete": null,
+        "actual_cost": null,
+        "baseline": null,
+        "start_variance_days": null,
+        "finish_variance_days": null,
+        "earned_value": {
+          "bac": 0,
+          "pv": 0,
+          "ev": 0,
+          "ac": 0,
+          "sv": 0,
+          "cv": 0,
+          "spi": 0,
+          "cpi": 0,
+          "eac": 0
+        },
+        "behind_schedule": true,
+        "float_until": "<date>",
+        "critical_subtasks": false,
+        "progress": 0,
+        "done": false,
+        "late": true,
+        "todos_done": 0,
+        "todos_total": 0,
+        "subtasks_done": 0,
+        "milestone": null,
+        "milestone_inherited": false,
+        "subtasks_total": 0,
+        "todos": [],
+        "depends_on": [],
+        "relationships": [],
+        "drives": [
+          {
+            "task_id": "<frame>",
+            "type": "FS",
+            "lag_days": 0,
+            "lag_unit": "d",
+            "conflict": false
+          }
+        ],
+        "conflicts": []
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 53,
+      "title": "after a task that is not its sibling: 400",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/schedule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<wiring>/schedule",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"after_id\":\"<order>\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 60,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"a task is placed after one of its sibling tasks\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "a task is placed after one of its sibling tasks"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 54,
       "title": "a baseline of the plan as it stands",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/baselines",
@@ -3359,20 +3493,20 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<bl>\",\"name\":\"As approved\",\"created_at\":\"<time@step 52>\",\"tasks\":4}"
+        "{\"id\":\"<bl>\",\"name\":\"As approved\",\"created_at\":\"<time@step 54>\",\"tasks\":4}"
       ],
       "trailing_newline": true,
       "parsed": {
         "id": "<bl>",
         "name": "As approved",
-        "created_at": "<time@step 52>",
+        "created_at": "<time@step 54>",
         "tasks": 4
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 53,
+      "n": 55,
       "title": "the viewer may not save one: 403",
       "actor": "viewer",
       "route": "POST /api/v1/projects/{id}/plan/baselines",
@@ -3401,7 +3535,7 @@
       "events": []
     },
     {
-      "n": 54,
+      "n": 56,
       "title": "Wiring really started, is 40% complete by hand and has cost 120",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -3420,7 +3554,7 @@
       "content_length": 1517,
       "kind": "json",
       "body": [
-        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":7.5,\"float_days\":20630,\"critical\":true,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":20630,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":\"<date>\",\"actual_finish\":null,\"percent_complete\":40,\"actual_cost\":120,\"baseline\":{\"id\":\"<wiring>\",\"start\":\"<date>\",\"end\":\"<date>\",\"duration_days\":8,\"effort_days\":7.5,\"cost\":0},\"start_variance_days\":0,\"finish_variance_days\":0,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":120,\"sv\":0,\"cv\":-120,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":true,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":40,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false}],\"conflicts\":[]}"
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":7.5,\"float_days\":20630,\"critical\":true,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":20630,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":\"<date>\",\"actual_finish\":null,\"percent_complete\":40,\"actual_cost\":120,\"baseline\":{\"id\":\"<wiring>\",\"start\":\"<date>\",\"end\":\"<date>\",\"duration_days\":8,\"effort_days\":7.5,\"cost\":0},\"start_variance_days\":0,\"finish_variance_days\":0,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":120,\"sv\":0,\"cv\":-120,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":true,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":40,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false}],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3431,7 +3565,7 @@
         "assignee_id": null,
         "parent_id": "<build>",
         "depth": 1,
-        "wbs": "2.1",
+        "wbs": "2.2",
         "start": "<date>",
         "end": "<date>",
         "span_start": "<date>",
@@ -3513,7 +3647,7 @@
       "events": []
     },
     {
-      "n": 55,
+      "n": 57,
       "title": "140 percent complete: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -3542,7 +3676,7 @@
       "events": []
     },
     {
-      "n": 56,
+      "n": 58,
       "title": "finished before it started: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -3571,7 +3705,7 @@
       "events": []
     },
     {
-      "n": 57,
+      "n": 59,
       "title": "progress is reported as of a status date, against that baseline",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -3617,7 +3751,7 @@
       "events": []
     },
     {
-      "n": 58,
+      "n": 60,
       "title": "a status date that is not a date: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -3646,7 +3780,7 @@
       "events": []
     },
     {
-      "n": 59,
+      "n": 61,
       "title": "the work that has not started moves to the status date",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/reschedule-remaining",
@@ -3681,7 +3815,7 @@
       ]
     },
     {
-      "n": 60,
+      "n": 62,
       "title": "the viewer may not reschedule: 403",
       "actor": "viewer",
       "route": "POST /api/v1/projects/{id}/plan/reschedule-remaining",
@@ -3706,7 +3840,7 @@
       "events": []
     },
     {
-      "n": 61,
+      "n": 63,
       "title": "the viewer may not delete the baseline: 403",
       "actor": "viewer",
       "route": "DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}",
@@ -3731,7 +3865,7 @@
       "events": []
     },
     {
-      "n": 62,
+      "n": 64,
       "title": "the baseline deleted",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}",
@@ -3749,7 +3883,7 @@
       "events": []
     },
     {
-      "n": 63,
+      "n": 65,
       "title": "deleted again: 404",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}",
@@ -3774,7 +3908,7 @@
       "events": []
     },
     {
-      "n": 64,
+      "n": 66,
       "title": "dates on Build, which has sub-tasks: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -3803,7 +3937,7 @@
       "events": []
     },
     {
-      "n": 65,
+      "n": 67,
       "title": "the plan works Monday to Saturday",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -3850,7 +3984,7 @@
       "events": []
     },
     {
-      "n": 66,
+      "n": 68,
       "title": "holidays, and a critical threshold of two days",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -3906,7 +4040,7 @@
       "events": []
     },
     {
-      "n": 67,
+      "n": 69,
       "title": "an automatic plan from 1 January 2099, a path per chain, to finish by 2100",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -3972,7 +4106,7 @@
       ]
     },
     {
-      "n": 68,
+      "n": 70,
       "title": "a mode that is neither: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4001,7 +4135,7 @@
       "events": []
     },
     {
-      "n": 69,
+      "n": 71,
       "title": "costs in pounds against a budget",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4057,7 +4191,7 @@
       "events": []
     },
     {
-      "n": 70,
+      "n": 72,
       "title": "a currency of four letters: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4086,7 +4220,7 @@
       "events": []
     },
     {
-      "n": 71,
+      "n": 73,
       "title": "a holiday that is not a date: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4115,7 +4249,7 @@
       "events": []
     },
     {
-      "n": 72,
+      "n": 74,
       "title": "a threshold over a year: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4144,7 +4278,7 @@
       "events": []
     },
     {
-      "n": 73,
+      "n": 75,
       "title": "no working days: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4173,7 +4307,7 @@
       "events": []
     },
     {
-      "n": 74,
+      "n": 76,
       "title": "a day 8: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4202,7 +4336,7 @@
       "events": []
     },
     {
-      "n": 75,
+      "n": 77,
       "title": "the viewer may not set them: 403",
       "actor": "viewer",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4231,7 +4365,7 @@
       "events": []
     },
     {
-      "n": 76,
+      "n": 78,
       "title": "the viewer may not schedule: 403",
       "actor": "viewer",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -4260,7 +4394,7 @@
       "events": []
     },
     {
-      "n": 77,
+      "n": 79,
       "title": "a to-do on Wiring",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -4279,7 +4413,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 77>\",\"updated_at\":\"<time@step 77>\"}"
+        "{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 79>\",\"updated_at\":\"<time@step 79>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4296,14 +4430,14 @@
         "source_chatter_id": null,
         "promoted_work_item_id": null,
         "created_by": "<owner>",
-        "created_at": "<time@step 77>",
-        "updated_at": "<time@step 77>"
+        "created_at": "<time@step 79>",
+        "updated_at": "<time@step 79>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 78,
+      "n": 80,
       "title": "a second to-do on Wiring, with its deadline",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -4322,7 +4456,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 78>\",\"updated_at\":\"<time@step 78>\"}"
+        "{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 80>\",\"updated_at\":\"<time@step 80>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4339,14 +4473,14 @@
         "source_chatter_id": null,
         "promoted_work_item_id": null,
         "created_by": "<owner>",
-        "created_at": "<time@step 78>",
-        "updated_at": "<time@step 78>"
+        "created_at": "<time@step 80>",
+        "updated_at": "<time@step 80>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 79,
+      "n": 81,
       "title": "a deadline not written YYYY-MM-DD: 400",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -4375,7 +4509,7 @@
       "events": []
     },
     {
-      "n": 80,
+      "n": 82,
       "title": "no text: 400",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -4404,7 +4538,7 @@
       "events": []
     },
     {
-      "n": 81,
+      "n": 83,
       "title": "the viewer may not add one: 403",
       "actor": "viewer",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -4433,7 +4567,7 @@
       "events": []
     },
     {
-      "n": 82,
+      "n": 84,
       "title": "Wiring's to-dos, to the viewer: both open",
       "actor": "viewer",
       "route": "GET /api/v1/work-items/{id}/todos",
@@ -4448,7 +4582,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 78>\",\"updated_at\":\"<time@step 78>\"},{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 77>\",\"updated_at\":\"<time@step 77>\"}]"
+        "[{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 80>\",\"updated_at\":\"<time@step 80>\"},{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 79>\",\"updated_at\":\"<time@step 79>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -4466,8 +4600,8 @@
           "source_chatter_id": null,
           "promoted_work_item_id": null,
           "created_by": "<owner>",
-          "created_at": "<time@step 78>",
-          "updated_at": "<time@step 78>"
+          "created_at": "<time@step 80>",
+          "updated_at": "<time@step 80>"
         },
         {
           "id": "<t1>",
@@ -4483,14 +4617,14 @@
           "source_chatter_id": null,
           "promoted_work_item_id": null,
           "created_by": "<owner>",
-          "created_at": "<time@step 77>",
-          "updated_at": "<time@step 77>"
+          "created_at": "<time@step 79>",
+          "updated_at": "<time@step 79>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 83,
+      "n": 85,
       "title": "Frame has none: []",
       "actor": "owner",
       "route": "GET /api/v1/work-items/{id}/todos",
@@ -4512,7 +4646,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 84,
+      "n": 86,
       "title": "a milestone: every user need addressed by 1 February 2020",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -4531,7 +4665,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<m1>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[{\"metric\":\"needs_addressed\",\"target\":100},{\"metric\":\"tasks_done\",\"target\":100}],\"created_at\":\"<time@step 84>\",\"updated_at\":\"<time@step 84>\"}"
+        "{\"id\":\"<m1>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[{\"metric\":\"needs_addressed\",\"target\":100},{\"metric\":\"tasks_done\",\"target\":100}],\"created_at\":\"<time@step 86>\",\"updated_at\":\"<time@step 86>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4551,14 +4685,14 @@
             "target": 100
           }
         ],
-        "created_at": "<time@step 84>",
-        "updated_at": "<time@step 84>"
+        "created_at": "<time@step 86>",
+        "updated_at": "<time@step 86>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 85,
+      "n": 87,
       "title": "a milestone with no date and no criteria",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -4577,7 +4711,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 85>\",\"updated_at\":\"<time@step 85>\"}"
+        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 87>\",\"updated_at\":\"<time@step 87>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4588,14 +4722,14 @@
         "description": "",
         "target_date": null,
         "criteria": [],
-        "created_at": "<time@step 85>",
-        "updated_at": "<time@step 85>"
+        "created_at": "<time@step 87>",
+        "updated_at": "<time@step 87>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 86,
+      "n": 88,
       "title": "Q's milestone",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -4614,7 +4748,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<q_m>\",\"project_id\":\"<q>\",\"release_id\":null,\"name\":\"Elsewhere\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 86>\",\"updated_at\":\"<time@step 86>\"}"
+        "{\"id\":\"<q_m>\",\"project_id\":\"<q>\",\"release_id\":null,\"name\":\"Elsewhere\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 88>\",\"updated_at\":\"<time@step 88>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4625,14 +4759,14 @@
         "description": "",
         "target_date": null,
         "criteria": [],
-        "created_at": "<time@step 86>",
-        "updated_at": "<time@step 86>"
+        "created_at": "<time@step 88>",
+        "updated_at": "<time@step 88>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 87,
+      "n": 89,
       "title": "no name: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -4661,7 +4795,7 @@
       "events": []
     },
     {
-      "n": 88,
+      "n": 90,
       "title": "an unknown metric: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -4690,7 +4824,7 @@
       "events": []
     },
     {
-      "n": 89,
+      "n": 91,
       "title": "a target of 0: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -4719,7 +4853,7 @@
       "events": []
     },
     {
-      "n": 90,
+      "n": 92,
       "title": "the viewer may not add one: 403",
       "actor": "viewer",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -4748,7 +4882,7 @@
       "events": []
     },
     {
-      "n": 91,
+      "n": 93,
       "title": "Kick-off gets a date; its name stays",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -4767,7 +4901,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[],\"created_at\":\"<time@step 85>\",\"updated_at\":\"<time@step 91>\"}"
+        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[],\"created_at\":\"<time@step 87>\",\"updated_at\":\"<time@step 93>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4778,14 +4912,14 @@
         "description": "",
         "target_date": "<date>",
         "criteria": [],
-        "created_at": "<time@step 85>",
-        "updated_at": "<time@step 91>"
+        "created_at": "<time@step 87>",
+        "updated_at": "<time@step 93>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 92,
+      "n": 94,
       "title": "Q's milestone through P: 404",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -4814,7 +4948,7 @@
       "events": []
     },
     {
-      "n": 93,
+      "n": 95,
       "title": "Wiring assigned to Definition complete",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -4833,7 +4967,7 @@
       "content_length": 1636,
       "kind": "json",
       "body": [
-        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":9,\"effort_days\":7.5,\"float_days\":41,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"snet\",\"constraint_date\":\"<date>\",\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":41,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"milestone\":\"<m1>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false}],\"conflicts\":[]}"
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":9,\"effort_days\":7.5,\"float_days\":41,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"snet\",\"constraint_date\":\"<date>\",\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":41,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"milestone\":\"<m1>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false}],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4844,7 +4978,7 @@
         "assignee_id": null,
         "parent_id": "<build>",
         "depth": 1,
-        "wbs": "1.1",
+        "wbs": "1.2",
         "start": "<date>",
         "end": "<date>",
         "span_start": "<date>",
@@ -4932,7 +5066,7 @@
       "events": []
     },
     {
-      "n": 94,
+      "n": 96,
       "title": "Order assigned to MVP, a release's milestone",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -5037,7 +5171,7 @@
       "events": []
     },
     {
-      "n": 95,
+      "n": 97,
       "title": "Q's milestone: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -5066,7 +5200,7 @@
       "events": []
     },
     {
-      "n": 96,
+      "n": 98,
       "title": "Q's release: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -5095,7 +5229,7 @@
       "events": []
     },
     {
-      "n": 97,
+      "n": 99,
       "title": "Frame assigned and taken off again",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -5114,7 +5248,7 @@
       "content_length": 1633,
       "kind": "json",
       "body": [
-        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":\"<m2>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<wiring>\",\"<order>\"],\"relationships\":[{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false},{\"task_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"drives\":[],\"conflicts\":[\"<order>\"]}"
+        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":\"<m2>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<wiring>\",\"<order>\"],\"relationships\":[{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false},{\"task_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"drives\":[],\"conflicts\":[\"<order>\"]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -5125,7 +5259,7 @@
         "assignee_id": null,
         "parent_id": "<build>",
         "depth": 1,
-        "wbs": "1.2",
+        "wbs": "1.1",
         "start": "<date>",
         "end": "<date>",
         "span_start": "<date>",
@@ -5212,7 +5346,7 @@
       "events": []
     },
     {
-      "n": 98,
+      "n": 100,
       "title": "the plan with MVP on its default criteria, and each milestone counting its tasks",
       "actor": "viewer",
       "route": "GET /api/v1/projects/{id}/plan",
@@ -5227,7 +5361,7 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"working_days\":[1,2,3,4,5,6],\"holidays\":[],\"critical_slack_days\":0,\"scheduling_mode\":\"manual\",\"project_start\":null,\"project_finish\":null,\"schedule_from\":\"start\",\"multiple_critical_paths\":false,\"resources\":[{\"type\":\"user\",\"id\":\"<uuid:6>\",\"daily_rate\":400,\"capacity\":80,\"name\":\"\",\"tasks\":0,\"work_days\":0,\"cost\":0,\"peak\":0,\"overallocations\":[]}],\"people\":[{\"type\":\"user\",\"id\":\"<owner>\",\"name\":\"Tour Owner\"},{\"type\":\"user\",\"id\":\"<viewer>\",\"name\":\"Tour Viewer\"},{\"type\":\"agent\",\"id\":\"<uuid:1>\",\"name\":\"Link Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:2>\",\"name\":\"Requirements Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:3>\",\"name\":\"Requirements Interviewer\"},{\"type\":\"agent\",\"id\":\"<uuid:4>\",\"name\":\"Test Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:5>\",\"name\":\"V\\u0026V Assistant\"}],\"currency\":\"GBP\",\"budget\":25000,\"status_date\":null,\"active_baseline_id\":null,\"status_day\":\"<date>\",\"baseline_id\":null,\"baselines\":[],\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":58,\"effort_days\":7.5,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":null,\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[],\"conflicts\":[]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":9,\"effort_days\":7.5,\"float_days\":41,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"snet\",\"constraint_date\":\"<date>\",\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":41,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"milestone\":\"<m1>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<wiring>\",\"<order>\"],\"relationships\":[{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false},{\"task_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"drives\":[],\"conflicts\":[\"<order>\"]},{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":-8,\"critical\":true,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":-8,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":\"release:<mvp>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":17,\"met\":false,\"late\":true,\"tasks\":[\"<wiring>\"]},{\"key\":\"<m2>\",\"kind\":\"custom\",\"id\":\"<m2>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[],\"progress\":0,\"met\":false,\"late\":false,\"tasks\":[]},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":true,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false,\"tasks\":[\"<order>\"]}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\"},{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"count\":0,\"total\":2,\"percent\":0}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"},{\"key\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"description\":\"Tasks assigned to the milestone that are in the Done column. A task with sub-tasks stands for them: each of its sub-tasks counts, not the task itself.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":0,\"unscheduled\":0,\"progress\":38,\"critical\":1,\"effort_days\":7.5,\"cost\":0,\"overallocated\":0}}"
+        "{\"project_id\":\"<p>\",\"working_days\":[1,2,3,4,5,6],\"holidays\":[],\"critical_slack_days\":0,\"scheduling_mode\":\"manual\",\"project_start\":null,\"project_finish\":null,\"schedule_from\":\"start\",\"multiple_critical_paths\":false,\"resources\":[{\"type\":\"user\",\"id\":\"<uuid:6>\",\"daily_rate\":400,\"capacity\":80,\"name\":\"\",\"tasks\":0,\"work_days\":0,\"cost\":0,\"peak\":0,\"overallocations\":[]}],\"people\":[{\"type\":\"user\",\"id\":\"<owner>\",\"name\":\"Tour Owner\"},{\"type\":\"user\",\"id\":\"<viewer>\",\"name\":\"Tour Viewer\"},{\"type\":\"agent\",\"id\":\"<uuid:1>\",\"name\":\"Link Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:2>\",\"name\":\"Requirements Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:3>\",\"name\":\"Requirements Interviewer\"},{\"type\":\"agent\",\"id\":\"<uuid:4>\",\"name\":\"Test Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:5>\",\"name\":\"V\\u0026V Assistant\"}],\"currency\":\"GBP\",\"budget\":25000,\"status_date\":null,\"active_baseline_id\":null,\"status_day\":\"<date>\",\"baseline_id\":null,\"baselines\":[],\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":58,\"effort_days\":7.5,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":null,\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<wiring>\",\"<order>\"],\"relationships\":[{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false},{\"task_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"drives\":[],\"conflicts\":[\"<order>\"]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":9,\"effort_days\":7.5,\"float_days\":41,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"snet\",\"constraint_date\":\"<date>\",\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":41,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"milestone\":\"<m1>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":-8,\"critical\":true,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":-8,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":\"release:<mvp>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":17,\"met\":false,\"late\":true,\"tasks\":[\"<wiring>\"]},{\"key\":\"<m2>\",\"kind\":\"custom\",\"id\":\"<m2>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[],\"progress\":0,\"met\":false,\"late\":false,\"tasks\":[]},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":true,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false,\"tasks\":[\"<order>\"]}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\"},{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"count\":0,\"total\":2,\"percent\":0}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"},{\"key\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"description\":\"Tasks assigned to the milestone that are in the Done column. A task with sub-tasks stands for them: each of its sub-tasks counts, not the task itself.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":0,\"unscheduled\":0,\"progress\":38,\"critical\":1,\"effort_days\":7.5,\"cost\":0,\"overallocated\":0}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -5382,6 +5516,97 @@
             "conflicts": []
           },
           {
+            "id": "<frame>",
+            "title": "Weld the frame",
+            "column": "done",
+            "assignee_type": "user",
+            "assignee_id": null,
+            "parent_id": "<build>",
+            "depth": 1,
+            "wbs": "1.1",
+            "start": "<date>",
+            "end": "<date>",
+            "span_start": "<date>",
+            "span_end": "<date>",
+            "duration_days": 8,
+            "effort_days": null,
+            "float_days": 0,
+            "critical": false,
+            "elapsed": false,
+            "deadline": null,
+            "deadline_missed": false,
+            "mode_own": "",
+            "mode": "manual",
+            "constraint_type": "asap",
+            "constraint_date": null,
+            "constraint_violated": false,
+            "early_start": "<date>",
+            "early_finish": "<date>",
+            "late_start": "<date>",
+            "late_finish": "<date>",
+            "free_float_days": 0,
+            "assignments": [],
+            "fixed_cost": 0,
+            "cost": 0,
+            "effort_driven": false,
+            "overallocated": false,
+            "actual_start": null,
+            "actual_finish": null,
+            "percent_complete": null,
+            "actual_cost": null,
+            "baseline": null,
+            "start_variance_days": null,
+            "finish_variance_days": null,
+            "earned_value": {
+              "bac": 0,
+              "pv": 0,
+              "ev": 0,
+              "ac": 0,
+              "sv": 0,
+              "cv": 0,
+              "spi": 0,
+              "cpi": 0,
+              "eac": 0
+            },
+            "behind_schedule": false,
+            "float_until": null,
+            "critical_subtasks": false,
+            "progress": 100,
+            "done": true,
+            "late": false,
+            "todos_done": 0,
+            "todos_total": 0,
+            "subtasks_done": 0,
+            "milestone": null,
+            "milestone_inherited": false,
+            "subtasks_total": 0,
+            "todos": [],
+            "depends_on": [
+              "<wiring>",
+              "<order>"
+            ],
+            "relationships": [
+              {
+                "task_id": "<wiring>",
+                "type": "FS",
+                "lag_days": 0,
+                "lag_unit": "d",
+                "conflict": false
+              },
+              {
+                "task_id": "<order>",
+                "type": "FS",
+                "lag_days": 0,
+                "lag_unit": "d",
+                "conflict": true
+              }
+            ],
+            "drives": [],
+            "conflicts": [
+              "<order>"
+            ]
+          },
+          {
             "id": "<wiring>",
             "title": "Wire the rig",
             "column": "todo",
@@ -5389,7 +5614,7 @@
             "assignee_id": null,
             "parent_id": "<build>",
             "depth": 1,
-            "wbs": "1.1",
+            "wbs": "1.2",
             "start": "<date>",
             "end": "<date>",
             "span_start": "<date>",
@@ -5472,97 +5697,6 @@
               }
             ],
             "conflicts": []
-          },
-          {
-            "id": "<frame>",
-            "title": "Weld the frame",
-            "column": "done",
-            "assignee_type": "user",
-            "assignee_id": null,
-            "parent_id": "<build>",
-            "depth": 1,
-            "wbs": "1.2",
-            "start": "<date>",
-            "end": "<date>",
-            "span_start": "<date>",
-            "span_end": "<date>",
-            "duration_days": 8,
-            "effort_days": null,
-            "float_days": 0,
-            "critical": false,
-            "elapsed": false,
-            "deadline": null,
-            "deadline_missed": false,
-            "mode_own": "",
-            "mode": "manual",
-            "constraint_type": "asap",
-            "constraint_date": null,
-            "constraint_violated": false,
-            "early_start": "<date>",
-            "early_finish": "<date>",
-            "late_start": "<date>",
-            "late_finish": "<date>",
-            "free_float_days": 0,
-            "assignments": [],
-            "fixed_cost": 0,
-            "cost": 0,
-            "effort_driven": false,
-            "overallocated": false,
-            "actual_start": null,
-            "actual_finish": null,
-            "percent_complete": null,
-            "actual_cost": null,
-            "baseline": null,
-            "start_variance_days": null,
-            "finish_variance_days": null,
-            "earned_value": {
-              "bac": 0,
-              "pv": 0,
-              "ev": 0,
-              "ac": 0,
-              "sv": 0,
-              "cv": 0,
-              "spi": 0,
-              "cpi": 0,
-              "eac": 0
-            },
-            "behind_schedule": false,
-            "float_until": null,
-            "critical_subtasks": false,
-            "progress": 100,
-            "done": true,
-            "late": false,
-            "todos_done": 0,
-            "todos_total": 0,
-            "subtasks_done": 0,
-            "milestone": null,
-            "milestone_inherited": false,
-            "subtasks_total": 0,
-            "todos": [],
-            "depends_on": [
-              "<wiring>",
-              "<order>"
-            ],
-            "relationships": [
-              {
-                "task_id": "<wiring>",
-                "type": "FS",
-                "lag_days": 0,
-                "lag_unit": "d",
-                "conflict": false
-              },
-              {
-                "task_id": "<order>",
-                "type": "FS",
-                "lag_days": 0,
-                "lag_unit": "d",
-                "conflict": true
-              }
-            ],
-            "drives": [],
-            "conflicts": [
-              "<order>"
-            ]
           },
           {
             "id": "<order>",
@@ -5905,7 +6039,7 @@
       }
     },
     {
-      "n": 99,
+      "n": 101,
       "title": "MVP's own criteria: requirements approved, 80%",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}",
@@ -5924,7 +6058,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<mvp_m>\",\"project_id\":\"<p>\",\"release_id\":\"<mvp>\",\"name\":\"\",\"description\":\"\",\"target_date\":null,\"criteria\":[{\"metric\":\"requirements_approved\",\"target\":80}],\"created_at\":\"<time@step 99>\",\"updated_at\":\"<time@step 99>\"}"
+        "{\"id\":\"<mvp_m>\",\"project_id\":\"<p>\",\"release_id\":\"<mvp>\",\"name\":\"\",\"description\":\"\",\"target_date\":null,\"criteria\":[{\"metric\":\"requirements_approved\",\"target\":80}],\"created_at\":\"<time@step 101>\",\"updated_at\":\"<time@step 101>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -5940,14 +6074,14 @@
             "target": 80
           }
         ],
-        "created_at": "<time@step 99>",
-        "updated_at": "<time@step 99>"
+        "created_at": "<time@step 101>",
+        "updated_at": "<time@step 101>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 100,
+      "n": 102,
       "title": "Q's release through P: 404",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}",
@@ -5976,7 +6110,7 @@
       "events": []
     },
     {
-      "n": 101,
+      "n": 103,
       "title": "a release milestone's name is the release's: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -6005,7 +6139,7 @@
       "events": []
     },
     {
-      "n": 102,
+      "n": 104,
       "title": "the plan: MVP now carries its own criterion",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan",
@@ -6020,7 +6154,7 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"working_days\":[1,2,3,4,5,6],\"holidays\":[],\"critical_slack_days\":0,\"scheduling_mode\":\"manual\",\"project_start\":null,\"project_finish\":null,\"schedule_from\":\"start\",\"multiple_critical_paths\":false,\"resources\":[{\"type\":\"user\",\"id\":\"<uuid:6>\",\"daily_rate\":400,\"capacity\":80,\"name\":\"\",\"tasks\":0,\"work_days\":0,\"cost\":0,\"peak\":0,\"overallocations\":[]}],\"people\":[{\"type\":\"user\",\"id\":\"<owner>\",\"name\":\"Tour Owner\"},{\"type\":\"user\",\"id\":\"<viewer>\",\"name\":\"Tour Viewer\"},{\"type\":\"agent\",\"id\":\"<uuid:1>\",\"name\":\"Link Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:2>\",\"name\":\"Requirements Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:3>\",\"name\":\"Requirements Interviewer\"},{\"type\":\"agent\",\"id\":\"<uuid:4>\",\"name\":\"Test Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:5>\",\"name\":\"V\\u0026V Assistant\"}],\"currency\":\"GBP\",\"budget\":25000,\"status_date\":null,\"active_baseline_id\":null,\"status_day\":\"<date>\",\"baseline_id\":null,\"baselines\":[],\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":58,\"effort_days\":7.5,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":null,\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[],\"conflicts\":[]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":9,\"effort_days\":7.5,\"float_days\":41,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"snet\",\"constraint_date\":\"<date>\",\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":41,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"milestone\":\"<m1>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<wiring>\",\"<order>\"],\"relationships\":[{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false},{\"task_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"drives\":[],\"conflicts\":[\"<order>\"]},{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":-8,\"critical\":true,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":-8,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":\"release:<mvp>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":17,\"met\":false,\"late\":true,\"tasks\":[\"<wiring>\"]},{\"key\":\"<m2>\",\"kind\":\"custom\",\"id\":\"<m2>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[],\"progress\":0,\"met\":false,\"late\":false,\"tasks\":[]},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"<mvp_m>\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":80,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false,\"tasks\":[\"<order>\"]}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\"},{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"count\":0,\"total\":2,\"percent\":0}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"},{\"key\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"description\":\"Tasks assigned to the milestone that are in the Done column. A task with sub-tasks stands for them: each of its sub-tasks counts, not the task itself.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":0,\"unscheduled\":0,\"progress\":38,\"critical\":1,\"effort_days\":7.5,\"cost\":0,\"overallocated\":0}}"
+        "{\"project_id\":\"<p>\",\"working_days\":[1,2,3,4,5,6],\"holidays\":[],\"critical_slack_days\":0,\"scheduling_mode\":\"manual\",\"project_start\":null,\"project_finish\":null,\"schedule_from\":\"start\",\"multiple_critical_paths\":false,\"resources\":[{\"type\":\"user\",\"id\":\"<uuid:6>\",\"daily_rate\":400,\"capacity\":80,\"name\":\"\",\"tasks\":0,\"work_days\":0,\"cost\":0,\"peak\":0,\"overallocations\":[]}],\"people\":[{\"type\":\"user\",\"id\":\"<owner>\",\"name\":\"Tour Owner\"},{\"type\":\"user\",\"id\":\"<viewer>\",\"name\":\"Tour Viewer\"},{\"type\":\"agent\",\"id\":\"<uuid:1>\",\"name\":\"Link Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:2>\",\"name\":\"Requirements Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:3>\",\"name\":\"Requirements Interviewer\"},{\"type\":\"agent\",\"id\":\"<uuid:4>\",\"name\":\"Test Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:5>\",\"name\":\"V\\u0026V Assistant\"}],\"currency\":\"GBP\",\"budget\":25000,\"status_date\":null,\"active_baseline_id\":null,\"status_day\":\"<date>\",\"baseline_id\":null,\"baselines\":[],\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":58,\"effort_days\":7.5,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":null,\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<wiring>\",\"<order>\"],\"relationships\":[{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false},{\"task_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"drives\":[],\"conflicts\":[\"<order>\"]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":9,\"effort_days\":7.5,\"float_days\":41,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"snet\",\"constraint_date\":\"<date>\",\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":41,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"milestone\":\"<m1>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":-8,\"critical\":true,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":-8,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":\"release:<mvp>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":17,\"met\":false,\"late\":true,\"tasks\":[\"<wiring>\"]},{\"key\":\"<m2>\",\"kind\":\"custom\",\"id\":\"<m2>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[],\"progress\":0,\"met\":false,\"late\":false,\"tasks\":[]},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"<mvp_m>\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":80,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false,\"tasks\":[\"<order>\"]}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\"},{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"count\":0,\"total\":2,\"percent\":0}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"},{\"key\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"description\":\"Tasks assigned to the milestone that are in the Done column. A task with sub-tasks stands for them: each of its sub-tasks counts, not the task itself.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":0,\"unscheduled\":0,\"progress\":38,\"critical\":1,\"effort_days\":7.5,\"cost\":0,\"overallocated\":0}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -6175,6 +6309,97 @@
             "conflicts": []
           },
           {
+            "id": "<frame>",
+            "title": "Weld the frame",
+            "column": "done",
+            "assignee_type": "user",
+            "assignee_id": null,
+            "parent_id": "<build>",
+            "depth": 1,
+            "wbs": "1.1",
+            "start": "<date>",
+            "end": "<date>",
+            "span_start": "<date>",
+            "span_end": "<date>",
+            "duration_days": 8,
+            "effort_days": null,
+            "float_days": 0,
+            "critical": false,
+            "elapsed": false,
+            "deadline": null,
+            "deadline_missed": false,
+            "mode_own": "",
+            "mode": "manual",
+            "constraint_type": "asap",
+            "constraint_date": null,
+            "constraint_violated": false,
+            "early_start": "<date>",
+            "early_finish": "<date>",
+            "late_start": "<date>",
+            "late_finish": "<date>",
+            "free_float_days": 0,
+            "assignments": [],
+            "fixed_cost": 0,
+            "cost": 0,
+            "effort_driven": false,
+            "overallocated": false,
+            "actual_start": null,
+            "actual_finish": null,
+            "percent_complete": null,
+            "actual_cost": null,
+            "baseline": null,
+            "start_variance_days": null,
+            "finish_variance_days": null,
+            "earned_value": {
+              "bac": 0,
+              "pv": 0,
+              "ev": 0,
+              "ac": 0,
+              "sv": 0,
+              "cv": 0,
+              "spi": 0,
+              "cpi": 0,
+              "eac": 0
+            },
+            "behind_schedule": false,
+            "float_until": null,
+            "critical_subtasks": false,
+            "progress": 100,
+            "done": true,
+            "late": false,
+            "todos_done": 0,
+            "todos_total": 0,
+            "subtasks_done": 0,
+            "milestone": null,
+            "milestone_inherited": false,
+            "subtasks_total": 0,
+            "todos": [],
+            "depends_on": [
+              "<wiring>",
+              "<order>"
+            ],
+            "relationships": [
+              {
+                "task_id": "<wiring>",
+                "type": "FS",
+                "lag_days": 0,
+                "lag_unit": "d",
+                "conflict": false
+              },
+              {
+                "task_id": "<order>",
+                "type": "FS",
+                "lag_days": 0,
+                "lag_unit": "d",
+                "conflict": true
+              }
+            ],
+            "drives": [],
+            "conflicts": [
+              "<order>"
+            ]
+          },
+          {
             "id": "<wiring>",
             "title": "Wire the rig",
             "column": "todo",
@@ -6182,7 +6407,7 @@
             "assignee_id": null,
             "parent_id": "<build>",
             "depth": 1,
-            "wbs": "1.1",
+            "wbs": "1.2",
             "start": "<date>",
             "end": "<date>",
             "span_start": "<date>",
@@ -6265,97 +6490,6 @@
               }
             ],
             "conflicts": []
-          },
-          {
-            "id": "<frame>",
-            "title": "Weld the frame",
-            "column": "done",
-            "assignee_type": "user",
-            "assignee_id": null,
-            "parent_id": "<build>",
-            "depth": 1,
-            "wbs": "1.2",
-            "start": "<date>",
-            "end": "<date>",
-            "span_start": "<date>",
-            "span_end": "<date>",
-            "duration_days": 8,
-            "effort_days": null,
-            "float_days": 0,
-            "critical": false,
-            "elapsed": false,
-            "deadline": null,
-            "deadline_missed": false,
-            "mode_own": "",
-            "mode": "manual",
-            "constraint_type": "asap",
-            "constraint_date": null,
-            "constraint_violated": false,
-            "early_start": "<date>",
-            "early_finish": "<date>",
-            "late_start": "<date>",
-            "late_finish": "<date>",
-            "free_float_days": 0,
-            "assignments": [],
-            "fixed_cost": 0,
-            "cost": 0,
-            "effort_driven": false,
-            "overallocated": false,
-            "actual_start": null,
-            "actual_finish": null,
-            "percent_complete": null,
-            "actual_cost": null,
-            "baseline": null,
-            "start_variance_days": null,
-            "finish_variance_days": null,
-            "earned_value": {
-              "bac": 0,
-              "pv": 0,
-              "ev": 0,
-              "ac": 0,
-              "sv": 0,
-              "cv": 0,
-              "spi": 0,
-              "cpi": 0,
-              "eac": 0
-            },
-            "behind_schedule": false,
-            "float_until": null,
-            "critical_subtasks": false,
-            "progress": 100,
-            "done": true,
-            "late": false,
-            "todos_done": 0,
-            "todos_total": 0,
-            "subtasks_done": 0,
-            "milestone": null,
-            "milestone_inherited": false,
-            "subtasks_total": 0,
-            "todos": [],
-            "depends_on": [
-              "<wiring>",
-              "<order>"
-            ],
-            "relationships": [
-              {
-                "task_id": "<wiring>",
-                "type": "FS",
-                "lag_days": 0,
-                "lag_unit": "d",
-                "conflict": false
-              },
-              {
-                "task_id": "<order>",
-                "type": "FS",
-                "lag_days": 0,
-                "lag_unit": "d",
-                "conflict": true
-              }
-            ],
-            "drives": [],
-            "conflicts": [
-              "<order>"
-            ]
           },
           {
             "id": "<order>",
@@ -6688,7 +6822,7 @@
       }
     },
     {
-      "n": 103,
+      "n": 105,
       "title": "the plan as CSV",
       "actor": "viewer",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -6708,8 +6842,8 @@
       "body": [
         "wbs,task,status,assignee,start,end,duration_days,effort_days,float_days,critical,progress_percent,todos_done,todos_total,subtasks_done,subtasks_total,relationships,late",
         "1,Build the rig,In Progress,,<date>,<date>,58,7.5,0,false,75,0,0,1,2,,false",
-        "1.1,Wire the rig,To Do,,<date>,<date>,9,7.5,41,false,50,1,2,0,0,,false",
-        "1.2,Weld the frame,Done,,<date>,<date>,8,,0,false,100,0,0,0,0,\"1.1FS, 2FS\",false",
+        "1.1,Weld the frame,Done,,<date>,<date>,8,,0,false,100,0,0,0,0,\"1.2FS, 2FS\",false",
+        "1.2,Wire the rig,To Do,,<date>,<date>,9,7.5,41,false,50,1,2,0,0,,false",
         "2,Order the parts,To Do,,<date>,<date>,1,,'-8,true,0,0,0,0,0,,false",
         "",
         "milestone,kind,date,progress_percent,met,criterion,target_percent,actual_percent,count,total,criterion_met",
@@ -6762,6 +6896,25 @@
         ],
         [
           "1.1",
+          "Weld the frame",
+          "Done",
+          "",
+          "<date>",
+          "<date>",
+          "8",
+          "",
+          "0",
+          "false",
+          "100",
+          "0",
+          "0",
+          "0",
+          "0",
+          "1.2FS, 2FS",
+          "false"
+        ],
+        [
+          "1.2",
           "Wire the rig",
           "To Do",
           "",
@@ -6777,25 +6930,6 @@
           "0",
           "0",
           "",
-          "false"
-        ],
-        [
-          "1.2",
-          "Weld the frame",
-          "Done",
-          "",
-          "<date>",
-          "<date>",
-          "8",
-          "",
-          "0",
-          "false",
-          "100",
-          "0",
-          "0",
-          "0",
-          "0",
-          "1.1FS, 2FS",
           "false"
         ],
         [
@@ -6912,7 +7046,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 104,
+      "n": 106,
       "title": "the plan as JSON",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -6932,7 +7066,7 @@
       "body": [
         "{",
         "  \"project_name\": \"Tour plan\",",
-        "  \"exported_at\": \"<time@step 104>\",",
+        "  \"exported_at\": \"<time@step 106>\",",
         "  \"plan\": {",
         "    \"project_id\": \"<p>\",",
         "    \"working_days\": [",
@@ -7049,6 +7183,97 @@
         "        \"conflicts\": []",
         "      },",
         "      {",
+        "        \"id\": \"<frame>\",",
+        "        \"title\": \"Weld the frame\",",
+        "        \"column\": \"done\",",
+        "        \"assignee_type\": \"user\",",
+        "        \"assignee_id\": null,",
+        "        \"parent_id\": \"<build>\",",
+        "        \"depth\": 1,",
+        "        \"wbs\": \"1.1\",",
+        "        \"start\": \"<date>\",",
+        "        \"end\": \"<date>\",",
+        "        \"span_start\": \"<date>\",",
+        "        \"span_end\": \"<date>\",",
+        "        \"duration_days\": 8,",
+        "        \"effort_days\": null,",
+        "        \"float_days\": 0,",
+        "        \"critical\": false,",
+        "        \"elapsed\": false,",
+        "        \"deadline\": null,",
+        "        \"deadline_missed\": false,",
+        "        \"mode_own\": \"\",",
+        "        \"mode\": \"manual\",",
+        "        \"constraint_type\": \"asap\",",
+        "        \"constraint_date\": null,",
+        "        \"constraint_violated\": false,",
+        "        \"early_start\": \"<date>\",",
+        "        \"early_finish\": \"<date>\",",
+        "        \"late_start\": \"<date>\",",
+        "        \"late_finish\": \"<date>\",",
+        "        \"free_float_days\": 0,",
+        "        \"assignments\": [],",
+        "        \"fixed_cost\": 0,",
+        "        \"cost\": 0,",
+        "        \"effort_driven\": false,",
+        "        \"overallocated\": false,",
+        "        \"actual_start\": null,",
+        "        \"actual_finish\": null,",
+        "        \"percent_complete\": null,",
+        "        \"actual_cost\": null,",
+        "        \"baseline\": null,",
+        "        \"start_variance_days\": null,",
+        "        \"finish_variance_days\": null,",
+        "        \"earned_value\": {",
+        "          \"bac\": 0,",
+        "          \"pv\": 0,",
+        "          \"ev\": 0,",
+        "          \"ac\": 0,",
+        "          \"sv\": 0,",
+        "          \"cv\": 0,",
+        "          \"spi\": 0,",
+        "          \"cpi\": 0,",
+        "          \"eac\": 0",
+        "        },",
+        "        \"behind_schedule\": false,",
+        "        \"float_until\": null,",
+        "        \"critical_subtasks\": false,",
+        "        \"progress\": 100,",
+        "        \"done\": true,",
+        "        \"late\": false,",
+        "        \"todos_done\": 0,",
+        "        \"todos_total\": 0,",
+        "        \"subtasks_done\": 0,",
+        "        \"milestone\": null,",
+        "        \"milestone_inherited\": false,",
+        "        \"subtasks_total\": 0,",
+        "        \"todos\": [],",
+        "        \"depends_on\": [",
+        "          \"<wiring>\",",
+        "          \"<order>\"",
+        "        ],",
+        "        \"relationships\": [",
+        "          {",
+        "            \"task_id\": \"<wiring>\",",
+        "            \"type\": \"FS\",",
+        "            \"lag_days\": 0,",
+        "            \"lag_unit\": \"d\",",
+        "            \"conflict\": false",
+        "          },",
+        "          {",
+        "            \"task_id\": \"<order>\",",
+        "            \"type\": \"FS\",",
+        "            \"lag_days\": 0,",
+        "            \"lag_unit\": \"d\",",
+        "            \"conflict\": true",
+        "          }",
+        "        ],",
+        "        \"drives\": [],",
+        "        \"conflicts\": [",
+        "          \"<order>\"",
+        "        ]",
+        "      },",
+        "      {",
         "        \"id\": \"<wiring>\",",
         "        \"title\": \"Wire the rig\",",
         "        \"column\": \"todo\",",
@@ -7056,7 +7281,7 @@
         "        \"assignee_id\": null,",
         "        \"parent_id\": \"<build>\",",
         "        \"depth\": 1,",
-        "        \"wbs\": \"1.1\",",
+        "        \"wbs\": \"1.2\",",
         "        \"start\": \"<date>\",",
         "        \"end\": \"<date>\",",
         "        \"span_start\": \"<date>\",",
@@ -7139,97 +7364,6 @@
         "          }",
         "        ],",
         "        \"conflicts\": []",
-        "      },",
-        "      {",
-        "        \"id\": \"<frame>\",",
-        "        \"title\": \"Weld the frame\",",
-        "        \"column\": \"done\",",
-        "        \"assignee_type\": \"user\",",
-        "        \"assignee_id\": null,",
-        "        \"parent_id\": \"<build>\",",
-        "        \"depth\": 1,",
-        "        \"wbs\": \"1.2\",",
-        "        \"start\": \"<date>\",",
-        "        \"end\": \"<date>\",",
-        "        \"span_start\": \"<date>\",",
-        "        \"span_end\": \"<date>\",",
-        "        \"duration_days\": 8,",
-        "        \"effort_days\": null,",
-        "        \"float_days\": 0,",
-        "        \"critical\": false,",
-        "        \"elapsed\": false,",
-        "        \"deadline\": null,",
-        "        \"deadline_missed\": false,",
-        "        \"mode_own\": \"\",",
-        "        \"mode\": \"manual\",",
-        "        \"constraint_type\": \"asap\",",
-        "        \"constraint_date\": null,",
-        "        \"constraint_violated\": false,",
-        "        \"early_start\": \"<date>\",",
-        "        \"early_finish\": \"<date>\",",
-        "        \"late_start\": \"<date>\",",
-        "        \"late_finish\": \"<date>\",",
-        "        \"free_float_days\": 0,",
-        "        \"assignments\": [],",
-        "        \"fixed_cost\": 0,",
-        "        \"cost\": 0,",
-        "        \"effort_driven\": false,",
-        "        \"overallocated\": false,",
-        "        \"actual_start\": null,",
-        "        \"actual_finish\": null,",
-        "        \"percent_complete\": null,",
-        "        \"actual_cost\": null,",
-        "        \"baseline\": null,",
-        "        \"start_variance_days\": null,",
-        "        \"finish_variance_days\": null,",
-        "        \"earned_value\": {",
-        "          \"bac\": 0,",
-        "          \"pv\": 0,",
-        "          \"ev\": 0,",
-        "          \"ac\": 0,",
-        "          \"sv\": 0,",
-        "          \"cv\": 0,",
-        "          \"spi\": 0,",
-        "          \"cpi\": 0,",
-        "          \"eac\": 0",
-        "        },",
-        "        \"behind_schedule\": false,",
-        "        \"float_until\": null,",
-        "        \"critical_subtasks\": false,",
-        "        \"progress\": 100,",
-        "        \"done\": true,",
-        "        \"late\": false,",
-        "        \"todos_done\": 0,",
-        "        \"todos_total\": 0,",
-        "        \"subtasks_done\": 0,",
-        "        \"milestone\": null,",
-        "        \"milestone_inherited\": false,",
-        "        \"subtasks_total\": 0,",
-        "        \"todos\": [],",
-        "        \"depends_on\": [",
-        "          \"<wiring>\",",
-        "          \"<order>\"",
-        "        ],",
-        "        \"relationships\": [",
-        "          {",
-        "            \"task_id\": \"<wiring>\",",
-        "            \"type\": \"FS\",",
-        "            \"lag_days\": 0,",
-        "            \"lag_unit\": \"d\",",
-        "            \"conflict\": false",
-        "          },",
-        "          {",
-        "            \"task_id\": \"<order>\",",
-        "            \"type\": \"FS\",",
-        "            \"lag_days\": 0,",
-        "            \"lag_unit\": \"d\",",
-        "            \"conflict\": true",
-        "          }",
-        "        ],",
-        "        \"drives\": [],",
-        "        \"conflicts\": [",
-        "          \"<order>\"",
-        "        ]",
         "      },",
         "      {",
         "        \"id\": \"<order>\",",
@@ -7566,7 +7700,7 @@
       }
     },
     {
-      "n": 105,
+      "n": 107,
       "title": "the plan as Excel",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -8012,41 +8146,41 @@
               "Q2 s= t=s: \"false\"",
               "JR2 s=2 t=: \"\"",
               "A3 s= t=s: \"1.1\"",
-              "B3 s= t=s: \"  Wire the rig\"",
-              "C3 s= t=s: \"To Do\"",
+              "B3 s= t=s: \"  Weld the frame\"",
+              "C3 s= t=s: \"Done\"",
               "D3 s= t=s: \"\"",
               "E3 s= t=s: \"<date>\"",
               "F3 s= t=s: \"<date>\"",
-              "G3 s= t=: \"9\"",
-              "H3 s= t=s: \"7.5\"",
-              "I3 s= t=: \"41\"",
+              "G3 s= t=: \"8\"",
+              "H3 s= t=s: \"\"",
+              "I3 s= t=: \"0\"",
               "J3 s= t=s: \"false\"",
-              "K3 s= t=: \"50\"",
-              "L3 s= t=: \"1\"",
-              "M3 s= t=: \"2\"",
+              "K3 s= t=: \"100\"",
+              "L3 s= t=: \"0\"",
+              "M3 s= t=: \"0\"",
               "N3 s= t=: \"0\"",
               "O3 s= t=: \"0\"",
-              "P3 s= t=s: \"\"",
+              "P3 s= t=s: \"1.2FS, 2FS\"",
               "Q3 s= t=s: \"false\"",
-              "JR3 s=2 t=: \"\"",
+              "JR3 s=3 t=: \"\"",
               "A4 s= t=s: \"1.2\"",
-              "B4 s= t=s: \"  Weld the frame\"",
-              "C4 s= t=s: \"Done\"",
+              "B4 s= t=s: \"  Wire the rig\"",
+              "C4 s= t=s: \"To Do\"",
               "D4 s= t=s: \"\"",
               "E4 s= t=s: \"<date>\"",
               "F4 s= t=s: \"<date>\"",
-              "G4 s= t=: \"8\"",
-              "H4 s= t=s: \"\"",
-              "I4 s= t=: \"0\"",
+              "G4 s= t=: \"9\"",
+              "H4 s= t=s: \"7.5\"",
+              "I4 s= t=: \"41\"",
               "J4 s= t=s: \"false\"",
-              "K4 s= t=: \"100\"",
-              "L4 s= t=: \"0\"",
-              "M4 s= t=: \"0\"",
+              "K4 s= t=: \"50\"",
+              "L4 s= t=: \"1\"",
+              "M4 s= t=: \"2\"",
               "N4 s= t=: \"0\"",
               "O4 s= t=: \"0\"",
-              "P4 s= t=s: \"1.1FS, 2FS\"",
+              "P4 s= t=s: \"\"",
               "Q4 s= t=s: \"false\"",
-              "JR4 s=3 t=: \"\"",
+              "JR4 s=2 t=: \"\"",
               "A5 s= t=s: \"2\"",
               "B5 s= t=s: \"Order the parts\"",
               "C5 s= t=s: \"To Do\"",
@@ -8652,7 +8786,7 @@
       }
     },
     {
-      "n": 106,
+      "n": 108,
       "title": "the plan as PDF, the default",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -8680,10 +8814,10 @@
         "pages": 2,
         "page_text": [
           {
-            "text": "Tour plan · Plan 4 tasks · 1 done · 0 late · 1 critical (amber outline) · 38% complete · as of <date> TASK START – END 2018 2025 2032 2039 2046 2053 2060 2067 2074 2081 2088 2095 Milestones Definition complete 17% 1 Build the rig 75% <date> – 03-10 1.1 Wire the rig 50% <date> – 01-12 1.2 Weld the frame 100% <date> – 03-10 2 Order the parts 0% <date> OpenV · <date> Page 1"
+            "text": "Tour plan · Plan 4 tasks · 1 done · 0 late · 1 critical (amber outline) · 38% complete · as of <date> TASK START – END 2018 2025 2032 2039 2046 2053 2060 2067 2074 2081 2088 2095 Milestones Definition complete 17% 1 Build the rig 75% <date> – 03-10 1.1 Weld the frame 100% <date> – 03-10 1.2 Wire the rig 50% <date> – 01-12 2 Order the parts 0% <date> OpenV · <date> Page 1 In progress Done Late Critical Drives Broken Today → 2.1 p.2: continues to task 2.1 on page 2"
           },
           {
-            "text": "Tour plan · Milestones MILESTONE DATE PROGRESS CRITERION TARGET ACTUAL MET Definition complete <date> 17% User needs addressed 100% 50% (1 of 2) No Plan tasks done 100% 0% (0 of 0) No Milestone tasks done 100% 0% (0 of 1) No Kick-off <date> 0% No criteria set No MVP (release) <date> 0% Requirements approved 80% 0% (0 of 0) No Milestone tasks done 100% 0% (0 of 1) No OpenV · <date> Page 2"
+            "text": "Tour plan · Milestones MILESTONE DATE PROGRESS CRITERION TARGET ACTUAL MET Definition complete <date> 17% User needs addressed 100% 50% (1 of 2) No Plan tasks done 100% 0% (0 of 0) No Milestone tasks done 100% 0% (0 of 1) No Kick-off <date> 0% No criteria set No MVP (release) <date> 0% Requirements approved 80% 0% (0 of 0) No Milestone tasks done 100% 0% (0 of 1) No OpenV · <date> Page 2 In progress Done Late Critical Drives Broken Today → 2.1 p.2: continues to task 2.1 on page 2"
           }
         ],
         "images": 0,
@@ -8697,7 +8831,7 @@
       }
     },
     {
-      "n": 107,
+      "n": 109,
       "title": "ReqIF is not a plan format: 400",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -8722,7 +8856,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 108,
+      "n": 110,
       "title": "the viewer may not delete one: 403",
       "actor": "viewer",
       "route": "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -8747,7 +8881,7 @@
       "events": []
     },
     {
-      "n": 109,
+      "n": 111,
       "title": "Kick-off deleted: 204",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -8765,7 +8899,7 @@
       "events": []
     },
     {
-      "n": 110,
+      "n": 112,
       "title": "Kick-off after the delete: 404",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -8794,7 +8928,7 @@
       "events": []
     },
     {
-      "n": 111,
+      "n": 113,
       "title": "MVP's stored milestone deleted: its criteria are the defaults again",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -8812,7 +8946,7 @@
       "events": []
     },
     {
-      "n": 112,
+      "n": 114,
       "title": "the plan after the deletes",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan",
@@ -8827,7 +8961,7 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"working_days\":[1,2,3,4,5,6],\"holidays\":[],\"critical_slack_days\":0,\"scheduling_mode\":\"manual\",\"project_start\":null,\"project_finish\":null,\"schedule_from\":\"start\",\"multiple_critical_paths\":false,\"resources\":[{\"type\":\"user\",\"id\":\"<uuid:6>\",\"daily_rate\":400,\"capacity\":80,\"name\":\"\",\"tasks\":0,\"work_days\":0,\"cost\":0,\"peak\":0,\"overallocations\":[]}],\"people\":[{\"type\":\"user\",\"id\":\"<owner>\",\"name\":\"Tour Owner\"},{\"type\":\"user\",\"id\":\"<viewer>\",\"name\":\"Tour Viewer\"},{\"type\":\"agent\",\"id\":\"<uuid:1>\",\"name\":\"Link Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:2>\",\"name\":\"Requirements Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:3>\",\"name\":\"Requirements Interviewer\"},{\"type\":\"agent\",\"id\":\"<uuid:4>\",\"name\":\"Test Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:5>\",\"name\":\"V\\u0026V Assistant\"}],\"currency\":\"GBP\",\"budget\":25000,\"status_date\":null,\"active_baseline_id\":null,\"status_day\":\"<date>\",\"baseline_id\":null,\"baselines\":[],\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":58,\"effort_days\":7.5,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":null,\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[],\"conflicts\":[]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":9,\"effort_days\":7.5,\"float_days\":41,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"snet\",\"constraint_date\":\"<date>\",\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":41,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"milestone\":\"<m1>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<wiring>\",\"<order>\"],\"relationships\":[{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false},{\"task_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"drives\":[],\"conflicts\":[\"<order>\"]},{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":-8,\"critical\":true,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":-8,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":\"release:<mvp>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":17,\"met\":false,\"late\":true,\"tasks\":[\"<wiring>\"]},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":true,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false,\"tasks\":[\"<order>\"]}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\"},{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"count\":0,\"total\":2,\"percent\":0}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"},{\"key\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"description\":\"Tasks assigned to the milestone that are in the Done column. A task with sub-tasks stands for them: each of its sub-tasks counts, not the task itself.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":0,\"unscheduled\":0,\"progress\":38,\"critical\":1,\"effort_days\":7.5,\"cost\":0,\"overallocated\":0}}"
+        "{\"project_id\":\"<p>\",\"working_days\":[1,2,3,4,5,6],\"holidays\":[],\"critical_slack_days\":0,\"scheduling_mode\":\"manual\",\"project_start\":null,\"project_finish\":null,\"schedule_from\":\"start\",\"multiple_critical_paths\":false,\"resources\":[{\"type\":\"user\",\"id\":\"<uuid:6>\",\"daily_rate\":400,\"capacity\":80,\"name\":\"\",\"tasks\":0,\"work_days\":0,\"cost\":0,\"peak\":0,\"overallocations\":[]}],\"people\":[{\"type\":\"user\",\"id\":\"<owner>\",\"name\":\"Tour Owner\"},{\"type\":\"user\",\"id\":\"<viewer>\",\"name\":\"Tour Viewer\"},{\"type\":\"agent\",\"id\":\"<uuid:1>\",\"name\":\"Link Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:2>\",\"name\":\"Requirements Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:3>\",\"name\":\"Requirements Interviewer\"},{\"type\":\"agent\",\"id\":\"<uuid:4>\",\"name\":\"Test Auditor\"},{\"type\":\"agent\",\"id\":\"<uuid:5>\",\"name\":\"V\\u0026V Assistant\"}],\"currency\":\"GBP\",\"budget\":25000,\"status_date\":null,\"active_baseline_id\":null,\"status_day\":\"<date>\",\"baseline_id\":null,\"baselines\":[],\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":58,\"effort_days\":7.5,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":null,\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":0,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<wiring>\",\"<order>\"],\"relationships\":[{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false},{\"task_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"drives\":[],\"conflicts\":[\"<order>\"]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":9,\"effort_days\":7.5,\"float_days\":41,\"critical\":false,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"snet\",\"constraint_date\":\"<date>\",\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":41,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"milestone\":\"<m1>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":-8,\"critical\":true,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":-8,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":null,\"actual_finish\":null,\"percent_complete\":null,\"actual_cost\":null,\"baseline\":null,\"start_variance_days\":null,\"finish_variance_days\":null,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":0,\"sv\":0,\"cv\":0,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":\"release:<mvp>\",\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":true}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":17,\"met\":false,\"late\":true,\"tasks\":[\"<wiring>\"]},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":true,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false,\"tasks\":[\"<order>\"]}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<wiring>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\"},{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25},{\"metric\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"count\":0,\"total\":2,\"percent\":0}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"},{\"key\":\"milestone_tasks\",\"label\":\"Milestone tasks done\",\"description\":\"Tasks assigned to the milestone that are in the Done column. A task with sub-tasks stands for them: each of its sub-tasks counts, not the task itself.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":0,\"unscheduled\":0,\"progress\":38,\"critical\":1,\"effort_days\":7.5,\"cost\":0,\"overallocated\":0}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -8982,6 +9116,97 @@
             "conflicts": []
           },
           {
+            "id": "<frame>",
+            "title": "Weld the frame",
+            "column": "done",
+            "assignee_type": "user",
+            "assignee_id": null,
+            "parent_id": "<build>",
+            "depth": 1,
+            "wbs": "1.1",
+            "start": "<date>",
+            "end": "<date>",
+            "span_start": "<date>",
+            "span_end": "<date>",
+            "duration_days": 8,
+            "effort_days": null,
+            "float_days": 0,
+            "critical": false,
+            "elapsed": false,
+            "deadline": null,
+            "deadline_missed": false,
+            "mode_own": "",
+            "mode": "manual",
+            "constraint_type": "asap",
+            "constraint_date": null,
+            "constraint_violated": false,
+            "early_start": "<date>",
+            "early_finish": "<date>",
+            "late_start": "<date>",
+            "late_finish": "<date>",
+            "free_float_days": 0,
+            "assignments": [],
+            "fixed_cost": 0,
+            "cost": 0,
+            "effort_driven": false,
+            "overallocated": false,
+            "actual_start": null,
+            "actual_finish": null,
+            "percent_complete": null,
+            "actual_cost": null,
+            "baseline": null,
+            "start_variance_days": null,
+            "finish_variance_days": null,
+            "earned_value": {
+              "bac": 0,
+              "pv": 0,
+              "ev": 0,
+              "ac": 0,
+              "sv": 0,
+              "cv": 0,
+              "spi": 0,
+              "cpi": 0,
+              "eac": 0
+            },
+            "behind_schedule": false,
+            "float_until": null,
+            "critical_subtasks": false,
+            "progress": 100,
+            "done": true,
+            "late": false,
+            "todos_done": 0,
+            "todos_total": 0,
+            "subtasks_done": 0,
+            "milestone": null,
+            "milestone_inherited": false,
+            "subtasks_total": 0,
+            "todos": [],
+            "depends_on": [
+              "<wiring>",
+              "<order>"
+            ],
+            "relationships": [
+              {
+                "task_id": "<wiring>",
+                "type": "FS",
+                "lag_days": 0,
+                "lag_unit": "d",
+                "conflict": false
+              },
+              {
+                "task_id": "<order>",
+                "type": "FS",
+                "lag_days": 0,
+                "lag_unit": "d",
+                "conflict": true
+              }
+            ],
+            "drives": [],
+            "conflicts": [
+              "<order>"
+            ]
+          },
+          {
             "id": "<wiring>",
             "title": "Wire the rig",
             "column": "todo",
@@ -8989,7 +9214,7 @@
             "assignee_id": null,
             "parent_id": "<build>",
             "depth": 1,
-            "wbs": "1.1",
+            "wbs": "1.2",
             "start": "<date>",
             "end": "<date>",
             "span_start": "<date>",
@@ -9072,97 +9297,6 @@
               }
             ],
             "conflicts": []
-          },
-          {
-            "id": "<frame>",
-            "title": "Weld the frame",
-            "column": "done",
-            "assignee_type": "user",
-            "assignee_id": null,
-            "parent_id": "<build>",
-            "depth": 1,
-            "wbs": "1.2",
-            "start": "<date>",
-            "end": "<date>",
-            "span_start": "<date>",
-            "span_end": "<date>",
-            "duration_days": 8,
-            "effort_days": null,
-            "float_days": 0,
-            "critical": false,
-            "elapsed": false,
-            "deadline": null,
-            "deadline_missed": false,
-            "mode_own": "",
-            "mode": "manual",
-            "constraint_type": "asap",
-            "constraint_date": null,
-            "constraint_violated": false,
-            "early_start": "<date>",
-            "early_finish": "<date>",
-            "late_start": "<date>",
-            "late_finish": "<date>",
-            "free_float_days": 0,
-            "assignments": [],
-            "fixed_cost": 0,
-            "cost": 0,
-            "effort_driven": false,
-            "overallocated": false,
-            "actual_start": null,
-            "actual_finish": null,
-            "percent_complete": null,
-            "actual_cost": null,
-            "baseline": null,
-            "start_variance_days": null,
-            "finish_variance_days": null,
-            "earned_value": {
-              "bac": 0,
-              "pv": 0,
-              "ev": 0,
-              "ac": 0,
-              "sv": 0,
-              "cv": 0,
-              "spi": 0,
-              "cpi": 0,
-              "eac": 0
-            },
-            "behind_schedule": false,
-            "float_until": null,
-            "critical_subtasks": false,
-            "progress": 100,
-            "done": true,
-            "late": false,
-            "todos_done": 0,
-            "todos_total": 0,
-            "subtasks_done": 0,
-            "milestone": null,
-            "milestone_inherited": false,
-            "subtasks_total": 0,
-            "todos": [],
-            "depends_on": [
-              "<wiring>",
-              "<order>"
-            ],
-            "relationships": [
-              {
-                "task_id": "<wiring>",
-                "type": "FS",
-                "lag_days": 0,
-                "lag_unit": "d",
-                "conflict": false
-              },
-              {
-                "task_id": "<order>",
-                "type": "FS",
-                "lag_days": 0,
-                "lag_unit": "d",
-                "conflict": true
-              }
-            ],
-            "drives": [],
-            "conflicts": [
-              "<order>"
-            ]
           },
           {
             "id": "<order>",
