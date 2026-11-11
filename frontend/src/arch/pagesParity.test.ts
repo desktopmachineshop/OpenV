@@ -145,7 +145,6 @@ const FORMER_NAV_SECTIONS: NavSection[] = [
       { to: 'vv', label: 'V&V' },
       { to: 'tests', label: 'Tests', feature: 'redesign-pages' },
       { to: 'baselines', label: 'Baselines', feature: 'redesign-pages' },
-      { to: 'releases', label: 'Releases', feature: 'target-releases' },
       { to: 'evidence', label: 'Evidence' },
       { to: 'matrix', label: 'Traceability' },
       { to: 'impact', label: 'Impact' },
@@ -158,6 +157,7 @@ const FORMER_NAV_SECTIONS: NavSection[] = [
       { to: 'board', label: 'Board' },
       { to: 'todos', label: 'To-dos', feature: 'todo-list' },
       { to: 'gantt', label: 'Gantt', feature: 'gantt-plan' },
+      { to: 'releases', label: 'Releases', feature: 'target-releases' },
     ],
   },
   {

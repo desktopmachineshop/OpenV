@@ -9,11 +9,12 @@
   <conbody>
     <p><b>Add task</b> makes a card in the board's To Do column and places it on the plan, with a start and a due date if you give them.</p>
     <p>To move a task, drag its bar. To change one date, drag that end of the bar. Both move in whole days. To place a task that has no dates, choose <b>+ Schedule</b> in its row: it gets a week from today, which you then drag to where it belongs.</p>
-    <p>Select a task to open it beside the chart. There you can:</p>
+    <p>Open a task, with the button on its row or by selecting its bar, to see it beside the chart. There you can:</p>
     <ul>
-      <li>set or clear its <b>Start</b> and <b>Due</b> dates. The due date is the card's own, so the board shows the same day;</li>
+      <li>set its <b>Start</b> and <b>Due</b> dates, its <b>Duration</b> and its <b>Effort</b>: see <xref href="#duration-and-effort" scope="external" format="html">Duration and effort</xref>. The due date is the card's own, so the board shows the same day;</li>
       <li>make it a <b>sub-task of</b> another task, or a top-level task again;</li>
       <li>set its <b>relationships</b> to the tasks that drive it;</li>
+      <li>add <b>to-dos</b> and tick them off;</li>
       <li>add <b>sub-tasks</b>.</li>
     </ul>
     <p><b>Sub-task of</b> and the task chooser under <b>Relationships</b> are searchable: open one and type part of a task's name or its outline number to narrow a long plan to the task you want.</p>

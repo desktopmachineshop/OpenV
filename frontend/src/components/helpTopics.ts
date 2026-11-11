@@ -234,8 +234,11 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     summary:
       "The project's plan on a timeline: the board's tasks with their sub-tasks, dependencies and progress, and milestones whose progress is measured from the project's artifacts.",
     tips: [
-      'Every card on the board is a task here: give it a start and a due date by dragging its bar, or in its panel.',
-      "A task's bar fills as the to-dos on its board card are ticked off and its sub-tasks finish; a task in Done is 100%.",
+      'Every card on the board is a task here: give it a start and a due date by dragging its bar, or open it with the button on its row.',
+      "A task's bar fills as its to-dos are ticked off and its sub-tasks finish; a task in Done is 100%.",
+      'A task keeps its duration: change its start and the due date moves, change its due date and the start moves. Effort is the work in it, in person-days.',
+      'Critical path marks in amber the tasks with no float: a day lost on one is a day lost at the end of the plan.',
+      'The timeline scrolls past both ends of the plan; drag an empty part of it, and Today brings today back.',
       'Relationships are finish to start, start to start or finish to finish, and a task can have several, so two tasks can drive when a third starts.',
       'Sub-task of and the relationship chooser are searchable: type part of a task name or its outline number.',
       'Each release is a milestone on the plan; add your own, such as Definition complete, with criteria like user needs addressed: 100%.',

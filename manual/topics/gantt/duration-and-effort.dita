@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="duration-and-effort">
+  <title>Duration and effort</title>
+  <shortdesc>A task has a <b>duration</b>: how many days it runs, counting its first and its last. A task from 1 March to 5 March has a duration of 5 days. The task keeps its duration, so its dates move together:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt.schedule"/>
+  </prolog>
+  <conbody>
+    <simpletable>
+      <sthead><stentry>You change</stentry><stentry>What follows</stentry></sthead>
+      <strow><stentry><b>Start</b></stentry><stentry>The due date moves, the same number of days later or earlier</stentry></strow>
+      <strow><stentry><b>Due</b></stentry><stentry>The start moves with it</stentry></strow>
+      <strow><stentry><b>Duration</b></stentry><stentry>The due date moves; the start stays</stentry></strow>
+      <strow><stentry>The bar, by dragging it</stentry><stentry>Both dates move</stentry></strow>
+      <strow><stentry>One end of the bar, by dragging it</stentry><stentry>The duration changes</stentry></strow>
+    </simpletable>
+    <p>A task with no dates yet can still be given a duration: it takes effect when the task gets a start or a due date. If a card's due date is changed on the board, the task's duration becomes what its two dates now span.</p>
+    <p><b>Effort</b> is the work in the task, in days of one person's time, and may be a part of a day. It is separate from the duration: three people working for two days is a duration of 2 and an effort of 6. The figures above the chart add up the effort of every task.</p>
+  </conbody>
+</concept>

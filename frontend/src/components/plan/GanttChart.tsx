@@ -6,8 +6,8 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlanMilestone, PlanTask, ProjectPlan } from '../../api/client';
 import { ellipsis, eyebrowStyle, mutedStyle } from '../ui';
-import { DependencyLines, OutlineCell, ROW_HEIGHT, TaskBar } from './GanttRows';
-import { Scale, Tick, Zoom, addDays, buildScale, buildTicks, shortDate } from './ganttScale';
+import { DependencyLines, OpenIcon, OutlineCell, ROW_HEIGHT, TaskBar } from './GanttRows';
+import { Scale, Tick, Zoom, addDays, buildScale, buildTicks, openingScroll, shortDate, todayScroll } from './ganttScale';
 import { milestoneColor, visibleTasks } from './planModel';
 
 const HEAD_ROW = 24;
@@ -128,6 +128,7 @@ const MilestoneLane: React.FC<{
               />
               <span style={{ ...ellipsis, fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{m.name}</span>
               <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.progress}%</span>
+              <OpenIcon />
             </button>
           </React.Fragment>
         );
@@ -171,6 +172,10 @@ export interface GanttChartProps {
   onSelectMilestone: (m: PlanMilestone) => void;
   /** Set where the reader may edit with a pointer: bars drag, and an unscheduled row offers Schedule. */
   onReschedule?: (t: PlanTask, start: string, end: string) => void;
+  /** Marks the tasks with no float, and the arrows between them. */
+  showCritical: boolean;
+  /** Counts presses of Today: each one scrolls today back to a third of the way in. */
+  todaySignal: number;
 }
 
 export const GanttChart: React.FC<GanttChartProps> = ({
@@ -182,6 +187,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   onSelectTask,
   onSelectMilestone,
   onReschedule,
+  showCritical,
+  todaySignal,
 }) => {
   const scroller = useRef<HTMLDivElement>(null);
   const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
@@ -205,12 +212,53 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const ticks = useMemo(() => buildTicks(scale), [scale]);
   const rows = useMemo(() => visibleTasks(plan.tasks, folded), [plan.tasks, folded]);
 
-  // Open on today, a little in from the left, whenever the zoom changes.
+  const timelineWidth = Math.max(viewWidth - outlineWidth, 0);
+
+  // Where the timeline opens, and again whenever the zoom changes: on the
+  // whole plan when it fits, else with today a third of the way in.
   useEffect(() => {
     const el = scroller.current;
-    if (el) el.scrollLeft = Math.max(scale.x(plan.today) - Math.max((el.clientWidth - outlineWidth) / 3, 40), 0);
+    if (el && timelineWidth > 0) el.scrollLeft = openingScroll(scale, plan.start, plan.end, plan.today, timelineWidth);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [zoom, plan.project_id, viewWidth > 0]);
+  }, [zoom, plan.project_id, timelineWidth > 0]);
+
+  // An edit that moves the plan's first day moves the scale's: keep the
+  // days the reader is looking at where they are.
+  const lastScale = useRef(scale);
+  useLayoutEffect(() => {
+    const prev = lastScale.current;
+    lastScale.current = scale;
+    const el = scroller.current;
+    if (el && prev.zoom === scale.zoom && prev.first !== scale.first) el.scrollLeft += (prev.first - scale.first) * scale.dayWidth;
+  }, [scale]);
+
+  useEffect(() => {
+    const el = scroller.current;
+    if (el && todaySignal > 0) el.scrollTo({ left: todayScroll(scale, plan.today, timelineWidth), behavior: 'smooth' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [todaySignal]);
+
+  // Dragging the empty timeline pans it, as a wheel or a trackpad scrolls it.
+  const pan = useRef<{ x: number; y: number; left: number; top: number } | null>(null);
+  const [panning, setPanning] = useState(false);
+  const startPan = (e: React.PointerEvent) => {
+    const el = scroller.current;
+    if (!el || e.button !== 0 || e.pointerType !== 'mouse') return;
+    if ((e.target as HTMLElement).closest('button, a, input, select, [role="rowheader"]')) return;
+    pan.current = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop };
+    el.setPointerCapture(e.pointerId);
+    setPanning(true);
+  };
+  const movePan = (e: React.PointerEvent) => {
+    const el = scroller.current;
+    if (!el || !pan.current) return;
+    el.scrollLeft = pan.current.left - (e.clientX - pan.current.x);
+    el.scrollTop = pan.current.top - (e.clientY - pan.current.y);
+  };
+  const endPan = () => {
+    pan.current = null;
+    setPanning(false);
+  };
 
   const toggle = (id: string) =>
     setFolded((prev) => {
@@ -226,7 +274,20 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       role="table"
       aria-label="Plan timeline"
       data-help-key="gantt.chart"
-      style={{ position: 'relative', overflow: 'auto', maxHeight: 'calc(100dvh - 210px)', minHeight: 180, overscrollBehaviorX: 'contain' }}
+      tabIndex={0}
+      onPointerDown={startPan}
+      onPointerMove={movePan}
+      onPointerUp={endPan}
+      onPointerCancel={endPan}
+      style={{
+        position: 'relative',
+        overflow: 'auto',
+        maxHeight: 'calc(100dvh - 210px)',
+        minHeight: 180,
+        overscrollBehaviorX: 'contain',
+        cursor: panning ? 'grabbing' : 'grab',
+        userSelect: panning ? 'none' : undefined,
+      }}
     >
       <div style={{ width: outlineWidth + scale.width, minWidth: '100%' }}>
         <div role="row" style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', background: 'var(--surface-alt)' }}>
@@ -265,6 +326,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 folded={folded.has(t.id)}
                 onToggle={() => toggle(t.id)}
                 onSelect={() => onSelectTask(t)}
+                critical={showCritical && t.critical}
               />
               <div
                 role="cell"
@@ -276,6 +338,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                     scale={scale}
                     today={plan.today}
                     selected={t.id === selectedTaskId}
+                    critical={showCritical && t.critical}
                     onSelect={() => onSelectTask(t)}
                     onReschedule={onReschedule ? (start, end) => onReschedule(t, start, end) : undefined}
                   />
@@ -306,7 +369,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             </div>
           ))}
           <div style={{ position: 'absolute', left: outlineWidth, top: 0, width: scale.width, height: bodyHeight, pointerEvents: 'none', zIndex: 1 }}>
-            <DependencyLines tasks={rows} scale={scale} />
+            <DependencyLines tasks={rows} scale={scale} showCritical={showCritical} />
           </div>
           {rows.length === 0 && (
             <p style={{ ...mutedStyle, margin: 0, padding: 16, position: 'sticky', left: 0, maxWidth: 520 }}>

@@ -3,7 +3,7 @@ const content = `
 # Target releases
 
 A **release** is a milestone you plan requirements for, such as *MVP*,
-*V1.0* or *V2.0*. The **Releases** page, under **Verify** in the project
+*V1.0* or *V2.0*. The **Releases** page, under **Plan** in the project
 menu, lists a project's releases in order and shows how far each one has
 come: how many of its requirements are approved, how many are verified, and
 a burn-up of verification over time.

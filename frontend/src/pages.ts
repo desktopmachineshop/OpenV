@@ -143,14 +143,6 @@ export const PAGES: readonly Page[] = [
   },
   {
     scope: 'project',
-    path: 'releases',
-    load: 'lazy',
-    public: false,
-    help: { topic: 'releases' },
-    nav: { group: 'Verify', label: 'Releases', feature: TARGET_RELEASES_FEATURE },
-  },
-  {
-    scope: 'project',
     path: 'evidence',
     load: 'eager',
     public: false,
@@ -204,6 +196,14 @@ export const PAGES: readonly Page[] = [
     public: false,
     help: { topic: 'gantt' },
     nav: { group: 'Plan', label: 'Gantt', feature: GANTT_PLAN_FEATURE },
+  },
+  {
+    scope: 'project',
+    path: 'releases',
+    load: 'lazy',
+    public: false,
+    help: { topic: 'releases' },
+    nav: { group: 'Plan', label: 'Releases', feature: TARGET_RELEASES_FEATURE },
   },
   {
     scope: 'project',

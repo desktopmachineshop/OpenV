@@ -313,35 +313,35 @@ func renderExcel(doc Document) ([]byte, error) {
 // column a week, each task's weeks filled in its state's colour (styles:
 // open, done, late, critical).
 func excelTimeline(f *excelize.File, sheet string, p *Plan, header int, styles [4]int) {
-if weeks := weeksOf(p); len(weeks) > 0 {
-	first := len(taskHeader) + 2
-	for i, w := range weeks {
-		cell, _ := excelize.CoordinatesToCellName(first+i, 1)
-		_ = f.SetCellValue(sheet, cell, w.Format("02 Jan"))
+	if weeks := weeksOf(p); len(weeks) > 0 {
+		first := len(taskHeader) + 2
+		for i, w := range weeks {
+			cell, _ := excelize.CoordinatesToCellName(first+i, 1)
+			_ = f.SetCellValue(sheet, cell, w.Format("02 Jan"))
+		}
+		from, _ := excelize.ColumnNumberToName(first)
+		to, _ := excelize.ColumnNumberToName(first + len(weeks) - 1)
+		_ = f.SetColWidth(sheet, from, to, 7)
+		_ = f.SetCellStyle(sheet, from+"1", to+"1", header)
+		for row, t := range p.Tasks {
+			if t.SpanStart == nil || t.SpanEnd == nil {
+				continue
+			}
+			a, b := weekIndex(weeks, *t.SpanStart), weekIndex(weeks, *t.SpanEnd)
+			style := styles[0]
+			if t.Critical {
+				style = styles[3]
+			}
+			if t.Done {
+				style = styles[1]
+			} else if t.Late {
+				style = styles[2]
+			}
+			c1, _ := excelize.CoordinatesToCellName(first+a, row+2)
+			c2, _ := excelize.CoordinatesToCellName(first+b, row+2)
+			_ = f.SetCellStyle(sheet, c1, c2, style)
+		}
 	}
-	from, _ := excelize.ColumnNumberToName(first)
-	to, _ := excelize.ColumnNumberToName(first + len(weeks) - 1)
-	_ = f.SetColWidth(sheet, from, to, 7)
-	_ = f.SetCellStyle(sheet, from+"1", to+"1", header)
-	for row, t := range p.Tasks {
-		if t.SpanStart == nil || t.SpanEnd == nil {
-			continue
-		}
-		a, b := weekIndex(weeks, *t.SpanStart), weekIndex(weeks, *t.SpanEnd)
-		style := styles[0]
-		if t.Critical {
-			style = styles[3]
-		}
-		if t.Done {
-			style = styles[1]
-		} else if t.Late {
-			style = styles[2]
-		}
-		c1, _ := excelize.CoordinatesToCellName(first+a, row+2)
-		c2, _ := excelize.CoordinatesToCellName(first+b, row+2)
-		_ = f.SetCellStyle(sheet, c1, c2, style)
-	}
-}
 }
 
 // maxWeeks caps the drawn timeline of a workbook: five years.

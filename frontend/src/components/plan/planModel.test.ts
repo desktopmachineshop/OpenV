@@ -1,5 +1,5 @@
 import type { PlanMilestone, PlanTask } from '../../api/client';
-import { buildScale, buildTicks, fitZoom, fromDay, shortDate, spanLabel, toDay } from './ganttScale';
+import { FIT_MARGIN, buildScale, buildTicks, fitZoom, fromDay, openingScroll, shortDate, spanLabel, toDay, todayScroll } from './ganttScale';
 import { barTone, dependents, descendants, phoneGroups, visibleTasks } from './planModel';
 
 // The plan's pure parts: the time scale the chart draws on, and what the
@@ -19,6 +19,10 @@ const task = (id: string, extra: Partial<PlanTask> = {}): PlanTask => ({
   end: null,
   span_start: null,
   span_end: null,
+  duration_days: null,
+  effort_days: null,
+  float_days: null,
+  critical: false,
   progress: 0,
   done: false,
   late: false,
@@ -63,11 +67,25 @@ describe('the Gantt scale', () => {
     expect(scale.width).toBe((scale.last - scale.first + 1) * 12);
   });
 
-  it('widens to fill the chart, and holds today when the plan is empty', () => {
-    const scale = buildScale('days', null, null, '2027-03-10', 3000);
-    expect(scale.width).toBeGreaterThanOrEqual(3000);
-    expect(scale.x('2027-03-10')).toBeGreaterThan(0);
-    expect(scale.x('2027-03-10')).toBeLessThan(scale.width);
+  it('reaches past the plan so the timeline scrolls, further forward than back', () => {
+    const scale = buildScale('weeks', '2027-03-01', '2027-03-20', '2027-03-10', 1200);
+    expect(scale.width).toBeGreaterThan(1200 * 1.5);
+    const before = scale.x('2027-03-01');
+    const after = scale.width - scale.x('2027-03-20');
+    expect(before).toBeGreaterThanOrEqual(600);
+    expect(after).toBeGreaterThan(before);
+    // An empty plan is drawn around today.
+    const empty = buildScale('days', null, null, '2027-03-10', 900);
+    expect(empty.x('2027-03-10')).toBeGreaterThan(0);
+    expect(empty.x('2027-03-10')).toBeLessThan(empty.width);
+  });
+
+  it('opens on the whole plan when it fits, else with today a third of the way in', () => {
+    const fits = buildScale('weeks', '2027-03-01', '2027-03-20', '2027-03-10', 1200);
+    expect(openingScroll(fits, '2027-03-01', '2027-03-20', '2027-03-10', 1200)).toBe(fits.x('2027-03-01') - FIT_MARGIN);
+    const long = buildScale('weeks', '2026-01-01', '2028-01-01', '2027-03-10', 1200);
+    expect(openingScroll(long, '2026-01-01', '2028-01-01', '2027-03-10', 1200)).toBe(Math.round(long.x('2027-03-10') - 400));
+    expect(todayScroll(long, '2027-03-10', 900)).toBe(Math.round(long.x('2027-03-10') - 300));
   });
 
   it('heads the days with their months and marks weekends', () => {
@@ -89,11 +107,12 @@ describe('the Gantt scale', () => {
     expect(lower.reduce((sum, t) => sum + t.width, 0)).toBeCloseTo(scale.width, 5);
   });
 
-  it('opens at the closest zoom that shows the whole plan', () => {
+  it('opens at the closest zoom at which the whole plan fits', () => {
     expect(fitZoom('2027-03-01', '2027-03-20', 1000)).toBe('days');
-    expect(fitZoom('2027-03-01', '2027-05-20', 1000)).toBe('weeks');
-    expect(fitZoom('2027-01-01', '2027-08-01', 1000)).toBe('months');
-    expect(fitZoom('2025-01-01', '2029-01-01', 1000)).toBe('quarters');
+    expect(fitZoom('2027-03-01', '2027-04-10', 1000)).toBe('weeks');
+    expect(fitZoom('2027-01-01', '2027-06-01', 1000)).toBe('months');
+    expect(fitZoom('2027-01-01', '2028-06-01', 1000)).toBe('quarters');
+    expect(fitZoom('2020-01-01', '2032-01-01', 1000)).toBe('quarters');
     expect(fitZoom(null, null, 1000)).toBe('weeks');
   });
 

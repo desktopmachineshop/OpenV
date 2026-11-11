@@ -2,7 +2,7 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="reading-the-chart">
   <title>Reading the chart</title>
-  <shortdesc>The outline on the left lists the tasks, numbered as an outline (1, 1.1, 1.2, 2). A task with sub-tasks has an arrow that folds them away. The figure at the end of each row is the task's progress.</shortdesc>
+  <shortdesc>The outline on the left lists the tasks, numbered as an outline (1, 1.1, 1.2, 2). A task with sub-tasks has an arrow that folds them away. The figure at the end of each row is the task's progress, and the small <b>open</b> button after it opens the task beside the chart. Each milestone carries the same button.</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="gantt.chart"/>
     <resourceid appname="openv-web" appid="gantt.summary"/>
@@ -17,6 +17,8 @@
       <li>A task with no dates yet shows <b>+ Schedule</b> at today.</li>
     </ul>
     <p>The row of <b>Milestones</b> above the tasks holds a diamond for each milestone, with its name and progress. The thin band leading up to a diamond, from the milestone before it, fills as that milestone's criteria are met. The red vertical line is today.</p>
-    <p><b>Days</b>, <b>Weeks</b>, <b>Months</b> and <b>Quarters</b> change the scale. The page opens at the scale that shows the whole plan. The figures above the chart count the plan: how far it is complete, its tasks, those done, late and not yet scheduled, and the milestones met.</p>
+    <p><b>Days</b>, <b>Weeks</b>, <b>Months</b> and <b>Quarters</b> change the scale. The page opens at the scale that shows the whole plan, on the whole plan. A plan too long to fit opens with today a third of the way in from the left, so that most of what you see is ahead of you.</p>
+    <p>The timeline scrolls sideways past both ends of the plan, further forward than back: use the scroll bar, a trackpad or a wheel, or drag an empty part of the timeline. <b>Today</b> brings today back into view.</p>
+    <p>The figures above the chart count the plan: how far it is complete, its tasks, those done, late, on the critical path and not yet scheduled, the effort in it, and the milestones met.</p>
   </conbody>
 </concept>

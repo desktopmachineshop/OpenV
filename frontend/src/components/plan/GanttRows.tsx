@@ -21,16 +21,24 @@ const caret: React.CSSProperties = {
   flexShrink: 0,
 };
 
-/** A task in the outline: its fold control, outline number, title and progress. */
+/** The small "open" mark on a row and a milestone: an arrow leaving a box. */
+export const OpenIcon: React.FC = () => (
+  <svg aria-hidden width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+    <path d="M5 2.5H2.5v7h7V7M7 2.5h2.5V5M9.3 2.7L5.5 6.5" />
+  </svg>
+);
+
+/** A task in the outline: its fold control, outline number, title, progress and the button that opens it. */
 export const OutlineCell: React.FC<{
   task: PlanTask;
   width: number;
   selected: boolean;
   folded: boolean;
+  /** Drawn as on the critical path. */
+  critical?: boolean;
   onToggle: () => void;
   onSelect: () => void;
-}> = ({ task, width, selected, folded, onToggle, onSelect }) => {
-  const tone = barTone(task);
+}> = ({ task, width, selected, folded, critical, onToggle, onSelect }) => {
   return (
     <div
       role="rowheader"
@@ -80,13 +88,26 @@ export const OutlineCell: React.FC<{
       >
         {task.title}
       </button>
+      {critical && (
+        <span title="On the critical path: any slip moves the plan's end" aria-label="Critical" role="img" style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--warning)', flexShrink: 0 }} />
+      )}
       <span
         title={task.late ? 'Late' : task.conflicts.length > 0 ? 'Its dates break a relationship' : undefined}
-        style={{ fontSize: 11, flexShrink: 0, color: task.late || task.conflicts.length > 0 ? 'var(--danger-strong)' : BAR_COLORS[tone].fill === 'var(--success)' ? 'var(--success-text)' : 'var(--text-muted)' }}
+        style={{ fontSize: 11, flexShrink: 0, color: task.late || task.conflicts.length > 0 ? 'var(--danger-strong)' : task.done ? 'var(--success-text)' : 'var(--text-muted)' }}
       >
         {task.conflicts.length > 0 && !task.late ? '⚠ ' : ''}
         {task.progress}%
       </span>
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-label={`Open ${task.title}`}
+        title="Open task"
+        data-open-task={task.id}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, padding: 0, flexShrink: 0, border: '1px solid transparent', borderRadius: 4, background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+      >
+        <OpenIcon />
+      </button>
     </div>
   );
 };
@@ -120,9 +141,11 @@ export const TaskBar: React.FC<{
   scale: Scale;
   today: string;
   selected: boolean;
+  /** Drawn as on the critical path: an amber ring. */
+  critical?: boolean;
   onSelect: () => void;
   onReschedule?: (start: string, end: string) => void;
-}> = ({ task, scale, today, selected, onSelect, onReschedule }) => {
+}> = ({ task, scale, today, selected, critical, onSelect, onReschedule }) => {
   const [drag, setDrag] = useState<Drag | null>(null);
   const live = useRef<Drag | null>(null);
   // A drag ends in a click on the bar, which must not also select the task.
@@ -174,7 +197,7 @@ export const TaskBar: React.FC<{
   };
   const pointer = draggable ? { onPointerMove: move, onPointerUp: finish, onPointerCancel: cancel } : {};
 
-  const label = `${task.title}: ${spanLabel(start, end, today)}, ${task.progress}% complete${task.late ? ', late' : ''}`;
+  const label = `${task.title}: ${spanLabel(start, end, today)}, ${task.progress}% complete${task.late ? ', late' : ''}${task.critical ? ', critical' : ''}`;
   return (
     <>
       <button
@@ -198,7 +221,7 @@ export const TaskBar: React.FC<{
           borderRadius: summary ? 2 : 4,
           border: `1px solid ${summary ? 'var(--text-secondary)' : colors.border}`,
           background: summary ? 'var(--neutral-soft)' : colors.track,
-          boxShadow: selected ? '0 0 0 2px var(--tint-blue-border)' : undefined,
+          boxShadow: critical ? '0 0 0 2px var(--warning)' : selected ? '0 0 0 2px var(--tint-blue-border)' : undefined,
           cursor: draggable ? (drag ? 'grabbing' : 'grab') : 'pointer',
           overflow: 'visible',
           touchAction: draggable ? 'none' : undefined,
@@ -238,10 +261,10 @@ export const TaskBar: React.FC<{
  * joins the two left edges, finish to finish the two right edges. A broken
  * relationship is dashed red.
  */
-export const DependencyLines: React.FC<{ tasks: PlanTask[]; scale: Scale }> = ({ tasks, scale }) => {
+export const DependencyLines: React.FC<{ tasks: PlanTask[]; scale: Scale; showCritical?: boolean }> = ({ tasks, scale, showCritical }) => {
   const row = new Map(tasks.map((t, i) => [t.id, i]));
   const byId = new Map(tasks.map((t) => [t.id, t]));
-  const paths: { key: string; d: string; conflict: boolean }[] = [];
+  const paths: { key: string; d: string; conflict: boolean; critical: boolean }[] = [];
   for (const t of tasks) {
     for (const rel of t.relationships) {
       const on = byId.get(rel.task_id);
@@ -271,7 +294,8 @@ export const DependencyLines: React.FC<{ tasks: PlanTask[]; scale: Scale }> = ({
             ? `M${x1} ${y1} H${x1 + 7} V${y2} H${x2 - 1}`
             : `M${x1} ${y1} H${x1 + 7} V${y1 + (y2 > y1 ? 1 : -1) * (ROW_HEIGHT / 2)} H${x2 - 9} V${y2} H${x2 - 1}`;
       }
-      paths.push({ key: `${rel.task_id}>${t.id}`, d, conflict: rel.conflict });
+      // The critical path runs along the arrows that join two critical tasks.
+      paths.push({ key: `${rel.task_id}>${t.id}`, d, conflict: rel.conflict, critical: Boolean(showCritical && t.critical && on.critical) });
     }
   }
   if (paths.length === 0) return null;
@@ -283,9 +307,9 @@ export const DependencyLines: React.FC<{ tasks: PlanTask[]; scale: Scale }> = ({
       style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', overflow: 'visible' }}
     >
       <defs>
-        {(['ok', 'conflict'] as const).map((k) => (
+        {(['ok', 'conflict', 'critical'] as const).map((k) => (
           <marker key={k} id={`gantt-arrow-${k}`} viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M0 0 L6 3 L0 6 z" fill={k === 'ok' ? 'var(--neutral)' : 'var(--danger)'} />
+            <path d="M0 0 L6 3 L0 6 z" fill={k === 'ok' ? 'var(--neutral)' : k === 'conflict' ? 'var(--danger)' : 'var(--warning)'} />
           </marker>
         ))}
       </defs>
@@ -294,10 +318,10 @@ export const DependencyLines: React.FC<{ tasks: PlanTask[]; scale: Scale }> = ({
           key={p.key}
           d={p.d}
           fill="none"
-          stroke={p.conflict ? 'var(--danger)' : 'var(--neutral)'}
-          strokeWidth={1.25}
+          stroke={p.conflict ? 'var(--danger)' : p.critical ? 'var(--warning)' : 'var(--neutral)'}
+          strokeWidth={p.critical && !p.conflict ? 2 : 1.25}
           strokeDasharray={p.conflict ? '4 3' : undefined}
-          markerEnd={`url(#gantt-arrow-${p.conflict ? 'conflict' : 'ok'})`}
+          markerEnd={`url(#gantt-arrow-${p.conflict ? 'conflict' : p.critical ? 'critical' : 'ok'})`}
         />
       ))}
     </svg>

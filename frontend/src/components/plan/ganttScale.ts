@@ -57,14 +57,16 @@ const PADDING: Record<Zoom, number> = { days: 5, weeks: 14, months: 45, quarters
 
 /**
  * The scale that shows a plan spanning start to end (either may be missing:
- * an empty plan is drawn around today), wide enough to fill minWidth.
+ * an empty plan is drawn around today). It reaches past the plan on both
+ * sides, by the zoom's padding or, when the chart's width is known, by half
+ * a screen before and a whole one after, so the timeline always scrolls:
+ * back a little, and further forward, where the work still to plan is.
  */
-export const buildScale = (zoom: Zoom, start: string | null, end: string | null, today: string, minWidth = 0): Scale => {
+export const buildScale = (zoom: Zoom, start: string | null, end: string | null, today: string, viewWidth = 0): Scale => {
   const dayWidth = DAY_WIDTH[zoom];
-  let first = Math.min(toDay(start || today), toDay(today)) - PADDING[zoom];
-  let last = Math.max(toDay(end || today), toDay(today)) + PADDING[zoom];
-  const short = Math.ceil(minWidth / dayWidth) - (last - first + 1);
-  if (short > 0) last += short;
+  const viewDays = Math.ceil(viewWidth / dayWidth);
+  let first = Math.min(toDay(start || today), toDay(today)) - Math.max(PADDING[zoom], Math.ceil(viewDays / 2));
+  const last = Math.max(toDay(end || today), toDay(today)) + Math.max(PADDING[zoom], viewDays);
   // Start the chart on a Monday, so week ticks and weekends line up.
   first -= (new Date(first * DAY_MS).getUTCDay() + 6) % 7;
   return {
@@ -77,6 +79,26 @@ export const buildScale = (zoom: Zoom, start: string | null, end: string | null,
     dayAt: (px) => fromDay(first + Math.floor(px / dayWidth)),
   };
 };
+
+/**
+ * Where the timeline opens, as a scroll offset: on the whole plan when it
+ * fits the view, with a small margin before its first day; otherwise with
+ * today a third of the way in from the left, since what is ahead is more
+ * use than what is behind.
+ */
+export const openingScroll = (scale: Scale, start: string | null, end: string | null, today: string, viewWidth: number): number => {
+  const from = scale.x(start || today);
+  const to = scale.x(end || today) + scale.dayWidth;
+  const fits = to - from <= viewWidth - 2 * FIT_MARGIN;
+  return Math.max(Math.round(fits ? from - FIT_MARGIN : todayScroll(scale, today, viewWidth)), 0);
+};
+
+/** The scroll offset that puts today a third of the way in from the left. */
+export const todayScroll = (scale: Scale, today: string, viewWidth: number): number =>
+  Math.max(Math.round(scale.x(today) - viewWidth / 3), 0);
+
+/** The space kept either side of a plan that fits the view, in pixels. */
+export const FIT_MARGIN = 24;
 
 export interface Tick {
   key: string;
@@ -148,14 +170,14 @@ export const buildTicks = (scale: Scale): { upper: Tick[]; lower: Tick[] } => {
 
 /**
  * The zoom a plan opens at: the closest one at which the whole plan, from
- * its first day to its last, is no wider than the chart and a quarter more,
- * so the reader sees all of it with at most a short scroll.
+ * its first day to its last, fits the chart's width with a margin either
+ * side. A plan too long for any of them opens at quarters.
  */
 export const fitZoom = (start: string | null, end: string | null, width: number): Zoom => {
   if (!start || !end || width <= 0) return 'weeks';
   const days = toDay(end) - toDay(start) + 1;
   for (const z of ZOOMS) {
-    if (days * DAY_WIDTH[z.value] <= width * 1.25) return z.value;
+    if (days * DAY_WIDTH[z.value] <= width - 2 * FIT_MARGIN) return z.value;
   }
   return 'quarters';
 };
