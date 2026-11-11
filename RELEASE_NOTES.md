@@ -15,7 +15,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
-- **Time off for each person.** **Workspace settings** → **Plan calendar** records the days each member is away. A plan reports a task that asks for someone while they are away, under Resources. Members record their own time off; admins anyone's.
+- **Tasks stretch over time off.** A task now skips the days everyone on it is away: it keeps its days of work and ends later. Recording or removing time off, or assigning the task to someone else, moves it to fit.
+- **Time off for each person.** **Workspace settings** → **Plan calendar** records the days each member is away. Members record their own time off; admins anyone's.
 - **Working days are a workspace setting.** The days of the week a plan works moved from the Gantt's header to **Workspace settings** → **Plan calendar**, set by a workspace admin and shared by every project in the workspace.
 - **A task opens in the middle of the window.** The open button on a Gantt row now opens the task in a wide pane over the page, with its description, to-dos and activity beside everything the plan holds on it.
 - **A cleaner Gantt.** The paragraph of instructions under the chart is gone, so the chart has the room; the help and the tooltips say the same. A relationship's line now starts at the end of the driving task's float line instead of running over it.

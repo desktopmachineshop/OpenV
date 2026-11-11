@@ -225,6 +225,9 @@ type Summary struct {
 
 // Plan is a project's plan as computed for a reader.
 type Plan struct {
+	// off is the days each resource is away, for the placing that follows.
+	off map[string]map[string]bool
+
 	ProjectID string `json:"project_id"`
 	// WorkingDays are the days of the week the plan works, as ISO weekday
 	// numbers (Monday is 1, Sunday 7): the days durations and float count.
@@ -389,7 +392,11 @@ func Build(in Inputs, now time.Time) *Plan {
 	today := now.UTC().Format(DateLayout)
 	p := &Plan{ProjectID: in.ProjectID, Today: today, Tasks: []*Task{}, Milestones: []MilestoneProgress{},
 		Dependencies: []Dependency{}, Catalogue: Metrics}
-	b := &builder{in: in, today: today, cal: NewCalendar(in.WorkingDays).WithHolidays(in.Holidays), byID: map[string]*Task{}, created: map[string]time.Time{}, order: map[string]int{}, children: map[string][]*Task{}}
+	b := &builder{in: in, today: today, cal: NewCalendar(in.WorkingDays).WithHolidays(in.Holidays), byID: map[string]*Task{}, created: map[string]time.Time{}, order: map[string]int{}, children: map[string][]*Task{}, off: away(in.TimeOff), own: map[string][]Assignment{}}
+	for _, a := range in.Assignments {
+		b.own[a.WorkItemID] = append(b.own[a.WorkItemID], Assignment{Type: a.Type, ID: a.ID, Units: a.Units})
+	}
+	p.off = b.off
 	p.WorkingDays, p.Holidays, p.CriticalSlackDays = DefaultWorkingDays, []Holiday{}, in.CriticalSlackDays
 	p.Scheduling = in.Scheduling
 	if p.Mode == "" {
@@ -475,7 +482,10 @@ type builder struct {
 	// order is a task's place among its siblings, where one was moved.
 	order    map[string]int
 	children map[string][]*Task
-	roots    []*Task
+	// off is the days each resource is away; own, the people set on each task.
+	off   map[string]map[string]bool
+	own   map[string][]Assignment
+	roots []*Task
 }
 
 // tasks makes a task of each work item and gives it its schedule.
@@ -555,6 +565,28 @@ func (b *builder) todos() {
 	}
 }
 
+// who is the people on a task: those set on the plan, or else the board's
+// assignee.
+func (b *builder) who(t *Task) []Assignment {
+	if own := b.own[t.ID]; len(own) > 0 {
+		return own
+	}
+	if t.AssigneeID != nil && *t.AssigneeID != "" {
+		return []Assignment{{Type: t.AssigneeType, ID: *t.AssigneeID, Units: 100}}
+	}
+	return nil
+}
+
+// task is the plan's task with the id, or nil.
+func (p *Plan) task(id string) *Task {
+	for _, t := range p.Tasks {
+		if t.ID == id {
+			return t
+		}
+	}
+	return nil
+}
+
 // settle works out a task's span and progress, its sub-tasks' first.
 func (b *builder) settle(t *Task) {
 	start, end := t.Start, t.End
@@ -589,8 +621,8 @@ func (b *builder) settle(t *Task) {
 	}
 	t.SpanStart, t.SpanEnd = start, end
 	cal := b.cal
-	if t.Elapsed && len(b.children[t.ID]) == 0 {
-		cal = elapsedCalendar
+	if len(b.children[t.ID]) == 0 {
+		cal = taskCalendar(b.cal, t.Elapsed, b.who(t), b.off)
 	}
 	if d := spanDays(cal, start, end); d != nil {
 		t.DurationDays = d

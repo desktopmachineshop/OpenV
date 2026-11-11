@@ -283,6 +283,8 @@ type Repository interface {
 	WorkspaceCalendar(orgID string) ([]int, []TimeOff, error)
 	SaveWorkspaceWorkingDays(orgID string, days []int) error
 	SaveProjectWorkingDays(projectID string, days []int) error
+	// OrgProjects lists the ids of a workspace's projects.
+	OrgProjects(orgID string) ([]string, error)
 	// ListTimeOff lists the time off of the workspace a project is in.
 	ListTimeOff(projectID string) ([]TimeOff, error)
 	AddTimeOff(orgID string, t *TimeOff) error
@@ -617,11 +619,20 @@ func (s *DefaultService) placeTask(item *workitems.WorkItem, current *TaskSchedu
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
-	// A task whose duration is elapsed time counts every day.
-	if elapsed := current.Elapsed; (req.Elapsed != nil && *req.Elapsed) || (req.Elapsed == nil && elapsed) {
-		cal = elapsedCalendar
+	// A task counts the days it is worked on: every day for elapsed time,
+	// otherwise the plan's days less those its people are all away.
+	was, now, err := s.taskCalendars(item, cal, current.Elapsed, req)
+	if err != nil {
+		return nil, nil, nil, nil, err
 	}
-	if start, due, duration, err = placeDates(cal, current, dayOf(item.DueDate), req); err != nil {
+	// New people and no new dates: the task keeps its days of work, and
+	// its end moves to fit them.
+	if req.Assignments != nil && req.Elapsed == nil && req.StartDate == nil && req.DueDate == nil && req.DurationDays == nil {
+		if d := spanDays(was, current.StartDate, dayOf(item.DueDate)); d != nil && *d > 0 {
+			req.DurationDays = d
+		}
+	}
+	if start, due, duration, err = placeDates(now, current, dayOf(item.DueDate), req); err != nil {
 		return nil, nil, nil, nil, err
 	}
 	effort = current.EffortDays

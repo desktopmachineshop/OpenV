@@ -120,7 +120,6 @@ export const PlanResources: React.FC<{
                       {r.overallocations.map((o) => (
                         <div key={o.start} style={{ fontSize: 12, color: 'var(--danger-strong)' }}>
                           {o.units}% on {spanLabel(o.start, o.end, plan.today)}
-                          {o.away ? ', while away' : ''}
                         </div>
                       ))}
                       {r.time_off.map((t) => (

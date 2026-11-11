@@ -152,10 +152,12 @@ six-day week, or switch a day off that your team never works. A plan works
 at least one day.
 
 **Time off**, on the same page, lists the days each member is away. A member
-records their own and an admin anyone's. A person who is away can give no
-time on any project: a task that asks for them on those days is reported
-under **Resources** as an over-allocation, marked *while away*, and the
-task is flagged. Time off does not move a task by itself.
+records their own and an admin anyone's. A task stretches over the days
+its people are away: it keeps its days of work and ends later, so a
+five-day task whose only person is away for two of them ends two working
+days later. With several people on a task it carries on while any of them
+is there. Adding or removing time off moves the tasks that are not done,
+and assigning a task to someone else fits it to their time off.
 
 **Calendar**, above the chart, opens the plan's own calendar. Add each
 day the plan does not work whatever its weekday, a public holiday or a

@@ -16,8 +16,8 @@ const inputStyle: React.CSSProperties = { padding: '5px 8px', minHeight: 32, box
 
 // The workspace's plan calendar: the days of the week every project's plan
 // works, and the days each member is away. A plan counts durations and
-// float in the working days, and reports a task that asks for someone
-// while they are away.
+// float in the working days, and a task stretches over the days its
+// people are away.
 export const OrgPlanCalendarTab: React.FC<OrgPlanCalendarTabProps> = ({ org, isAdmin, currentUserId }) => {
   const [calendar, setCalendar] = useState<WorkspacePlanCalendar | null>(null);
   const [members, setMembers] = useState<OrgMember[]>([]);
@@ -70,7 +70,7 @@ export const OrgPlanCalendarTab: React.FC<OrgPlanCalendarTabProps> = ({ org, isA
       <section>
         <h3 style={{ margin: '0 0 6px', fontSize: 15 }}>Time off</h3>
         <p style={{ ...mutedStyle, margin: '0 0 8px' }}>
-          The days a member is away, on every project. A plan reports a task that asks for someone while they are away, as it does anyone asked for more than they can give.
+          The days a member is away, on every project. A task stretches over the days everyone on it is away: it keeps its days of work and ends later. Adding or removing time off moves the tasks that are not done.
           {isAdmin ? '' : ' You can record your own; a workspace admin records anyone’s.'}
         </p>
         {calendar.time_off.length === 0 ? (
