@@ -192,7 +192,7 @@ func (b *builder) tracking(p *Plan) {
 		t.BehindSchedule = !t.Done && ev.BAC > 0 && ev.EV < ev.PV
 		if ev.BAC == 0 && !t.Done && t.SpanStart != nil {
 			// With no money on it, by time: the share of its days gone by.
-			t.BehindSchedule = t.fraction < b.share(*t.SpanStart, *t.SpanEnd, status)
+			t.BehindSchedule = t.fraction < b.share(taskCalendar(b.cal, t.Elapsed, t.Assignments, b.off), *t.SpanStart, *t.SpanEnd, status)
 		}
 	}
 	p.EarnedValue.derive()
@@ -200,14 +200,14 @@ func (b *builder) tracking(p *Plan) {
 
 // share is the part of the working days from start to end that has passed
 // by the end of day.
-func (b *builder) share(start, end, day string) float64 {
+func (b *builder) share(cal Calendar, start, end, day string) float64 {
 	switch {
 	case day < start:
 		return 0
 	case day >= end:
 		return 1
 	}
-	return float64(b.cal.Span(start, day)) / float64(b.cal.Span(start, end))
+	return float64(cal.Span(start, day)) / float64(cal.Span(start, end))
 }
 
 // earned is a task's earned value at the status date: its budget is the
@@ -220,7 +220,8 @@ func (b *builder) earned(t *Task, base *BaselineTask, status string) EarnedValue
 		ev.BAC, start, end = base.Cost, base.Start, base.End
 	}
 	if start != nil && end != nil {
-		ev.PV = ev.BAC * b.share(*start, *end, status)
+		// Planned work goes at the pace the task's people are there for.
+		ev.PV = ev.BAC * b.share(taskCalendar(b.cal, t.Elapsed, t.Assignments, b.off), *start, *end, status)
 	}
 	ev.EV = ev.BAC * t.fraction
 	ev.AC = t.Cost * t.fraction

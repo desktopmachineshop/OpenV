@@ -145,32 +145,13 @@ The bar under the chart's header changes how the tasks are listed. It changes no
 **Undo and redo.** **Undo** (Ctrl+Z) takes back your last edit to a task: its dates, duration, effort, progress, parent, order and the other fields of its panel. **Redo** (Ctrl+Y) makes it again. Up to 50 edits are kept until you leave the page. Relationships drawn on the chart, milestones and the plan's settings are not undone this way, and on an automatic plan the tasks an edit moved are placed again from where they now stand. 
 ## Working days
 
-The days of the week a plan works are the workspace's, the same for every
-project in it: Monday to Friday until a workspace admin changes them, under
-**Workspace settings** → **Plan calendar**. Switch on Saturday there for a
-six-day week, or switch a day off that your team never works. A plan works
-at least one day.
+The days of the week a plan works are the workspace's, the same for every project in it: Monday to Friday until a workspace admin changes them, under **Workspace settings** → **Plan calendar**. Switch on Saturday there for a six-day week, or switch a day off that your team never works. A plan works at least one day.
 
-**Time off**, on the same page, lists the days each member is away. A member
-records their own and an admin anyone's. A task stretches over the days
-its people are away: it keeps its days of work and ends later, so a
-five-day task whose only person is away for two of them ends two working
-days later. With several people on a task it carries on while any of them
-is there. Adding or removing time off moves the tasks that are not done,
-and assigning a task to someone else fits it to their time off.
+**Time off**, on the same page, lists the days each member is away. A member records their own and an admin anyone's. A task stretches over the days its people are away: it keeps its days of work and ends later, so a five-day task whose only person is away for two of them ends two working days later. With several people on a task, a day counts for the share of them who are there, by their percentage on the task: with two people at equal shares, a day one is away is half a day. Each person's work and cost count the days they are there. Adding or removing time off moves the tasks that are not done, and reassigning a task fits it to its new people.
 
-**Calendar**, above the chart, opens the plan's own calendar. Add each
-day the plan does not work whatever its weekday, a public holiday or a
-shutdown, with a name if you like; remove one with its cross. A holiday is
-skipped exactly as a weekend day is, and shaded on the chart.
+**Calendar**, above the chart, opens the plan's own calendar. Add each day the plan does not work whatever its weekday, a public holiday or a shutdown, with a name if you like; remove one with its cross. A holiday is skipped exactly as a weekend day is, and shaded on the chart.
 
-Durations and float count working days only. With Monday to Friday, a task
-that starts on a Thursday and lasts 3 days is due the following Monday, and
-a task from a Monday to the Friday of the next week has a duration of 10.
-A start that falls on a day off counts from the next working day. The
-chart shades the days off at the **Days** scale. Changing the working days
-does not move any task's dates: durations and float are counted again.
-
+Durations and float count working days only. With Monday to Friday, a task that starts on a Thursday and lasts 3 days is due the following Monday, and a task from a Monday to the Friday of the next week has a duration of 10. A start that falls on a day off counts from the next working day. The chart shades the days off at the **Days** scale. Changing the working days does not move any task's dates: durations and float are counted again. 
 ## Duration and effort
 
 A task has a **duration**: how many [working days](#working-days) it runs,

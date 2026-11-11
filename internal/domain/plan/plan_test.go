@@ -1830,14 +1830,30 @@ func TestWorkspaceCalendarAndTimeOff(t *testing.T) {
 	if len(p.Resources) != 1 || len(p.Resources[0].TimeOff) != 1 || len(p.Resources[0].Overallocations) != 0 || p.Resources[0].WorkDays != 2.5 {
 		t.Fatalf("her load: %+v", p.Resources)
 	}
-	// Bo joins her: the task is worked on while either is there, so it is
-	// back to the five days it spans.
+	// Bo joins her at the same share: the two days she is away are half
+	// days of the pair's work, so the five days end a day late, on Monday.
 	both := []Assignment{{Type: "user", ID: "ann", Units: 50}, {Type: "user", ID: "bo", Units: 50}}
 	if err := svc.Schedule("a", ScheduleRequest{Assignments: &both}, "tester"); err != nil {
 		t.Fatal(err)
 	}
-	if p, _ = svc.Plan("p", Evidence{}, now); *task(p, "a").SpanEnd != "2027-03-19" {
-		t.Fatalf("with Bo on it: ends %s", *task(p, "a").SpanEnd)
+	p, _ = svc.Plan("p", Evidence{}, now)
+	if a = task(p, "a"); *a.SpanEnd != "2027-03-22" || *a.DurationDays != 5 {
+		t.Fatalf("with Bo on it: ends %s after %d days", *a.SpanEnd, *a.DurationDays)
+	}
+	// Each is counted for the days they are there: Ann four, Bo all six.
+	for _, r := range p.Resources {
+		if want := map[string]float64{"ann": 2, "bo": 3}[r.ID]; r.WorkDays != want {
+			t.Fatalf("%s works %v days, not %v", r.ID, r.WorkDays, want)
+		}
+	}
+	// Ann at 100% and Bo at 50%: a day without her is a third of a day, so
+	// the task needs Monday and Tuesday of the next week as well.
+	uneven := []Assignment{{Type: "user", ID: "ann", Units: 100}, {Type: "user", ID: "bo", Units: 50}}
+	if err := svc.Schedule("a", ScheduleRequest{Assignments: &uneven}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if p, _ = svc.Plan("p", Evidence{}, now); *task(p, "a").SpanEnd != "2027-03-23" {
+		t.Fatalf("with most of the work hers: ends %s", *task(p, "a").SpanEnd)
 	}
 	if err := svc.Schedule("a", ScheduleRequest{Assignments: &ann}, "tester"); err != nil {
 		t.Fatal(err)

@@ -15,6 +15,10 @@ type Calendar struct {
 	work [7]bool // by time.Weekday
 	// off holds the holidays, as YYYY-MM-DD.
 	off map[string]bool
+	// part holds the days that count for less than a whole day, each with
+	// the share of a day it counts for: a task's day on which only some of
+	// its people are there. Only Span, End and Start weigh them.
+	part map[string]float64
 }
 
 // Holiday is a day the plan does not work whatever its weekday.
@@ -172,6 +176,16 @@ func (c Calendar) perWeek() int {
 // Span is a task's duration from start to end: the working days it covers,
 // counting both ends, and never less than 1 for a task that has dates.
 func (c Calendar) Span(start, end string) int {
+	if len(c.part) > 0 {
+		sum := 0.0
+		for d, to := parseDay(start), parseDay(end); !d.After(to); d = d.AddDate(0, 0, 1) {
+			sum += c.weight(d)
+		}
+		if n := int(sum + 1e-9); n > 1 {
+			return n
+		}
+		return 1
+	}
 	n := c.Between(start, end)
 	if c.Works(start) {
 		n++
@@ -180,6 +194,42 @@ func (c Calendar) Span(start, end string) int {
 		n = 1
 	}
 	return n
+}
+
+// weight is how much of a day's work d counts for: nothing on a day off, a
+// share on a day only some of a task's people are there, otherwise 1.
+func (c Calendar) weight(d time.Time) float64 {
+	if !c.works(d) {
+		return 0
+	}
+	if w, ok := c.part[d.Format(DateLayout)]; ok {
+		return w
+	}
+	return 1
+}
+
+// walk goes from the working day d, forward (by 1) or back (by -1), until
+// the days passed, d among them, add up to duration days of work, and
+// answers the day that happens on.
+func (c Calendar) walk(d time.Time, duration, by int) string {
+	done := 0.0
+	for i := 0; i < calendarHorizon; i++ {
+		done += c.weight(d)
+		if done >= float64(duration)-1e-9 {
+			break
+		}
+		d = d.AddDate(0, 0, by)
+	}
+	return d.Format(DateLayout)
+}
+
+// Partly is the calendar with those days counting for only a share of a
+// day each (YYYY-MM-DD to a share above 0 and below 1).
+func (c Calendar) Partly(days map[string]float64) Calendar {
+	if len(days) > 0 {
+		c.part = days
+	}
+	return c
 }
 
 // calendarHorizon bounds a walk along the calendar, in days: a calendar
@@ -209,6 +259,9 @@ func (c Calendar) OnOrBefore(day string) string {
 // working days: the last of them. A start on a day off begins the count at
 // the next working day.
 func (c Calendar) End(start string, duration int) string {
+	if len(c.part) > 0 {
+		return c.walk(c.step(parseDay(start), 1), duration, 1)
+	}
 	return c.Add(c.OnOrAfter(start), duration-1)
 }
 
@@ -216,6 +269,9 @@ func (c Calendar) End(start string, duration int) string {
 // duration working days: the first of them. A due date on a day off counts
 // back from the working day before it.
 func (c Calendar) Start(due string, duration int) string {
+	if len(c.part) > 0 {
+		return c.walk(c.step(parseDay(due), -1), duration, -1)
+	}
 	return c.Add(c.OnOrBefore(due), 1-duration)
 }
 

@@ -121,36 +121,40 @@ func away(off []TimeOff) map[string]map[string]bool {
 }
 
 // taskCalendar is the calendar a task's duration counts: every day for
-// elapsed time; otherwise the plan's, less the days on which everyone
-// assigned to the task is away, since nobody can work on it then. A task
-// stretches over those days: its duration is the days it is worked on.
+// elapsed time; otherwise the plan's, with each day weighed by how much of
+// the task's people is there. A person counts for their share of the task
+// (their units), so a day on which the one person at 100% of two is away
+// and the other, at 50%, is there counts for a third of a day; a day on
+// which everyone is away counts for nothing. A task stretches to fit: its
+// duration is the days of its whole team's work.
 func taskCalendar(base Calendar, elapsed bool, who []Assignment, off map[string]map[string]bool) Calendar {
 	if elapsed {
 		return elapsedCalendar
 	}
-	if len(who) == 0 || len(off) == 0 {
+	total := 0
+	missing := map[string]int{}
+	for _, a := range who {
+		units := a.Units
+		if units <= 0 {
+			units = 100
+		}
+		total += units
+		for day := range off[a.Type+":"+a.ID] {
+			missing[day] += units
+		}
+	}
+	if total == 0 || len(missing) == 0 {
 		return base
 	}
-	var all map[string]bool
-	for i, a := range who {
-		days := off[a.Type+":"+a.ID]
-		if len(days) == 0 {
-			return base
-		}
-		if i == 0 {
-			all = make(map[string]bool, len(days))
-			for d := range days {
-				all[d] = true
-			}
-			continue
-		}
-		for d := range all {
-			if !days[d] {
-				delete(all, d)
-			}
+	none, part := map[string]bool{}, map[string]float64{}
+	for day, units := range missing {
+		if units >= total {
+			none[day] = true
+		} else {
+			part[day] = float64(total-units) / float64(total)
 		}
 	}
-	return base.Without(all)
+	return base.Without(none).Partly(part)
 }
 
 // stretched is a task as it sat before a change to who is away.
