@@ -284,12 +284,12 @@ describe('Plan page', () => {
     expect(section.querySelector('.ov-chip')?.getAttribute('title')).toBe('This task starts before that one finishes');
     const type = section.querySelector('select[aria-label="How this task relates to Weld the frame"]') as HTMLSelectElement;
     expect(Array.from(type.options).map((o) => o.textContent)).toEqual([
-      'Starts after it finishes (FS)',
-      'Starts no earlier than it starts (SS)',
-      'Finishes no earlier than it finishes (FF)',
-      'Finishes before it starts (FS)',
-      'Starts no later than it starts (SS)',
-      'Finishes no later than it finishes (FF)',
+      'Start to finish: this starts after that finishes (FS)',
+      'Start to start: this starts after that starts (SS)',
+      'Finish to finish: this finishes after that finishes (FF)',
+      'Finish to start: that starts after this finishes (FS)',
+      'Start to start: that starts after this starts (SS)',
+      'Finish to finish: that finishes after this finishes (FF)',
     ]);
     expect(type.value).toBe('driven_by:FS');
   });
@@ -378,7 +378,7 @@ describe('Plan page', () => {
     expect(section.textContent).toContain('1.2 Wire the rig');
     const type = section.querySelector('select[aria-label="How this task relates to Wire the rig"]') as HTMLSelectElement;
     expect(type.value).toBe('drives:FS');
-    expect(type.selectedOptions[0].textContent).toBe('Finishes before it starts (FS)');
+    expect(type.selectedOptions[0].textContent).toBe('Finish to start: that starts after this finishes (FS)');
     await change(type, 'drives:FF');
     expect(vi.mocked(planAPI.relate)).toHaveBeenLastCalledWith('frame', 'wiring', 'FF', 'drives');
     await flush();

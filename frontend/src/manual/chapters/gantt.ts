@@ -209,19 +209,21 @@ types project plans use:
 | **Finish to finish** (FF) | The task finishes no earlier than the other finishes | Joins the two ends |
 
 A relationship belongs to both of its tasks, and each one's panel lists it
-under **Relationships**, worded from that task's side. Open *Write the
-requirements* and its relationship to *Design* reads **Finishes before it
-starts**; open *Design* and the same relationship reads **Starts after it
-finishes**. You can add, change or remove it from either one:
+under **Relationships**, named from that task's side: by this task's end,
+then the other task's end. Open *Write the requirements* and its
+relationship to *Design* reads **Finish to start: that starts after this
+finishes**; open *Design* and the same relationship reads **Start to
+finish: this starts after that finishes**. You can add, change or remove
+it from either one:
 
-| This task… | Type | Which drives |
+| From this task | Type | Which drives |
 | --- | --- | --- |
-| Starts after it finishes | FS | The other task |
-| Starts no earlier than it starts | SS | The other task |
-| Finishes no earlier than it finishes | FF | The other task |
-| Finishes before it starts | FS | This task |
-| Starts no later than it starts | SS | This task |
-| Finishes no later than it finishes | FF | This task |
+| Finish to start: that starts after this finishes | FS | This task |
+| Start to start: that starts after this starts | SS | This task |
+| Finish to finish: that finishes after this finishes | FF | This task |
+| Start to finish: this starts after that finishes | FS | The other task |
+| Start to start: this starts after that starts | SS | The other task |
+| Finish to finish: this finishes after that finishes | FF | The other task |
 
 To add one, choose how this task relates to the other, then the other task.
 A task can have several relationships, so two tasks can together decide

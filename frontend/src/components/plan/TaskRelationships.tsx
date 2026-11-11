@@ -1,6 +1,7 @@
 // A task's relationships, in its panel (TaskPanel.tsx): every task it is
 // related to, whichever of the two drives the other, each worded from this
-// task's side ("starts after it finishes", "finishes before it starts"), so
+// task's side ("finish to start" on the task that comes first, "start to
+// finish" on the one that follows), so
 // a relationship is read, changed and removed from either task.
 import React, { useMemo, useState } from 'react';
 import type { PlanRelationship, PlanTask, ProjectPlan } from '../../api/client';
@@ -100,7 +101,7 @@ export const TaskRelationships: React.FC<TaskRelationshipsProps> = ({ plan, task
       {editable && candidates.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 4 }}>
           <label htmlFor="gantt-relationship-add" style={fieldStyle}>
-            Add a relationship: this task…
+            Add a relationship from this task
           </label>
           <ViewSelect value={adding} label="How this task relates to the task chosen" onChange={setAdding} />
           <Picker

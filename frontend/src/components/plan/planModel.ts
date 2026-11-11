@@ -68,16 +68,19 @@ export interface RelationshipView {
 
 /**
  * The six ways one task can relate to another, worded from the side of the
- * task being edited: "this task" is the subject of each. The first three are
- * driven by the other task, the last three drive it.
+ * task being edited, each named by the end of this task and then the end of
+ * the other that it joins, so one finish-to-start link reads "finish to
+ * start" on the task that comes first and "start to finish" on the one that
+ * follows. The first three are driven by the other task, the last three
+ * drive it.
  */
 export const RELATIONSHIP_VIEWS: (RelationshipView & { label: string })[] = [
-  { direction: 'driven_by', type: 'FS', label: 'Starts after it finishes' },
-  { direction: 'driven_by', type: 'SS', label: 'Starts no earlier than it starts' },
-  { direction: 'driven_by', type: 'FF', label: 'Finishes no earlier than it finishes' },
-  { direction: 'drives', type: 'FS', label: 'Finishes before it starts' },
-  { direction: 'drives', type: 'SS', label: 'Starts no later than it starts' },
-  { direction: 'drives', type: 'FF', label: 'Finishes no later than it finishes' },
+  { direction: 'driven_by', type: 'FS', label: 'Start to finish: this starts after that finishes' },
+  { direction: 'driven_by', type: 'SS', label: 'Start to start: this starts after that starts' },
+  { direction: 'driven_by', type: 'FF', label: 'Finish to finish: this finishes after that finishes' },
+  { direction: 'drives', type: 'FS', label: 'Finish to start: that starts after this finishes' },
+  { direction: 'drives', type: 'SS', label: 'Start to start: that starts after this starts' },
+  { direction: 'drives', type: 'FF', label: 'Finish to finish: that finishes after this finishes' },
 ];
 
 export const viewKey = (v: RelationshipView): string => `${v.direction}:${v.type}`;
