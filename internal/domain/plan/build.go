@@ -97,6 +97,18 @@ type Task struct {
 	LateStart     *string `json:"late_start"`
 	LateFinish    *string `json:"late_finish"`
 	FreeFloatDays *int    `json:"free_float_days"`
+	// Assignments are who does the task and for what share of their time:
+	// the ones set on the plan, or the board's assignee at 100%.
+	Assignments []Assignment `json:"assignments"`
+	// FixedCost is the task's cost beyond people's time; Cost is the whole:
+	// its people's work at their rates, its fixed cost, and its sub-tasks'.
+	FixedCost float64 `json:"fixed_cost"`
+	Cost      float64 `json:"cost"`
+	// EffortDriven: effort and the people on it decide the duration.
+	EffortDriven bool `json:"effort_driven"`
+	// Overallocated: someone on the task is asked for more than their
+	// capacity while it runs.
+	Overallocated bool `json:"overallocated"`
 	// FloatUntil is the last day the task's end can slip to before it
 	// pushes a task it drives; nil when it drives none or has no room.
 	FloatUntil *string `json:"float_until"`
@@ -185,6 +197,11 @@ type Summary struct {
 	Critical int `json:"critical"`
 	// EffortDays is the effort of every task, added up.
 	EffortDays float64 `json:"effort_days"`
+	// Cost is what the plan costs: every task's, added up.
+	Cost float64 `json:"cost"`
+	// Overallocated counts the people and agents asked for more than
+	// their capacity on some day.
+	Overallocated int `json:"overallocated"`
 }
 
 // Plan is a project's plan as computed for a reader.
@@ -200,6 +217,13 @@ type Plan struct {
 	// Scheduling is how the plan is scheduled: its mode, its start and
 	// finish, and whether each chain has its own critical path.
 	Scheduling
+	// Resources are the people and agents with work on the plan, or a rate
+	// or capacity set, with their load. People lists who a task can be
+	// assigned to, filled in by whoever serves the plan.
+	Resources []ResourceLoad `json:"resources"`
+	People    []Person       `json:"people"`
+	Currency  string         `json:"currency"`
+	Budget    *float64       `json:"budget"`
 	// Today is the day the plan was computed for (UTC), which decides late.
 	Today string `json:"today"`
 	// Start and End span every dated task and milestone.
@@ -234,9 +258,15 @@ type Inputs struct {
 	// Scheduling is how the plan is scheduled; the zero value is manual,
 	// from its start.
 	Scheduling Scheduling
-	Milestones []*Milestone
-	Releases   []*targetreleases.Release
-	Evidence   Evidence
+	// Assignments are who each task is assigned to; Resources the rates and
+	// capacities the project keeps; Currency and Budget its money.
+	Assignments []Assignment
+	Resources   []Resource
+	Currency    string
+	Budget      *float64
+	Milestones  []*Milestone
+	Releases    []*targetreleases.Release
+	Evidence    Evidence
 }
 
 // Plan loads the project's board, to-dos, schedule and milestones and
@@ -266,6 +296,13 @@ func (s *DefaultService) Plan(projectID string, ev Evidence, now time.Time) (*Pl
 		return nil, err
 	}
 	in.WorkingDays, in.Holidays, in.CriticalSlackDays, in.Scheduling = set.WorkingDays, set.Holidays, set.CriticalSlackDays, set.Scheduling
+	in.Currency, in.Budget = set.Currency, set.Budget
+	if in.Assignments, err = s.repo.ListAssignments(projectID); err != nil {
+		return nil, err
+	}
+	if in.Resources, err = s.repo.ListResources(projectID); err != nil {
+		return nil, err
+	}
 	if in.Milestones, err = s.repo.ListMilestones(projectID); err != nil {
 		return nil, err
 	}
@@ -338,6 +375,13 @@ func Build(in Inputs, now time.Time) *Plan {
 	b.dependencies(p)
 	b.criticalPath(p)
 	b.summary(p)
+	b.resources(p)
+	for _, res := range p.Resources {
+		if len(res.Overallocations) > 0 {
+			p.Summary.Overallocated++
+		}
+	}
+	p.Currency, p.Budget, p.People = in.Currency, in.Budget, []Person{}
 
 	own := map[string]string{}
 	for _, sc := range in.Schedules {
@@ -412,6 +456,7 @@ func (b *builder) tasks() {
 		t.DurationDays, t.EffortDays = sc.DurationDays, sc.EffortDays
 		t.Elapsed, t.Deadline = sc.Elapsed, sc.Deadline
 		t.ModeOwn, t.ConstraintType, t.ConstraintDate = sc.Mode, sc.ConstraintType, sc.ConstraintDate
+		t.FixedCost, t.EffortDriven = sc.FixedCost, sc.EffortDriven
 		if t.ModeOwn != "" {
 			t.Mode = t.ModeOwn
 		}

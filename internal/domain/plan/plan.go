@@ -52,6 +52,9 @@ var (
 	ErrWorkingDays       = errors.New("working days are weekday numbers from 1 (Monday) to 7 (Sunday), at least one")
 	ErrInvalidLag        = errors.New("a relationship's offset is a whole number, at most 3650 either way, in working days (d), elapsed days (ed) or percent of the driving task's duration (%)")
 	ErrHoliday           = errors.New("a holiday is a date written YYYY-MM-DD with a name of at most 80 characters, and a plan has at most 366")
+	ErrAssignment        = errors.New("a task is assigned to at most 20 users or agents, each for 1 to 1000 percent of their time")
+	ErrResource          = errors.New("a resource is a user or an agent with a daily rate of 0 or more and a capacity of 1 to 1000 percent")
+	ErrInvalidCost       = errors.New("a cost or a budget is 0 or more, and a currency is at most three letters")
 	ErrSchedulingMode    = errors.New("a scheduling mode is manual or auto, and a plan is scheduled from its start or its finish")
 	ErrConstraint        = errors.New("a constraint is asap, alap, snet, snlt, fnet, fnlt, mso or mfo, and every one but asap and alap needs a date")
 	ErrCriticalSlack     = errors.New("the critical threshold is a whole number of working days from 0 to 365")
@@ -94,6 +97,11 @@ type TaskSchedule struct {
 	// Constraint constants.
 	ConstraintType string
 	ConstraintDate *string
+	// FixedCost is what the task costs beyond the time of the people on it.
+	FixedCost float64
+	// EffortDriven: the task's effort and the people on it decide its
+	// duration.
+	EffortDriven bool
 	// MilestoneKey is the milestone the task is assigned to, by the key the
 	// plan gives it: a stored milestone's id, or "release:<id>".
 	MilestoneKey *string
@@ -205,10 +213,15 @@ type ScheduleRequest struct {
 	Mode *string `json:"mode"`
 	// ConstraintType is one of the Constraint constants; ConstraintDate is
 	// YYYY-MM-DD, needed by every type but asap and alap.
-	ConstraintType *string         `json:"constraint_type"`
-	ConstraintDate *string         `json:"constraint_date"`
-	DependsOn      *[]string       `json:"depends_on"`
-	Relationships  *[]Relationship `json:"relationships"`
+	ConstraintType *string `json:"constraint_type"`
+	ConstraintDate *string `json:"constraint_date"`
+	// Assignments replaces who the task is assigned to.
+	Assignments *[]Assignment `json:"assignments"`
+	// FixedCost is 0 or more; EffortDriven lets effort decide the duration.
+	FixedCost     *float64        `json:"fixed_cost"`
+	EffortDriven  *bool           `json:"effort_driven"`
+	DependsOn     *[]string       `json:"depends_on"`
+	Relationships *[]Relationship `json:"relationships"`
 }
 
 // Repository stores what the plan adds to the board.
@@ -222,6 +235,13 @@ type Repository interface {
 	// them. SaveSettings stores them whole.
 	Settings(projectID string) (Settings, error)
 	SaveSettings(projectID string, s Settings) error
+	// ListAssignments lists who each task is assigned to; SetAssignments
+	// replaces a task's.
+	ListAssignments(projectID string) ([]Assignment, error)
+	SetAssignments(projectID, workItemID string, assignments []Assignment) error
+	// ListResources lists the rates and capacities the project keeps.
+	ListResources(projectID string) ([]Resource, error)
+	SaveResource(projectID string, res Resource) error
 	// SetDependencies replaces a task's relationships; each entry's
 	// DependsOnID and Type are read.
 	SetDependencies(projectID, workItemID string, relationships []Dependency) error
@@ -274,6 +294,11 @@ type Service interface {
 	// Recalculate moves each task that another drives to the dates its
 	// relationships ask for, and answers how many tasks it moved.
 	Recalculate(projectID, actor string, onlyLater bool, now time.Time) (int, error)
+	// Level delays tasks until nobody is asked for more than their
+	// capacity, and answers how many tasks it moved.
+	Level(projectID, actor string, now time.Time) (int, error)
+	// SetResource stores a person's or an agent's daily rate and capacity.
+	SetResource(projectID string, res Resource) (Resource, error)
 	// Unrelate removes the relationship between two tasks, whichever way
 	// it runs.
 	Unrelate(taskID, otherID string) error
@@ -432,6 +457,10 @@ func (s *DefaultService) schedule(workItemID string, req ScheduleRequest, actor 
 	if err != nil {
 		return err
 	}
+	if due, duration, err = s.assign(item, next, req, start, due, duration, effort); err != nil {
+		return err
+	}
+	dueChanged = (due == nil) != (was == nil) || (due != nil && *due != *was)
 	next.StartDate, next.ParentID, next.DurationDays, next.EffortDays, next.MilestoneKey = start, parent, duration, effort, milestone
 	if err := s.repo.SaveSchedule(next); err != nil {
 		return err

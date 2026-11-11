@@ -221,14 +221,16 @@ func TestACriterionIsNotMetByRounding(t *testing.T) {
 
 // fakeRepo is a plan.Repository in memory.
 type fakeRepo struct {
-	schedules  map[string]*TaskSchedule
-	deps       map[string][]Dependency
-	days       []int
-	holidays   []Holiday
-	slack      int
-	set        Settings
-	todoTasks  map[string]string
-	milestones map[string]*Milestone
+	schedules   map[string]*TaskSchedule
+	deps        map[string][]Dependency
+	days        []int
+	holidays    []Holiday
+	slack       int
+	set         Settings
+	assignments map[string][]Assignment
+	resources   []Resource
+	todoTasks   map[string]string
+	milestones  map[string]*Milestone
 }
 
 func newFakeRepo() *fakeRepo {
@@ -249,6 +251,28 @@ func (r *fakeRepo) Settings(string) (Settings, error) {
 }
 func (r *fakeRepo) SaveSettings(_ string, s Settings) error {
 	r.set, r.days, r.holidays, r.slack = s, s.WorkingDays, s.Holidays, s.CriticalSlackDays
+	return nil
+}
+func (r *fakeRepo) ListAssignments(string) ([]Assignment, error) {
+	out := []Assignment{}
+	for id, list := range r.assignments {
+		for _, a := range list {
+			a.WorkItemID = id
+			out = append(out, a)
+		}
+	}
+	return out, nil
+}
+func (r *fakeRepo) SetAssignments(_, id string, a []Assignment) error {
+	if r.assignments == nil {
+		r.assignments = map[string][]Assignment{}
+	}
+	r.assignments[id] = a
+	return nil
+}
+func (r *fakeRepo) ListResources(string) ([]Resource, error) { return r.resources, nil }
+func (r *fakeRepo) SaveResource(_ string, res Resource) error {
+	r.resources = append(r.resources, res)
 	return nil
 }
 func (r *fakeRepo) SaveSchedule(s *TaskSchedule) error { r.schedules[s.WorkItemID] = s; return nil }
@@ -1298,5 +1322,121 @@ func TestRecalculateOnlyLaterAndAsLateAsPossible(t *testing.T) {
 	// Without "only later", B snaps back against A.
 	if moved, err := svc.Recalculate("p", "tester", false, now); err != nil || at("b") != "2027-03-15..2027-03-17" {
 		t.Fatalf("snap: moved %d, b %s, %v", moved, at("b"), err)
+	}
+}
+
+func TestAssignmentsCostAndOverallocation(t *testing.T) {
+	week := []int{1, 2, 3, 4, 5}
+	ten := 10.0
+	in := Inputs{
+		WorkingDays: week,
+		Items: []*workitems.WorkItem{
+			// 1 March 2027 is a Monday.
+			item("a", "A", workitems.ColumnTodo, day("2027-03-05"), 0),
+			item("b", "B", workitems.ColumnTodo, day("2027-03-10"), 1),
+			item("c", "C", workitems.ColumnTodo, day("2027-03-19"), 2),
+		},
+		Schedules: []*TaskSchedule{
+			{WorkItemID: "a", StartDate: sp("2027-03-01"), EffortDays: &ten, FixedCost: 250},
+			{WorkItemID: "b", StartDate: sp("2027-03-04")},
+			{WorkItemID: "c", StartDate: sp("2027-03-15")},
+		},
+		Assignments: []Assignment{
+			// Ann and Bob share A's ten days of effort three to one.
+			{WorkItemID: "a", Type: "user", ID: "ann", Units: 75},
+			{WorkItemID: "a", Type: "user", ID: "bob", Units: 25},
+			// Ann is also on B at 50%: over her capacity while the two overlap.
+			{WorkItemID: "b", Type: "user", ID: "ann", Units: 50},
+		},
+		Resources: []Resource{{Type: "user", ID: "ann", DailyRate: 400, Capacity: 100}, {Type: "user", ID: "bob", DailyRate: 200, Capacity: 100}},
+		Currency:  "GBP",
+	}
+	uid := "cat"
+	in.Items[2].AssigneeID = &uid
+	p := Build(in, now)
+	// A: Ann 7.5 days at 400, Bob 2.5 at 200, and 250 fixed.
+	if a := task(p, "a"); a.Cost != 3750 || len(a.Assignments) != 2 || !a.Overallocated {
+		t.Fatalf("a: cost %v, %+v, overallocated %v", a.Cost, a.Assignments, a.Overallocated)
+	}
+	// B runs five working days, half of Ann's: 2.5 days at 400.
+	if b := task(p, "b"); b.Cost != 1000 || !b.Overallocated {
+		t.Fatalf("b: %v %v", b.Cost, b.Overallocated)
+	}
+	// C has nobody set on the plan: the board's assignee does it, at no rate.
+	if c := task(p, "c"); len(c.Assignments) != 1 || c.Assignments[0].ID != "cat" || c.Assignments[0].Units != 100 || c.Cost != 0 || c.Overallocated {
+		t.Fatalf("c: %+v %v", c.Assignments, c.Cost)
+	}
+	var ann ResourceLoad
+	for _, res := range p.Resources {
+		if res.ID == "ann" {
+			ann = res
+		}
+	}
+	// Ann is at 125% on Thursday 4 and Friday 5 March.
+	if ann.Peak != 125 || len(ann.Overallocations) != 1 || ann.Overallocations[0] != (Overallocation{Start: "2027-03-04", End: "2027-03-05", Units: 125}) || ann.WorkDays != 10 || ann.Cost != 4000 {
+		t.Fatalf("ann: %+v", ann)
+	}
+	if p.Summary.Cost != 4750 || p.Summary.Overallocated != 1 || p.Currency != "GBP" || len(p.Resources) != 3 {
+		t.Fatalf("summary: %+v, %d resources", p.Summary, len(p.Resources))
+	}
+	if _, err := CleanAssignments([]Assignment{{Type: "team", ID: "x"}}); !errors.Is(err, ErrAssignment) {
+		t.Fatalf("an unknown kind of assignee: %v", err)
+	}
+	if got, _ := CleanAssignments([]Assignment{{Type: "User", ID: " ann "}, {Type: "user", ID: "ann", Units: 50}}); len(got) != 1 || got[0].Units != 100 {
+		t.Fatalf("each assignee once, at 100%% unless said: %+v", got)
+	}
+}
+
+func TestEffortDrivesDurationAndLevellingClearsOverallocation(t *testing.T) {
+	svc, repo, board, _ := newService()
+	repo.days = []int{1, 2, 3, 4, 5}
+	at := func(id string) string {
+		return *repo.schedules[id].StartDate + ".." + board.items[id].DueDate.Format(DateLayout)
+	}
+	// Six days of effort for two people at full time: three days.
+	six, yes := 6.0, true
+	two := []Assignment{{Type: "user", ID: "ann"}, {Type: "user", ID: "bob"}}
+	if err := svc.Schedule("a", ScheduleRequest{StartDate: sp("2027-03-01"), EffortDays: &six, EffortDriven: &yes, Assignments: &two}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if at("a") != "2027-03-01..2027-03-03" || *repo.schedules["a"].DurationDays != 3 {
+		t.Fatalf("effort driven: %s", at("a"))
+	}
+	// Bob leaves: the same effort now takes Ann six days.
+	one := []Assignment{{Type: "user", ID: "ann"}}
+	if err := svc.Schedule("a", ScheduleRequest{Assignments: &one}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if at("a") != "2027-03-01..2027-03-08" {
+		t.Fatalf("one person: %s", at("a"))
+	}
+	// Ann is also on B, which overlaps A; C waits for B.
+	if err := svc.Schedule("b", ScheduleRequest{StartDate: sp("2027-03-02"), DueDate: sp("2027-03-04"), Assignments: &one}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Schedule("c", ScheduleRequest{StartDate: sp("2027-03-05"), DueDate: sp("2027-03-05")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Relate("c", "b", RelFinishToStart, false, 0, ""); err != nil {
+		t.Fatal(err)
+	}
+	moved, err := svc.Level("p", "tester", now)
+	if err != nil || moved != 2 {
+		t.Fatalf("levelled %d: %v", moved, err)
+	}
+	// A, which ends the plan, has no float and stays; B goes after it and
+	// takes C, which it drives, with it.
+	if at("a") != "2027-03-01..2027-03-08" || at("b") != "2027-03-09..2027-03-11" || at("c") != "2027-03-12..2027-03-12" {
+		t.Fatalf("a %s b %s c %s", at("a"), at("b"), at("c"))
+	}
+	if again, _ := svc.Level("p", "tester", now); again != 0 {
+		t.Fatalf("a levelled plan stays: %d", again)
+	}
+	if _, err := svc.SetResource("p", Resource{Type: "user", ID: "ann", DailyRate: -1}); !errors.Is(err, ErrResource) {
+		t.Fatalf("a negative rate: %v", err)
+	}
+	budget, money := 5000.0, "gbp"
+	if set, err := svc.SetSettings("p", SettingsRequest{Budget: &budget, Currency: &money}); err != nil || set.Currency != "GBP" || *set.Budget != 5000 {
+		t.Fatalf("budget and currency: %+v %v", set, err)
 	}
 }

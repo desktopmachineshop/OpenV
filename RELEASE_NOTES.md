@@ -15,6 +15,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **People on tasks.** A task's panel on the Gantt has **Resources**: assign several people or agents, each for a share of their time. **Effort decides the duration** makes a task as long as its effort and its people need.
+- **Who is over-allocated, and levelling.** **Resources**, above the chart, lists everyone with work on the plan, their work and the days they are asked for more than their capacity. **Level the plan** delays the tasks with the most float until nobody is.
+- **Cost and budget.** Give each person a day rate and a task a fixed cost, and the plan costs every task and itself, against a budget if you set one.
 - **Automatic scheduling.** A plan can be scheduled automatically: after every change, each task goes straight after the tasks that drive it. Set it under **Calendar** on the Gantt, with the day the plan starts and the day it must finish by; a task can keep its own mode. Plans stay manual until you change them.
 - **Constraints.** A task can be held to a date: start or finish no earlier or no later than, must start or finish on, or as late as possible.
 - **Earliest and latest dates, and negative float.** A task's panel shows the earliest and latest it can run and its float, which goes negative, *N working days behind*, when it runs past a deadline, a constraint or the plan's finish.

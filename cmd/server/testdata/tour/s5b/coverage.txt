@@ -89,6 +89,7 @@ POST /api/v1/interviews/{id}/close: 200, 403, 404; interviews
 POST /api/v1/interviews/{id}/invites: 201, 400, 403, 404; interviews
 POST /api/v1/projects/{id}/evidence-bundles: 201, 400, 403, 404; evidence
 POST /api/v1/projects/{id}/interviews: 201, 400, 403; interviews
+POST /api/v1/projects/{id}/plan/level: 200, 403; plan
 POST /api/v1/projects/{id}/plan/milestones: 201, 400, 403; plan
 POST /api/v1/projects/{id}/plan/recalculate: 200, 403; plan
 POST /api/v1/projects/{id}/releases: 201, 400, 403, 409; target_releases
@@ -115,6 +116,7 @@ PUT /api/v1/orgs/{id}/quality-rules: 200, 400, 403; quality_profile_parties
 PUT /api/v1/projects/{id}/parties: 200, 400, 403; quality_profile_parties
 PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}: 200, 400, 404; plan
 PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}: 200, 404; plan
+PUT /api/v1/projects/{id}/plan/resources/{assigneeId}: 200, 400, 403; plan
 PUT /api/v1/projects/{id}/plan/settings: 200, 400, 403; plan
 PUT /api/v1/projects/{id}/priority-detection: 200, 400, 403; quality_profile_parties
 PUT /api/v1/projects/{id}/profile: 200, 400, 403, 404; quality_profile_parties
@@ -128,4 +130,4 @@ PUT /api/v1/work-items/{id}: 200, 400, 403, 404; work_items
 PUT /api/v1/work-items/{id}/relationships/{otherId}: 200, 400, 403; plan
 PUT /api/v1/work-items/{id}/schedule: 200, 400, 403; plan
 
-s5b: 116 of 379 routes reached (30.6%), 116 with a 2xx or 3xx answer (30.6%)
+s5b: 118 of 381 routes reached (31.0%), 118 with a 2xx or 3xx answer (31.0%)

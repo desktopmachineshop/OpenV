@@ -748,6 +748,11 @@
       "description": "Place a board task on the plan: its start date and due date (YYYY-MM-DD), its duration in working days and effort in days (a task with sub-tasks takes all four from them and refuses them), its parent task (making it a sub-task) and its relationships to the tasks that drive it. A relationship is written \"<work item id>:<type>\", where the type is FS (finish to start: this task starts after that one finishes), SS (start to start: it starts no earlier than that one starts) or FF (finish to finish: it finishes no earlier than that one finishes); with no type it is FS. A task may have several, so two tasks can together drive when it starts. Only the arguments you pass change; pass an empty string to clear a date or the parent, and an empty relationships list to clear them. Answers the task's row of the plan.",
       "input_schema": {
         "properties": {
+          "assignments": {
+            "description": "Who the task is assigned to on the plan, each \"user:<id>\" or \"agent:<id>\", with an optional share of their time after it as in \"user:<id>:50\" (percent; 100 when left out); replaces the task's assignments, and an empty list leaves it to the board's assignee",
+            "items": {"type": "string"},
+            "type": "array"
+          },
           "constraint_date": {"description": "The constraint's date, YYYY-MM-DD", "type": "string"},
           "constraint_type": {
             "description": "A date constraint: \"asap\" (none), \"alap\" (as late as possible), \"snet\"/\"snlt\" (start no earlier/later than), \"fnet\"/\"fnlt\" (finish no earlier/later than), \"mso\"/\"mfo\" (must start/finish on). Every one but asap and alap needs constraint_date",
@@ -774,8 +779,16 @@
             "description": "The work in the task, in person-days (may be a decimal); \"0\" clears it",
             "type": "string"
           },
+          "effort_driven": {
+            "description": "\"true\" lets the task's effort and the people on it decide its duration",
+            "type": "string"
+          },
           "elapsed": {
             "description": "\"true\" makes the duration count calendar days, weekends and holidays included (a cure, a delivery); \"false\" counts working days",
+            "type": "string"
+          },
+          "fixed_cost": {
+            "description": "What the task costs beyond the time of the people on it; \"0\" clears it",
             "type": "string"
           },
           "id": {"description": "Work item ID", "type": "string"},
@@ -806,7 +819,7 @@
       },
       "calls": ["PUT /api/v1/work-items/{id}/schedule"],
       "requests": [
-        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"constraint_date\":\"2027-01-11\",\"constraint_type\":\"snet\",\"deadline\":\"2027-02-15\",\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"duration_days\":21,\"effort_days\":7.5,\"elapsed\":true,\"milestone\":\"release:99999999-9999-4999-8999-999999999999\",\"mode\":\"auto\",\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"relationships\":[{\"lag_days\":5,\"lag_unit\":\"ed\",\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"lag_days\":50,\"lag_unit\":\"%\",\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"SF\"}],\"start_date\":\"2027-01-11\"}"
+        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"assignments\":[{\"id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"user\",\"units\":50},{\"id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"agent\"}],\"constraint_date\":\"2027-01-11\",\"constraint_type\":\"snet\",\"deadline\":\"2027-02-15\",\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"duration_days\":21,\"effort_days\":7.5,\"effort_driven\":true,\"elapsed\":true,\"fixed_cost\":250,\"milestone\":\"release:99999999-9999-4999-8999-999999999999\",\"mode\":\"auto\",\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"relationships\":[{\"lag_days\":5,\"lag_unit\":\"ed\",\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"lag_days\":50,\"lag_unit\":\"%\",\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"SF\"}],\"start_date\":\"2027-01-11\"}"
       ]
     },
     {
@@ -835,8 +848,13 @@
       "description": "Set a project's plan holidays, its critical threshold and how it is scheduled. holidays replaces the plan's days off (days it does not work whatever the weekday), each \"YYYY-MM-DD\" or \"YYYY-MM-DD:Name\"; critical_slack_days is the float, in working days, at or below which a task counts as critical (\"0\" by default); scheduling_mode \"auto\" has the platform place every task from its relationships and constraints after each change, \"manual\" (the default) leaves tasks where they are put. An argument left out stays as it is. Answers every setting as stored.",
       "input_schema": {
         "properties": {
+          "budget": {"description": "What the plan may cost; \"0\" clears it", "type": "string"},
           "critical_slack_days": {
             "description": "Float in working days at or below which a task is critical, \"0\" to \"365\"",
+            "type": "string"
+          },
+          "currency": {
+            "description": "The money costs are in, as up to three letters, e.g. \"GBP\"",
             "type": "string"
           },
           "holidays": {
@@ -871,8 +889,48 @@
       },
       "calls": ["PUT /api/v1/projects/{id}/plan/settings"],
       "requests": [
-        "PUT /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/settings {\"critical_slack_days\":2,\"holidays\":[{\"date\":\"2027-12-27\",\"name\":\"Shutdown\"},{\"date\":\"2027-01-01\",\"name\":\"\"}],\"multiple_critical_paths\":true,\"project_finish\":\"2027-12-17\",\"project_start\":\"2027-01-04\",\"schedule_from\":\"finish\",\"scheduling_mode\":\"auto\"}"
+        "PUT /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/settings {\"budget\":25000,\"critical_slack_days\":2,\"currency\":\"GBP\",\"holidays\":[{\"date\":\"2027-12-27\",\"name\":\"Shutdown\"},{\"date\":\"2027-01-01\",\"name\":\"\"}],\"multiple_critical_paths\":true,\"project_finish\":\"2027-12-17\",\"project_start\":\"2027-01-04\",\"schedule_from\":\"finish\",\"scheduling_mode\":\"auto\"}"
       ]
+    },
+    {
+      "name": "set_plan_resource",
+      "read_only": false,
+      "description": "Set what a day of a person's or an agent's time costs on a project, and the share of a working day they can give it. The plan costs each task from its people's rates, and reports anyone asked for more than their capacity. get_plan lists who can be assigned under people.",
+      "input_schema": {
+        "properties": {
+          "capacity": {
+            "description": "The percentage of a working day they can give the project; \"100\" when left out",
+            "type": "string"
+          },
+          "daily_rate": {
+            "description": "What a day of their time costs, in the plan's currency",
+            "type": "string"
+          },
+          "id": {"description": "The user's or the agent's ID", "type": "string"},
+          "project_id": {"description": "Project ID", "type": "string"},
+          "type": {"description": "\"user\" or \"agent\"", "type": "string"}
+        },
+        "required": ["project_id", "type", "id", "daily_rate"],
+        "type": "object"
+      },
+      "calls": ["PUT /api/v1/projects/{id}/plan/resources/{assigneeId}"],
+      "requests": [
+        "PUT /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/resources/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb {\"capacity\":80,\"daily_rate\":400,\"type\":\"user\"}"
+      ]
+    },
+    {
+      "name": "level_plan",
+      "read_only": false,
+      "description": "Level a project's plan: delay tasks until no person or agent is asked for more than their capacity on any day. Where someone is over-allocated the task with the most float is delayed until after the first of the others ends, and the tasks it drives follow. Answers how many tasks moved.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/projects/{id}/plan/level"],
+      "requests": ["POST /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/level"]
     },
     {
       "name": "set_plan_working_days",

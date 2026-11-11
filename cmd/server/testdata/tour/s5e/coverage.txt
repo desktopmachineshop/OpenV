@@ -297,6 +297,7 @@ POST /api/v1/projects/{id}/draft-test-cases: 400, 401, 403, 404; phantom_matrix,
 POST /api/v1/projects/{id}/evidence-bundles: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/interviews: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/members: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+POST /api/v1/projects/{id}/plan/level: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/plan/milestones: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/plan/recalculate: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/reindex-embeddings: 401, 404; phantom_matrix (errors only)
@@ -373,6 +374,7 @@ PUT /api/v1/projects/{id}/members/{userId}: 400, 401, 403, 404; phantom_matrix, 
 PUT /api/v1/projects/{id}/parties: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}: 401, 404; phantom_matrix (errors only)
+PUT /api/v1/projects/{id}/plan/resources/{assigneeId}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/projects/{id}/plan/settings: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/projects/{id}/priority-detection: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/projects/{id}/profile: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
@@ -391,4 +393,4 @@ PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (
 PUT /api/v1/work-items/{id}/relationships/{otherId}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/work-items/{id}/schedule: 401, 404; phantom_matrix (errors only)
 
-s5e: 378 of 379 routes reached (99.7%), 173 with a 2xx or 3xx answer (45.6%)
+s5e: 380 of 381 routes reached (99.7%), 173 with a 2xx or 3xx answer (45.4%)

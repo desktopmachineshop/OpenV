@@ -154,6 +154,7 @@
         "docs/link-type-rules.md",
         "e2e/tests/review-queue.spec.ts",
         "frontend/src/api/**/artifacts*",
+        "frontend/src/api/**/plan*",
         "frontend/src/api/**/projects*",
         "frontend/src/components/Artifact*",
         "frontend/src/components/ChatterPanel*",

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -31,6 +32,8 @@ func (h *Handler) registerPlanRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/plan/release-milestones/{releaseId}", h.SetReleaseMilestoneCriteria).Methods("PUT")
 	router.HandleFunc("/api/v1/projects/{id}/plan/settings", h.SetPlanSettings).Methods("PUT")
 	router.HandleFunc("/api/v1/projects/{id}/plan/recalculate", h.RecalculatePlan).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/plan/level", h.LevelPlan).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/plan/resources/{assigneeId}", h.SetPlanResource).Methods("PUT")
 	router.HandleFunc("/api/v1/work-items/{id}/schedule", h.ScheduleWorkItem).Methods("PUT")
 	router.HandleFunc("/api/v1/work-items/{id}/relationships/{otherId}", h.RelateWorkItems).Methods("PUT")
 	router.HandleFunc("/api/v1/work-items/{id}/relationships/{otherId}", h.UnrelateWorkItems).Methods("DELETE")
@@ -48,7 +51,7 @@ func writePlanError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, plan.ErrNameRequired), errors.Is(err, plan.ErrInvalidDate), errors.Is(err, plan.ErrDateOrder),
 		errors.Is(err, plan.ErrParentSelf), errors.Is(err, plan.ErrParentCycle), errors.Is(err, plan.ErrOtherProject),
 		errors.Is(err, plan.ErrDependsOnSelf), errors.Is(err, plan.ErrDependencyCycle), errors.Is(err, plan.ErrRelationshipType), errors.Is(err, plan.ErrInvalidDuration), errors.Is(err, plan.ErrInvalidEffort),
-		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrMilestone), errors.Is(err, plan.ErrInvalidLag), errors.Is(err, plan.ErrHoliday), errors.Is(err, plan.ErrCriticalSlack), errors.Is(err, plan.ErrSchedulingMode), errors.Is(err, plan.ErrConstraint), errors.Is(err, plan.ErrUnknownMetric),
+		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrMilestone), errors.Is(err, plan.ErrInvalidLag), errors.Is(err, plan.ErrHoliday), errors.Is(err, plan.ErrCriticalSlack), errors.Is(err, plan.ErrSchedulingMode), errors.Is(err, plan.ErrAssignment), errors.Is(err, plan.ErrResource), errors.Is(err, plan.ErrInvalidCost), errors.Is(err, plan.ErrConstraint), errors.Is(err, plan.ErrUnknownMetric),
 		errors.Is(err, plan.ErrInvalidTarget), errors.Is(err, plan.ErrTooManyCriteria), errors.Is(err, plan.ErrDuplicateMetric),
 		errors.Is(err, plan.ErrReleaseMilestone), errors.Is(err, plan.ErrUnsupportedFormat),
 		errors.Is(err, todos.ErrTextRequired), errors.Is(err, todos.ErrTextTooLong), errors.Is(err, todos.ErrParagraphs):
@@ -121,7 +124,45 @@ func (h *Handler) GetPlan(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
+	h.namePlanPeople(projectID, p)
 	respondJSON(w, http.StatusOK, p)
+}
+
+// namePlanPeople fills in who the plan's tasks can be assigned to, users
+// then agents, each list by name, and names each of the plan's resources.
+func (h *Handler) namePlanPeople(projectID string, p *plan.Plan) {
+	names := map[string]string{}
+	add := func(kind, id, name string) {
+		p.People = append(p.People, plan.Person{Type: kind, ID: id, Name: name})
+		names[kind+":"+id] = name
+	}
+	if h.MemberService != nil {
+		if list, err := h.MemberService.ListMembers(projectID); err == nil {
+			for _, m := range list {
+				name := m.UserName
+				if strings.TrimSpace(name) == "" {
+					name = m.UserEmail
+				}
+				add("user", m.UserID, name)
+			}
+		}
+	}
+	users := len(p.People)
+	if h.AgentService != nil {
+		if list, err := h.AgentService.List(h.orgIDForProject(projectID)); err == nil {
+			for _, a := range list {
+				if !a.Archived {
+					add("agent", a.ID, a.Name)
+				}
+			}
+		}
+	}
+	for _, part := range [][]plan.Person{p.People[:users], p.People[users:]} {
+		sort.SliceStable(part, func(i, j int) bool { return strings.ToLower(part[i].Name) < strings.ToLower(part[j].Name) })
+	}
+	for i := range p.Resources {
+		p.Resources[i].Name = names[p.Resources[i].Type+":"+p.Resources[i].ID]
+	}
 }
 
 // ExportPlan answers the plan as a file: ?format=pdf (the default), excel,
@@ -447,6 +488,48 @@ func (h *Handler) RecalculatePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, map[string]int{"moved": moved})
+}
+
+// LevelPlan delays tasks until no person or agent is asked for more than
+// their capacity on any day. It answers {"moved": n}.
+func (h *Handler) LevelPlan(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.planReady(w, r, projectID, members.RoleEditor, true) {
+		return
+	}
+	moved, err := h.PlanService.Level(projectID, Actor(r), time.Now())
+	if err != nil {
+		writePlanError(w, r, err)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]int{"moved": moved})
+}
+
+// SetPlanResource stores what a day of a person's or an agent's time costs
+// and the share of a working day they can give the project: {"type":
+// "user" or "agent", "daily_rate", "capacity"}, a percentage that is 100
+// when left out. It answers the
+// resource as stored.
+func (h *Handler) SetPlanResource(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.planReady(w, r, projectID, members.RoleEditor, true) {
+		return
+	}
+	var req struct {
+		Type      string  `json:"type"`
+		DailyRate float64 `json:"daily_rate"`
+		Capacity  int     `json:"capacity"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	res, err := h.PlanService.SetResource(projectID, plan.Resource{Type: req.Type, ID: mux.Vars(r)["assigneeId"],
+		DailyRate: req.DailyRate, Capacity: req.Capacity})
+	if err != nil {
+		writePlanError(w, r, err)
+		return
+	}
+	respondJSON(w, http.StatusOK, res)
 }
 
 // SetPlanSettings changes the plan's calendar and critical threshold,

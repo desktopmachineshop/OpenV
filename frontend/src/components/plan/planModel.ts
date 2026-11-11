@@ -1,7 +1,7 @@
 // What the plan's views share beyond the API's answer: which rows a folded
 // outline shows, a task's descendants, the colours of a bar and a milestone,
 // and the phone's grouping of tasks under the milestone they lead to.
-import type { PlanConstraintType, PlanLagUnit, PlanMilestone, PlanRelationshipDirection, PlanRelationshipType, PlanTask } from '../../api/client';
+import type { PlanAssignment, PlanConstraintType, PlanLagUnit, PlanMilestone, PlanPerson, PlanRelationshipDirection, PlanRelationshipType, PlanTask } from '../../api/client';
 import { addDays, isoWeekday } from './ganttScale';
 import type { ChipTone } from '../ui';
 import { BOARD_COLUMNS } from '../kanban/columns';
@@ -147,6 +147,16 @@ export const workEnd = (workingDays: number[], start: string, duration: number, 
 /** The start of a task that is due on a day and runs for so many working days. */
 export const workStart = (workingDays: number[], due: string, duration: number, holidays: readonly string[] = []): string =>
   step(workingDays, due, duration, -1, holidays);
+
+/** An amount of money: grouped digits, with the plan's currency code when it has one. */
+export const money = (amount: number, currency: string): string => {
+  const n = amount.toLocaleString('en-GB', { maximumFractionDigits: Number.isInteger(amount) ? 0 : 2, minimumFractionDigits: Number.isInteger(amount) ? 0 : 2 });
+  return currency ? `${currency} ${n}` : n;
+};
+
+/** The name of who an assignment is to, or their id when the plan does not list them. */
+export const personName = (people: PlanPerson[], a: Pick<PlanAssignment, 'type' | 'id'>): string =>
+  people.find((p) => p.type === a.type && p.id === a.id)?.name || a.id;
 
 /** The date constraints, in the order a chooser shows them. */
 export const CONSTRAINTS: { value: PlanConstraintType; label: string }[] = [

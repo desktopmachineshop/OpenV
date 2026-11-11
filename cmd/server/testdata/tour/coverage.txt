@@ -296,6 +296,7 @@ POST /api/v1/projects/{id}/draft-test-cases: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/projects/{id}/evidence-bundles: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/projects/{id}/interviews: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/projects/{id}/members: s5c, s5e; 2xx or 3xx in s5c
+POST /api/v1/projects/{id}/plan/level: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/projects/{id}/plan/milestones: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/projects/{id}/plan/recalculate: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/projects/{id}/reindex-embeddings: s5a, s5e; 2xx or 3xx in s5a
@@ -372,6 +373,7 @@ PUT /api/v1/projects/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/projects/{id}/parties: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/projects/{id}/plan/resources/{assigneeId}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/plan/settings: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/priority-detection: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/profile: s5b, s5e; 2xx or 3xx in s5b
@@ -390,4 +392,4 @@ PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}/relationships/{otherId}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}/schedule: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 379 of 379 routes reached (100.0%), 365 with a 2xx or 3xx answer (96.3%); the floor is 90%, 342 routes
+the tour: 381 of 381 routes reached (100.0%), 367 with a 2xx or 3xx answer (96.3%); the floor is 90%, 343 routes

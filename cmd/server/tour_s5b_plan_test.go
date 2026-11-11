@@ -37,6 +37,10 @@ import (
 //   - a task has a scheduling mode and a date constraint; a plan has a
 //     mode, a start and a finish, and may have a critical path per chain;
 //     an automatic task is placed after each change;
+//   - a task is assigned to people for a share of their time, has a fixed
+//     cost and may let its effort decide its duration; a person has a
+//     daily rate and a capacity; the plan has a currency and a budget, and
+//     is levelled on request;
 //   - a relationship carries an offset in working days, and the plan is
 //     recalculated: the driven tasks move to what their relationships ask,
 //     and a second recalculation moves nothing;
@@ -167,6 +171,24 @@ func planTour(tr *tour) {
 	tr.step("the viewer may not recalculate: 403", viewer, recalculate, at("id", "{{p}}"))
 	tr.setup("Order and Wiring unrelated again", o, "DELETE /api/v1/work-items/{id}/relationships/{otherId}",
 		at("id", "{{order}}", "otherId", "{{wiring}}"))
+	ann := "11111111-1111-4111-8111-111111111111"
+	resource := "PUT /api/v1/projects/{id}/plan/resources/{assigneeId}"
+	tr.step("a person's daily rate and capacity", o, resource, at("id", "{{p}}", "assigneeId", ann),
+		jsonBody(`{"type":"user","daily_rate":400,"capacity":80}`))
+	tr.step("a negative rate: 400", o, resource, at("id", "{{p}}", "assigneeId", ann), jsonBody(`{"type":"user","daily_rate":-1}`))
+	tr.step("a resource that is neither a user nor an agent: 400", o, resource, at("id", "{{p}}", "assigneeId", ann),
+		jsonBody(`{"type":"team","daily_rate":1}`))
+	tr.step("the viewer may not set a rate: 403", viewer, resource, at("id", "{{p}}", "assigneeId", ann), jsonBody(`{"type":"user","daily_rate":1}`))
+	tr.step("Wiring assigned to her at full time, with a fixed cost, its effort deciding its duration", o, schedule, at("id", "{{wiring}}"),
+		jsonBody(`{"assignments":[{"type":"user","id":"`+ann+`","units":100}],"fixed_cost":250,"effort_driven":true}`))
+	tr.step("an assignment of 0 percent: 400", o, schedule, at("id", "{{wiring}}"),
+		jsonBody(`{"assignments":[{"type":"user","id":"`+ann+`","units":-5}]}`))
+	tr.step("a negative fixed cost: 400", o, schedule, at("id", "{{wiring}}"), jsonBody(`{"fixed_cost":-1}`))
+	level := "POST /api/v1/projects/{id}/plan/level"
+	tr.step("the plan levelled: she is over her 80% on Wiring alone, which no delay can cure", o, level, at("id", "{{p}}"))
+	tr.step("the viewer may not level: 403", viewer, level, at("id", "{{p}}"))
+	tr.setup("Wiring unassigned, with no fixed cost, its duration its own again", o, schedule, at("id", "{{wiring}}"),
+		jsonBody(`{"assignments":[],"fixed_cost":0,"effort_driven":false}`))
 	tr.step("dates on Build, which has sub-tasks: 400", o, schedule, at("id", "{{build}}"), jsonBody(`{"start_date":"2099-03-01"}`))
 
 	settings := "PUT /api/v1/projects/{id}/plan/settings"
@@ -178,6 +200,8 @@ func planTour(tr *tour) {
 	tr.step("a mode that is neither: 400", o, settings, at("id", "{{p}}"), jsonBody(`{"scheduling_mode":"magic"}`))
 	tr.setup("the plan manual again, with no start or finish", o, settings, at("id", "{{p}}"),
 		jsonBody(`{"scheduling_mode":"manual","project_start":"","project_finish":"","multiple_critical_paths":false}`))
+	tr.step("costs in pounds against a budget", o, settings, at("id", "{{p}}"), jsonBody(`{"currency":"gbp","budget":25000}`))
+	tr.step("a currency of four letters: 400", o, settings, at("id", "{{p}}"), jsonBody(`{"currency":"EURO"}`))
 	tr.step("a holiday that is not a date: 400", o, settings, at("id", "{{p}}"), jsonBody(`{"holidays":[{"date":"Christmas"}]}`))
 	tr.step("a threshold over a year: 400", o, settings, at("id", "{{p}}"), jsonBody(`{"critical_slack_days":999}`))
 	tr.setup("the holidays and the threshold cleared", o, settings, at("id", "{{p}}"), jsonBody(`{"holidays":[],"critical_slack_days":0}`))

@@ -51,6 +51,9 @@ func planTools() []Tool {
 				"mode":            str("The task's own scheduling mode: \"manual\" (it stays where it is put), \"auto\" (the platform places it from its relationships and constraint), or an empty string to take the plan's"),
 				"constraint_type": str("A date constraint: \"asap\" (none), \"alap\" (as late as possible), \"snet\"/\"snlt\" (start no earlier/later than), \"fnet\"/\"fnlt\" (finish no earlier/later than), \"mso\"/\"mfo\" (must start/finish on). Every one but asap and alap needs constraint_date"),
 				"constraint_date": str("The constraint's date, YYYY-MM-DD"),
+				"assignments":     strList("Who the task is assigned to on the plan, each \"user:<id>\" or \"agent:<id>\", with an optional share of their time after it as in \"user:<id>:50\" (percent; 100 when left out); replaces the task's assignments, and an empty list leaves it to the board's assignee"),
+				"fixed_cost":      str("What the task costs beyond the time of the people on it; \"0\" clears it"),
+				"effort_driven":   str("\"true\" lets the task's effort and the people on it decide its duration"),
 				"milestone":       str("Key of the milestone the task is assigned to, as get_plan lists it (a milestone's id, or \"release:<release id>\"); an empty string takes it off. The milestone then counts the task among its tasks done"),
 				"relationships":   strList("The tasks that drive this one, each \"<work item id>:FS\", \":SS\", \":FF\" or \":SF\", with an optional offset after it as in \"<id>:SS:5\" (working days; negative leads), \"<id>:FS:3ed\" (elapsed days) or \"<id>:SS:50%\" (of the driving task's duration); replaces the task's relationships"),
 				"depends_on":      strList("Earlier form of relationships: work item IDs, each finish to start unless it already has a type"),
@@ -70,6 +73,19 @@ func planTools() []Tool {
 			Handler: recalculatePlan,
 		},
 		planCalendarTool(),
+		planResourceTool(),
+		{
+			Name: "level_plan",
+			Description: "Level a project's plan: delay tasks until no person or agent is asked for more than their capacity on any day. " +
+				"Where someone is over-allocated the task with the most float is delayed until after the first of the others ends, and the tasks it drives follow. Answers how many tasks moved.",
+			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+				"project_id": str("Project ID"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/level", nil, nil)
+				return out, err
+			},
+		},
 		{
 			Name: "set_plan_working_days",
 			Description: "Set which days of the week a project's plan works, as ISO weekday numbers from \"1\" (Monday) to \"7\" " +
@@ -105,10 +121,32 @@ func scheduleWorkItem(c *Client, args map[string]interface{}) (string, error) {
 			body[key] = strArg(args, key)
 		}
 	}
+	if _, set := args["assignments"]; set {
+		list := []map[string]interface{}{}
+		for _, a := range strListArg(args, "assignments") {
+			parts := strings.SplitN(a, ":", 3)
+			if len(parts) < 2 {
+				return "", fmt.Errorf("an assignment is user:<id> or agent:<id>, optionally followed by :<percent>")
+			}
+			one := map[string]interface{}{"type": strings.TrimSpace(parts[0]), "id": strings.TrimSpace(parts[1])}
+			if len(parts) == 3 {
+				n, err := strconv.Atoi(strings.TrimSpace(parts[2]))
+				if err != nil {
+					return "", fmt.Errorf("an assignment's share is a whole percentage")
+				}
+				one["units"] = n
+			}
+			list = append(list, one)
+		}
+		body["assignments"] = list
+	}
+	if _, set := args["effort_driven"]; set {
+		body["effort_driven"] = strings.EqualFold(strings.TrimSpace(strArg(args, "effort_driven")), "true")
+	}
 	if _, set := args["elapsed"]; set {
 		body["elapsed"] = strings.EqualFold(strings.TrimSpace(strArg(args, "elapsed")), "true")
 	}
-	for _, key := range []string{"duration_days", "effort_days"} {
+	for _, key := range []string{"duration_days", "effort_days", "fixed_cost"} {
 		if _, set := args[key]; !set {
 			continue
 		}
@@ -164,7 +202,14 @@ func setPlanCalendar(c *Client, args map[string]interface{}) (string, error) {
 		}
 		body["holidays"] = holidays
 	}
-	for _, key := range []string{"scheduling_mode", "project_start", "project_finish", "schedule_from"} {
+	if _, set := args["budget"]; set {
+		n, err := strconv.ParseFloat(strings.TrimSpace(strArg(args, "budget")), 64)
+		if err != nil {
+			return "", fmt.Errorf("budget must be a number")
+		}
+		body["budget"] = n
+	}
+	for _, key := range []string{"scheduling_mode", "project_start", "project_finish", "schedule_from", "currency"} {
 		if _, set := args[key]; set {
 			body[key] = strArg(args, key)
 		}
@@ -209,8 +254,47 @@ func planCalendarTool() Tool {
 			"project_start":           str("The day the plan starts, YYYY-MM-DD: an automatic task starts no earlier. An empty string clears it"),
 			"project_finish":          str("The day the plan must finish by, YYYY-MM-DD: float is counted to it. An empty string clears it"),
 			"schedule_from":           str("\"start\" (tasks as soon as possible) or \"finish\" (automatic tasks as late as possible)"),
+			"currency":                str("The money costs are in, as up to three letters, e.g. \"GBP\""),
+			"budget":                  str("What the plan may cost; \"0\" clears it"),
 			"multiple_critical_paths": str("\"true\" gives each chain of tasks a critical path of its own, to its own last task"),
 		}),
 		Handler: setPlanCalendar,
+	}
+}
+
+// planResourceTool is set_plan_resource: a person's or an agent's daily
+// rate and capacity on a project.
+func planResourceTool() Tool {
+	return Tool{
+		Name: "set_plan_resource",
+		Description: "Set what a day of a person's or an agent's time costs on a project, and the share of a working day they " +
+			"can give it. The plan costs each task from its people's rates, and reports anyone asked for more than their " +
+			"capacity. get_plan lists who can be assigned under people.",
+		InputSchema: schema([]string{"project_id", "type", "id", "daily_rate"}, map[string]interface{}{
+			"project_id": str("Project ID"),
+			"type":       str("\"user\" or \"agent\""),
+			"id":         str("The user's or the agent's ID"),
+			"daily_rate": str("What a day of their time costs, in the plan's currency"),
+			"capacity":   str("The percentage of a working day they can give the project; \"100\" when left out"),
+		}),
+		Handler: func(c *Client, args map[string]interface{}) (string, error) {
+			body := map[string]interface{}{"type": strArg(args, "type")}
+			if _, set := args["daily_rate"]; set {
+				rate, err := strconv.ParseFloat(strings.TrimSpace(strArg(args, "daily_rate")), 64)
+				if err != nil {
+					return "", fmt.Errorf("daily_rate must be a number")
+				}
+				body["daily_rate"] = rate
+			}
+			if _, set := args["capacity"]; set {
+				n, err := strconv.Atoi(strings.TrimSpace(strArg(args, "capacity")))
+				if err != nil {
+					return "", fmt.Errorf("capacity is a whole percentage")
+				}
+				body["capacity"] = n
+			}
+			out, _, err := c.request("PUT", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/resources/"+strArg(args, "id"), nil, body)
+			return out, err
+		},
 	}
 }

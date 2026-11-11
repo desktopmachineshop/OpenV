@@ -284,6 +284,7 @@ POST /api/v1/projects/{id}/draft-test-cases
 POST /api/v1/projects/{id}/evidence-bundles
 POST /api/v1/projects/{id}/interviews
 POST /api/v1/projects/{id}/members
+POST /api/v1/projects/{id}/plan/level
 POST /api/v1/projects/{id}/plan/milestones
 POST /api/v1/projects/{id}/plan/recalculate
 POST /api/v1/projects/{id}/reindex-embeddings
@@ -360,6 +361,7 @@ PUT /api/v1/projects/{id}/members/{userId}
 PUT /api/v1/projects/{id}/parties
 PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}
 PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}
+PUT /api/v1/projects/{id}/plan/resources/{assigneeId}
 PUT /api/v1/projects/{id}/plan/settings
 PUT /api/v1/projects/{id}/priority-detection
 PUT /api/v1/projects/{id}/profile
