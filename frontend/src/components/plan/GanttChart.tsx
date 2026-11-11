@@ -7,7 +7,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import type { PlanMilestone, PlanTask, ProjectPlan } from '../../api/client';
 import { ellipsis, eyebrowStyle, mutedStyle } from '../ui';
 import { DependencyLines, LinkBand, OnLink, ROW_HEIGHT, useLinkDrag } from './GanttLinks';
-import { AddTaskRow, OpenIcon, OutlineCell, TaskBar } from './GanttRows';
+import { AddTaskRow, OpenIcon, OutlineCell, TaskBar, BaselineBar } from './GanttRows';
 import { ScheduleTrack } from './GanttSchedule';
 import { Scale, Tick, Zoom, buildScale, buildTicks, openingScroll, shortDate, todayScroll } from './ganttScale';
 import { milestoneColor, visibleTasks } from './planModel';
@@ -140,11 +140,12 @@ const MilestoneLane: React.FC<{
 };
 
 /** The vertical guides behind the bars: days off and period lines, each milestone, and today. */
-const Guides: React.FC<{ scale: Scale; ticks: Tick[]; milestones: PlanMilestone[]; today: string; height: number }> = ({
+const Guides: React.FC<{ scale: Scale; ticks: Tick[]; milestones: PlanMilestone[]; today: string; status: string; height: number }> = ({
   scale,
   ticks,
   milestones,
   today,
+  status,
   height,
 }) => (
   <div aria-hidden style={{ position: 'absolute', left: 0, top: 0, width: scale.width, height, pointerEvents: 'none' }}>
@@ -160,6 +161,7 @@ const Guides: React.FC<{ scale: Scale; ticks: Tick[]; milestones: PlanMilestone[
         <span key={m.key} style={{ position: 'absolute', left: scale.x(m.date!) + scale.dayWidth / 2, top: 0, bottom: 0, borderLeft: `1px dashed ${milestoneColor(m)}`, opacity: 0.55 }} />
       ))}
     <span style={{ position: 'absolute', left: scale.x(today) + scale.dayWidth / 2, top: 0, bottom: 0, borderLeft: '2px solid var(--danger)', opacity: 0.7 }} />
+    {status !== today && <span data-status-line style={{ position: 'absolute', left: scale.x(status) + scale.dayWidth, top: 0, bottom: 0, borderLeft: '2px dashed var(--info, var(--tint-blue-border))' }} />}
   </div>
 );
 
@@ -193,6 +195,8 @@ export interface GanttChartProps {
   onlyCritical?: boolean;
   /** Counts presses of Today: each one scrolls today back to a third of the way in. */
   todaySignal: number;
+  /** Draws where the baseline had each task, under its bar. */
+  showBaseline?: boolean;
 }
 
 export const GanttChart: React.FC<GanttChartProps> = ({
@@ -212,6 +216,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   showCritical,
   onlyCritical,
   todaySignal,
+  showBaseline,
 }) => {
   const scroller = useRef<HTMLDivElement>(null);
   const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
@@ -369,7 +374,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
         <div ref={body} style={{ position: 'relative' }}>
           <div style={{ position: 'absolute', left: outlineWidth, top: 0, width: scale.width, height: bodyHeight }}>
-            <Guides scale={scale} ticks={ticks.lower} milestones={plan.milestones} today={plan.today} height={bodyHeight} />
+            <Guides scale={scale} ticks={ticks.lower} milestones={plan.milestones} today={plan.today} status={plan.status_day} height={bodyHeight} />
           </div>
           {rows.map((t) => {
             // A folded task stands for its sub-tasks: it carries their critical mark.
@@ -392,6 +397,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   onPointerLeave={() => setPointed((id) => (id === t.id ? '' : id))}
                   style={{ position: 'relative', width: scale.width, height: ROW_HEIGHT, boxSizing: 'border-box', borderBottom: '1px solid var(--border-soft)', background: t.id === selectedTaskId ? 'color-mix(in srgb, var(--tint-blue) 45%, transparent)' : undefined }}
                 >
+                  {showBaseline && <BaselineBar task={t} scale={scale} today={plan.today} />}
                   {t.span_start ? (
                     <TaskBar
                       task={t}

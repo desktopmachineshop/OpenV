@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 341
-  axios instance calls: 331 (DELETE 39, GET 133, HEAD 1, POST 107, PUT 51)
+call sites: 344
+  axios instance calls: 334 (DELETE 40, GET 133, HEAD 1, POST 109, PUT 51)
   helper calls (a function that passes its argument to the instance): 1
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 6 (3 of them axios calls)
-distinct METHOD PATH lines below: 339; server routes reached: 339
+distinct METHOD PATH lines below: 342; server routes reached: 342
 
 GET     /api/v1/admin/metrics/usage                                       adminAPI.usage
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
@@ -239,6 +239,8 @@ PUT     /api/v1/projects/{id}/members/{userId}                            member
 GET     /api/v1/projects/{id}/parties                                     projectAPI.parties
 PUT     /api/v1/projects/{id}/parties                                     projectAPI.setParties
 GET     /api/v1/projects/{id}/plan                                        planAPI.get
+POST    /api/v1/projects/{id}/plan/baselines                              planAPI.saveBaseline
+DELETE  /api/v1/projects/{id}/plan/baselines/{baselineId}                 planAPI.deleteBaseline
 GET     /api/v1/projects/{id}/plan/export                                 planAPI.export
 POST    /api/v1/projects/{id}/plan/level                                  planAPI.level
 POST    /api/v1/projects/{id}/plan/milestones                             planAPI.createMilestone
@@ -246,6 +248,7 @@ DELETE  /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAP
 PUT     /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAPI.updateMilestone
 POST    /api/v1/projects/{id}/plan/recalculate                            planAPI.recalculate
 PUT     /api/v1/projects/{id}/plan/release-milestones/{releaseId}         planAPI.setReleaseCriteria
+POST    /api/v1/projects/{id}/plan/reschedule-remaining                   planAPI.rescheduleRemaining
 PUT     /api/v1/projects/{id}/plan/resources/{assigneeId}                 planAPI.setResource
 PUT     /api/v1/projects/{id}/plan/settings                               planAPI.setSettings, planAPI.setWorkingDays
 GET     /api/v1/projects/{id}/priority-detection                          projectAPI.priorityDetection

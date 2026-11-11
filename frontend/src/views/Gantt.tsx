@@ -37,6 +37,7 @@ import { MilestonePanel } from '../components/plan/MilestonePanel';
 import { AddMilestoneForm, AddTaskForm, ExportControl, NewTask } from '../components/plan/PlanForms';
 import { PlanPhone } from '../components/plan/PlanPhone';
 import { PlanChartPanel } from '../components/plan/PlanChartPanel';
+import type { TrackingAction } from '../components/plan/PlanTracking';
 import { TaskPanel } from '../components/plan/TaskPanel';
 import { money, type RelationshipView } from '../components/plan/planModel';
 import { ErrorBanner, FeatureGate, Sheet, buttonStyle, mutedStyle, pageType, useConfirm } from '../components/ui';
@@ -86,6 +87,23 @@ const FullTask: React.FC<{ workItemId: string; projectId: string; onClose: () =>
       .catch(() => setArtifactMap({}));
   }, [projectId]);
   return <WorkItemDrawer {...drawer} projectId={projectId} artifactMap={artifactMap} />;
+};
+
+/** Levels the plan; answers what to tell the user. */
+const levelPlan = async (projectId: string): Promise<string> => {
+  const n = (await planAPI.level(projectId)).data.moved;
+  return n === 0 ? 'Nothing moved: no delay would clear the over-allocation.' : `${n} ${n === 1 ? 'task' : 'tasks'} delayed.`;
+};
+
+/** Does what the tracking dialog asked; answers what to tell the user, if anything. */
+const trackPlan = async (projectId: string, action: TrackingAction): Promise<string> => {
+  if (action.kind === 'save') return `${(await planAPI.saveBaseline(projectId, action.name)).data.name} saved.`;
+  if (action.kind === 'delete') {
+    await planAPI.deleteBaseline(projectId, action.id);
+    return '';
+  }
+  const n = (await planAPI.rescheduleRemaining(projectId)).data.moved;
+  return n === 0 ? 'Nothing moved: no unstarted task sits before the status date.' : `${n} ${n === 1 ? 'task' : 'tasks'} moved.`;
 };
 
 const PlanPage: React.FC = () => {
@@ -364,13 +382,9 @@ const PlanPage: React.FC = () => {
           onLink={coarsePointer ? undefined : relate}
           onRecalculate={recalculate}
           onResource={(res, change) => run(() => planAPI.setResource(projectId, res.type, res.id, change), 'Failed to save the resource')}
-          onLevel={() =>
-            run(async () => {
-              const n = (await planAPI.level(projectId)).data.moved;
-              setNote(n === 0 ? 'Nothing moved: no delay would clear the over-allocation.' : `${n} ${n === 1 ? 'task' : 'tasks'} delayed.`);
-            }, 'Failed to level the plan')
-          }
-          onSettings={(change) => run(() => planAPI.setSettings(projectId, change), 'Failed to save the plan calendar')}
+          onLevel={() => run(async () => setNote(await levelPlan(projectId)), 'Failed to level the plan')}
+          onTracking={(action) => run(async () => setNote(await trackPlan(projectId, action)), 'Failed to update the tracking')}
+          onSettings={(change) => run(() => planAPI.setSettings(projectId, change), 'Failed to save the plan settings')}
           onAddTask={(title) => addTask({ title, start: '', end: '' }, undefined, true)}
           busy={busy}
           touch={coarsePointer}

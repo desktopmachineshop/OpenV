@@ -95,6 +95,38 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 	if set, _ := repo.Settings(project); set.Currency != "GBP" || set.Budget == nil || *set.Budget != 25000 {
 		t.Fatalf("currency and budget: %+v", set)
 	}
+	started, pct, spent := "2027-03-01", 40, 120.5
+	if err := repo.SaveSchedule(&plan.TaskSchedule{WorkItemID: a, ProjectID: project, ActualStart: &started, PercentComplete: &pct, ActualCost: &spent}); err != nil {
+		t.Fatal(err)
+	}
+	if rows, _ := repo.ListSchedules(project); len(rows) == 0 || rows[0].ActualStart == nil || *rows[0].ActualStart != started ||
+		rows[0].ActualFinish != nil || *rows[0].PercentComplete != 40 || *rows[0].ActualCost != 120.5 {
+		t.Fatalf("actuals: %+v", rows)
+	}
+	start := "2027-03-01"
+	base := &plan.Baseline{ID: "22222222-2222-4222-8222-222222222222", CreatedAt: time.Date(2027, 3, 1, 9, 0, 0, 0, time.UTC), ProjectID: project, Name: "As approved", Tasks: []plan.BaselineTask{{ID: a, Start: &start, Cost: 100}}}
+	if err := repo.CreateBaseline(base); err != nil || base.ID == "" || base.CreatedAt.IsZero() {
+		t.Fatalf("baseline: %+v %v", base, err)
+	}
+	if got, err := repo.ListBaselines(project); err != nil || len(got) != 1 || got[0].Name != "As approved" || len(got[0].Tasks) != 1 || *got[0].Tasks[0].Start != start {
+		t.Fatalf("baselines: %+v %v", got, err)
+	}
+	status := "2027-03-10"
+	if err := repo.SaveSettings(project, plan.Settings{WorkingDays: []int{1, 2, 3, 4, 5}, Tracking: plan.Tracking{StatusDate: &status, ActiveBaselineID: &base.ID}, Scheduling: plan.Scheduling{Mode: plan.ModeManual, ScheduleFrom: plan.FromStart}}); err != nil {
+		t.Fatal(err)
+	}
+	if set, _ := repo.Settings(project); set.StatusDate == nil || *set.StatusDate != status || set.ActiveBaselineID == nil || *set.ActiveBaselineID != base.ID {
+		t.Fatalf("tracking settings: %+v", set)
+	}
+	if err := repo.DeleteBaseline(project, "nope"); err != plan.ErrNotFound {
+		t.Fatalf("a baseline id that is not one: %v", err)
+	}
+	if err := repo.DeleteBaseline(project, base.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.DeleteBaseline(project, base.ID); err != plan.ErrNotFound {
+		t.Fatalf("deleted twice: %v", err)
+	}
 	if err := repo.SaveSchedule(&plan.TaskSchedule{WorkItemID: a, ProjectID: project, FixedCost: 250, EffortDriven: true}); err != nil {
 		t.Fatal(err)
 	}
@@ -128,7 +160,7 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 	if list, err := repo.ListSchedules(project); err != nil || len(list) != 0 {
 		t.Fatalf("empty schedules: %v %v", list, err)
 	}
-	start := "2027-03-01"
+	start = "2027-03-01"
 	if err := repo.SaveSchedule(&plan.TaskSchedule{WorkItemID: b, ProjectID: project, StartDate: &start, ParentID: &a}); err != nil {
 		t.Fatal(err)
 	}

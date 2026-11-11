@@ -64,6 +64,18 @@ export interface PlanTask {
   effort_driven: boolean;
   /** Someone on it is asked for more than their capacity while it runs. */
   overallocated: boolean;
+  /** What happened: the days work really started and finished, a percentage typed by hand (it is then the progress), and what it has cost. */
+  actual_start: string | null;
+  actual_finish: string | null;
+  percent_complete: number | null;
+  actual_cost: number | null;
+  /** The task as the baseline measured against has it, and how many working days later (negative: earlier) it now starts and finishes. */
+  baseline: PlanBaselineTask | null;
+  start_variance_days: number | null;
+  finish_variance_days: number | null;
+  earned_value: PlanEarnedValue | null;
+  /** Less is done than the status day asks. */
+  behind_schedule: boolean;
   /** The critical path runs through this task's sub-tasks. */
   critical_subtasks: boolean;
   /** A whole percentage, from the to-dos ticked off and the sub-tasks. */
@@ -86,6 +98,37 @@ export interface PlanTask {
   drives: PlanRelationship[];
   /** The driving tasks whose relationship the dates break. */
   conflicts: string[];
+}
+
+/** A task as a baseline recorded it. */
+export interface PlanBaselineTask {
+  id: string;
+  start: string | null;
+  end: string | null;
+  duration_days: number | null;
+  effort_days: number | null;
+  cost: number;
+}
+
+/** A saved baseline: the plan as it stood. */
+export interface PlanBaselineInfo {
+  id: string;
+  name: string;
+  created_at: string;
+  tasks: number;
+}
+
+/** Earned value: the baseline's cost, what was planned, earned and spent by the status day, and the variances and indices from them. */
+export interface PlanEarnedValue {
+  bac: number;
+  pv: number;
+  ev: number;
+  ac: number;
+  sv: number;
+  cv: number;
+  spi: number;
+  cpi: number;
+  eac: number;
 }
 
 /** FS: finish to start. SS: start to start. FF: finish to finish. SF: start to finish. */
@@ -155,6 +198,9 @@ export interface PlanSettings {
   /** The money costs are in, up to three letters; and what the plan may cost (0 clears it). */
   currency: string;
   budget: number | null;
+  /** The day progress is reported as of (unset: today), and the baseline chosen to measure against (unset: the newest). */
+  status_date: string | null;
+  active_baseline_id: string | null;
 }
 
 export interface PlanRelationship {
@@ -229,6 +275,13 @@ export interface ProjectPlan {
   multiple_critical_paths: boolean;
   currency: string;
   budget: number | null;
+  status_date: string | null;
+  active_baseline_id: string | null;
+  /** The day progress is measured at, the baseline measured against, and every baseline saved. */
+  status_day: string;
+  baseline_id: string | null;
+  baselines: PlanBaselineInfo[];
+  earned_value: PlanEarnedValue;
   resources: PlanResourceLoad[];
   people: PlanPerson[];
   today: string;
@@ -265,6 +318,13 @@ export interface PlanScheduleInput {
   assignments?: PlanAssignment[];
   fixed_cost?: number;
   effort_driven?: boolean;
+  /** YYYY-MM-DD; empty clears it. */
+  actual_start?: string;
+  actual_finish?: string;
+  /** 0 to 100; -1 goes back to the counted progress. */
+  percent_complete?: number;
+  /** -1 clears it. */
+  actual_cost?: number;
   parent_id?: string;
   /** The key of the milestone the task is assigned to; empty takes it off. */
   milestone?: string;

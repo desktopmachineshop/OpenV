@@ -158,6 +158,23 @@ const handle = (side: 'left' | 'right'): React.CSSProperties => ({
   touchAction: 'none',
 });
 
+/** Where the baseline had the task: a thin grey bar under its own. */
+export const BaselineBar: React.FC<{ task: PlanTask; scale: Scale; today: string }> = ({ task, scale, today }) => {
+  const b = task.baseline;
+  if (!b || !b.start || !b.end) return null;
+  const left = scale.x(b.start);
+  const label = `Baseline: ${spanLabel(b.start, b.end, today)}`;
+  return (
+    <span
+      role="img"
+      data-baseline-bar={task.id}
+      aria-label={label}
+      title={label}
+      style={{ position: 'absolute', left, width: Math.max(scale.x(b.end) + scale.dayWidth - left, 4), top: ROW_HEIGHT - 7, height: 4, borderRadius: 2, background: 'var(--neutral)', opacity: 0.75 }}
+    />
+  );
+};
+
 /**
  * A task's bar: the track of its span with its progress filled in. With
  * onReschedule, dragging the bar moves it and dragging an end resizes it, in

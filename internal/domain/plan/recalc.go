@@ -95,6 +95,7 @@ func (s *DefaultService) inputs(projectID string) (Inputs, Calendar, Settings, e
 		return in, cal, set, err
 	}
 	in.WorkingDays, in.Holidays, in.CriticalSlackDays, in.Scheduling = set.WorkingDays, set.Holidays, set.CriticalSlackDays, set.Scheduling
+	in.Currency, in.Budget, in.Tracking = set.Currency, set.Budget, set.Tracking
 	return in, cal, set, nil
 }
 

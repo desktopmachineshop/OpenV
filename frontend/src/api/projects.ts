@@ -20,6 +20,7 @@ import type {
   Party,
   PlanExportFormat,
   PlanMilestoneInput,
+  PlanBaselineInfo,
   PlanLagUnit,
   PlanRelationshipDirection,
   PlanSettings,
@@ -228,8 +229,13 @@ export const planAPI = {
   /** What a day of a person's or an agent's time costs, and the share of a day they can give. */
   setResource: (projectId: string, type: 'user' | 'agent', id: string, change: { daily_rate: number; capacity: number }) =>
     client.put(`/api/v1/projects/${projectId}/plan/resources/${id}`, { type, ...change }),
+  /** Records the plan as it stands, to measure against later. */
+  saveBaseline: (projectId: string, name = '') => client.post<PlanBaselineInfo>(`/api/v1/projects/${projectId}/plan/baselines`, { name }),
+  deleteBaseline: (projectId: string, baselineId: string) => client.delete(`/api/v1/projects/${projectId}/plan/baselines/${baselineId}`),
+  /** Moves the work that should have started by the status day and has not to that day; answers how many moved. */
+  rescheduleRemaining: (projectId: string) => client.post<{ moved: number }>(`/api/v1/projects/${projectId}/plan/reschedule-remaining`),
   /** The plan's holidays and critical threshold, whichever the change names. */
-  setSettings: (projectId: string, change: Partial<Omit<PlanSettings, 'project_start' | 'project_finish' | 'budget'>> & { project_start?: string; project_finish?: string; budget?: number }) =>
+  setSettings: (projectId: string, change: Partial<Omit<PlanSettings, 'project_start' | 'project_finish' | 'budget' | 'status_date' | 'active_baseline_id'>> & { project_start?: string; project_finish?: string; budget?: number; status_date?: string; active_baseline_id?: string }) =>
     client.put<PlanSettings>(`/api/v1/projects/${projectId}/plan/settings`, change),
   /** A to-do raised on a task, which counts toward its progress. */
   addTodo: (workItemId: string, text: string, dueDate?: string) =>

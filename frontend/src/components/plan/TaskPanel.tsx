@@ -11,6 +11,7 @@ import { shortDate, spanLabel } from './ganttScale';
 import { TaskRelationships, type TaskRelationshipsProps } from './TaskRelationships';
 import { TaskResources } from './TaskResources';
 import { TaskScheduling } from './TaskScheduling';
+import { TaskTracking } from './TaskTracking';
 import { BAR_COLORS, TASK_TONE, WEEKDAYS, barTone, columnLabel, descendants, workEnd, workSpan, workStart } from './planModel';
 
 export const fieldStyle: React.CSSProperties = {
@@ -426,6 +427,7 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
       {task.subtasks_total === 0 && <TaskScheduling plan={plan} task={task} editable={editable} busy={busy} onSchedule={onSchedule} />}
 
       {task.subtasks_total === 0 && <TaskResources plan={plan} task={task} editable={editable} busy={busy} onSchedule={onSchedule} />}
+      {task.subtasks_total === 0 && <TaskTracking plan={plan} task={task} editable={editable} busy={busy} onSchedule={onSchedule} />}
 
       <div style={sectionStyle} data-help-key="gantt.task-milestone">
         <label htmlFor="gantt-task-milestone" style={fieldStyle}>

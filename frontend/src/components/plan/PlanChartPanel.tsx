@@ -7,10 +7,11 @@ import { Modal, PanelHeader, SegmentedControl, buttonStyle, mutedStyle, panelSty
 import { GanttChart, type GanttChartProps } from './GanttChart';
 import { PlanCalendar, type PlanSettingsChange } from './PlanCalendar';
 import { PlanResources } from './PlanResources';
+import { PlanTracking, type TrackingAction } from './PlanTracking';
 import { WorkingDays } from './WorkingDays';
 import { ZOOMS, Zoom } from './ganttScale';
 
-export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'showCritical' | 'todaySignal' | 'onSelectMilestone'> {
+export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'showCritical' | 'todaySignal' | 'onSelectMilestone' | 'showBaseline'> {
   plan: ProjectPlan;
   zoom: Zoom;
   onZoom: (zoom: Zoom) => void;
@@ -21,16 +22,20 @@ export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'sho
   onResource: (res: PlanResourceLoad, change: { daily_rate: number; capacity: number }) => void;
   /** Delays tasks until nobody is over-allocated. */
   onLevel: () => void;
+  /** Saves or deletes a baseline, or moves the work that has not started to the status date. */
+  onTracking: (action: TrackingAction) => void;
   /** Moves the placed tasks to the dates their relationships and constraints ask for; onlyLater never moves one earlier. */
   onRecalculate: (onlyLater: boolean) => void;
   onSelectMilestone: (m: PlanMilestone) => void;
 }
 
-export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onWorkingDays, onSettings, onResource, onLevel, onRecalculate, onSelectMilestone, busy, touch, ...chart }) => {
+export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onWorkingDays, onSettings, onResource, onLevel, onTracking, onRecalculate, onSelectMilestone, busy, touch, ...chart }) => {
   const [showCritical, setShowCritical] = useState(true);
   const [onlyCritical, setOnlyCritical] = useState(false);
   const [calendar, setCalendar] = useState(false);
   const [resources, setResources] = useState(false);
+  const [tracking, setTracking] = useState(false);
+  const [showBaseline, setShowBaseline] = useState(true);
   const [recalculating, setRecalculating] = useState(false);
   const [onlyLater, setOnlyLater] = useState(false);
   const [todaySignal, setTodaySignal] = useState(0);
@@ -59,6 +64,9 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
                   }}
                 >
                   Resources{plan.summary.overallocated ? ` · ${plan.summary.overallocated} over` : ''}
+                </button>
+                <button type="button" onClick={() => setTracking(true)} data-help-key="gantt.tracking" title="Baselines, the status date, earned value and work that is behind" style={buttonStyle('secondary', { compact: true })}>
+                  Tracking{plan.baselines.length ? ` · ${plan.baselines.length}` : ''}
                 </button>
                 <button
                   type="button"
@@ -102,7 +110,7 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
               </span>
             }
           />
-          <GanttChart {...chart} plan={plan} zoom={zoom} busy={busy} touch={touch} onSelectMilestone={onSelectMilestone} showCritical={showCritical} onlyCritical={showCritical && onlyCritical} todaySignal={todaySignal} />
+          <GanttChart {...chart} plan={plan} zoom={zoom} busy={busy} touch={touch} onSelectMilestone={onSelectMilestone} showBaseline={showBaseline && Boolean(plan.baseline_id)} showCritical={showCritical} onlyCritical={showCritical && onlyCritical} todaySignal={todaySignal} />
           {recalculating && (
             <Modal title="Recalculate the plan" width={440} onClose={() => setRecalculating(false)}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13 }}>
@@ -135,6 +143,7 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
               </div>
             </Modal>
           )}
+          {tracking && <PlanTracking plan={plan} busy={busy} showBaseline={showBaseline} onShowBaseline={setShowBaseline} onSettings={onSettings} onAction={onTracking} onClose={() => setTracking(false)} />}
           {resources && <PlanResources plan={plan} busy={busy} onResource={onResource} onSettings={onSettings} onLevel={onLevel} onClose={() => setResources(false)} />}
           {calendar && <PlanCalendar plan={plan} busy={busy} onChange={onSettings} onClose={() => setCalendar(false)} />}
           {undated.length > 0 && (
