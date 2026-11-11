@@ -52,6 +52,10 @@ opens at the scale that shows the whole plan, on the whole plan. A plan too
 long to fit opens with today a third of the way in from the left, so that
 most of what you see is ahead of you.
 
+On a computer the chart reaches the bottom of the window, and so does the
+panel of a task or a milestone opened beside it; each scrolls on its own
+when it is longer than the window.
+
 The timeline scrolls sideways past both ends of the plan, further forward
 than back: use the scroll bar, a trackpad or a wheel, or drag an empty part
 of the timeline. The scroll bar under the chart belongs to the timeline, so

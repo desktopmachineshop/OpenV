@@ -30,6 +30,7 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 - **The whole critical path, with its float.** The critical path is now the chain of tasks that decides when the plan ends, shown even where the dates leave room between two of them. After a task's bar, a thin line ended by a tick shows how far it can slip before it pushes the next task.
 - **Add a task in the chart.** Type a title in the last row of the Gantt's outline and press Enter.
 - **The scroll bar belongs to the timeline.** It sits under the timeline and starts where the task column ends.
+- **The Gantt fills the window.** On a computer, the chart and the task or milestone panel beside it reach the bottom of the window, however few tasks the plan has; each scrolls on its own when it is longer.
 - **Open a task from its row.** Each row of the Gantt, and each milestone, has a small open button.
 - **Releases is under Plan.** The **Releases** page has moved from **Verify** to **Plan** in the project menu, beside the Gantt, where each release is a milestone. Links to it are unchanged.
 

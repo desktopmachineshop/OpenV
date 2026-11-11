@@ -290,7 +290,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   const bodyHeight = rows.length * ROW_HEIGHT;
   return (
-    <div>
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <div
       ref={scroller}
       role="table"
@@ -313,7 +313,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         position: 'relative',
         overflowX: touch ? 'auto' : 'hidden',
         overflowY: 'auto',
-        maxHeight: 'calc(100dvh - 210px)',
+        flex: 1,
         minHeight: 180,
         overscrollBehaviorX: 'contain',
         cursor: link ? 'crosshair' : panning ? 'grabbing' : 'grab',

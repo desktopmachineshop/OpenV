@@ -289,7 +289,7 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
   const tone = barTone(task);
 
   return (
-    <aside aria-label={`Task ${task.title}`} data-help-key="gantt.task" style={{ ...panelStyle, display: 'flex', flexDirection: 'column' }}>
+    <aside aria-label={`Task ${task.title}`} data-help-key="gantt.task" style={{ ...panelStyle, display: 'flex', flexDirection: 'column', flex: '1 0 auto' }}>
       <PanelHeader
         title={`Task ${task.wbs}`}
         action={

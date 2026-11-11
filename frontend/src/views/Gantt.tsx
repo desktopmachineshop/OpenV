@@ -14,7 +14,7 @@
 // shows but bars do not drag; dates and relationships are set in the task's
 // panel. The plan's working days (Monday to Friday until set) decide which
 // days a duration counts and which the chart shades.
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
   planAPI,
@@ -49,10 +49,35 @@ const Figure: React.FC<{ value: React.ReactNode; label: string; color?: string }
   </span>
 );
 
+/**
+ * The height that takes an element from where it sits to the bottom of the
+ * window, so the chart and the panel beside it fill the page however few
+ * tasks the plan has. Measured again on every render and resize, since a
+ * form or a banner above moves the element down.
+ */
+const useFillHeight = (min: number): [React.RefObject<HTMLDivElement>, number] => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(min);
+  const measure = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + (document.scrollingElement?.scrollTop ?? 0);
+    const next = Math.max(Math.floor(window.innerHeight - top - 16), min);
+    setHeight((h) => (h === next ? h : next));
+  }, [min]);
+  useLayoutEffect(measure);
+  useEffect(() => {
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [measure]);
+  return [ref, height];
+};
+
 const PlanPage: React.FC = () => {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const { isPhone, isCompact, coarsePointer, width } = useViewport();
   const confirm = useConfirm();
+  const [fill, fillHeight] = useFillHeight(360);
 
   const [plan, setPlan] = useState<ProjectPlan | null>(null);
   const [error, setError] = useState('');
@@ -271,8 +296,8 @@ const PlanPage: React.FC = () => {
       </div>
       {errorBanner}
       {forms}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-        <section aria-label="Plan" style={{ ...panelStyle, flex: 1, overflow: 'hidden' }}>
+      <div ref={fill} style={{ display: 'flex', gap: 12, alignItems: 'stretch', height: fillHeight }}>
+        <section aria-label="Plan" style={{ ...panelStyle, flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <PanelHeader
             title="Plan"
             action={
@@ -334,7 +359,9 @@ const PlanPage: React.FC = () => {
             criteria are met. {coarsePointer ? 'Select a task to set its dates.' : 'Drag a bar to move it or an end to resize it, drag the + at an end to another bar to link them, and click or drag across the row of a task with no dates to schedule it. Drag the empty timeline to scroll.'}
           </p>
         </section>
-        {panel && !isCompact && <div style={{ width: 340, flexShrink: 0 }}>{panel}</div>}
+        {panel && !isCompact && (
+          <div data-plan-side style={{ width: 340, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>{panel}</div>
+        )}
       </div>
       {panel && isCompact && (
         <Sheet label={selectedTask ? `Task ${selectedTask.title}` : `Milestone ${selectedMilestone?.name}`} onClose={close}>
