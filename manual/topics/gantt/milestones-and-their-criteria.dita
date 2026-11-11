@@ -18,6 +18,7 @@
       <strow><stentry>Test cases passing</stentry><stentry>Test cases whose latest result is a pass</stentry></strow>
       <strow><stentry>Hazards mitigated</stentry><stentry>Hazards that a design item mitigates</stentry></strow>
       <strow><stentry>Plan tasks done</stentry><stentry>Tasks due by the milestone's date that are in Done</stentry></strow>
+      <strow><stentry>Milestone tasks done</stentry><stentry>Tasks assigned to the milestone that are in Done</stentry></strow>
     </simpletable>
     <p><b>Add milestone</b> starts from a preset, such as <b>Definition complete</b> (user needs addressed: 100%), which you can change: give the milestone a name, a date, and any criteria with their targets. An early milestone might ask only that every user need is addressed; a later one that 80% of requirements are verified.</p>
     <p>A milestone's progress is how far its criteria have come toward their targets, averaged. It is <b>met</b> when every criterion has reached its target, and <b>late</b> when its date has passed and it is not met. Select a milestone to see each criterion's figure and the count behind it, and to edit or delete it. A milestone with no criteria shows no progress.</p>

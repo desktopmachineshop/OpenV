@@ -1,13 +1,15 @@
 // One milestone of the plan: how far each of its criteria has come, and the
 // editor that sets them. A criterion is a metric read from the project's
 // artifacts (user needs addressed, requirements verified, ...) and the
-// percentage it must reach. A release's milestone edits its criteria here
+// percentage it must reach; the tasks assigned to the milestone
+// (MilestoneTasks.tsx) count among them. A release's milestone edits its criteria here
 // and its name and date on the Releases page.
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import type { PlanCriterion, PlanMilestone, PlanMilestoneInput, ProjectPlan } from '../../api/client';
 import { Chip, PanelHeader, buttonStyle, eyebrowStyle, mutedStyle, panelStyle } from '../ui';
 import { shortDate } from './ganttScale';
+import { MilestoneTasks, type MilestoneTasksProps } from './MilestoneTasks';
 import { milestoneColor, milestoneState } from './planModel';
 import { fieldStyle, inputStyle, sectionStyle } from './TaskPanel';
 
@@ -114,10 +116,12 @@ export interface MilestonePanelProps {
   busy: boolean;
   onSave: (m: PlanMilestone, change: PlanMilestoneInput) => void;
   onDelete: (m: PlanMilestone) => void;
+  onAssign: MilestoneTasksProps['onAssign'];
+  onSelectTask: MilestoneTasksProps['onSelectTask'];
   onClose: () => void;
 }
 
-export const MilestonePanel: React.FC<MilestonePanelProps> = ({ plan, milestone: m, projectId, editable, busy, onSave, onDelete, onClose }) => {
+export const MilestonePanel: React.FC<MilestonePanelProps> = ({ plan, milestone: m, projectId, editable, busy, onSave, onDelete, onAssign, onSelectTask, onClose }) => {
   const stored = (): PlanCriterion[] => m.criteria.map(({ metric, target }) => ({ metric, target }));
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(m.name);
@@ -174,6 +178,8 @@ export const MilestonePanel: React.FC<MilestonePanelProps> = ({ plan, milestone:
           </span>
         )}
       </div>
+
+      <MilestoneTasks plan={plan} milestone={m} editable={editable} busy={busy} onAssign={onAssign} onSelectTask={onSelectTask} />
 
       {!editing && (
         <div style={{ ...sectionStyle, borderBottom: 'none' }}>

@@ -173,6 +173,7 @@ SECTION_KEYS = {
     ('gantt', 'working-days'): ['gantt.working-days'],
     ('gantt', 'progress-from-to-dos-and-sub-tasks'): ['gantt.todos'],
     ('gantt', 'milestones-and-their-criteria'): ['gantt.milestone', 'gantt.add-milestone'],
+    ('gantt', 'assigning-tasks-to-a-milestone'): ['gantt.milestone-tasks', 'gantt.task-milestone'],
     ('gantt', 'exporting-the-plan'): ['gantt.export'],
     ('project-pages', 'home'): ['home', 'home.figures', 'home.needs', 'home.activity', 'home.projects', 'home.proposals'],
     ('project-pages', 'design'): ['design', 'design.tree', 'design.detail', 'design.attributes', 'design.trace'],

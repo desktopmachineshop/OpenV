@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="assigning-tasks-to-a-milestone">
+  <title>Assigning tasks to a milestone</title>
+  <shortdesc>A milestone can own tasks: the work that has to be finished to reach it. Assign them from either side:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt.milestone-tasks"/>
+    <resourceid appname="openv-web" appid="gantt.task-milestone"/>
+  </prolog>
+  <conbody>
+    <ul>
+      <li>In a <b>task's</b> panel, choose its <b>Milestone</b>.</li>
+      <li>In a <b>milestone's</b> panel, under <b>Tasks</b>, choose <b>Assign a task</b>. The list there shows each of the milestone's tasks with its progress, and the cross takes a task off the milestone.</li>
+    </ul>
+    <p>A task belongs to one milestone at a time, which may be a release's. Assigning a task that has sub-tasks brings them with it: each sub-task counts toward the milestone unless it is given a milestone of its own. The milestone counts the tasks that have no sub-tasks, so a task and its sub-tasks are not counted twice.</p>
+    <p>A milestone with tasks measures <b>Milestone tasks done</b>, the share of those tasks in Done, as one of its criteria, with a target of 100%. You do not have to add it: it is there as soon as the milestone has a task, so finishing the tasks is part of the milestone's percentage alongside its other criteria. To ask for less than all of them, add the criterion yourself and set its target. A milestone whose only criterion is its tasks is met when they are all done.</p>
+    <p><b>Plan tasks done</b> is a different measure: it counts every task of the plan due by the milestone's date, assigned or not.</p>
+  </conbody>
+</concept>

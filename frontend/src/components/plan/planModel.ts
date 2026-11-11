@@ -193,8 +193,8 @@ export interface PhoneGroup {
 }
 
 /**
- * The phone's schedule: the top-level tasks under the first dated milestone
- * they are due on or before, then those due after the last milestone, then
+ * The phone's schedule: the top-level tasks under the milestone they are
+ * assigned to, or else the first dated milestone they are due on or before, then those due after the last milestone, then
  * the unscheduled. A sub-task stays under its parent, which the row counts.
  */
 export const phoneGroups = (tasks: PlanTask[], milestones: PlanMilestone[]): PhoneGroup[] => {
@@ -208,7 +208,8 @@ export const phoneGroups = (tasks: PlanTask[], milestones: PlanMilestone[]): Pho
       unscheduled.tasks.push(t);
       continue;
     }
-    const i = dated.findIndex((m) => t.span_end! <= m.date!);
+    const own = t.milestone ? dated.findIndex((m) => m.key === t.milestone) : -1;
+    const i = own >= 0 ? own : dated.findIndex((m) => t.span_end! <= m.date!);
     (i >= 0 ? groups[i] : later).tasks.push(t);
   }
   return [...groups, later, unscheduled].filter((g) => g.milestone || g.tasks.length > 0);

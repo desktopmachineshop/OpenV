@@ -16,6 +16,6 @@
     <ul>
       <li><b>JSON</b>: the whole plan as the app reads it.</li>
     </ul>
-    <p>Agents read the plan with the <codeph>get_plan</codeph> tool, place a task, with its relationships, with <codeph>schedule_work_item</codeph>, and set the working days with <codeph>set_plan_working_days</codeph>.</p>
+    <p>Agents read the plan with the <codeph>get_plan</codeph> tool, place a task, with its relationships, with <codeph>schedule_work_item</codeph>, which also assigns it to a milestone, and set the working days with <codeph>set_plan_working_days</codeph>.</p>
   </conbody>
 </concept>

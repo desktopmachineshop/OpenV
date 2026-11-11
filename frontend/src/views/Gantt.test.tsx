@@ -39,6 +39,8 @@ const task = (id: string, title: string, extra: Partial<PlanTask> = {}): PlanTas
   todos_total: 0,
   subtasks_done: 0,
   subtasks_total: 0,
+  milestone: null,
+  milestone_inherited: false,
   todos: [],
   depends_on: [],
   relationships: [],
@@ -60,6 +62,8 @@ const definition: PlanMilestone = {
   progress: 50,
   met: false,
   late: true,
+  // Build is assigned to it, which brings its two sub-tasks.
+  tasks: ['frame', 'wiring'],
 };
 
 const mvp: PlanMilestone = {
@@ -67,6 +71,7 @@ const mvp: PlanMilestone = {
   kind: 'release',
   id: '',
   release_id: 'r1',
+  tasks: [],
   name: 'MVP',
   description: '',
   date: '2027-04-01',
@@ -86,11 +91,13 @@ const plan: ProjectPlan = {
   start: '2027-03-01',
   end: '2027-04-01',
   tasks: [
-    task('build', 'Build the rig', { wbs: '1', span_start: '2027-03-01', span_end: '2027-03-20', subtasks_total: 2, subtasks_done: 1, progress: 75, duration_days: 20, effort_days: 6.5, critical_subtasks: true }),
+    task('build', 'Build the rig', { wbs: '1', span_start: '2027-03-01', span_end: '2027-03-20', subtasks_total: 2, subtasks_done: 1, progress: 75, duration_days: 20, effort_days: 6.5, critical_subtasks: true, milestone: 'm1' }),
     task('frame', 'Weld the frame', {
       wbs: '1.1',
       depth: 1,
       parent_id: 'build',
+      milestone: 'm1',
+      milestone_inherited: true,
       column: 'done',
       done: true,
       progress: 100,
@@ -104,6 +111,8 @@ const plan: ProjectPlan = {
       wbs: '1.2',
       depth: 1,
       parent_id: 'build',
+      milestone: 'm1',
+      milestone_inherited: true,
       start: '2027-03-08',
       end: '2027-03-20',
       span_start: '2027-03-08',
@@ -451,6 +460,32 @@ describe('Plan page', () => {
     expect(placed.start_date! <= '2027-03-10' && placed.due_date! >= '2027-03-10').toBe(true);
   });
 
+  it('assigns tasks to a milestone, from the milestone and from the task', async () => {
+    await mount();
+    await click(container.querySelector('[data-milestone="m1"]'));
+    const tasks = container.querySelector('[data-help-key="gantt.milestone-tasks"]')!;
+    expect(tasks.querySelector('h3')?.textContent).toBe('Tasks · 1/2 done');
+    expect(Array.from(tasks.querySelectorAll('[data-milestone-task]')).map((r) => r.textContent)).toEqual([
+      '1.1 Weld the frameDonevia 1',
+      '1.2 Wire the rig50%via 1',
+    ]);
+    // Every task not already on it can be assigned: the folder itself, and the loose one.
+    const add = tasks.querySelector('#gantt-milestone-task-add') as HTMLSelectElement;
+    expect(Array.from(add.options).map((o) => o.value)).toEqual(['', 'loose']);
+    await change(add, 'loose');
+    expect(vi.mocked(planAPI.schedule)).toHaveBeenLastCalledWith('loose', { milestone: 'm1' });
+
+    // From a task: a sub-task says where its milestone comes from, and takes its own.
+    await click(container.querySelector('[data-task-bar="wiring"]'));
+    const section = container.querySelector('[data-help-key="gantt.task-milestone"]')!;
+    const pick = section.querySelector('#gantt-task-milestone') as HTMLSelectElement;
+    expect(pick.value).toBe('');
+    expect(pick.options[0].textContent).toBe('From its parent task: Definition complete');
+    expect(Array.from(pick.options).map((o) => o.value)).toEqual(['', 'm1', 'release:r1']);
+    await change(pick, 'release:r1');
+    expect(vi.mocked(planAPI.schedule)).toHaveBeenLastCalledWith('wiring', { milestone: 'release:r1' });
+  });
+
   it("shows a milestone's criteria, and saves a release milestone's through the release", async () => {
     await mount();
     await click(container.querySelector('[data-milestone="m1"]'));
@@ -477,8 +512,9 @@ describe('Plan page', () => {
     expect(container.querySelector('[role="table"]')).toBeNull();
     const sections = Array.from(container.querySelectorAll('section')).map((s) => s.getAttribute('aria-label'));
     expect(sections).toEqual(['Definition complete', 'MVP', 'Not scheduled']);
-    expect(container.querySelector('section[aria-label="MVP"]')?.textContent).toContain('Build the rig');
-    expect(container.querySelector('section[aria-label="MVP"]')?.textContent).toContain('Wire the rig');
+    // Build is assigned to Definition complete, so it is listed there though it is due after it.
+    expect(container.querySelector('section[aria-label="Definition complete"]')?.textContent).toContain('Build the rig');
+    expect(container.querySelector('section[aria-label="Definition complete"]')?.textContent).toContain('Wire the rig');
     await click(button('Milestones 2'));
     expect(container.querySelector('section[aria-label="Milestones"]')?.textContent).toContain('0/1 criteria met');
   });

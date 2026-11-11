@@ -286,6 +286,8 @@ const PlanPage: React.FC = () => {
       busy={busy}
       onSave={saveMilestone}
       onDelete={deleteMilestone}
+      onAssign={(taskId, key) => run(() => planAPI.schedule(taskId, { milestone: key }), 'Failed to assign the task')}
+      onSelectTask={openTask}
       onClose={close}
     />
   ) : null;

@@ -96,6 +96,8 @@ the row, shows everything else about it. In the panel you can:
   see [Duration and effort](#duration-and-effort). The due date is the
   card's own, so the board shows the same day;
 - make it a **sub-task of** another task, or a top-level task again;
+- assign it to a **milestone**: see
+  [Assigning tasks to a milestone](#assigning-tasks-to-a-milestone);
 - set its **relationships** to other tasks, whichever of the two drives;
 - add **to-dos** and tick them off;
 - add **sub-tasks**.
@@ -292,6 +294,7 @@ measure of the project's artifacts and the percentage it must reach.
 | Test cases passing | Test cases whose latest result is a pass |
 | Hazards mitigated | Hazards that a design item mitigates |
 | Plan tasks done | Tasks due by the milestone's date that are in Done |
+| Milestone tasks done | Tasks assigned to the milestone that are in Done |
 
 **Add milestone** starts from a preset, such as **Definition complete**
 (user needs addressed: 100%), which you can change: give the milestone a
@@ -304,6 +307,33 @@ targets, averaged. It is **met** when every criterion has reached its
 target, and **late** when its date has passed and it is not met. Select a
 milestone to see each criterion's figure and the count behind it, and to
 edit or delete it. A milestone with no criteria shows no progress.
+
+## Assigning tasks to a milestone
+
+A milestone can own tasks: the work that has to be finished to reach it.
+Assign them from either side:
+
+- In a **task's** panel, choose its **Milestone**.
+- In a **milestone's** panel, under **Tasks**, choose **Assign a task**.
+  The list there shows each of the milestone's tasks with its progress,
+  and the cross takes a task off the milestone.
+
+A task belongs to one milestone at a time, which may be a release's.
+Assigning a task that has sub-tasks brings them with it: each sub-task
+counts toward the milestone unless it is given a milestone of its own. The
+milestone counts the tasks that have no sub-tasks, so a task and its
+sub-tasks are not counted twice.
+
+A milestone with tasks measures **Milestone tasks done**, the share of
+those tasks in Done, as one of its criteria, with a target of 100%. You do
+not have to add it: it is there as soon as the milestone has a task, so
+finishing the tasks is part of the milestone's percentage alongside its
+other criteria. To ask for less than all of them, add the criterion
+yourself and set its target. A milestone whose only criterion is its tasks
+is met when they are all done.
+
+**Plan tasks done** is a different measure: it counts every task of the
+plan due by the milestone's date, assigned or not.
 
 ## Release milestones
 
@@ -335,14 +365,15 @@ the Excel timeline mark critical tasks in amber.
 - **JSON**: the whole plan as the app reads it.
 
 Agents read the plan with the \`get_plan\` tool, place a task, with its
-relationships, with \`schedule_work_item\`, and set the working days with
+relationships, with \`schedule_work_item\`, which also assigns it to a milestone, and set the working days with
 \`set_plan_working_days\`.
 
 ## On a phone
 
 A timeline needs more width than a phone has, so the phone shows the same
 plan as a schedule. Four tiles give the figures. Under **Schedule**, the
-tasks are grouped by the milestone they are due before, each with its
+tasks are grouped by the milestone they are assigned to, or else the one
+they are due before, each with its
 dates, duration and a progress bar, and **Critical** on a task with no
 float; **Milestones** lists the milestones with their
 progress. Tap a task or a milestone to open it and make the same edits as
