@@ -6,71 +6,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 )
 
-// calendar is the project's calendar: its working days less its holidays.
-func (s *DefaultService) calendar(projectID string) (Calendar, error) {
-	days, err := s.repo.WorkingDays(projectID)
-	if err != nil {
-		return Calendar{}, err
-	}
-	holidays, err := s.repo.Holidays(projectID)
-	if err != nil {
-		return Calendar{}, err
-	}
-	return NewCalendar(days).WithHolidays(holidays), nil
-}
-
-// SetSettings changes the plan's working days, holidays and critical
-// threshold, whichever the request names, and answers them all.
-func (s *DefaultService) SetSettings(projectID string, req SettingsRequest) (Settings, error) {
-	var out Settings
-	var err error
-	if req.WorkingDays != nil {
-		if _, err = s.SetWorkingDays(projectID, *req.WorkingDays); err != nil {
-			return out, err
-		}
-	}
-	if req.Holidays != nil {
-		clean, err := CleanHolidays(*req.Holidays)
-		if err != nil {
-			return out, err
-		}
-		if err := s.repo.SetHolidays(projectID, clean); err != nil {
-			return out, err
-		}
-	}
-	if req.CriticalSlackDays != nil {
-		if *req.CriticalSlackDays < 0 || *req.CriticalSlackDays > MaxCriticalSlackDays {
-			return out, ErrCriticalSlack
-		}
-		if err := s.repo.SetCriticalSlackDays(projectID, *req.CriticalSlackDays); err != nil {
-			return out, err
-		}
-	}
-	if out.WorkingDays, err = s.repo.WorkingDays(projectID); err != nil {
-		return out, err
-	}
-	if out.WorkingDays == nil {
-		out.WorkingDays = DefaultWorkingDays
-	}
-	if out.Holidays, err = s.repo.Holidays(projectID); err != nil {
-		return out, err
-	}
-	if out.Holidays == nil {
-		out.Holidays = []Holiday{}
-	}
-	out.CriticalSlackDays, err = s.repo.CriticalSlackDays(projectID)
-	return out, err
-}
-
-// SetWorkingDays sets which days of the week the plan works.
-func (s *DefaultService) SetWorkingDays(projectID string, days []int) ([]int, error) {
-	clean, err := CleanWorkingDays(days)
-	if err != nil {
-		return nil, err
-	}
-	return clean, s.repo.SetWorkingDays(projectID, clean)
-}
-
 // pair loads two tasks of one project that are not the same task.
 func (s *DefaultService) pair(taskID, otherID string) (*workitems.WorkItem, *workitems.WorkItem, error) {
 	a, err := s.board.Get(taskID)
@@ -140,7 +75,10 @@ func (s *DefaultService) Relate(taskID, otherID, kind string, drives bool, lagDa
 	if err := s.repo.SetDependencies(a.ProjectID, driver, without(rest, driver, driven)); err != nil {
 		return err
 	}
-	return s.repo.SetDependencies(a.ProjectID, driven, next)
+	if err := s.repo.SetDependencies(a.ProjectID, driven, next); err != nil {
+		return err
+	}
+	return s.autoSchedule(a.ProjectID, "")
 }
 
 // Unrelate removes the relationship between two tasks, whichever way round.
@@ -156,5 +94,105 @@ func (s *DefaultService) Unrelate(taskID, otherID string) error {
 	if err := s.repo.SetDependencies(a.ProjectID, a.ID, without(deps, a.ID, b.ID)); err != nil {
 		return err
 	}
-	return s.repo.SetDependencies(a.ProjectID, b.ID, without(deps, b.ID, a.ID))
+	if err := s.repo.SetDependencies(a.ProjectID, b.ID, without(deps, b.ID, a.ID)); err != nil {
+		return err
+	}
+	return s.autoSchedule(a.ProjectID, "")
+}
+
+// MaxLagDays bounds a relationship's offset, either way.
+const MaxLagDays = 3650
+
+// The units of a relationship's offset.
+const (
+	LagWorkingDays = "d"
+	LagElapsedDays = "ed"
+	LagPercent     = "%"
+)
+
+// ValidLagUnit reports whether u names an offset's unit; the empty unit is
+// working days.
+func ValidLagUnit(u string) bool {
+	return u == "" || u == LagWorkingDays || u == LagElapsedDays || u == LagPercent
+}
+
+func lagUnit(u string) string {
+	if u == "" {
+		return LagWorkingDays
+	}
+	return u
+}
+
+// wantedRelationships reads the relationships a request asks for: its
+// Relationships, or its DependsOn with each task keeping the type it has now.
+func wantedRelationships(id string, req ScheduleRequest, existing []Dependency) []Relationship {
+	if req.Relationships != nil {
+		return *req.Relationships
+	}
+	has := map[string]Dependency{}
+	for _, d := range existing {
+		if d.WorkItemID == id {
+			has[d.DependsOnID] = d
+		}
+	}
+	out := make([]Relationship, 0, len(*req.DependsOn))
+	for _, dep := range *req.DependsOn {
+		dep = strings.TrimSpace(dep)
+		out = append(out, Relationship{TaskID: dep, Type: has[dep].Type, LagDays: has[dep].LagDays, LagUnit: has[dep].LagUnit})
+	}
+	return out
+}
+
+// checkDependencies checks the relationships id is to have: each to a task
+// on the project's board, none to id itself, each of a known type, and none
+// to a task that id already drives, whatever the types along the way. A task
+// named twice keeps its first entry.
+func checkDependencies(id string, want []Relationship, existing []Dependency, onBoard map[string]bool, known bool) ([]Dependency, error) {
+	waitsOn := map[string][]string{}
+	for _, d := range existing {
+		if d.WorkItemID != id {
+			waitsOn[d.WorkItemID] = append(waitsOn[d.WorkItemID], d.DependsOnID)
+		}
+	}
+	out := []Dependency{}
+	seen := map[string]bool{}
+	for _, rel := range want {
+		dep, kind := strings.TrimSpace(rel.TaskID), strings.ToUpper(strings.TrimSpace(rel.Type))
+		if dep == "" || seen[dep] {
+			continue
+		}
+		if kind == "" {
+			kind = RelFinishToStart
+		}
+		switch {
+		case dep == id:
+			return nil, ErrDependsOnSelf
+		case !known && !onBoard[dep]:
+			return nil, ErrOtherProject
+		case !ValidRelationshipType(kind):
+			return nil, ErrRelationshipType
+		case rel.LagDays > MaxLagDays || rel.LagDays < -MaxLagDays || !ValidLagUnit(rel.LagUnit):
+			return nil, ErrInvalidLag
+		}
+		seen[dep] = true
+		out = append(out, Dependency{WorkItemID: id, DependsOnID: dep, Type: kind, LagDays: rel.LagDays, LagUnit: lagUnit(rel.LagUnit)})
+	}
+	visited := map[string]bool{}
+	stack := make([]string, 0, len(out))
+	for _, d := range out {
+		stack = append(stack, d.DependsOnID)
+	}
+	for len(stack) > 0 {
+		cur := stack[len(stack)-1]
+		stack = stack[:len(stack)-1]
+		if cur == id {
+			return nil, ErrDependencyCycle
+		}
+		if visited[cur] {
+			continue
+		}
+		visited[cur] = true
+		stack = append(stack, waitsOn[cur]...)
+	}
+	return out, nil
 }

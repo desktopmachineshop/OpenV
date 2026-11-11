@@ -748,6 +748,11 @@
       "description": "Place a board task on the plan: its start date and due date (YYYY-MM-DD), its duration in working days and effort in days (a task with sub-tasks takes all four from them and refuses them), its parent task (making it a sub-task) and its relationships to the tasks that drive it. A relationship is written \"<work item id>:<type>\", where the type is FS (finish to start: this task starts after that one finishes), SS (start to start: it starts no earlier than that one starts) or FF (finish to finish: it finishes no earlier than that one finishes); with no type it is FS. A task may have several, so two tasks can together drive when it starts. Only the arguments you pass change; pass an empty string to clear a date or the parent, and an empty relationships list to clear them. Answers the task's row of the plan.",
       "input_schema": {
         "properties": {
+          "constraint_date": {"description": "The constraint's date, YYYY-MM-DD", "type": "string"},
+          "constraint_type": {
+            "description": "A date constraint: \"asap\" (none), \"alap\" (as late as possible), \"snet\"/\"snlt\" (start no earlier/later than), \"fnet\"/\"fnlt\" (finish no earlier/later than), \"mso\"/\"mfo\" (must start/finish on). Every one but asap and alap needs constraint_date",
+            "type": "string"
+          },
           "deadline": {
             "description": "The day the task should be finished by, YYYY-MM-DD; it moves nothing, and the plan flags a task that misses it. An empty string clears it",
             "type": "string"
@@ -778,6 +783,10 @@
             "description": "Key of the milestone the task is assigned to, as get_plan lists it (a milestone's id, or \"release:<release id>\"); an empty string takes it off. The milestone then counts the task among its tasks done",
             "type": "string"
           },
+          "mode": {
+            "description": "The task's own scheduling mode: \"manual\" (it stays where it is put), \"auto\" (the platform places it from its relationships and constraint), or an empty string to take the plan's",
+            "type": "string"
+          },
           "parent_id": {
             "description": "Work item ID of the parent task; an empty string makes it a top-level task",
             "type": "string"
@@ -797,27 +806,33 @@
       },
       "calls": ["PUT /api/v1/work-items/{id}/schedule"],
       "requests": [
-        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"deadline\":\"2027-02-15\",\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"duration_days\":21,\"effort_days\":7.5,\"elapsed\":true,\"milestone\":\"release:99999999-9999-4999-8999-999999999999\",\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"relationships\":[{\"lag_days\":5,\"lag_unit\":\"ed\",\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"lag_days\":50,\"lag_unit\":\"%\",\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"SF\"}],\"start_date\":\"2027-01-11\"}"
+        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"constraint_date\":\"2027-01-11\",\"constraint_type\":\"snet\",\"deadline\":\"2027-02-15\",\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"duration_days\":21,\"effort_days\":7.5,\"elapsed\":true,\"milestone\":\"release:99999999-9999-4999-8999-999999999999\",\"mode\":\"auto\",\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"relationships\":[{\"lag_days\":5,\"lag_unit\":\"ed\",\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"lag_days\":50,\"lag_unit\":\"%\",\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"SF\"}],\"start_date\":\"2027-01-11\"}"
       ]
     },
     {
       "name": "recalculate_plan",
       "read_only": false,
-      "description": "Recalculate a project's plan: move each task that another task drives to the dates its relationships, with their offsets, ask for. A task keeps its duration; a task nothing drives, and a task that is done, stay where they are. Answers how many tasks moved. The platform never moves a task otherwise.",
+      "description": "Recalculate a project's plan: move each task that another task drives, or that a constraint holds to a date, to the dates those ask for. A task keeps its duration; a task nothing places, and a task that is done, stay where they are. Answers how many tasks moved. A manual plan's tasks move only on this call; an automatic plan's are placed after every change.",
       "input_schema": {
         "properties": {
+          "only_later": {
+            "description": "\"true\" treats relationships as minimums: a task already on or after the day asked is left where it is",
+            "type": "string"
+          },
           "project_id": {"description": "Project ID", "type": "string"}
         },
         "required": ["project_id"],
         "type": "object"
       },
       "calls": ["POST /api/v1/projects/{id}/plan/recalculate"],
-      "requests": ["POST /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/recalculate"]
+      "requests": [
+        "POST /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/recalculate {\"only_later\":true}"
+      ]
     },
     {
       "name": "set_plan_calendar",
       "read_only": false,
-      "description": "Set a project's plan holidays and its critical threshold. holidays replaces the plan's days off (days it does not work whatever the weekday), each \"YYYY-MM-DD\" or \"YYYY-MM-DD:Name\"; critical_slack_days is the float, in working days, at or below which a task counts as critical (\"0\" by default). An argument left out stays as it is. Answers the working days, holidays and threshold as stored.",
+      "description": "Set a project's plan holidays, its critical threshold and how it is scheduled. holidays replaces the plan's days off (days it does not work whatever the weekday), each \"YYYY-MM-DD\" or \"YYYY-MM-DD:Name\"; critical_slack_days is the float, in working days, at or below which a task counts as critical (\"0\" by default); scheduling_mode \"auto\" has the platform place every task from its relationships and constraints after each change, \"manual\" (the default) leaves tasks where they are put. An argument left out stays as it is. Answers every setting as stored.",
       "input_schema": {
         "properties": {
           "critical_slack_days": {
@@ -829,14 +844,34 @@
             "items": {"type": "string"},
             "type": "array"
           },
-          "project_id": {"description": "Project ID", "type": "string"}
+          "multiple_critical_paths": {
+            "description": "\"true\" gives each chain of tasks a critical path of its own, to its own last task",
+            "type": "string"
+          },
+          "project_finish": {
+            "description": "The day the plan must finish by, YYYY-MM-DD: float is counted to it. An empty string clears it",
+            "type": "string"
+          },
+          "project_id": {"description": "Project ID", "type": "string"},
+          "project_start": {
+            "description": "The day the plan starts, YYYY-MM-DD: an automatic task starts no earlier. An empty string clears it",
+            "type": "string"
+          },
+          "schedule_from": {
+            "description": "\"start\" (tasks as soon as possible) or \"finish\" (automatic tasks as late as possible)",
+            "type": "string"
+          },
+          "scheduling_mode": {
+            "description": "\"manual\" or \"auto\": the mode of every task that has none of its own",
+            "type": "string"
+          }
         },
         "required": ["project_id"],
         "type": "object"
       },
       "calls": ["PUT /api/v1/projects/{id}/plan/settings"],
       "requests": [
-        "PUT /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/settings {\"critical_slack_days\":2,\"holidays\":[{\"date\":\"2027-12-27\",\"name\":\"Shutdown\"},{\"date\":\"2027-01-01\",\"name\":\"\"}]}"
+        "PUT /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/settings {\"critical_slack_days\":2,\"holidays\":[{\"date\":\"2027-12-27\",\"name\":\"Shutdown\"},{\"date\":\"2027-01-01\",\"name\":\"\"}],\"multiple_critical_paths\":true,\"project_finish\":\"2027-12-17\",\"project_start\":\"2027-01-04\",\"schedule_from\":\"finish\",\"scheduling_mode\":\"auto\"}"
       ]
     },
     {

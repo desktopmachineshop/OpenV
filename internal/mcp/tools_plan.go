@@ -40,46 +40,36 @@ func planTools() []Tool {
 				"pass an empty string to clear a date or the parent, and an empty relationships list to clear them. Answers the " +
 				"task's row of the plan.",
 			InputSchema: schema([]string{"id"}, map[string]interface{}{
-				"id":            str("Work item ID"),
-				"start_date":    str("Start date, YYYY-MM-DD; an empty string clears it"),
-				"due_date":      str("Due date, YYYY-MM-DD; an empty string clears it"),
-				"duration_days": str("How long the task runs, in whole working days counting its first and last; the task keeps it, so a start date sent alone moves the due date and a due date sent alone moves the start. \"0\" clears it"),
-				"effort_days":   str("The work in the task, in person-days (may be a decimal); \"0\" clears it"),
-				"parent_id":     str("Work item ID of the parent task; an empty string makes it a top-level task"),
-				"deadline":      str("The day the task should be finished by, YYYY-MM-DD; it moves nothing, and the plan flags a task that misses it. An empty string clears it"),
-				"elapsed":       str("\"true\" makes the duration count calendar days, weekends and holidays included (a cure, a delivery); \"false\" counts working days"),
-				"milestone":     str("Key of the milestone the task is assigned to, as get_plan lists it (a milestone's id, or \"release:<release id>\"); an empty string takes it off. The milestone then counts the task among its tasks done"),
-				"relationships": strList("The tasks that drive this one, each \"<work item id>:FS\", \":SS\", \":FF\" or \":SF\", with an optional offset after it as in \"<id>:SS:5\" (working days; negative leads), \"<id>:FS:3ed\" (elapsed days) or \"<id>:SS:50%\" (of the driving task's duration); replaces the task's relationships"),
-				"depends_on":    strList("Earlier form of relationships: work item IDs, each finish to start unless it already has a type"),
+				"id":              str("Work item ID"),
+				"start_date":      str("Start date, YYYY-MM-DD; an empty string clears it"),
+				"due_date":        str("Due date, YYYY-MM-DD; an empty string clears it"),
+				"duration_days":   str("How long the task runs, in whole working days counting its first and last; the task keeps it, so a start date sent alone moves the due date and a due date sent alone moves the start. \"0\" clears it"),
+				"effort_days":     str("The work in the task, in person-days (may be a decimal); \"0\" clears it"),
+				"parent_id":       str("Work item ID of the parent task; an empty string makes it a top-level task"),
+				"deadline":        str("The day the task should be finished by, YYYY-MM-DD; it moves nothing, and the plan flags a task that misses it. An empty string clears it"),
+				"elapsed":         str("\"true\" makes the duration count calendar days, weekends and holidays included (a cure, a delivery); \"false\" counts working days"),
+				"mode":            str("The task's own scheduling mode: \"manual\" (it stays where it is put), \"auto\" (the platform places it from its relationships and constraint), or an empty string to take the plan's"),
+				"constraint_type": str("A date constraint: \"asap\" (none), \"alap\" (as late as possible), \"snet\"/\"snlt\" (start no earlier/later than), \"fnet\"/\"fnlt\" (finish no earlier/later than), \"mso\"/\"mfo\" (must start/finish on). Every one but asap and alap needs constraint_date"),
+				"constraint_date": str("The constraint's date, YYYY-MM-DD"),
+				"milestone":       str("Key of the milestone the task is assigned to, as get_plan lists it (a milestone's id, or \"release:<release id>\"); an empty string takes it off. The milestone then counts the task among its tasks done"),
+				"relationships":   strList("The tasks that drive this one, each \"<work item id>:FS\", \":SS\", \":FF\" or \":SF\", with an optional offset after it as in \"<id>:SS:5\" (working days; negative leads), \"<id>:FS:3ed\" (elapsed days) or \"<id>:SS:50%\" (of the driving task's duration); replaces the task's relationships"),
+				"depends_on":      strList("Earlier form of relationships: work item IDs, each finish to start unless it already has a type"),
 			}),
 			Handler: scheduleWorkItem,
 		},
 		{
 			Name: "recalculate_plan",
-			Description: "Recalculate a project's plan: move each task that another task drives to the dates its relationships, " +
-				"with their offsets, ask for. A task keeps its duration; a task nothing drives, and a task that is done, stay " +
-				"where they are. Answers how many tasks moved. The platform never moves a task otherwise.",
+			Description: "Recalculate a project's plan: move each task that another task drives, or that a constraint holds to a " +
+				"date, to the dates those ask for. A task keeps its duration; a task nothing places, and a task that is done, stay " +
+				"where they are. Answers how many tasks moved. A manual plan's tasks move only on this call; an automatic " +
+				"plan's are placed after every change.",
 			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
 				"project_id": str("Project ID"),
+				"only_later": str("\"true\" treats relationships as minimums: a task already on or after the day asked is left where it is"),
 			}),
-			Handler: func(c *Client, args map[string]interface{}) (string, error) {
-				out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/recalculate", nil, nil)
-				return out, err
-			},
+			Handler: recalculatePlan,
 		},
-		{
-			Name: "set_plan_calendar",
-			Description: "Set a project's plan holidays and its critical threshold. holidays replaces the plan's days off " +
-				"(days it does not work whatever the weekday), each \"YYYY-MM-DD\" or \"YYYY-MM-DD:Name\"; " +
-				"critical_slack_days is the float, in working days, at or below which a task counts as critical (\"0\" by default). " +
-				"An argument left out stays as it is. Answers the working days, holidays and threshold as stored.",
-			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
-				"project_id":          str("Project ID"),
-				"holidays":            strList("The plan's holidays, each \"YYYY-MM-DD\" or \"YYYY-MM-DD:Name\"; an empty list clears them"),
-				"critical_slack_days": str("Float in working days at or below which a task is critical, \"0\" to \"365\""),
-			}),
-			Handler: setPlanCalendar,
-		},
+		planCalendarTool(),
 		{
 			Name: "set_plan_working_days",
 			Description: "Set which days of the week a project's plan works, as ISO weekday numbers from \"1\" (Monday) to \"7\" " +
@@ -110,7 +100,7 @@ func planTools() []Tool {
 // as the schedule route reads them.
 func scheduleWorkItem(c *Client, args map[string]interface{}) (string, error) {
 	body := map[string]interface{}{}
-	for _, key := range []string{"start_date", "due_date", "parent_id", "milestone", "deadline"} {
+	for _, key := range []string{"start_date", "due_date", "parent_id", "milestone", "deadline", "mode", "constraint_type", "constraint_date"} {
 		if _, set := args[key]; set {
 			body[key] = strArg(args, key)
 		}
@@ -174,6 +164,14 @@ func setPlanCalendar(c *Client, args map[string]interface{}) (string, error) {
 		}
 		body["holidays"] = holidays
 	}
+	for _, key := range []string{"scheduling_mode", "project_start", "project_finish", "schedule_from"} {
+		if _, set := args[key]; set {
+			body[key] = strArg(args, key)
+		}
+	}
+	if _, set := args["multiple_critical_paths"]; set {
+		body["multiple_critical_paths"] = strings.EqualFold(strings.TrimSpace(strArg(args, "multiple_critical_paths")), "true")
+	}
 	if _, set := args["critical_slack_days"]; set {
 		n, err := strconv.Atoi(strings.TrimSpace(strArg(args, "critical_slack_days")))
 		if err != nil {
@@ -183,4 +181,36 @@ func setPlanCalendar(c *Client, args map[string]interface{}) (string, error) {
 	}
 	out, _, err := c.request("PUT", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/settings", nil, body)
 	return out, err
+}
+
+// recalculatePlan is recalculate_plan's call.
+func recalculatePlan(c *Client, args map[string]interface{}) (string, error) {
+	body := map[string]interface{}{"only_later": strings.EqualFold(strings.TrimSpace(strArg(args, "only_later")), "true")}
+	out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/recalculate", nil, body)
+	return out, err
+}
+
+// planCalendarTool is set_plan_calendar: the plan's holidays, critical
+// threshold and scheduling settings.
+func planCalendarTool() Tool {
+	return Tool{
+		Name: "set_plan_calendar",
+		Description: "Set a project's plan holidays, its critical threshold and how it is scheduled. holidays replaces the " +
+			"plan's days off (days it does not work whatever the weekday), each \"YYYY-MM-DD\" or \"YYYY-MM-DD:Name\"; " +
+			"critical_slack_days is the float, in working days, at or below which a task counts as critical (\"0\" by default); " +
+			"scheduling_mode \"auto\" has the platform place every task from its relationships and constraints after each " +
+			"change, \"manual\" (the default) leaves tasks where they are put. An argument left out stays as it is. " +
+			"Answers every setting as stored.",
+		InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+			"project_id":              str("Project ID"),
+			"holidays":                strList("The plan's holidays, each \"YYYY-MM-DD\" or \"YYYY-MM-DD:Name\"; an empty list clears them"),
+			"critical_slack_days":     str("Float in working days at or below which a task is critical, \"0\" to \"365\""),
+			"scheduling_mode":         str("\"manual\" or \"auto\": the mode of every task that has none of its own"),
+			"project_start":           str("The day the plan starts, YYYY-MM-DD: an automatic task starts no earlier. An empty string clears it"),
+			"project_finish":          str("The day the plan must finish by, YYYY-MM-DD: float is counted to it. An empty string clears it"),
+			"schedule_from":           str("\"start\" (tasks as soon as possible) or \"finish\" (automatic tasks as late as possible)"),
+			"multiple_critical_paths": str("\"true\" gives each chain of tasks a critical path of its own, to its own last task"),
+		}),
+		Handler: setPlanCalendar,
+	}
 }

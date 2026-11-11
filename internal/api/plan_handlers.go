@@ -48,7 +48,7 @@ func writePlanError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, plan.ErrNameRequired), errors.Is(err, plan.ErrInvalidDate), errors.Is(err, plan.ErrDateOrder),
 		errors.Is(err, plan.ErrParentSelf), errors.Is(err, plan.ErrParentCycle), errors.Is(err, plan.ErrOtherProject),
 		errors.Is(err, plan.ErrDependsOnSelf), errors.Is(err, plan.ErrDependencyCycle), errors.Is(err, plan.ErrRelationshipType), errors.Is(err, plan.ErrInvalidDuration), errors.Is(err, plan.ErrInvalidEffort),
-		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrMilestone), errors.Is(err, plan.ErrInvalidLag), errors.Is(err, plan.ErrHoliday), errors.Is(err, plan.ErrCriticalSlack), errors.Is(err, plan.ErrUnknownMetric),
+		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrMilestone), errors.Is(err, plan.ErrInvalidLag), errors.Is(err, plan.ErrHoliday), errors.Is(err, plan.ErrCriticalSlack), errors.Is(err, plan.ErrSchedulingMode), errors.Is(err, plan.ErrConstraint), errors.Is(err, plan.ErrUnknownMetric),
 		errors.Is(err, plan.ErrInvalidTarget), errors.Is(err, plan.ErrTooManyCriteria), errors.Is(err, plan.ErrDuplicateMetric),
 		errors.Is(err, plan.ErrReleaseMilestone), errors.Is(err, plan.ErrUnsupportedFormat),
 		errors.Is(err, todos.ErrTextRequired), errors.Is(err, todos.ErrTextTooLong), errors.Is(err, todos.ErrParagraphs):
@@ -424,15 +424,24 @@ func (h *Handler) ListWorkItemTodos(w http.ResponseWriter, r *http.Request) {
 }
 
 // RecalculatePlan moves each task that another task drives to the dates its
-// relationships, with their offsets, ask for; a task nothing drives, and a
-// task that is done, stay where they are. It answers {"moved": n}, the
+// relationships, with their offsets, ask for, and each task a constraint
+// holds to a date to that date; a task nothing places, and a task that is
+// done, stay where they are. {"only_later": true} treats relationships as
+// minimums: a task already on or after the day asked is left alone. It answers {"moved": n}, the
 // number of tasks whose dates changed.
 func (h *Handler) RecalculatePlan(w http.ResponseWriter, r *http.Request) {
 	projectID := mux.Vars(r)["id"]
 	if !h.planReady(w, r, projectID, members.RoleEditor, true) {
 		return
 	}
-	moved, err := h.PlanService.Recalculate(projectID, Actor(r), time.Now())
+	var req struct {
+		OnlyLater bool `json:"only_later"`
+	}
+	// The body is optional: none means every placed task goes where it is asked.
+	if r.ContentLength != 0 && !decodeJSON(w, r, &req) {
+		return
+	}
+	moved, err := h.PlanService.Recalculate(projectID, Actor(r), req.OnlyLater, time.Now())
 	if err != nil {
 		writePlanError(w, r, err)
 		return

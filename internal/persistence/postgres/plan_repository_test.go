@@ -38,26 +38,40 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 	}
 	a, b, c := card("A"), card("B"), card("C")
 
-	if h, err := repo.Holidays(project); err != nil || len(h) != 0 {
-		t.Fatalf("no holidays yet: %v %v", h, err)
+	if set, err := repo.Settings(project); err != nil || set.WorkingDays != nil || len(set.Holidays) != 0 || set.Mode != plan.ModeManual || set.ScheduleFrom != plan.FromStart {
+		t.Fatalf("a project that never set its plan's settings has the defaults, and no working days stored: %+v %v", set, err)
 	}
-	if err := repo.SetHolidays(project, []plan.Holiday{{Date: "2027-12-27", Name: "Shutdown"}, {Date: "2027-01-01"}}); err != nil {
+	start0, finish0 := "2027-01-04", "2027-12-17"
+	want := plan.Settings{
+		WorkingDays:       []int{1, 7},
+		Holidays:          []plan.Holiday{{Date: "2027-12-27", Name: "Shutdown"}, {Date: "2027-01-01"}},
+		CriticalSlackDays: 3,
+		Scheduling:        plan.Scheduling{Mode: plan.ModeAuto, ProjectStart: &start0, ProjectFinish: &finish0, ScheduleFrom: plan.FromFinish, MultipleCriticalPaths: true},
+	}
+	if err := repo.SaveSettings(project, want); err != nil {
 		t.Fatal(err)
 	}
-	if h, _ := repo.Holidays(project); len(h) != 2 || h[0].Date != "2027-01-01" || h[1].Name != "Shutdown" {
+	set, err := repo.Settings(project)
+	if err != nil || len(set.WorkingDays) != 2 || set.WorkingDays[1] != 7 || set.CriticalSlackDays != 3 || set.Mode != plan.ModeAuto ||
+		*set.ProjectStart != start0 || *set.ProjectFinish != finish0 || set.ScheduleFrom != plan.FromFinish || !set.MultipleCriticalPaths {
+		t.Fatalf("settings: %+v %v", set, err)
+	}
+	if h := set.Holidays; len(h) != 2 || h[0].Date != "2027-01-01" || h[1].Name != "Shutdown" {
 		t.Fatalf("holidays in date order: %+v", h)
 	}
-	if err := repo.SetCriticalSlackDays(project, 3); err != nil {
+	// Saved again, they are replaced whole.
+	if err := repo.SaveSettings(project, plan.Settings{WorkingDays: []int{1, 2, 3, 4, 5}, Scheduling: plan.Scheduling{Mode: plan.ModeManual, ScheduleFrom: plan.FromStart}}); err != nil {
 		t.Fatal(err)
 	}
-	if n, err := repo.CriticalSlackDays(project); err != nil || n != 3 {
-		t.Fatalf("critical threshold: %d %v", n, err)
+	if set, _ := repo.Settings(project); len(set.Holidays) != 0 || set.ProjectStart != nil || set.Mode != plan.ModeManual || len(set.WorkingDays) != 5 {
+		t.Fatalf("settings replaced: %+v", set)
 	}
-	if err := repo.SetHolidays(project, nil); err != nil {
+	constraint := "2027-03-15"
+	if err := repo.SaveSchedule(&plan.TaskSchedule{WorkItemID: a, ProjectID: project, Mode: plan.ModeAuto, ConstraintType: plan.ConstraintSNET, ConstraintDate: &constraint}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := db.Exec(`DELETE FROM plan_settings WHERE project_id = $1`, project); err != nil {
-		t.Fatal(err)
+	if got, _ := repo.ListSchedules(project); len(got) != 1 || got[0].Mode != plan.ModeAuto || got[0].ConstraintType != plan.ConstraintSNET || *got[0].ConstraintDate != constraint {
+		t.Fatalf("mode and constraint: %+v", got)
 	}
 	deadline := "2027-06-30"
 	if err := repo.SaveSchedule(&plan.TaskSchedule{WorkItemID: a, ProjectID: project, Elapsed: true, Deadline: &deadline}); err != nil {
@@ -75,18 +89,6 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 	}
 	if _, err := db.Exec(`DELETE FROM plan_tasks WHERE work_item_id = $1`, a); err != nil {
 		t.Fatal(err)
-	}
-	if days, err := repo.WorkingDays(project); err != nil || days != nil {
-		t.Fatalf("a project that never set its working days has none stored: %v %v", days, err)
-	}
-	if err := repo.SetWorkingDays(project, []int{1, 2, 3, 4, 6}); err != nil {
-		t.Fatal(err)
-	}
-	if err := repo.SetWorkingDays(project, []int{7, 1}); err != nil {
-		t.Fatal(err)
-	}
-	if days, err := repo.WorkingDays(project); err != nil || len(days) != 2 || days[0] != 1 || days[1] != 7 {
-		t.Fatalf("working days: %v %v", days, err)
 	}
 	if list, err := repo.ListSchedules(project); err != nil || len(list) != 0 {
 		t.Fatalf("empty schedules: %v %v", list, err)
