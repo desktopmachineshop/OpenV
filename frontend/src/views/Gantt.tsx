@@ -75,6 +75,18 @@ const useFillHeight = (min: number): [React.RefObject<HTMLDivElement>, number] =
   return [ref, height];
 };
 
+/** A task opened in full, in the board's drawer, with the project's artifacts it may name. */
+const FullTask: React.FC<{ workItemId: string; projectId: string; onClose: () => void; onChanged: () => void; onDeleted: () => void }> = ({ projectId, ...drawer }) => {
+  const [artifactMap, setArtifactMap] = useState<Record<string, Artifact>>({});
+  useEffect(() => {
+    artifactAPI
+      .list(projectId)
+      .then((res) => setArtifactMap(Object.fromEntries((res.data || []).map((a) => [a.id, a]))))
+      .catch(() => setArtifactMap({}));
+  }, [projectId]);
+  return <WorkItemDrawer {...drawer} projectId={projectId} artifactMap={artifactMap} />;
+};
+
 const PlanPage: React.FC = () => {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const { isPhone, isCompact, coarsePointer, width } = useViewport();
@@ -91,14 +103,6 @@ const PlanPage: React.FC = () => {
   // The task opened in full, in the board's drawer, and the artifacts it names.
   const [note, setNote] = useState('');
   const [fullTaskId, setFullTaskId] = useState('');
-  const [artifactMap, setArtifactMap] = useState<Record<string, Artifact> | null>(null);
-  useEffect(() => {
-    if (!fullTaskId || artifactMap || !projectId) return;
-    artifactAPI
-      .list(projectId)
-      .then((res) => setArtifactMap(Object.fromEntries((res.data || []).map((a) => [a.id, a]))))
-      .catch(() => setArtifactMap({}));
-  }, [fullTaskId, artifactMap, projectId]);
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -233,10 +237,9 @@ const PlanPage: React.FC = () => {
   const close = () => setSelection(null);
   const openFull = (t: PlanTask) => setFullTaskId(t.id);
   const fullTask = fullTaskId ? (
-    <WorkItemDrawer
+    <FullTask
       workItemId={fullTaskId}
       projectId={projectId}
-      artifactMap={artifactMap || {}}
       onClose={() => setFullTaskId('')}
       onChanged={() => void load()}
       onDeleted={() => {
