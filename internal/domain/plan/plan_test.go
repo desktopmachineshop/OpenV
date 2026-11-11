@@ -872,3 +872,89 @@ func TestARelationshipIsMadeFromEitherEnd(t *testing.T) {
 		t.Fatalf("unrelate from the driver: %v %+v", err, repo.deps)
 	}
 }
+
+func TestATaskIsAssignedToAMilestoneAndCountsTowardIt(t *testing.T) {
+	in := Inputs{
+		WorkingDays: everyDay,
+		Items: []*workitems.WorkItem{
+			item("design", "Design", workitems.ColumnTodo, nil, 0),
+			item("d1", "Drive", workitems.ColumnDone, day("2027-03-05"), 1),
+			item("d2", "Guard", workitems.ColumnTodo, day("2027-03-20"), 2),
+			item("own", "Own", workitems.ColumnDone, day("2027-03-25"), 3),
+			item("free", "Free", workitems.ColumnTodo, day("2027-03-25"), 4),
+			item("lost", "Lost", workitems.ColumnTodo, day("2027-03-25"), 5),
+		},
+		Schedules: []*TaskSchedule{
+			// A folder on a milestone puts its sub-tasks on it; one of them is on another.
+			{WorkItemID: "design", MilestoneKey: sp("m1")},
+			{WorkItemID: "d1", ParentID: sp("design")},
+			{WorkItemID: "d2", ParentID: sp("design")},
+			{WorkItemID: "own", ParentID: sp("design"), MilestoneKey: sp("m2")},
+			// A milestone that has gone is no milestone.
+			{WorkItemID: "lost", MilestoneKey: sp("deleted")},
+		},
+		Milestones: []*Milestone{
+			{ID: "m1", ProjectID: "p", Name: "Review", TargetDate: sp("2027-03-21"), Criteria: []Criterion{{MetricNeedsAddressed, 100}}},
+			{ID: "m2", ProjectID: "p", Name: "Ship", TargetDate: sp("2027-04-01"), Criteria: []Criterion{{MetricMilestoneTasks, 50}}},
+			{ID: "m3", ProjectID: "p", Name: "Later", Criteria: []Criterion{}},
+		},
+	}
+	p := Build(in, now)
+	ms := map[string]MilestoneProgress{}
+	for _, m := range p.Milestones {
+		ms[m.Key] = m
+	}
+	if got := ms["m1"].Tasks; len(got) != 2 || got[0] != "d1" || got[1] != "d2" {
+		t.Fatalf("m1 counts the folder's sub-tasks left on it, not the folder: %v", got)
+	}
+	// m1's tasks join its criteria unasked: one of two done.
+	c := ms["m1"].Criteria
+	if len(c) != 2 || c[1].Metric != MetricMilestoneTasks || c[1].Count != 1 || c[1].Total != 2 || c[1].Target != 100 || ms["m1"].Met {
+		t.Fatalf("m1 criteria: %+v", c)
+	}
+	// m2 names the metric itself, with its own target.
+	if c := ms["m2"].Criteria; len(c) != 1 || c[0].Target != 50 || c[0].Count != 1 || c[0].Total != 1 || !ms["m2"].Met || ms["m2"].Progress != 100 {
+		t.Fatalf("m2 criteria: %+v", c)
+	}
+	if m := ms["m3"]; len(m.Criteria) != 0 || len(m.Tasks) != 0 {
+		t.Fatalf("a milestone with no tasks gains no criterion: %+v", m)
+	}
+	if d := task(p, "d2"); d.Milestone == nil || *d.Milestone != "m1" || !d.MilestoneInherited {
+		t.Fatalf("a sub-task takes its folder's milestone: %+v", d)
+	}
+	if o := task(p, "own"); *o.Milestone != "m2" || o.MilestoneInherited {
+		t.Fatalf("its own milestone wins: %+v", o)
+	}
+	if task(p, "free").Milestone != nil || task(p, "lost").Milestone != nil {
+		t.Fatalf("no milestone, and one that has gone, are both none")
+	}
+	for _, v := range p.Metrics {
+		if v.Metric == MetricMilestoneTasks && (v.Count != 2 || v.Total != 3) {
+			t.Fatalf("across the plan: %+v", v)
+		}
+	}
+}
+
+func TestScheduleAssignsAMilestoneOfTheSameProject(t *testing.T) {
+	svc, repo, _, _ := newService()
+	repo.milestones["m1"] = &Milestone{ID: "m1", ProjectID: "p", Name: "Review"}
+	repo.milestones["far"] = &Milestone{ID: "far", ProjectID: "other", Name: "Elsewhere"}
+	if err := svc.Schedule("a", ScheduleRequest{Milestone: sp("m1")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if got := repo.schedules["a"].MilestoneKey; got == nil || *got != "m1" {
+		t.Fatalf("assigned: %v", got)
+	}
+	// A request that names no milestone leaves it.
+	if err := svc.Schedule("a", ScheduleRequest{StartDate: sp("2027-03-08")}, "tester"); err != nil || repo.schedules["a"].MilestoneKey == nil {
+		t.Fatalf("kept: %v %v", err, repo.schedules["a"].MilestoneKey)
+	}
+	for _, key := range []string{"far", "nowhere", "release:none"} {
+		if err := svc.Schedule("a", ScheduleRequest{Milestone: sp(key)}, "tester"); !errors.Is(err, ErrMilestone) {
+			t.Fatalf("%s: %v", key, err)
+		}
+	}
+	if err := svc.Schedule("a", ScheduleRequest{Milestone: sp("")}, "tester"); err != nil || repo.schedules["a"].MilestoneKey != nil {
+		t.Fatalf("cleared: %v %v", err, repo.schedules["a"].MilestoneKey)
+	}
+}

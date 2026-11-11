@@ -46,12 +46,13 @@ func planTools() []Tool {
 				"duration_days": str("How long the task runs, in whole working days counting its first and last; the task keeps it, so a start date sent alone moves the due date and a due date sent alone moves the start. \"0\" clears it"),
 				"effort_days":   str("The work in the task, in person-days (may be a decimal); \"0\" clears it"),
 				"parent_id":     str("Work item ID of the parent task; an empty string makes it a top-level task"),
+				"milestone":     str("Key of the milestone the task is assigned to, as get_plan lists it (a milestone's id, or \"release:<release id>\"); an empty string takes it off. The milestone then counts the task among its tasks done"),
 				"relationships": strList("The tasks that drive this one, each \"<work item id>:FS\", \":SS\" or \":FF\"; replaces the task's relationships"),
 				"depends_on":    strList("Earlier form of relationships: work item IDs, each finish to start unless it already has a type"),
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
 				body := map[string]interface{}{}
-				for _, key := range []string{"start_date", "due_date", "parent_id"} {
+				for _, key := range []string{"start_date", "due_date", "parent_id", "milestone"} {
 					if _, set := args[key]; set {
 						body[key] = strArg(args, key)
 					}

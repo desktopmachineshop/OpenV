@@ -31,6 +31,9 @@ import (
 //     plan reports each task's float and marks the critical path;
 //   - a relationship is made, retyped, turned round and removed from either
 //     task; a task with sub-tasks takes no dates of its own (400);
+//   - a task is assigned to a milestone or to a release's, and taken off
+//     it; the milestone then counts its tasks done among its criteria;
+//     another project's milestone or release is a 400;
 //   - the plan's working days are set (Monday to Saturday), and durations
 //     and float count them; none, or a day 8, is a 400;
 //   - a to-do raised on a task is the project's, takes one date (its
@@ -163,7 +166,13 @@ func planTour(tr *tour) {
 	update := "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}"
 	tr.step("Kick-off gets a date; its name stays", o, update, at("id", "{{p}}", "milestoneId", "{{m2}}"), jsonBody(`{"target_date":"2099-01-05"}`))
 	tr.step("Q's milestone through P: 404", o, update, at("id", "{{p}}", "milestoneId", "{{q_m}}"), jsonBody(`{"name":"x"}`))
-	tr.step("the plan with MVP on its default criteria", viewer, plan, at("id", "{{p}}"))
+	tr.step("Wiring assigned to Definition complete", o, schedule, at("id", "{{wiring}}"), jsonBody(`{"milestone":"{{m1}}"}`))
+	tr.step("Order assigned to MVP, a release's milestone", o, schedule, at("id", "{{order}}"), jsonBody(`{"milestone":"release:{{mvp}}"}`))
+	tr.step("Q's milestone: 400", o, schedule, at("id", "{{order}}"), jsonBody(`{"milestone":"{{q_m}}"}`))
+	tr.step("Q's release: 400", o, schedule, at("id", "{{order}}"), jsonBody(`{"milestone":"release:{{q_mvp}}"}`))
+	tr.step("Frame assigned and taken off again", o, schedule, at("id", "{{frame}}"), jsonBody(`{"milestone":"{{m2}}"}`))
+	tr.setup("Frame off its milestone", o, schedule, at("id", "{{frame}}"), jsonBody(`{"milestone":""}`))
+	tr.step("the plan with MVP on its default criteria, and each milestone counting its tasks", viewer, plan, at("id", "{{p}}"))
 
 	criteria := "PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}"
 	tr.step("MVP's own criteria: requirements approved, 80%", o, criteria, at("id", "{{p}}", "releaseId", "{{mvp}}"),

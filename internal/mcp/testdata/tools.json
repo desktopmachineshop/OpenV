@@ -766,6 +766,10 @@
             "type": "string"
           },
           "id": {"description": "Work item ID", "type": "string"},
+          "milestone": {
+            "description": "Key of the milestone the task is assigned to, as get_plan lists it (a milestone's id, or \"release:<release id>\"); an empty string takes it off. The milestone then counts the task among its tasks done",
+            "type": "string"
+          },
           "parent_id": {
             "description": "Work item ID of the parent task; an empty string makes it a top-level task",
             "type": "string"
@@ -785,7 +789,7 @@
       },
       "calls": ["PUT /api/v1/work-items/{id}/schedule"],
       "requests": [
-        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"duration_days\":21,\"effort_days\":7.5,\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"relationships\":[{\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"\"}],\"start_date\":\"2027-01-11\"}"
+        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"duration_days\":21,\"effort_days\":7.5,\"milestone\":\"release:99999999-9999-4999-8999-999999999999\",\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"relationships\":[{\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"\"}],\"start_date\":\"2027-01-11\"}"
       ]
     },
     {

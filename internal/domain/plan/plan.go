@@ -52,6 +52,7 @@ var (
 	ErrInvalidDuration   = errors.New("a duration is a whole number of days, 1 or more")
 	ErrInvalidEffort     = errors.New("effort is a number of days, 0 or more")
 	ErrWorkingDays       = errors.New("working days are weekday numbers from 1 (Monday) to 7 (Sunday), at least one")
+	ErrMilestone         = errors.New("the milestone is not one of this project's")
 	ErrParentDates       = errors.New("a task with sub-tasks takes its dates, duration and effort from them")
 	ErrRelationshipType  = errors.New("a relationship is FS (finish to start), SS (start to start) or FF (finish to finish)")
 	ErrUnknownMetric     = errors.New("unknown criterion metric")
@@ -77,6 +78,9 @@ type TaskSchedule struct {
 	DurationDays *int
 	// EffortDays is the work in the task, in person-days.
 	EffortDays *float64
+	// MilestoneKey is the milestone the task is assigned to, by the key the
+	// plan gives it: a stored milestone's id, or "release:<id>".
+	MilestoneKey *string
 }
 
 // The types of a relationship between two tasks, as a Gantt names them.
@@ -157,11 +161,14 @@ type MilestoneRequest struct {
 // dates sent together set the duration to what they span. A DurationDays or
 // EffortDays of 0 clears it.
 type ScheduleRequest struct {
-	StartDate     *string         `json:"start_date"`
-	DueDate       *string         `json:"due_date"`
-	DurationDays  *int            `json:"duration_days"`
-	EffortDays    *float64        `json:"effort_days"`
-	ParentID      *string         `json:"parent_id"`
+	StartDate    *string  `json:"start_date"`
+	DueDate      *string  `json:"due_date"`
+	DurationDays *int     `json:"duration_days"`
+	EffortDays   *float64 `json:"effort_days"`
+	ParentID     *string  `json:"parent_id"`
+	// Milestone is the key of the milestone the task is assigned to; empty
+	// takes it off its milestone.
+	Milestone     *string         `json:"milestone"`
 	DependsOn     *[]string       `json:"depends_on"`
 	Relationships *[]Relationship `json:"relationships"`
 }
@@ -359,8 +366,12 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 		}
 	}
 
+	milestone, err := s.milestoneKey(item.ProjectID, current.MilestoneKey, req.Milestone)
+	if err != nil {
+		return err
+	}
 	if err := s.repo.SaveSchedule(&TaskSchedule{WorkItemID: item.ID, ProjectID: item.ProjectID, StartDate: start, ParentID: parent,
-		DurationDays: duration, EffortDays: effort}); err != nil {
+		DurationDays: duration, EffortDays: effort, MilestoneKey: milestone}); err != nil {
 		return err
 	}
 	if setRelationships {
@@ -388,6 +399,38 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 	}
 	return nil
 }
+
+// milestoneKey is the milestone a schedule request leaves a task on: the one
+// it had when the request names none, none when it names the empty key, and
+// otherwise the one named, which must be a milestone or a release of the
+// task's project.
+func (s *DefaultService) milestoneKey(projectID string, current, want *string) (*string, error) {
+	if want == nil {
+		return current, nil
+	}
+	key := strings.TrimSpace(*want)
+	if key == "" {
+		return nil, nil
+	}
+	if id, ok := strings.CutPrefix(key, releaseKeyPrefix); ok {
+		if s.releases == nil {
+			return nil, ErrMilestone
+		}
+		rel, err := s.releases.Get(id)
+		if err != nil || rel == nil || rel.ProjectID != projectID {
+			return nil, ErrMilestone
+		}
+		return &key, nil
+	}
+	m, err := s.repo.GetMilestone(key)
+	if err != nil || m == nil || m.ProjectID != projectID || m.ReleaseID != nil {
+		return nil, ErrMilestone
+	}
+	return &key, nil
+}
+
+// releaseKeyPrefix begins the plan's key of a release's milestone.
+const releaseKeyPrefix = "release:"
 
 // placeTask works out a task's start, due date, duration and effort from a
 // request. A task with sub-tasks is a folder for them: its dates, duration
