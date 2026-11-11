@@ -31,15 +31,14 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
-import { GanttChart } from '../components/plan/GanttChart';
-import { ZOOMS, Zoom, fitZoom } from '../components/plan/ganttScale';
+import { Zoom, fitZoom } from '../components/plan/ganttScale';
 import { MilestonePanel } from '../components/plan/MilestonePanel';
 import { AddMilestoneForm, AddTaskForm, ExportControl, NewTask } from '../components/plan/PlanForms';
 import { PlanPhone } from '../components/plan/PlanPhone';
+import { PlanChartPanel } from '../components/plan/PlanChartPanel';
 import { TaskPanel } from '../components/plan/TaskPanel';
-import { WorkingDays } from '../components/plan/WorkingDays';
 import type { RelationshipView } from '../components/plan/planModel';
-import { ErrorBanner, FeatureGate, PanelHeader, SegmentedControl, Sheet, buttonStyle, mutedStyle, pageType, panelStyle, useConfirm } from '../components/ui';
+import { ErrorBanner, FeatureGate, Sheet, buttonStyle, mutedStyle, pageType, useConfirm } from '../components/ui';
 import { GANTT_PLAN_FEATURE } from '../features';
 import { useViewport } from '../hooks/useViewport';
 
@@ -89,8 +88,6 @@ const PlanPage: React.FC = () => {
   const [zoom, setZoom] = useState<Zoom | null>(null);
   const [adding, setAdding] = useState<'task' | 'milestone' | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
-  const [showCritical, setShowCritical] = useState(true);
-  const [todaySignal, setTodaySignal] = useState(0);
   // The task opened in full, in the board's drawer, and the artifacts it names.
   const [fullTaskId, setFullTaskId] = useState('');
   const [artifactMap, setArtifactMap] = useState<Record<string, Artifact> | null>(null);
@@ -308,7 +305,6 @@ const PlanPage: React.FC = () => {
   }
 
   const s = plan.summary;
-  const undated = plan.milestones.filter((m) => !m.date);
   return (
     <div style={{ ...pageType(false), padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px 20px', flexWrap: 'wrap' }}>
@@ -327,69 +323,23 @@ const PlanPage: React.FC = () => {
       {errorBanner}
       {forms}
       <div ref={fill} style={{ display: 'flex', gap: 12, alignItems: 'stretch', height: fillHeight }}>
-        <section aria-label="Plan" style={{ ...panelStyle, flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-          <PanelHeader
-            title="Plan"
-            action={
-              <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                <WorkingDays
-                  days={plan.working_days}
-                  busy={busy}
-                  onChange={(days) => run(() => planAPI.setWorkingDays(projectId, days), 'Failed to set the working days')}
-                />
-                <button
-                  type="button"
-                  aria-pressed={showCritical}
-                  onClick={() => setShowCritical((on) => !on)}
-                  data-help-key="gantt.critical"
-                  title="Mark the chain of tasks that decides when the plan ends, and show each task's float after its bar"
-                  style={{
-                    ...buttonStyle('secondary', { compact: true }),
-                    ...(showCritical ? { background: 'var(--tint-yellow)', borderColor: 'var(--tint-yellow-border)', color: 'var(--warning-text)' } : {}),
-                  }}
-                >
-                  <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--warning)' }} />
-                  Critical path
-                </button>
-                <button type="button" onClick={() => setTodaySignal((n) => n + 1)} style={buttonStyle('secondary', { compact: true })}>
-                  Today
-                </button>
-                <SegmentedControl aria-label="Zoom" options={ZOOMS} value={zoom || 'weeks'} onChange={setZoom} style={{ fontSize: 12 }} />
-              </span>
-            }
-          />
-          <GanttChart
-            plan={plan}
-            zoom={zoom || 'weeks'}
-            outlineWidth={isCompact ? 220 : 320}
-            selectedTaskId={selectedTask?.id || ''}
-            selectedMilestoneKey={selectedMilestone?.key || ''}
-            onSelectTask={openTask}
-            onOpenTask={openFull}
-            onSelectMilestone={openMilestone}
-            onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
-            onLink={coarsePointer ? undefined : relate}
-            onAddTask={(title) => addTask({ title, start: '', end: '' }, undefined, true)}
-            busy={busy}
-            touch={coarsePointer}
-            showCritical={showCritical}
-            todaySignal={todaySignal}
-          />
-          {undated.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', borderTop: '1px solid var(--border-soft)' }}>
-              <span style={mutedStyle}>No date yet:</span>
-              {undated.map((m) => (
-                <button key={m.key} type="button" onClick={() => openMilestone(m)} style={buttonStyle('secondary', { compact: true })}>
-                  ◆ {m.name} · {m.progress}%
-                </button>
-              ))}
-            </div>
-          )}
-          <p style={{ ...mutedStyle, margin: 0, padding: '8px 12px', borderTop: '1px solid var(--border-soft)' }}>
-            A task's bar fills as its to-dos are ticked off and its sub-tasks finish. A milestone's band fills as its
-            criteria are met. {coarsePointer ? 'Select a task to set its dates.' : 'Drag a bar to move it or an end to resize it, drag the + at an end to another bar to link them, and click or drag across the row of a task with no dates to schedule it. Drag the empty timeline to scroll.'}
-          </p>
-        </section>
+        <PlanChartPanel
+          plan={plan}
+          zoom={zoom || 'weeks'}
+          onZoom={setZoom}
+          onWorkingDays={(days) => run(() => planAPI.setWorkingDays(projectId, days), 'Failed to set the working days')}
+          outlineWidth={isCompact ? 220 : 320}
+          selectedTaskId={selectedTask?.id || ''}
+          selectedMilestoneKey={selectedMilestone?.key || ''}
+          onSelectTask={openTask}
+          onOpenTask={openFull}
+          onSelectMilestone={openMilestone}
+          onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
+          onLink={coarsePointer ? undefined : relate}
+          onAddTask={(title) => addTask({ title, start: '', end: '' }, undefined, true)}
+          busy={busy}
+          touch={coarsePointer}
+        />
         {panel && !isCompact && (
           <div data-plan-side style={{ width: 340, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>{panel}</div>
         )}
