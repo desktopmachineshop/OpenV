@@ -101,6 +101,30 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 	if rows, _ := repo.ListSchedules(project); len(rows) == 0 || rows[0].SortOrder == nil || *rows[0].SortOrder != 2 {
 		t.Fatalf("a task's place: %+v", rows)
 	}
+	// A link to a task of another project is listed from both ends.
+	otherProject, otherTask := "33333333-3333-4333-8333-333333333333", ""
+	seedProjects(t, db, otherProject)
+	if err := db.QueryRow(`INSERT INTO work_items (id, project_id, title, due_date) VALUES (gen_random_uuid(), $1, 'Their task', '2027-04-02') RETURNING id`, otherProject).Scan(&otherTask); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.SaveExternalLink(a, otherTask, "SS", 3, "d"); err != nil {
+		t.Fatal(err)
+	}
+	mine, _ := repo.ListExternalLinks(project)
+	theirs, _ := repo.ListExternalLinks(otherProject)
+	if len(mine) != 1 || mine[0].LocalID != a || mine[0].TaskID != otherTask || mine[0].ProjectName == "" || mine[0].ProjectID != otherProject || mine[0].Direction != plan.ExternalDrivenBy ||
+		mine[0].Type != "SS" || mine[0].LagDays != 3 || mine[0].End == nil || *mine[0].End != "2027-04-02" || *mine[0].Start != "2027-04-02" {
+		t.Fatalf("the link from here: %+v", mine)
+	}
+	if len(theirs) != 1 || theirs[0].LocalID != otherTask || theirs[0].TaskID != a || theirs[0].Direction != plan.ExternalDrives {
+		t.Fatalf("the link from there: %+v", theirs)
+	}
+	if err := repo.DeleteExternalLink(otherTask, a); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.DeleteExternalLink(a, otherTask); err != plan.ErrNotFound {
+		t.Fatalf("removed twice: %v", err)
+	}
 	started, pct, spent := "2027-03-01", 40, 120.5
 	if err := repo.SaveSchedule(&plan.TaskSchedule{WorkItemID: a, ProjectID: project, ActualStart: &started, PercentComplete: &pct, ActualCost: &spent}); err != nil {
 		t.Fatal(err)

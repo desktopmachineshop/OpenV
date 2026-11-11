@@ -73,6 +73,7 @@ const task = (id: string, title: string, extra: Partial<PlanTask> = {}): PlanTas
   relationships: [],
   drives: [],
   conflicts: [],
+  external_links: [],
   ...extra,
 });
 

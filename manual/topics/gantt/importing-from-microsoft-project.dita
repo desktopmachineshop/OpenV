@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="importing-from-microsoft-project">
+  <title>Importing from Microsoft Project</title>
+  <conbody>
+    <p><b>Import</b>, beside Export, reads a Microsoft Project XML file (in Project: <i>Save as</i>, <i>XML format</i>) and adds its tasks to this project. Each task becomes a card on the board, in To Do, In Progress or Done by its percentage complete, with its dates, its place in the outline, its date constraint and its deadline. A task of no length marked as a milestone becomes a milestone, and the relationships between the tasks follow with their offsets. Resources and calendars are not read. Importing adds to the plan; it replaces nothing, so importing a file twice adds its tasks twice.</p>
+  </conbody>
+</concept>

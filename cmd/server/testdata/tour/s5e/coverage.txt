@@ -51,6 +51,7 @@ DELETE /api/v1/test-results/{id}/citations/{bundleId}: 401, 404; phantom_matrix 
 DELETE /api/v1/test-runs/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/todos/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/work-items/{id}: 401, 404; phantom_matrix (errors only)
+DELETE /api/v1/work-items/{id}/external-links/{otherId}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/work-items/{id}/relationships/{otherId}: 401, 404; phantom_matrix (errors only)
 DELETE /mcp: 405; phantom_matrix (errors only)
 GET /.well-known/oauth-authorization-server: 200; phantom_matrix
@@ -139,6 +140,7 @@ GET /api/v1/orgs/{id}/teams: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/orgs/{id}/usage: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/orgs/{id}/worker-keys: 200, 401, 403, 404; phantom_matrix, real_id_reads
 GET /api/v1/orgs/{id}/worker-status: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/plan/master: 200, 401; phantom_matrix
 GET /api/v1/projects: 200, 401; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/ai-map: 200, 401, 404; over_plan_tiers_on, phantom_matrix, real_id_reads
@@ -299,6 +301,7 @@ POST /api/v1/projects/{id}/evidence-bundles: 400, 401, 403, 404; phantom_matrix,
 POST /api/v1/projects/{id}/interviews: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/members: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/plan/baselines: 401, 404; phantom_matrix (errors only)
+POST /api/v1/projects/{id}/plan/import: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/plan/level: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/plan/milestones: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/plan/recalculate: 401, 404; phantom_matrix (errors only)
@@ -393,7 +396,8 @@ PUT /api/v1/shared-products/{id}/vote: 401, 403, 404; phantom_matrix (errors onl
 PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/todos/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+PUT /api/v1/work-items/{id}/external-links/{otherId}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/work-items/{id}/relationships/{otherId}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/work-items/{id}/schedule: 401, 404; phantom_matrix (errors only)
 
-s5e: 383 of 384 routes reached (99.7%), 173 with a 2xx or 3xx answer (45.1%)
+s5e: 387 of 388 routes reached (99.7%), 174 with a 2xx or 3xx answer (44.8%)

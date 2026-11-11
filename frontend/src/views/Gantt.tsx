@@ -90,6 +90,12 @@ const FullTask: React.FC<{ workItemId: string; projectId: string; onClose: () =>
   return <WorkItemDrawer {...drawer} projectId={projectId} artifactMap={artifactMap} />;
 };
 
+/** Adds a Microsoft Project file's tasks to the plan; answers what to tell the user. */
+const importPlan = async (projectId: string, file: File): Promise<string> => {
+  const n = (await planAPI.importMSProject(projectId, file)).data;
+  return `Imported ${n.tasks} ${n.tasks === 1 ? 'task' : 'tasks'}, ${n.milestones} ${n.milestones === 1 ? 'milestone' : 'milestones'} and ${n.relationships} ${n.relationships === 1 ? 'relationship' : 'relationships'}.`;
+};
+
 /** Levels the plan; answers what to tell the user. */
 const levelPlan = async (projectId: string): Promise<string> => {
   const n = (await planAPI.level(projectId)).data.moved;
@@ -285,7 +291,7 @@ const PlanPage: React.FC = () => {
           Add milestone
         </button>
       )}
-      <ExportControl busy={exporting} onExport={exportPlan} />
+      <ExportControl busy={exporting} onExport={exportPlan} onImport={(file) => run(async () => setNote(await importPlan(projectId, file)), 'Failed to import the plan')} />
     </div>
   );
   const forms = (
@@ -302,6 +308,7 @@ const PlanPage: React.FC = () => {
       editable
       busy={busy}
       onSchedule={schedule}
+      onReload={() => void load()}
       onRelate={(t, otherId, view, lagDays, lagUnit) => relate(t.id, otherId, view, lagDays, lagUnit)}
       onUnrelate={(t, otherId) => run(() => planAPI.unrelate(t.id, otherId), 'Failed to remove the relationship')}
       onAddSubtask={(t, title) => addTask({ title, start: '', end: '' }, t.id)}

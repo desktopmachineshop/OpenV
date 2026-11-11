@@ -8,6 +8,7 @@ import { Link } from 'react-router-dom';
 import type { PlanScheduleInput, PlanTask, ProjectPlan } from '../../api/client';
 import { Chip, Meter, PanelHeader, Picker, buttonStyle, eyebrowStyle, mutedStyle, panelStyle, type PickerOption } from '../ui';
 import { shortDate, spanLabel } from './ganttScale';
+import { TaskExternalLinks } from './TaskExternalLinks';
 import { TaskRelationships, type TaskRelationshipsProps } from './TaskRelationships';
 import { TaskResources } from './TaskResources';
 import { TaskScheduling } from './TaskScheduling';
@@ -53,6 +54,8 @@ export interface TaskPanelProps {
   onSchedule: (task: PlanTask, change: PlanScheduleInput) => void;
   onRelate: TaskRelationshipsProps['onRelate'];
   onUnrelate: TaskRelationshipsProps['onUnrelate'];
+  /** Reads the plan again, after a link to another project's task changes. */
+  onReload?: () => void;
   onAddSubtask: (task: PlanTask, title: string) => void;
   onAddTodo: (task: PlanTask, text: string, dueDate: string) => void;
   onTickTodo: (todoId: string, done: boolean) => void;
@@ -309,6 +312,7 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
   onSchedule,
   onRelate,
   onUnrelate,
+  onReload,
   onAddSubtask,
   onAddTodo,
   onTickTodo,
@@ -451,6 +455,7 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
       </div>
 
       <TaskRelationships plan={plan} task={task} editable={editable} busy={busy} onRelate={onRelate} onUnrelate={onUnrelate} onSelectTask={onSelectTask} />
+      {onReload && <TaskExternalLinks plan={plan} task={task} editable={editable} busy={busy} onChanged={onReload} />}
 
       <Todos plan={plan} task={task} editable={editable} busy={busy} onAddTodo={onAddTodo} onTickTodo={onTickTodo} />
 

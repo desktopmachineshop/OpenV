@@ -156,6 +156,8 @@ type Task struct {
 	// Conflicts are the tasks this one depends on that finish on or after
 	// the day it starts.
 	Conflicts []string `json:"conflicts"`
+	// ExternalLinks are the task's relationships to tasks of other projects.
+	ExternalLinks []ExternalLink `json:"external_links"`
 
 	fraction float64
 }
@@ -272,6 +274,8 @@ type Inputs struct {
 	Todos        []*todos.Todo
 	Schedules    []*TaskSchedule
 	Dependencies []Dependency
+	// External are the project's links to tasks of other projects.
+	External []ExternalLink
 	// TodoTasks maps an attached to-do to its task.
 	TodoTasks map[string]string
 	// WorkingDays are the plan's working days as ISO weekday numbers; nil
@@ -328,6 +332,9 @@ func (s *DefaultService) Plan(projectID string, ev Evidence, now time.Time) (*Pl
 	in.WorkingDays, in.Holidays, in.CriticalSlackDays, in.Scheduling = set.WorkingDays, set.Holidays, set.CriticalSlackDays, set.Scheduling
 	in.Currency, in.Budget, in.Tracking = set.Currency, set.Budget, set.Tracking
 	if in.Baselines, err = s.repo.ListBaselines(projectID); err != nil {
+		return nil, err
+	}
+	if in.External, err = s.repo.ListExternalLinks(projectID); err != nil {
 		return nil, err
 	}
 	if in.Assignments, err = s.repo.ListAssignments(projectID); err != nil {
@@ -406,6 +413,7 @@ func Build(in Inputs, now time.Time) *Plan {
 	}
 	b.outline(p, b.roots, 0, "")
 	b.dependencies(p)
+	b.external()
 	b.criticalPath(p)
 	b.summary(p)
 	b.resources(p)
@@ -473,7 +481,7 @@ func (b *builder) tasks() {
 		}
 		b.byID[it.ID] = &Task{ID: it.ID, Title: it.Title, Column: it.Column, AssigneeType: it.AssigneeType, AssigneeID: it.AssigneeID,
 			End: dayOf(it.DueDate), Done: it.Column == workitems.ColumnDone,
-			Todos: []TaskTodo{}, DependsOn: []string{}, Relationships: []TaskRelationship{}, Drives: []TaskRelationship{}, Conflicts: []string{}}
+			Todos: []TaskTodo{}, ExternalLinks: []ExternalLink{}, DependsOn: []string{}, Relationships: []TaskRelationship{}, Drives: []TaskRelationship{}, Conflicts: []string{}}
 		b.created[it.ID] = it.CreatedAt
 	}
 	mode := b.in.Scheduling.Mode

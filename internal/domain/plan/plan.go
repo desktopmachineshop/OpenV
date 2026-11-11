@@ -56,6 +56,8 @@ var (
 	ErrResource          = errors.New("a resource is a user or an agent with a daily rate of 0 or more and a capacity of 1 to 1000 percent")
 	ErrInvalidCost       = errors.New("a cost or a budget is 0 or more, and a currency is at most three letters")
 	ErrTooManyBaselines  = errors.New("a plan keeps at most 11 baselines")
+	ErrSameProject       = errors.New("the two tasks are in the same project: relate them on its plan")
+	ErrImport            = errors.New("the file is not a Microsoft Project XML plan this can read")
 	ErrPosition          = errors.New("a task is placed after one of its sibling tasks")
 	ErrPercent           = errors.New("a percentage complete is a whole number from 0 to 100, or -1 to go back to the computed one")
 	ErrSchedulingMode    = errors.New("a scheduling mode is manual or auto, and a plan is scheduled from its start or its finish")
@@ -268,6 +270,12 @@ type Repository interface {
 	// ListBaselines lists the project's baselines with their tasks, oldest
 	// first; DeleteBaseline answers ErrNotFound for one it has not.
 	ListBaselines(projectID string) ([]*Baseline, error)
+	// ListExternalLinks lists the project's links to tasks of other
+	// projects, both ways round; DeleteExternalLink answers ErrNotFound
+	// for a pair that has none.
+	ListExternalLinks(projectID string) ([]ExternalLink, error)
+	SaveExternalLink(taskID, dependsOnID, kind string, lagDays int, lagUnit string) error
+	DeleteExternalLink(taskID, otherID string) error
 	// SetOrder numbers tasks among their siblings: work item id to place,
 	// where 0 clears it.
 	SetOrder(projectID string, order map[string]int) error
@@ -292,6 +300,7 @@ type Board interface {
 	Get(id string) (*workitems.WorkItem, error)
 	ListByProject(projectID string) ([]*workitems.WorkItem, error)
 	Update(id string, req workitems.UpdateWorkItemRequest, actor string) (*workitems.WorkItem, error)
+	Create(req workitems.CreateWorkItemRequest, createdBy *string, actor string) (*workitems.WorkItem, error)
 }
 
 // TodoStore is the part of the to-do service the plan uses.
@@ -337,6 +346,13 @@ type Service interface {
 	// RescheduleRemaining moves unstarted work that should have started
 	// by the status date to that date, and answers how many tasks moved.
 	RescheduleRemaining(projectID, actor string, now time.Time) (int, error)
+	// RelateExternal makes a task driven by a task of another project;
+	// UnrelateExternal removes the link, whichever way round.
+	RelateExternal(taskID, otherID, kind string, lagDays int, lagUnit, actor string) error
+	UnrelateExternal(taskID, otherID string) error
+	// ImportMSProject adds the tasks, milestones and relationships of a
+	// Microsoft Project XML file to the project.
+	ImportMSProject(projectID string, data []byte, createdBy *string, actor string) (ImportResult, error)
 	// Unrelate removes the relationship between two tasks, whichever way
 	// it runs.
 	Unrelate(taskID, otherID string) error

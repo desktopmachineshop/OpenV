@@ -20,6 +20,7 @@ import type {
   Party,
   PlanExportFormat,
   PlanMilestoneInput,
+  MasterPlan,
   PlanBaselineInfo,
   PlanLagUnit,
   PlanRelationshipDirection,
@@ -205,7 +206,7 @@ export const todosAPI = {
   remove: (id: string) => client.delete(`/api/v1/todos/${id}`),
 };
 
-const PLAN_EXTENSION: Record<PlanExportFormat, string> = { pdf: 'pdf', excel: 'xlsx', csv: 'csv', json: 'json' };
+const PLAN_EXTENSION: Record<PlanExportFormat, string> = { pdf: 'pdf', excel: 'xlsx', csv: 'csv', msproject: 'xml', json: 'json' };
 
 /** The project plan, the Gantt over the board: its read, edits and export. */
 export const planAPI = {
@@ -229,6 +230,15 @@ export const planAPI = {
   /** What a day of a person's or an agent's time costs, and the share of a day they can give. */
   setResource: (projectId: string, type: 'user' | 'agent', id: string, change: { daily_rate: number; capacity: number }) =>
     client.put(`/api/v1/projects/${projectId}/plan/resources/${id}`, { type, ...change }),
+  /** The plans of every project of the workspace the reader can see. */
+  master: () => client.get<MasterPlan>('/api/v1/plan/master'),
+  /** Makes a task driven by a task of another project. */
+  relateExternal: (workItemId: string, otherId: string, type: PlanRelationshipType, lagDays = 0, lagUnit: PlanLagUnit = 'd') =>
+    client.put<PlanTask>(`/api/v1/work-items/${workItemId}/external-links/${otherId}`, { type, lag_days: lagDays, lag_unit: lagUnit }),
+  unrelateExternal: (workItemId: string, otherId: string) => client.delete(`/api/v1/work-items/${workItemId}/external-links/${otherId}`),
+  /** Adds the tasks of a Microsoft Project XML file to the board and the plan; answers what it added. */
+  importMSProject: (projectId: string, file: Blob) =>
+    client.post<{ tasks: number; milestones: number; relationships: number }>(`/api/v1/projects/${projectId}/plan/import`, file, { headers: { 'Content-Type': 'application/xml' } }),
   /** Records the plan as it stands, to measure against later. */
   saveBaseline: (projectId: string, name = '') => client.post<PlanBaselineInfo>(`/api/v1/projects/${projectId}/plan/baselines`, { name }),
   deleteBaseline: (projectId: string, baselineId: string) => client.delete(`/api/v1/projects/${projectId}/plan/baselines/${baselineId}`),

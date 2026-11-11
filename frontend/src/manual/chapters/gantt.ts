@@ -536,6 +536,7 @@ that release. A release marked **Released** is met.
 - **Excel**: the tasks with a timeline of weeks drawn beside them, and the
   milestones on a second sheet.
 - **CSV**: the tasks, then the milestones and their criteria.
+- **Microsoft Project (XML)**: a file Microsoft Project opens, with the tasks, their outline, dates, durations, progress, constraints, deadlines and relationships, the milestones, and the people with their assignments.
 
 In Excel and CSV, the **relationships** column names each driving task by
 its outline number and type, with any offset after it, as in *1.1FS,
@@ -549,6 +550,27 @@ relationships, with \`schedule_work_item\`, which also assigns it to a milestone
 \`set_plan_resource\`, level the plan with \`level_plan\`, recalculate it with
 \`recalculate_plan\`, and set the working days with
 \`set_plan_working_days\`.
+
+## Importing from Microsoft Project
+
+**Import**, beside Export, reads a Microsoft Project XML file (in Project: *Save as*, *XML format*) and adds its tasks to this project. Each task becomes a card on the board, in To Do, In Progress or Done by its percentage complete, with its dates, its place in the outline, its date constraint and its deadline. A task of no length marked as a milestone becomes a milestone, and the relationships between the tasks follow with their offsets. Resources and calendars are not read. Importing adds to the plan; it replaces nothing, so importing a file twice adds its tasks twice.
+
+## Other views of the plan
+
+The row of views under the chart's header shows the same plan in other ways.
+
+- **Network** draws a box for each task and an arrow for each relationship, each task one column to the right of the tasks that drive it. Critical tasks have an amber border.
+- **Calendar** shows a month: each day lists the tasks that run on it and the milestones due, with the days the plan does not work shaded.
+- **Resource usage** lists each person and agent with work on the plan and the days of their time each week asks for. A week that asks for more than they can give is red.
+- **Timeline** fits the top-level tasks and the milestones on one band across the page.
+
+Select a task in any of them to open its panel.
+
+## All projects, and links between them
+
+**All projects** shows the plan of every project of the workspace that you can read, each on a line with its top-level tasks, its milestones and its progress. A project's name opens its Gantt.
+
+A task can wait on a task of another project of the same workspace. In the task's panel, under **Other projects**, choose **Wait on a task of another project**, then the project, the task, the relationship and an offset. The task then follows the other one when the plan is recalculated, or at once on an automatic plan. The other project's task is never moved from here, and it is not a row of this plan: it is named on the task it is linked to, in both projects, and under **Links between projects** in All projects. A link whose dates are broken is marked.
 
 ## On a phone
 

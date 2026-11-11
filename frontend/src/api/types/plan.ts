@@ -98,6 +98,45 @@ export interface PlanTask {
   drives: PlanRelationship[];
   /** The driving tasks whose relationship the dates break. */
   conflicts: string[];
+  /** The task's relationships to tasks of other projects. */
+  external_links: PlanExternalLink[];
+}
+
+/** A relationship to a task of another project, as the task that carries it sees it. */
+export interface PlanExternalLink {
+  task_id: string;
+  project_id: string;
+  project_name: string;
+  title: string;
+  start: string | null;
+  end: string | null;
+  done: boolean;
+  type: PlanRelationshipType;
+  lag_days: number;
+  lag_unit: PlanLagUnit;
+  /** driven_by: the other task drives this one. */
+  direction: PlanRelationshipDirection;
+  conflict: boolean;
+}
+
+/** A project's line of the master plan. */
+export interface MasterProject {
+  project_id: string;
+  name: string;
+  start: string | null;
+  end: string | null;
+  summary: ProjectPlan['summary'];
+  tasks: { id: string; title: string; wbs: string; start: string | null; end: string | null; progress: number; done: boolean; late: boolean; critical: boolean }[];
+  milestones: { key: string; name: string; date: string; progress: number; met: boolean; late: boolean }[];
+}
+
+/** The plans of the workspace's projects the reader can see, and the links between their tasks. */
+export interface MasterPlan {
+  today: string;
+  start: string | null;
+  end: string | null;
+  projects: MasterProject[];
+  links: { from_project_id: string; from_title: string; to_project_id: string; to_title: string; type: PlanRelationshipType; conflict: boolean }[];
 }
 
 /** A task as a baseline recorded it. */
@@ -354,4 +393,4 @@ export interface StoredPlanMilestone {
   criteria: PlanCriterion[];
 }
 
-export type PlanExportFormat = 'pdf' | 'excel' | 'csv' | 'json';
+export type PlanExportFormat = 'pdf' | 'excel' | 'csv' | 'msproject' | 'json';

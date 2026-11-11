@@ -137,6 +137,9 @@
     <topicref href="../topics/gantt/assigning-tasks-to-a-milestone.dita"/>
     <topicref href="../topics/gantt/release-milestones.dita"/>
     <topicref href="../topics/gantt/exporting-the-plan.dita"/>
+    <topicref href="../topics/gantt/importing-from-microsoft-project.dita"/>
+    <topicref href="../topics/gantt/other-views-of-the-plan.dita"/>
+    <topicref href="../topics/gantt/all-projects-and-links-between-them.dita"/>
     <topicref href="../topics/gantt/on-a-phone.dita"/>
   </topicref>
   <topicref href="../topics/project-pages/index.dita">

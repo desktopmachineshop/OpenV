@@ -179,6 +179,8 @@ SECTION_KEYS = {
     ('gantt', 'milestones-and-their-criteria'): ['gantt.milestone', 'gantt.add-milestone'],
     ('gantt', 'assigning-tasks-to-a-milestone'): ['gantt.milestone-tasks', 'gantt.task-milestone'],
     ('gantt', 'exporting-the-plan'): ['gantt.export'],
+    ('gantt', 'other-views-of-the-plan'): ['gantt.views'],
+    ('gantt', 'all-projects-and-links-between-them'): ['gantt.master'],
     ('project-pages', 'home'): ['home', 'home.figures', 'home.needs', 'home.activity', 'home.projects', 'home.proposals'],
     ('project-pages', 'design'): ['design', 'design.tree', 'design.detail', 'design.attributes', 'design.trace'],
     ('project-pages', 'tests'): ['tests', 'tests.runs', 'tests.cases'],
