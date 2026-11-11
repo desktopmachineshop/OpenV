@@ -43,6 +43,7 @@ DELETE /api/v1/test-results/{id}/citations/{bundleId}: project:editor
 DELETE /api/v1/test-runs/{id}: project:editor
 DELETE /api/v1/todos/{id}: project:editor
 DELETE /api/v1/work-items/{id}: project:editor
+DELETE /api/v1/work-items/{id}/relationships/{otherId}: project:editor
 DELETE /mcp: -
 GET /.well-known/oauth-authorization-server: -
 GET /.well-known/oauth-protected-resource: -
@@ -364,6 +365,7 @@ PUT /api/v1/projects/{id}/members/{userId}: project:owner
 PUT /api/v1/projects/{id}/parties: project:editor
 PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}: project:editor
 PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}: project:editor
+PUT /api/v1/projects/{id}/plan/settings: project:editor
 PUT /api/v1/projects/{id}/priority-detection: project:editor
 PUT /api/v1/projects/{id}/profile: project:editor
 PUT /api/v1/projects/{id}/quality-rules: project:editor
@@ -378,4 +380,5 @@ PUT /api/v1/shared-products/{id}/vote: session
 PUT /api/v1/test-runs/{id}: project:editor
 PUT /api/v1/todos/{id}: project:editor
 PUT /api/v1/work-items/{id}: project:editor
+PUT /api/v1/work-items/{id}/relationships/{otherId}: project:editor
 PUT /api/v1/work-items/{id}/schedule: project:editor

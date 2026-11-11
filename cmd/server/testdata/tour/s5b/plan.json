@@ -77,11 +77,18 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"today\":\"<date>\",\"start\":null,\"end\":null,\"tasks\":[],\"milestones\":[],\"dependencies\":[],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":0,\"total\":0,\"percent\":0}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":0,\"done\":0,\"late\":0,\"unscheduled\":0,\"progress\":0,\"critical\":0,\"effort_days\":0}}"
+        "{\"project_id\":\"<p>\",\"working_days\":[1,2,3,4,5],\"today\":\"<date>\",\"start\":null,\"end\":null,\"tasks\":[],\"milestones\":[],\"dependencies\":[],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":0,\"total\":0,\"percent\":0}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":0,\"done\":0,\"late\":0,\"unscheduled\":0,\"progress\":0,\"critical\":0,\"effort_days\":0}}"
       ],
       "trailing_newline": true,
       "parsed": {
         "project_id": "<p>",
+        "working_days": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
         "today": "<date>",
         "start": null,
         "end": null,
@@ -221,10 +228,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 531,
+      "content_length": 587,
       "kind": "json",
       "body": [
-        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]}"
+        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":7,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -240,10 +247,12 @@
         "end": "<date>",
         "span_start": "<date>",
         "span_end": "<date>",
-        "duration_days": 10,
+        "duration_days": 7,
         "effort_days": null,
         "float_days": 0,
         "critical": false,
+        "float_until": null,
+        "critical_subtasks": false,
         "progress": 100,
         "done": true,
         "late": false,
@@ -254,6 +263,7 @@
         "todos": [],
         "depends_on": [],
         "relationships": [],
+        "drives": [],
         "conflicts": []
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -286,10 +296,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 644,
+      "content_length": 700,
       "kind": "json",
       "body": [
-        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":null,\"float_days\":0,\"critical\":true,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":9,\"effort_days\":null,\"float_days\":0,\"critical\":true,\"float_until\":null,\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"drives\":[],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -305,10 +315,12 @@
         "end": "<date>",
         "span_start": "<date>",
         "span_end": "<date>",
-        "duration_days": 11,
+        "duration_days": 9,
         "effort_days": null,
         "float_days": 0,
         "critical": true,
+        "float_until": null,
+        "critical_subtasks": false,
         "progress": 0,
         "done": false,
         "late": false,
@@ -327,6 +339,7 @@
             "conflict": false
           }
         ],
+        "drives": [],
         "conflicts": []
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -359,10 +372,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 489,
+      "content_length": 546,
       "kind": "json",
       "body": [
-        "{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":28919,\"critical\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]}"
+        "{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":20657,\"critical\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -380,8 +393,10 @@
         "span_end": "<date>",
         "duration_days": 1,
         "effort_days": null,
-        "float_days": 28919,
+        "float_days": 20657,
         "critical": false,
+        "float_until": null,
+        "critical_subtasks": false,
         "progress": 0,
         "done": false,
         "late": true,
@@ -392,6 +407,7 @@
         "todos": [],
         "depends_on": [],
         "relationships": [],
+        "drives": [],
         "conflicts": []
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -424,10 +440,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 648,
+      "content_length": 783,
       "kind": "json",
       "body": [
-        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
+        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":7,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"drives\":[{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -443,10 +459,12 @@
         "end": "<date>",
         "span_start": "<date>",
         "span_end": "<date>",
-        "duration_days": 10,
+        "duration_days": 7,
         "effort_days": null,
         "float_days": 0,
         "critical": false,
+        "float_until": null,
+        "critical_subtasks": false,
         "progress": 100,
         "done": true,
         "late": false,
@@ -461,6 +479,13 @@
         "relationships": [
           {
             "task_id": "<order>",
+            "type": "FS",
+            "conflict": false
+          }
+        ],
+        "drives": [
+          {
+            "task_id": "<wiring>",
             "type": "FS",
             "conflict": false
           }
@@ -516,10 +541,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 648,
+      "content_length": 783,
       "kind": "json",
       "body": [
-        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
+        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":7,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"drives\":[{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -535,10 +560,12 @@
         "end": "<date>",
         "span_start": "<date>",
         "span_end": "<date>",
-        "duration_days": 10,
+        "duration_days": 7,
         "effort_days": null,
         "float_days": 0,
         "critical": false,
+        "float_until": null,
+        "critical_subtasks": false,
         "progress": 100,
         "done": true,
         "late": false,
@@ -557,20 +584,17 @@
             "conflict": false
           }
         ],
+        "drives": [
+          {
+            "task_id": "<wiring>",
+            "type": "FS",
+            "conflict": false
+          }
+        ],
         "conflicts": []
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "workitem.updated",
-          "actor": "user:<owner>",
-          "project": "<p>",
-          "entity": "<frame>",
-          "payload": {
-            "title": "string \"Weld the frame\""
-          }
-        }
-      ]
+      "events": []
     },
     {
       "n": 8,
@@ -589,10 +613,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 648,
+      "content_length": 783,
       "kind": "json",
       "body": [
-        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
+        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":7,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"drives\":[{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -608,10 +632,12 @@
         "end": "<date>",
         "span_start": "<date>",
         "span_end": "<date>",
-        "duration_days": 10,
+        "duration_days": 7,
         "effort_days": null,
         "float_days": 0,
         "critical": false,
+        "float_until": null,
+        "critical_subtasks": false,
         "progress": 100,
         "done": true,
         "late": false,
@@ -630,20 +656,17 @@
             "conflict": false
           }
         ],
+        "drives": [
+          {
+            "task_id": "<wiring>",
+            "type": "FS",
+            "conflict": false
+          }
+        ],
         "conflicts": []
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": [
-        {
-          "type": "workitem.updated",
-          "actor": "user:<owner>",
-          "project": "<p>",
-          "entity": "<frame>",
-          "payload": {
-            "title": "string \"Weld the frame\""
-          }
-        }
-      ]
+      "events": []
     },
     {
       "n": 9,
@@ -662,10 +685,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 642,
+      "content_length": 699,
       "kind": "json",
       "body": [
-        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":5,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":5,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"float_until\":null,\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"drives\":[],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -685,6 +708,8 @@
         "effort_days": 7.5,
         "float_days": 0,
         "critical": true,
+        "float_until": null,
+        "critical_subtasks": false,
         "progress": 0,
         "done": false,
         "late": false,
@@ -703,6 +728,7 @@
             "conflict": false
           }
         ],
+        "drives": [],
         "conflicts": []
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -735,10 +761,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 643,
+      "content_length": 700,
       "kind": "json",
       "body": [
-        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"float_until\":null,\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"drives\":[],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -758,6 +784,8 @@
         "effort_days": 7.5,
         "float_days": 0,
         "critical": true,
+        "float_until": null,
+        "critical_subtasks": false,
         "progress": 0,
         "done": false,
         "late": false,
@@ -776,6 +804,7 @@
             "conflict": false
           }
         ],
+        "drives": [],
         "conflicts": []
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -1040,10 +1069,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 762,
+      "content_length": 819,
       "kind": "json",
       "body": [
-        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\",\"<frame>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"SS\",\"conflict\":false},{\"task_id\":\"<frame>\",\"type\":\"FF\",\"conflict\":false}],\"conflicts\":[]}"
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"float_until\":null,\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\",\"<frame>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"SS\",\"conflict\":false},{\"task_id\":\"<frame>\",\"type\":\"FF\",\"conflict\":false}],\"drives\":[],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1063,6 +1092,8 @@
         "effort_days": 7.5,
         "float_days": 0,
         "critical": true,
+        "float_until": null,
+        "critical_subtasks": false,
         "progress": 0,
         "done": false,
         "late": false,
@@ -1087,6 +1118,7 @@
             "conflict": false
           }
         ],
+        "drives": [],
         "conflicts": []
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -1138,10 +1170,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 643,
+      "content_length": 700,
       "kind": "json",
       "body": [
-        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FF\",\"conflict\":false}],\"conflicts\":[]}"
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"float_until\":null,\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FF\",\"conflict\":false}],\"drives\":[],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1161,6 +1193,8 @@
         "effort_days": 7.5,
         "float_days": 0,
         "critical": true,
+        "float_until": null,
+        "critical_subtasks": false,
         "progress": 0,
         "done": false,
         "late": false,
@@ -1179,6 +1213,7 @@
             "conflict": false
           }
         ],
+        "drives": [],
         "conflicts": []
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -1201,10 +1236,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 643,
+      "content_length": 700,
       "kind": "json",
       "body": [
-        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}"
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"float_until\":null,\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"drives\":[],\"conflicts\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1224,6 +1259,8 @@
         "effort_days": 7.5,
         "float_days": 0,
         "critical": true,
+        "float_until": null,
+        "critical_subtasks": false,
         "progress": 0,
         "done": false,
         "late": false,
@@ -1242,6 +1279,7 @@
             "conflict": false
           }
         ],
+        "drives": [],
         "conflicts": []
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -1249,6 +1287,435 @@
     },
     {
       "n": 23,
+      "title": "a relationship made from the driving end: Order drives Wiring, start to start",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/relationships/{otherId}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<order>/relationships/<wiring>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"type\":\"SS\",\"direction\":\"drives\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 712,
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":20642,\"critical\":true,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false},{\"task_id\":\"<wiring>\",\"type\":\"SS\",\"conflict\":false}],\"conflicts\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<order>",
+        "title": "Order the parts",
+        "column": "todo",
+        "assignee_type": "user",
+        "assignee_id": null,
+        "parent_id": null,
+        "depth": 0,
+        "wbs": "1",
+        "start": null,
+        "end": "<date>",
+        "span_start": "<date>",
+        "span_end": "<date>",
+        "duration_days": 1,
+        "effort_days": null,
+        "float_days": 20642,
+        "critical": true,
+        "float_until": "<date>",
+        "critical_subtasks": false,
+        "progress": 0,
+        "done": false,
+        "late": true,
+        "todos_done": 0,
+        "todos_total": 0,
+        "subtasks_done": 0,
+        "subtasks_total": 0,
+        "todos": [],
+        "depends_on": [],
+        "relationships": [],
+        "drives": [
+          {
+            "task_id": "<frame>",
+            "type": "FS",
+            "conflict": false
+          },
+          {
+            "task_id": "<wiring>",
+            "type": "SS",
+            "conflict": false
+          }
+        ],
+        "conflicts": []
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 24,
+      "title": "the same pair turned round from Wiring's end: Wiring drives Order, finish to finish",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/relationships/{otherId}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<wiring>/relationships/<order>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"type\":\"FF\",\"direction\":\"drives\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 49,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"these dependencies would make a loop\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "these dependencies would make a loop"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 25,
+      "title": "a relationship that would close a loop: 400",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/relationships/{otherId}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<frame>/relationships/<wiring>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"type\":\"FS\",\"direction\":\"driven_by\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 861,
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":7,\"effort_days\":null,\"float_days\":10,\"critical\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\",\"<wiring>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false},{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"conflict\":true}],\"drives\":[],\"conflicts\":[\"<wiring>\"]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<frame>",
+        "title": "Weld the frame",
+        "column": "done",
+        "assignee_type": "user",
+        "assignee_id": null,
+        "parent_id": "<build>",
+        "depth": 1,
+        "wbs": "2.1",
+        "start": "<date>",
+        "end": "<date>",
+        "span_start": "<date>",
+        "span_end": "<date>",
+        "duration_days": 7,
+        "effort_days": null,
+        "float_days": 10,
+        "critical": false,
+        "float_until": null,
+        "critical_subtasks": false,
+        "progress": 100,
+        "done": true,
+        "late": false,
+        "todos_done": 0,
+        "todos_total": 0,
+        "subtasks_done": 0,
+        "subtasks_total": 0,
+        "todos": [],
+        "depends_on": [
+          "<order>",
+          "<wiring>"
+        ],
+        "relationships": [
+          {
+            "task_id": "<order>",
+            "type": "FS",
+            "conflict": false
+          },
+          {
+            "task_id": "<wiring>",
+            "type": "FS",
+            "conflict": true
+          }
+        ],
+        "drives": [],
+        "conflicts": [
+          "<wiring>"
+        ]
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 26,
+      "title": "a direction that is neither: 400",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/relationships/{otherId}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<order>/relationships/<wiring>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"type\":\"FS\",\"direction\":\"sideways\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 45,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"direction is drives or driven_by\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "direction is drives or driven_by"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 27,
+      "title": "Q's task: 400",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/relationships/{otherId}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<order>/relationships/<q_task>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"type\":\"FS\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 52,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"the task is not on this project's board\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "the task is not on this project's board"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 28,
+      "title": "the viewer may not relate tasks: 403",
+      "actor": "viewer",
+      "route": "PUT /api/v1/work-items/{id}/relationships/{otherId}",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<order>/relationships/<wiring>",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"type\":\"FS\"}"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 29,
+      "title": "the relationship removed from Order's end: 204",
+      "actor": "owner",
+      "route": "DELETE /api/v1/work-items/{id}/relationships/{otherId}",
+      "request": {
+        "method": "DELETE",
+        "path": "/api/v1/work-items/<order>/relationships/<wiring>"
+      },
+      "status": 204,
+      "content_type": null,
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": null,
+      "kind": "empty",
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 30,
+      "title": "dates on Build, which has sub-tasks: 400",
+      "actor": "owner",
+      "route": "PUT /api/v1/work-items/{id}/schedule",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/work-items/<build>/schedule",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"start_date\":\"<date>\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 81,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"a task with sub-tasks takes its dates, duration and effort from them\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "a task with sub-tasks takes its dates, duration and effort from them"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 31,
+      "title": "the plan works Monday to Saturday",
+      "actor": "owner",
+      "route": "PUT /api/v1/projects/{id}/plan/settings",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/projects/<p>/plan/settings",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"working_days\":[6,1,2,3,4,5]}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 31,
+      "kind": "json",
+      "body": [
+        "{\"working_days\":[1,2,3,4,5,6]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "working_days": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ]
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 32,
+      "title": "no working days: 400",
+      "actor": "owner",
+      "route": "PUT /api/v1/projects/{id}/plan/settings",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/projects/<p>/plan/settings",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"working_days\":[]}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 89,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"working days are weekday numbers from 1 (Monday) to 7 (Sunday), at least one\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "working days are weekday numbers from 1 (Monday) to 7 (Sunday), at least one"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 33,
+      "title": "a day 8: 400",
+      "actor": "owner",
+      "route": "PUT /api/v1/projects/{id}/plan/settings",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/projects/<p>/plan/settings",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"working_days\":[1,8]}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 89,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"working days are weekday numbers from 1 (Monday) to 7 (Sunday), at least one\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "working days are weekday numbers from 1 (Monday) to 7 (Sunday), at least one"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 34,
+      "title": "the viewer may not set them: 403",
+      "actor": "viewer",
+      "route": "PUT /api/v1/projects/{id}/plan/settings",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/projects/<p>/plan/settings",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"working_days\":[1]}"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 35,
       "title": "the viewer may not schedule: 403",
       "actor": "viewer",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -1277,7 +1744,7 @@
       "events": []
     },
     {
-      "n": 24,
+      "n": 36,
       "title": "a to-do on Wiring",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -1296,7 +1763,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"}"
+        "{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 36>\",\"updated_at\":\"<time@step 36>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1313,14 +1780,14 @@
         "source_chatter_id": null,
         "promoted_work_item_id": null,
         "created_by": "<owner>",
-        "created_at": "<time@step 24>",
-        "updated_at": "<time@step 24>"
+        "created_at": "<time@step 36>",
+        "updated_at": "<time@step 36>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 25,
+      "n": 37,
       "title": "a second to-do on Wiring, with its deadline",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -1339,7 +1806,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 25>\",\"updated_at\":\"<time@step 25>\"}"
+        "{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 37>\",\"updated_at\":\"<time@step 37>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1356,14 +1823,14 @@
         "source_chatter_id": null,
         "promoted_work_item_id": null,
         "created_by": "<owner>",
-        "created_at": "<time@step 25>",
-        "updated_at": "<time@step 25>"
+        "created_at": "<time@step 37>",
+        "updated_at": "<time@step 37>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 26,
+      "n": 38,
       "title": "a deadline not written YYYY-MM-DD: 400",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -1392,7 +1859,7 @@
       "events": []
     },
     {
-      "n": 27,
+      "n": 39,
       "title": "no text: 400",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -1421,7 +1888,7 @@
       "events": []
     },
     {
-      "n": 28,
+      "n": 40,
       "title": "the viewer may not add one: 403",
       "actor": "viewer",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -1450,7 +1917,7 @@
       "events": []
     },
     {
-      "n": 29,
+      "n": 41,
       "title": "Wiring's to-dos, to the viewer: both open",
       "actor": "viewer",
       "route": "GET /api/v1/work-items/{id}/todos",
@@ -1465,7 +1932,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 25>\",\"updated_at\":\"<time@step 25>\"},{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 24>\",\"updated_at\":\"<time@step 24>\"}]"
+        "[{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 37>\",\"updated_at\":\"<time@step 37>\"},{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 36>\",\"updated_at\":\"<time@step 36>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1483,8 +1950,8 @@
           "source_chatter_id": null,
           "promoted_work_item_id": null,
           "created_by": "<owner>",
-          "created_at": "<time@step 25>",
-          "updated_at": "<time@step 25>"
+          "created_at": "<time@step 37>",
+          "updated_at": "<time@step 37>"
         },
         {
           "id": "<t1>",
@@ -1500,14 +1967,14 @@
           "source_chatter_id": null,
           "promoted_work_item_id": null,
           "created_by": "<owner>",
-          "created_at": "<time@step 24>",
-          "updated_at": "<time@step 24>"
+          "created_at": "<time@step 36>",
+          "updated_at": "<time@step 36>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 30,
+      "n": 42,
       "title": "Frame has none: []",
       "actor": "owner",
       "route": "GET /api/v1/work-items/{id}/todos",
@@ -1529,7 +1996,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 31,
+      "n": 43,
       "title": "a milestone: every user need addressed by 1 February 2020",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -1548,7 +2015,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<m1>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[{\"metric\":\"needs_addressed\",\"target\":100},{\"metric\":\"tasks_done\",\"target\":100}],\"created_at\":\"<time@step 31>\",\"updated_at\":\"<time@step 31>\"}"
+        "{\"id\":\"<m1>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[{\"metric\":\"needs_addressed\",\"target\":100},{\"metric\":\"tasks_done\",\"target\":100}],\"created_at\":\"<time@step 43>\",\"updated_at\":\"<time@step 43>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1568,14 +2035,14 @@
             "target": 100
           }
         ],
-        "created_at": "<time@step 31>",
-        "updated_at": "<time@step 31>"
+        "created_at": "<time@step 43>",
+        "updated_at": "<time@step 43>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 32,
+      "n": 44,
       "title": "a milestone with no date and no criteria",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -1594,7 +2061,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 32>\",\"updated_at\":\"<time@step 32>\"}"
+        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 44>\",\"updated_at\":\"<time@step 44>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1605,14 +2072,14 @@
         "description": "",
         "target_date": null,
         "criteria": [],
-        "created_at": "<time@step 32>",
-        "updated_at": "<time@step 32>"
+        "created_at": "<time@step 44>",
+        "updated_at": "<time@step 44>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 33,
+      "n": 45,
       "title": "Q's milestone",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -1631,7 +2098,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<q_m>\",\"project_id\":\"<q>\",\"release_id\":null,\"name\":\"Elsewhere\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 33>\",\"updated_at\":\"<time@step 33>\"}"
+        "{\"id\":\"<q_m>\",\"project_id\":\"<q>\",\"release_id\":null,\"name\":\"Elsewhere\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 45>\",\"updated_at\":\"<time@step 45>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1642,14 +2109,14 @@
         "description": "",
         "target_date": null,
         "criteria": [],
-        "created_at": "<time@step 33>",
-        "updated_at": "<time@step 33>"
+        "created_at": "<time@step 45>",
+        "updated_at": "<time@step 45>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 34,
+      "n": 46,
       "title": "no name: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -1678,7 +2145,7 @@
       "events": []
     },
     {
-      "n": 35,
+      "n": 47,
       "title": "an unknown metric: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -1707,7 +2174,7 @@
       "events": []
     },
     {
-      "n": 36,
+      "n": 48,
       "title": "a target of 0: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -1736,7 +2203,7 @@
       "events": []
     },
     {
-      "n": 37,
+      "n": 49,
       "title": "the viewer may not add one: 403",
       "actor": "viewer",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -1765,7 +2232,7 @@
       "events": []
     },
     {
-      "n": 38,
+      "n": 50,
       "title": "Kick-off gets a date; its name stays",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -1784,7 +2251,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[],\"created_at\":\"<time@step 32>\",\"updated_at\":\"<time@step 38>\"}"
+        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[],\"created_at\":\"<time@step 44>\",\"updated_at\":\"<time@step 50>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1795,14 +2262,14 @@
         "description": "",
         "target_date": "<date>",
         "criteria": [],
-        "created_at": "<time@step 32>",
-        "updated_at": "<time@step 38>"
+        "created_at": "<time@step 44>",
+        "updated_at": "<time@step 50>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 39,
+      "n": 51,
       "title": "Q's milestone through P: 404",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -1831,7 +2298,7 @@
       "events": []
     },
     {
-      "n": 40,
+      "n": 52,
       "title": "the plan with MVP on its default criteria",
       "actor": "viewer",
       "route": "GET /api/v1/projects/{id}/plan",
@@ -1846,11 +2313,19 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":28899,\"critical\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]},{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":20,\"effort_days\":null,\"float_days\":0,\"critical\":true,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":25,\"met\":false,\"late\":true},{\"key\":\"<m2>\",\"kind\":\"custom\",\"id\":\"<m2>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[],\"progress\":0,\"met\":false,\"late\":false},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":true,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\"},{\"work_item_id\":\"<wiring>\",\"depends_on_id\":\"<frame>\",\"type\":\"FS\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":1,\"unscheduled\":0,\"progress\":38,\"critical\":2,\"effort_days\":7.5}}"
+        "{\"project_id\":\"<p>\",\"working_days\":[1,2,3,4,5,6],\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":24783,\"critical\":false,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":20,\"effort_days\":7.5,\"float_days\":0,\"critical\":false,\"float_until\":null,\"critical_subtasks\":true,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":null,\"float_days\":12,\"critical\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\",\"<wiring>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false},{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"conflict\":true}],\"drives\":[],\"conflicts\":[\"<wiring>\"]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":13,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"float_until\":null,\"critical_subtasks\":false,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":true}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":25,\"met\":false,\"late\":true},{\"key\":\"<m2>\",\"kind\":\"custom\",\"id\":\"<m2>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[],\"progress\":0,\"met\":false,\"late\":false},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":true,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\"},{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<wiring>\",\"type\":\"FS\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":1,\"unscheduled\":0,\"progress\":38,\"critical\":1,\"effort_days\":7.5}}"
       ],
       "trailing_newline": true,
       "parsed": {
         "project_id": "<p>",
+        "working_days": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
         "today": "<date>",
         "start": "<date>",
         "end": "<date>",
@@ -1870,8 +2345,10 @@
             "span_end": "<date>",
             "duration_days": 1,
             "effort_days": null,
-            "float_days": 28899,
+            "float_days": 24783,
             "critical": false,
+            "float_until": "<date>",
+            "critical_subtasks": false,
             "progress": 0,
             "done": false,
             "late": true,
@@ -1882,6 +2359,13 @@
             "todos": [],
             "depends_on": [],
             "relationships": [],
+            "drives": [
+              {
+                "task_id": "<frame>",
+                "type": "FS",
+                "conflict": false
+              }
+            ],
             "conflicts": []
           },
           {
@@ -1898,9 +2382,11 @@
             "span_start": "<date>",
             "span_end": "<date>",
             "duration_days": 20,
-            "effort_days": null,
+            "effort_days": 7.5,
             "float_days": 0,
-            "critical": true,
+            "critical": false,
+            "float_until": null,
+            "critical_subtasks": true,
             "progress": 75,
             "done": false,
             "late": false,
@@ -1911,6 +2397,7 @@
             "todos": [],
             "depends_on": [],
             "relationships": [],
+            "drives": [],
             "conflicts": []
           },
           {
@@ -1926,10 +2413,12 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
-            "duration_days": 10,
+            "duration_days": 8,
             "effort_days": null,
-            "float_days": 0,
+            "float_days": 12,
             "critical": false,
+            "float_until": null,
+            "critical_subtasks": false,
             "progress": 100,
             "done": true,
             "late": false,
@@ -1939,16 +2428,25 @@
             "subtasks_total": 0,
             "todos": [],
             "depends_on": [
-              "<order>"
+              "<order>",
+              "<wiring>"
             ],
             "relationships": [
               {
                 "task_id": "<order>",
                 "type": "FS",
                 "conflict": false
+              },
+              {
+                "task_id": "<wiring>",
+                "type": "FS",
+                "conflict": true
               }
             ],
-            "conflicts": []
+            "drives": [],
+            "conflicts": [
+              "<wiring>"
+            ]
           },
           {
             "id": "<wiring>",
@@ -1963,10 +2461,12 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
-            "duration_days": 11,
+            "duration_days": 13,
             "effort_days": 7.5,
             "float_days": 0,
             "critical": true,
+            "float_until": null,
+            "critical_subtasks": false,
             "progress": 50,
             "done": false,
             "late": false,
@@ -1988,14 +2488,13 @@
                 "due_date": null
               }
             ],
-            "depends_on": [
-              "<frame>"
-            ],
-            "relationships": [
+            "depends_on": [],
+            "relationships": [],
+            "drives": [
               {
                 "task_id": "<frame>",
                 "type": "FS",
-                "conflict": false
+                "conflict": true
               }
             ],
             "conflicts": []
@@ -2095,8 +2594,8 @@
             "type": "FS"
           },
           {
-            "work_item_id": "<wiring>",
-            "depends_on_id": "<frame>",
+            "work_item_id": "<frame>",
+            "depends_on_id": "<wiring>",
             "type": "FS"
           }
         ],
@@ -2206,7 +2705,7 @@
           "late": 1,
           "unscheduled": 0,
           "progress": 38,
-          "critical": 2,
+          "critical": 1,
           "effort_days": 7.5
         }
       },
@@ -2217,7 +2716,7 @@
       }
     },
     {
-      "n": 41,
+      "n": 53,
       "title": "MVP's own criteria: requirements approved, 80%",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}",
@@ -2236,7 +2735,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<mvp_m>\",\"project_id\":\"<p>\",\"release_id\":\"<mvp>\",\"name\":\"\",\"description\":\"\",\"target_date\":null,\"criteria\":[{\"metric\":\"requirements_approved\",\"target\":80}],\"created_at\":\"<time@step 41>\",\"updated_at\":\"<time@step 41>\"}"
+        "{\"id\":\"<mvp_m>\",\"project_id\":\"<p>\",\"release_id\":\"<mvp>\",\"name\":\"\",\"description\":\"\",\"target_date\":null,\"criteria\":[{\"metric\":\"requirements_approved\",\"target\":80}],\"created_at\":\"<time@step 53>\",\"updated_at\":\"<time@step 53>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2252,14 +2751,14 @@
             "target": 80
           }
         ],
-        "created_at": "<time@step 41>",
-        "updated_at": "<time@step 41>"
+        "created_at": "<time@step 53>",
+        "updated_at": "<time@step 53>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 42,
+      "n": 54,
       "title": "Q's release through P: 404",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}",
@@ -2288,7 +2787,7 @@
       "events": []
     },
     {
-      "n": 43,
+      "n": 55,
       "title": "a release milestone's name is the release's: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -2317,7 +2816,7 @@
       "events": []
     },
     {
-      "n": 44,
+      "n": 56,
       "title": "the plan: MVP now carries its own criterion",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan",
@@ -2332,11 +2831,19 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":28899,\"critical\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]},{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":20,\"effort_days\":null,\"float_days\":0,\"critical\":true,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":25,\"met\":false,\"late\":true},{\"key\":\"<m2>\",\"kind\":\"custom\",\"id\":\"<m2>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[],\"progress\":0,\"met\":false,\"late\":false},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"<mvp_m>\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":80,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\"},{\"work_item_id\":\"<wiring>\",\"depends_on_id\":\"<frame>\",\"type\":\"FS\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":1,\"unscheduled\":0,\"progress\":38,\"critical\":2,\"effort_days\":7.5}}"
+        "{\"project_id\":\"<p>\",\"working_days\":[1,2,3,4,5,6],\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":24783,\"critical\":false,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":20,\"effort_days\":7.5,\"float_days\":0,\"critical\":false,\"float_until\":null,\"critical_subtasks\":true,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":null,\"float_days\":12,\"critical\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\",\"<wiring>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false},{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"conflict\":true}],\"drives\":[],\"conflicts\":[\"<wiring>\"]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":13,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"float_until\":null,\"critical_subtasks\":false,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":true}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":25,\"met\":false,\"late\":true},{\"key\":\"<m2>\",\"kind\":\"custom\",\"id\":\"<m2>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[],\"progress\":0,\"met\":false,\"late\":false},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"<mvp_m>\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":80,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\"},{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<wiring>\",\"type\":\"FS\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":1,\"unscheduled\":0,\"progress\":38,\"critical\":1,\"effort_days\":7.5}}"
       ],
       "trailing_newline": true,
       "parsed": {
         "project_id": "<p>",
+        "working_days": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
         "today": "<date>",
         "start": "<date>",
         "end": "<date>",
@@ -2356,8 +2863,10 @@
             "span_end": "<date>",
             "duration_days": 1,
             "effort_days": null,
-            "float_days": 28899,
+            "float_days": 24783,
             "critical": false,
+            "float_until": "<date>",
+            "critical_subtasks": false,
             "progress": 0,
             "done": false,
             "late": true,
@@ -2368,6 +2877,13 @@
             "todos": [],
             "depends_on": [],
             "relationships": [],
+            "drives": [
+              {
+                "task_id": "<frame>",
+                "type": "FS",
+                "conflict": false
+              }
+            ],
             "conflicts": []
           },
           {
@@ -2384,9 +2900,11 @@
             "span_start": "<date>",
             "span_end": "<date>",
             "duration_days": 20,
-            "effort_days": null,
+            "effort_days": 7.5,
             "float_days": 0,
-            "critical": true,
+            "critical": false,
+            "float_until": null,
+            "critical_subtasks": true,
             "progress": 75,
             "done": false,
             "late": false,
@@ -2397,6 +2915,7 @@
             "todos": [],
             "depends_on": [],
             "relationships": [],
+            "drives": [],
             "conflicts": []
           },
           {
@@ -2412,10 +2931,12 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
-            "duration_days": 10,
+            "duration_days": 8,
             "effort_days": null,
-            "float_days": 0,
+            "float_days": 12,
             "critical": false,
+            "float_until": null,
+            "critical_subtasks": false,
             "progress": 100,
             "done": true,
             "late": false,
@@ -2425,16 +2946,25 @@
             "subtasks_total": 0,
             "todos": [],
             "depends_on": [
-              "<order>"
+              "<order>",
+              "<wiring>"
             ],
             "relationships": [
               {
                 "task_id": "<order>",
                 "type": "FS",
                 "conflict": false
+              },
+              {
+                "task_id": "<wiring>",
+                "type": "FS",
+                "conflict": true
               }
             ],
-            "conflicts": []
+            "drives": [],
+            "conflicts": [
+              "<wiring>"
+            ]
           },
           {
             "id": "<wiring>",
@@ -2449,10 +2979,12 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
-            "duration_days": 11,
+            "duration_days": 13,
             "effort_days": 7.5,
             "float_days": 0,
             "critical": true,
+            "float_until": null,
+            "critical_subtasks": false,
             "progress": 50,
             "done": false,
             "late": false,
@@ -2474,14 +3006,13 @@
                 "due_date": null
               }
             ],
-            "depends_on": [
-              "<frame>"
-            ],
-            "relationships": [
+            "depends_on": [],
+            "relationships": [],
+            "drives": [
               {
                 "task_id": "<frame>",
                 "type": "FS",
-                "conflict": false
+                "conflict": true
               }
             ],
             "conflicts": []
@@ -2571,8 +3102,8 @@
             "type": "FS"
           },
           {
-            "work_item_id": "<wiring>",
-            "depends_on_id": "<frame>",
+            "work_item_id": "<frame>",
+            "depends_on_id": "<wiring>",
             "type": "FS"
           }
         ],
@@ -2682,7 +3213,7 @@
           "late": 1,
           "unscheduled": 0,
           "progress": 38,
-          "critical": 2,
+          "critical": 1,
           "effort_days": 7.5
         }
       },
@@ -2693,7 +3224,7 @@
       }
     },
     {
-      "n": 45,
+      "n": 57,
       "title": "the plan as CSV",
       "actor": "viewer",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -2708,14 +3239,14 @@
         "Content-Disposition: attachment; filename=\"plan-Tour plan-<date>.csv\""
       ],
       "security_headers": "standard",
-      "content_length": 872,
+      "content_length": 880,
       "kind": "csv",
       "body": [
         "wbs,task,status,assignee,start,end,duration_days,effort_days,float_days,critical,progress_percent,todos_done,todos_total,subtasks_done,subtasks_total,relationships,late",
-        "1,Order the parts,To Do,,<date>,<date>,1,,28899,false,0,0,0,0,0,,true",
-        "2,Build the rig,In Progress,,<date>,<date>,20,,0,true,75,0,0,1,2,,false",
-        "2.1,Weld the frame,Done,,<date>,<date>,10,,0,false,100,0,0,0,0,1FS,false",
-        "2.2,Wire the rig,To Do,,<date>,<date>,11,7.5,0,true,50,1,2,0,0,2.1FS,false",
+        "1,Order the parts,To Do,,<date>,<date>,1,,24783,false,0,0,0,0,0,,true",
+        "2,Build the rig,In Progress,,<date>,<date>,20,7.5,0,false,75,0,0,1,2,,false",
+        "2.1,Weld the frame,Done,,<date>,<date>,8,,12,false,100,0,0,0,0,\"1FS, 2.2FS\",false",
+        "2.2,Wire the rig,To Do,,<date>,<date>,13,7.5,0,true,50,1,2,0,0,,false",
         "",
         "milestone,kind,date,progress_percent,met,criterion,target_percent,actual_percent,count,total,criterion_met",
         "Definition complete,custom,<date>,25,false,User needs addressed,100,50,1,2,false",
@@ -2753,7 +3284,7 @@
           "<date>",
           "1",
           "",
-          "28899",
+          "24783",
           "false",
           "0",
           "0",
@@ -2771,9 +3302,9 @@
           "<date>",
           "<date>",
           "20",
-          "",
+          "7.5",
           "0",
-          "true",
+          "false",
           "75",
           "0",
           "0",
@@ -2789,16 +3320,16 @@
           "",
           "<date>",
           "<date>",
-          "10",
+          "8",
           "",
-          "0",
+          "12",
           "false",
           "100",
           "0",
           "0",
           "0",
           "0",
-          "1FS",
+          "1FS, 2.2FS",
           "false"
         ],
         [
@@ -2808,7 +3339,7 @@
           "",
           "<date>",
           "<date>",
-          "11",
+          "13",
           "7.5",
           "0",
           "true",
@@ -2817,7 +3348,7 @@
           "2",
           "0",
           "0",
-          "2.1FS",
+          "",
           "false"
         ],
         [
@@ -2889,7 +3420,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 46,
+      "n": 58,
       "title": "the plan as JSON",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -2909,9 +3440,17 @@
       "body": [
         "{",
         "  \"project_name\": \"Tour plan\",",
-        "  \"exported_at\": \"<time@step 46>\",",
+        "  \"exported_at\": \"<time@step 58>\",",
         "  \"plan\": {",
         "    \"project_id\": \"<p>\",",
+        "    \"working_days\": [",
+        "      1,",
+        "      2,",
+        "      3,",
+        "      4,",
+        "      5,",
+        "      6",
+        "    ],",
         "    \"today\": \"<date>\",",
         "    \"start\": \"<date>\",",
         "    \"end\": \"<date>\",",
@@ -2931,8 +3470,10 @@
         "        \"span_end\": \"<date>\",",
         "        \"duration_days\": 1,",
         "        \"effort_days\": null,",
-        "        \"float_days\": 28899,",
+        "        \"float_days\": 24783,",
         "        \"critical\": false,",
+        "        \"float_until\": \"<date>\",",
+        "        \"critical_subtasks\": false,",
         "        \"progress\": 0,",
         "        \"done\": false,",
         "        \"late\": true,",
@@ -2943,6 +3484,13 @@
         "        \"todos\": [],",
         "        \"depends_on\": [],",
         "        \"relationships\": [],",
+        "        \"drives\": [",
+        "          {",
+        "            \"task_id\": \"<frame>\",",
+        "            \"type\": \"FS\",",
+        "            \"conflict\": false",
+        "          }",
+        "        ],",
         "        \"conflicts\": []",
         "      },",
         "      {",
@@ -2959,9 +3507,11 @@
         "        \"span_start\": \"<date>\",",
         "        \"span_end\": \"<date>\",",
         "        \"duration_days\": 20,",
-        "        \"effort_days\": null,",
+        "        \"effort_days\": 7.5,",
         "        \"float_days\": 0,",
-        "        \"critical\": true,",
+        "        \"critical\": false,",
+        "        \"float_until\": null,",
+        "        \"critical_subtasks\": true,",
         "        \"progress\": 75,",
         "        \"done\": false,",
         "        \"late\": false,",
@@ -2972,6 +3522,7 @@
         "        \"todos\": [],",
         "        \"depends_on\": [],",
         "        \"relationships\": [],",
+        "        \"drives\": [],",
         "        \"conflicts\": []",
         "      },",
         "      {",
@@ -2987,10 +3538,12 @@
         "        \"end\": \"<date>\",",
         "        \"span_start\": \"<date>\",",
         "        \"span_end\": \"<date>\",",
-        "        \"duration_days\": 10,",
+        "        \"duration_days\": 8,",
         "        \"effort_days\": null,",
-        "        \"float_days\": 0,",
+        "        \"float_days\": 12,",
         "        \"critical\": false,",
+        "        \"float_until\": null,",
+        "        \"critical_subtasks\": false,",
         "        \"progress\": 100,",
         "        \"done\": true,",
         "        \"late\": false,",
@@ -3000,16 +3553,25 @@
         "        \"subtasks_total\": 0,",
         "        \"todos\": [],",
         "        \"depends_on\": [",
-        "          \"<order>\"",
+        "          \"<order>\",",
+        "          \"<wiring>\"",
         "        ],",
         "        \"relationships\": [",
         "          {",
         "            \"task_id\": \"<order>\",",
         "            \"type\": \"FS\",",
         "            \"conflict\": false",
+        "          },",
+        "          {",
+        "            \"task_id\": \"<wiring>\",",
+        "            \"type\": \"FS\",",
+        "            \"conflict\": true",
         "          }",
         "        ],",
-        "        \"conflicts\": []",
+        "        \"drives\": [],",
+        "        \"conflicts\": [",
+        "          \"<wiring>\"",
+        "        ]",
         "      },",
         "      {",
         "        \"id\": \"<wiring>\",",
@@ -3024,10 +3586,12 @@
         "        \"end\": \"<date>\",",
         "        \"span_start\": \"<date>\",",
         "        \"span_end\": \"<date>\",",
-        "        \"duration_days\": 11,",
+        "        \"duration_days\": 13,",
         "        \"effort_days\": 7.5,",
         "        \"float_days\": 0,",
         "        \"critical\": true,",
+        "        \"float_until\": null,",
+        "        \"critical_subtasks\": false,",
         "        \"progress\": 50,",
         "        \"done\": false,",
         "        \"late\": false,",
@@ -3049,14 +3613,13 @@
         "            \"due_date\": null",
         "          }",
         "        ],",
-        "        \"depends_on\": [",
-        "          \"<frame>\"",
-        "        ],",
-        "        \"relationships\": [",
+        "        \"depends_on\": [],",
+        "        \"relationships\": [],",
+        "        \"drives\": [",
         "          {",
         "            \"task_id\": \"<frame>\",",
         "            \"type\": \"FS\",",
-        "            \"conflict\": false",
+        "            \"conflict\": true",
         "          }",
         "        ],",
         "        \"conflicts\": []",
@@ -3146,8 +3709,8 @@
         "        \"type\": \"FS\"",
         "      },",
         "      {",
-        "        \"work_item_id\": \"<wiring>\",",
-        "        \"depends_on_id\": \"<frame>\",",
+        "        \"work_item_id\": \"<frame>\",",
+        "        \"depends_on_id\": \"<wiring>\",",
         "        \"type\": \"FS\"",
         "      }",
         "    ],",
@@ -3257,7 +3820,7 @@
         "      \"late\": 1,",
         "      \"unscheduled\": 0,",
         "      \"progress\": 38,",
-        "      \"critical\": 2,",
+        "      \"critical\": 1,",
         "      \"effort_days\": 7.5",
         "    }",
         "  },",
@@ -3272,7 +3835,7 @@
       }
     },
     {
-      "n": 47,
+      "n": 59,
       "title": "the plan as Excel",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -3685,7 +4248,7 @@
               "F2 s= t=s: \"<date>\"",
               "G2 s= t=: \"1\"",
               "H2 s= t=s: \"\"",
-              "I2 s= t=: \"28899\"",
+              "I2 s= t=: \"24783\"",
               "J2 s= t=s: \"false\"",
               "K2 s= t=: \"0\"",
               "L2 s= t=: \"0\"",
@@ -3702,9 +4265,9 @@
               "E3 s= t=s: \"<date>\"",
               "F3 s= t=s: \"<date>\"",
               "G3 s= t=: \"20\"",
-              "H3 s= t=s: \"\"",
+              "H3 s= t=s: \"7.5\"",
               "I3 s= t=: \"0\"",
-              "J3 s= t=s: \"true\"",
+              "J3 s= t=s: \"false\"",
               "K3 s= t=: \"75\"",
               "L3 s= t=: \"0\"",
               "M3 s= t=: \"0\"",
@@ -3712,23 +4275,23 @@
               "O3 s= t=: \"2\"",
               "P3 s= t=s: \"\"",
               "Q3 s= t=s: \"false\"",
-              "JR3 s=5 t=: \"\"",
+              "JR3 s=2 t=: \"\"",
               "A4 s= t=s: \"2.1\"",
               "B4 s= t=s: \"  Weld the frame\"",
               "C4 s= t=s: \"Done\"",
               "D4 s= t=s: \"\"",
               "E4 s= t=s: \"<date>\"",
               "F4 s= t=s: \"<date>\"",
-              "G4 s= t=: \"10\"",
+              "G4 s= t=: \"8\"",
               "H4 s= t=s: \"\"",
-              "I4 s= t=: \"0\"",
+              "I4 s= t=: \"12\"",
               "J4 s= t=s: \"false\"",
               "K4 s= t=: \"100\"",
               "L4 s= t=: \"0\"",
               "M4 s= t=: \"0\"",
               "N4 s= t=: \"0\"",
               "O4 s= t=: \"0\"",
-              "P4 s= t=s: \"1FS\"",
+              "P4 s= t=s: \"1FS, 2.2FS\"",
               "Q4 s= t=s: \"false\"",
               "JR4 s=3 t=: \"\"",
               "A5 s= t=s: \"2.2\"",
@@ -3737,7 +4300,7 @@
               "D5 s= t=s: \"\"",
               "E5 s= t=s: \"<date>\"",
               "F5 s= t=s: \"<date>\"",
-              "G5 s= t=: \"11\"",
+              "G5 s= t=: \"13\"",
               "H5 s= t=s: \"7.5\"",
               "I5 s= t=: \"0\"",
               "J5 s= t=s: \"true\"",
@@ -3746,7 +4309,7 @@
               "M5 s= t=: \"2\"",
               "N5 s= t=: \"0\"",
               "O5 s= t=: \"0\"",
-              "P5 s= t=s: \"2.1FS\"",
+              "P5 s= t=s: \"\"",
               "Q5 s= t=s: \"false\"",
               "JR5 s=5 t=: \"\""
             ]
@@ -4336,7 +4899,7 @@
       }
     },
     {
-      "n": 48,
+      "n": 60,
       "title": "the plan as PDF, the default",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -4364,7 +4927,7 @@
         "pages": 2,
         "page_text": [
           {
-            "text": "Tour plan · Plan 4 tasks · 1 done · 1 late · 2 critical (amber outline) · 38% complete · as of <date> TASK START – END 2018 2025 2032 2039 2046 2053 2060 2067 2074 2081 2088 2095 Milestones Definition complete 25% 1 Order the parts 0% <date> 2 Build the rig 75% <date> – 03-20 2.1 Weld the frame 100% <date> – 03-10 2.2 Wire the rig 50% <date> – 03-20 OpenV · <date> Page 1"
+            "text": "Tour plan · Plan 4 tasks · 1 done · 1 late · 1 critical (amber outline) · 38% complete · as of <date> TASK START – END 2018 2025 2032 2039 2046 2053 2060 2067 2074 2081 2088 2095 Milestones Definition complete 25% 1 Order the parts 0% <date> 2 Build the rig 75% <date> – 03-24 2.1 Weld the frame 100% <date> – 03-10 2.2 Wire the rig 50% <date> – 03-24 OpenV · <date> Page 1"
           },
           {
             "text": "Tour plan · Milestones MILESTONE DATE PROGRESS CRITERION TARGET ACTUAL MET Definition complete <date> 25% User needs addressed 100% 50% (1 of 2) No Plan tasks done 100% 0% (0 of 1) No Kick-off <date> 0% No criteria set No MVP (release) <date> 0% Requirements approved 80% 0% (0 of 0) No OpenV · <date> Page 2"
@@ -4381,7 +4944,7 @@
       }
     },
     {
-      "n": 49,
+      "n": 61,
       "title": "ReqIF is not a plan format: 400",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -4406,7 +4969,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 50,
+      "n": 62,
       "title": "the viewer may not delete one: 403",
       "actor": "viewer",
       "route": "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -4431,7 +4994,7 @@
       "events": []
     },
     {
-      "n": 51,
+      "n": 63,
       "title": "Kick-off deleted: 204",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -4449,7 +5012,7 @@
       "events": []
     },
     {
-      "n": 52,
+      "n": 64,
       "title": "Kick-off after the delete: 404",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -4478,7 +5041,7 @@
       "events": []
     },
     {
-      "n": 53,
+      "n": 65,
       "title": "MVP's stored milestone deleted: its criteria are the defaults again",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -4496,7 +5059,7 @@
       "events": []
     },
     {
-      "n": 54,
+      "n": 66,
       "title": "the plan after the deletes",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan",
@@ -4511,11 +5074,19 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":28899,\"critical\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]},{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":20,\"effort_days\":null,\"float_days\":0,\"critical\":true,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":10,\"effort_days\":null,\"float_days\":0,\"critical\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":11,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[\"<frame>\"],\"relationships\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":25,\"met\":false,\"late\":true},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":true,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\"},{\"work_item_id\":\"<wiring>\",\"depends_on_id\":\"<frame>\",\"type\":\"FS\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":1,\"unscheduled\":0,\"progress\":38,\"critical\":2,\"effort_days\":7.5}}"
+        "{\"project_id\":\"<p>\",\"working_days\":[1,2,3,4,5,6],\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"tasks\":[{\"id\":\"<order>\",\"title\":\"Order the parts\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"1\",\"start\":null,\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"float_days\":24783,\"critical\":false,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":0,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":false}],\"conflicts\":[]},{\"id\":\"<build>\",\"title\":\"Build the rig\",\"column\":\"in-progress\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":null,\"depth\":0,\"wbs\":\"2\",\"start\":null,\"end\":null,\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":20,\"effort_days\":7.5,\"float_days\":0,\"critical\":false,\"float_until\":null,\"critical_subtasks\":true,\"progress\":75,\"done\":false,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":1,\"subtasks_total\":2,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[],\"conflicts\":[]},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"column\":\"done\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.1\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":null,\"float_days\":12,\"critical\":false,\"float_until\":null,\"critical_subtasks\":false,\"progress\":100,\"done\":true,\"late\":false,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[\"<order>\",\"<wiring>\"],\"relationships\":[{\"task_id\":\"<order>\",\"type\":\"FS\",\"conflict\":false},{\"task_id\":\"<wiring>\",\"type\":\"FS\",\"conflict\":true}],\"drives\":[],\"conflicts\":[\"<wiring>\"]},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"2.2\",\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":13,\"effort_days\":7.5,\"float_days\":0,\"critical\":true,\"float_until\":null,\"critical_subtasks\":false,\"progress\":50,\"done\":false,\"late\":false,\"todos_done\":1,\"todos_total\":2,\"subtasks_done\":0,\"subtasks_total\":0,\"todos\":[{\"id\":\"<t2>\",\"text\":\"Label the loom\",\"done\":false,\"due_date\":\"<date>\"},{\"id\":\"<t1>\",\"text\":\"Crimp the connectors\",\"done\":true,\"due_date\":null}],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"conflict\":true}],\"conflicts\":[]}],\"milestones\":[{\"key\":\"<m1>\",\"kind\":\"custom\",\"id\":\"<m1>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"date\":\"<date>\",\"default_criteria\":false,\"criteria\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"target\":100,\"actual\":50,\"count\":1,\"total\":2,\"met\":false,\"percent\":50},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"target\":100,\"actual\":0,\"count\":0,\"total\":1,\"met\":false,\"percent\":0}],\"progress\":25,\"met\":false,\"late\":true},{\"key\":\"release:<mvp>\",\"kind\":\"release\",\"id\":\"\",\"release_id\":\"<mvp>\",\"name\":\"MVP\",\"description\":\"\",\"date\":\"<date>\",\"release_status\":\"planned\",\"default_criteria\":true,\"criteria\":[{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"target\":100,\"actual\":0,\"count\":0,\"total\":0,\"met\":false,\"percent\":0}],\"progress\":0,\"met\":false,\"late\":false}],\"dependencies\":[{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<order>\",\"type\":\"FS\"},{\"work_item_id\":\"<frame>\",\"depends_on_id\":\"<wiring>\",\"type\":\"FS\"}],\"metrics\":[{\"metric\":\"needs_addressed\",\"label\":\"User needs addressed\",\"count\":1,\"total\":2,\"percent\":50},{\"metric\":\"requirements_approved\",\"label\":\"Requirements approved\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"requirements_verified\",\"label\":\"Requirements verified\",\"count\":0,\"total\":1,\"percent\":0},{\"metric\":\"tests_passing\",\"label\":\"Test cases passing\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"count\":0,\"total\":0,\"percent\":0},{\"metric\":\"tasks_done\",\"label\":\"Plan tasks done\",\"count\":1,\"total\":4,\"percent\":25}],\"metric_catalogue\":[{\"key\":\"needs_addressed\",\"label\":\"User needs addressed\",\"description\":\"User needs that at least one requirement derives from.\"},{\"key\":\"requirements_approved\",\"label\":\"Requirements approved\",\"description\":\"Requirements whose review status is approved.\"},{\"key\":\"requirements_designed\",\"label\":\"Requirements covered by design\",\"description\":\"Requirements that at least one design item satisfies.\"},{\"key\":\"requirements_tested\",\"label\":\"Requirements with a test case\",\"description\":\"Requirements that at least one test case verifies.\"},{\"key\":\"requirements_verified\",\"label\":\"Requirements verified\",\"description\":\"Requirements whose verification passes, by test or by a manual method.\"},{\"key\":\"tests_passing\",\"label\":\"Test cases passing\",\"description\":\"Test cases whose latest result is a pass.\"},{\"key\":\"hazards_mitigated\",\"label\":\"Hazards mitigated\",\"description\":\"Hazards that at least one design item mitigates.\"},{\"key\":\"tasks_done\",\"label\":\"Plan tasks done\",\"description\":\"Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date.\"}],\"summary\":{\"tasks\":4,\"done\":1,\"late\":1,\"unscheduled\":0,\"progress\":38,\"critical\":1,\"effort_days\":7.5}}"
       ],
       "trailing_newline": true,
       "parsed": {
         "project_id": "<p>",
+        "working_days": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
         "today": "<date>",
         "start": "<date>",
         "end": "<date>",
@@ -4535,8 +5106,10 @@
             "span_end": "<date>",
             "duration_days": 1,
             "effort_days": null,
-            "float_days": 28899,
+            "float_days": 24783,
             "critical": false,
+            "float_until": "<date>",
+            "critical_subtasks": false,
             "progress": 0,
             "done": false,
             "late": true,
@@ -4547,6 +5120,13 @@
             "todos": [],
             "depends_on": [],
             "relationships": [],
+            "drives": [
+              {
+                "task_id": "<frame>",
+                "type": "FS",
+                "conflict": false
+              }
+            ],
             "conflicts": []
           },
           {
@@ -4563,9 +5143,11 @@
             "span_start": "<date>",
             "span_end": "<date>",
             "duration_days": 20,
-            "effort_days": null,
+            "effort_days": 7.5,
             "float_days": 0,
-            "critical": true,
+            "critical": false,
+            "float_until": null,
+            "critical_subtasks": true,
             "progress": 75,
             "done": false,
             "late": false,
@@ -4576,6 +5158,7 @@
             "todos": [],
             "depends_on": [],
             "relationships": [],
+            "drives": [],
             "conflicts": []
           },
           {
@@ -4591,10 +5174,12 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
-            "duration_days": 10,
+            "duration_days": 8,
             "effort_days": null,
-            "float_days": 0,
+            "float_days": 12,
             "critical": false,
+            "float_until": null,
+            "critical_subtasks": false,
             "progress": 100,
             "done": true,
             "late": false,
@@ -4604,16 +5189,25 @@
             "subtasks_total": 0,
             "todos": [],
             "depends_on": [
-              "<order>"
+              "<order>",
+              "<wiring>"
             ],
             "relationships": [
               {
                 "task_id": "<order>",
                 "type": "FS",
                 "conflict": false
+              },
+              {
+                "task_id": "<wiring>",
+                "type": "FS",
+                "conflict": true
               }
             ],
-            "conflicts": []
+            "drives": [],
+            "conflicts": [
+              "<wiring>"
+            ]
           },
           {
             "id": "<wiring>",
@@ -4628,10 +5222,12 @@
             "end": "<date>",
             "span_start": "<date>",
             "span_end": "<date>",
-            "duration_days": 11,
+            "duration_days": 13,
             "effort_days": 7.5,
             "float_days": 0,
             "critical": true,
+            "float_until": null,
+            "critical_subtasks": false,
             "progress": 50,
             "done": false,
             "late": false,
@@ -4653,14 +5249,13 @@
                 "due_date": null
               }
             ],
-            "depends_on": [
-              "<frame>"
-            ],
-            "relationships": [
+            "depends_on": [],
+            "relationships": [],
+            "drives": [
               {
                 "task_id": "<frame>",
                 "type": "FS",
-                "conflict": false
+                "conflict": true
               }
             ],
             "conflicts": []
@@ -4746,8 +5341,8 @@
             "type": "FS"
           },
           {
-            "work_item_id": "<wiring>",
-            "depends_on_id": "<frame>",
+            "work_item_id": "<frame>",
+            "depends_on_id": "<wiring>",
             "type": "FS"
           }
         ],
@@ -4857,7 +5452,7 @@
           "late": 1,
           "unscheduled": 0,
           "progress": 38,
-          "critical": 2,
+          "critical": 1,
           "effort_days": 7.5
         }
       },

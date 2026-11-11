@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 334
-  axios instance calls: 324 (DELETE 38, GET 133, HEAD 1, POST 105, PUT 47)
+call sites: 337
+  axios instance calls: 327 (DELETE 39, GET 133, HEAD 1, POST 105, PUT 49)
   helper calls (a function that passes its argument to the instance): 1
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 6 (3 of them axios calls)
-distinct METHOD PATH lines below: 333; server routes reached: 333
+distinct METHOD PATH lines below: 336; server routes reached: 336
 
 GET     /api/v1/admin/metrics/usage                                       adminAPI.usage
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
@@ -244,6 +244,7 @@ POST    /api/v1/projects/{id}/plan/milestones                             planAP
 DELETE  /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAPI.removeMilestone
 PUT     /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAPI.updateMilestone
 PUT     /api/v1/projects/{id}/plan/release-milestones/{releaseId}         planAPI.setReleaseCriteria
+PUT     /api/v1/projects/{id}/plan/settings                               planAPI.setWorkingDays
 GET     /api/v1/projects/{id}/priority-detection                          projectAPI.priorityDetection
 PUT     /api/v1/projects/{id}/priority-detection                          projectAPI.setPriorityDetection
 GET     /api/v1/projects/{id}/profile                                     productProfileAPI.get
@@ -338,6 +339,8 @@ GET     /api/v1/work-items/{id}                                           workIt
 PUT     /api/v1/work-items/{id}                                           workItemsAPI.update
 POST    /api/v1/work-items/{id}/comments                                  workItemsAPI.comment
 POST    /api/v1/work-items/{id}/move                                      workItemsAPI.move
+DELETE  /api/v1/work-items/{id}/relationships/{otherId}                   planAPI.unrelate
+PUT     /api/v1/work-items/{id}/relationships/{otherId}                   planAPI.relate
 PUT     /api/v1/work-items/{id}/schedule                                  planAPI.schedule
 GET     /api/v1/work-items/{id}/todos                                     planAPI.listTodos
 POST    /api/v1/work-items/{id}/todos                                     planAPI.addTodo

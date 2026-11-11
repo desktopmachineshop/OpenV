@@ -23,6 +23,9 @@ export const toDay = (date: string): number => Math.round(Date.parse(`${date}T00
 /** A day count back to YYYY-MM-DD. */
 export const fromDay = (day: number): string => new Date(day * DAY_MS).toISOString().slice(0, 10);
 
+/** A day's ISO weekday number: Monday is 1, Sunday 7. */
+export const isoWeekday = (date: string): number => new Date(`${date}T00:00:00Z`).getUTCDay() || 7;
+
 export const addDays = (date: string, days: number): string => fromDay(toDay(date) + days);
 
 /** "3 Mar", with the year when it is not this plan's. */
@@ -105,7 +108,7 @@ export interface Tick {
   label: string;
   left: number;
   width: number;
-  /** A weekend day, shaded at the days zoom. */
+  /** A day the plan does not work, shaded at the days zoom. */
   weekend?: boolean;
 }
 
@@ -138,7 +141,7 @@ const eachPeriod = (scale: Scale, months: number, fn: (year: number, month: numb
  * The header's two rows. Upper: months (days, weeks), quarters or years.
  * Lower: days, weeks by their Monday, months, or quarters.
  */
-export const buildTicks = (scale: Scale): { upper: Tick[]; lower: Tick[] } => {
+export const buildTicks = (scale: Scale, workingDays: number[] = [1, 2, 3, 4, 5]): { upper: Tick[]; lower: Tick[] } => {
   const upper: Tick[] = [];
   const lower: Tick[] = [];
   const push = (list: Tick[], key: string, label: string, from: number, to: number, weekend?: boolean) => {
@@ -150,8 +153,7 @@ export const buildTicks = (scale: Scale): { upper: Tick[]; lower: Tick[] } => {
     if (scale.zoom === 'days') {
       for (let day = scale.first; day <= scale.last; day++) {
         const d = new Date(day * DAY_MS);
-        const dow = d.getUTCDay();
-        push(lower, String(day), String(d.getUTCDate()), day, day + 1, dow === 0 || dow === 6);
+        push(lower, String(day), String(d.getUTCDate()), day, day + 1, !workingDays.includes(d.getUTCDay() || 7));
       }
     } else {
       for (let day = scale.first; day <= scale.last; day += 7) {
@@ -180,4 +182,21 @@ export const fitZoom = (start: string | null, end: string | null, width: number)
     if (days * DAY_WIDTH[z.value] <= width - 2 * FIT_MARGIN) return z.value;
   }
   return 'quarters';
+};
+
+/**
+ * The span one click on the timeline schedules: the period of the zoom's
+ * lower header row that holds the day. A day at the days zoom, its week
+ * (Monday to Sunday) at weeks, its month at months, its quarter at quarters.
+ */
+export const unitSpan = (zoom: Zoom, date: string): { start: string; end: string } => {
+  if (zoom === 'days') return { start: date, end: date };
+  if (zoom === 'weeks') {
+    const monday = addDays(date, 1 - isoWeekday(date));
+    return { start: monday, end: addDays(monday, 6) };
+  }
+  const d = new Date(`${date}T00:00:00Z`);
+  const months = zoom === 'months' ? 1 : 3;
+  const month = Math.floor(d.getUTCMonth() / months) * months;
+  return { start: fromDay(monthStart(d.getUTCFullYear(), month)), end: fromDay(monthStart(d.getUTCFullYear(), month + months) - 1) };
 };

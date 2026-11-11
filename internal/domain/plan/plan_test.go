@@ -17,6 +17,9 @@ import (
 
 func sp(s string) *string { return &s }
 
+// everyDay is a calendar with no days off, for the tests that count days.
+var everyDay = []int{1, 2, 3, 4, 5, 6, 7}
+
 func day(s string) *time.Time {
 	t, _ := time.Parse(DateLayout, s)
 	return &t
@@ -97,7 +100,7 @@ func TestTaskProgressComesFromToDosAndSubTasks(t *testing.T) {
 	if want := "1 parent,1.1 a,1.2 b,2 lone,3 free"; strings.Join(got, ",") != want {
 		t.Fatalf("outline %v, want %s", got, want)
 	}
-	if p.Summary != (Summary{Tasks: 5, Done: 1, Late: 1, Unscheduled: 1, Progress: 26, Critical: 2}) {
+	if p.Summary != (Summary{Tasks: 5, Done: 1, Late: 1, Unscheduled: 1, Progress: 26, Critical: 1}) {
 		t.Fatalf("summary %+v", p.Summary)
 	}
 	if *p.Start != "2027-03-01" || *p.End != "2027-03-20" {
@@ -220,12 +223,13 @@ func TestACriterionIsNotMetByRounding(t *testing.T) {
 type fakeRepo struct {
 	schedules  map[string]*TaskSchedule
 	deps       map[string][]Dependency
+	days       []int
 	todoTasks  map[string]string
 	milestones map[string]*Milestone
 }
 
 func newFakeRepo() *fakeRepo {
-	return &fakeRepo{schedules: map[string]*TaskSchedule{}, deps: map[string][]Dependency{}, todoTasks: map[string]string{}, milestones: map[string]*Milestone{}}
+	return &fakeRepo{days: everyDay, schedules: map[string]*TaskSchedule{}, deps: map[string][]Dependency{}, todoTasks: map[string]string{}, milestones: map[string]*Milestone{}}
 }
 
 func (r *fakeRepo) ListSchedules(string) ([]*TaskSchedule, error) {
@@ -235,7 +239,9 @@ func (r *fakeRepo) ListSchedules(string) ([]*TaskSchedule, error) {
 	}
 	return out, nil
 }
-func (r *fakeRepo) SaveSchedule(s *TaskSchedule) error { r.schedules[s.WorkItemID] = s; return nil }
+func (r *fakeRepo) WorkingDays(string) ([]int, error)      { return r.days, nil }
+func (r *fakeRepo) SetWorkingDays(_ string, d []int) error { r.days = d; return nil }
+func (r *fakeRepo) SaveSchedule(s *TaskSchedule) error     { r.schedules[s.WorkItemID] = s; return nil }
 func (r *fakeRepo) ListDependencies(string) ([]Dependency, error) {
 	out := []Dependency{}
 	for _, on := range r.deps {
@@ -354,6 +360,10 @@ func TestScheduleChecksDatesParentsAndDependencies(t *testing.T) {
 	fails("a loop of parents", ScheduleRequest{ParentID: sp("c")}, "a", ErrParentCycle)
 	fails("a loop of dependencies", ScheduleRequest{DependsOn: &[]string{"b"}}, "c", ErrDependencyCycle)
 
+	// b has a sub-task now, so it takes its dates from it and none can be set on it.
+	fails("dates on a task with sub-tasks", ScheduleRequest{StartDate: sp("2027-03-02")}, "b", ErrParentDates)
+	ok("c", ScheduleRequest{ParentID: sp("")})
+
 	// An omitted field is left as it is; an empty one clears it.
 	ok("b", ScheduleRequest{StartDate: sp("2027-03-02")})
 	if s := repo.schedules["b"]; s.ParentID == nil || *s.ParentID != "a" || len(repo.deps["b"]) != 1 || board.updates != 1 {
@@ -436,6 +446,7 @@ func TestRenderEveryFormat(t *testing.T) {
 		Dependencies: []Dependency{{WorkItemID: "b", DependsOnID: "a"}},
 		Milestones:   []*Milestone{{ID: "m", Name: "Definition complete", TargetDate: sp("2027-03-15"), Criteria: []Criterion{{MetricNeedsAddressed, 100}}}, {ID: "n", Name: "Kick-off"}},
 		Evidence:     evidence(),
+		WorkingDays:  everyDay,
 	}
 	in.Items[1].AssigneeID = sp("u1")
 	doc := Document{ProjectName: `Rig "Mk/2"`, ExportedAt: now, Plan: Build(in, now), Assignees: map[string]string{"u1": "Sam"}}
@@ -460,7 +471,7 @@ func TestRenderEveryFormat(t *testing.T) {
 	csvOut, _ := Render(doc, FormatCSV)
 	text := string(csvOut.Data)
 	for _, want := range []string{
-		`1,"'=Frame, ""welded""",Done,,2027-03-01,2027-03-20,20,,0,false,100,`,
+		`1,"'=Frame, ""welded""",Done,,2027-03-06,2027-03-20,15,,0,false,100,`,
 		"1.1,Wiring,In Progress,Sam,2027-03-06,2027-03-20,15,,0,true,0,0,0,0,0,1FS,false",
 		"\n\nmilestone,kind,date,",
 		"Definition complete,custom,2027-03-15,50,false,User needs addressed,100,50,1,2,false",
@@ -629,14 +640,14 @@ func TestATaskKeepsItsDuration(t *testing.T) {
 	}
 }
 
-func TestCriticalPathIsTheTasksWithNoFloat(t *testing.T) {
+func TestCriticalPathIsTheChainThatDecidesThePlansEnd(t *testing.T) {
 	// design 1-5, build 6-12 after design (FS, tight), test 13-20 after build
 	// (tight) and the last task; docs 6-8 after design, with room to slip;
 	// paint 14-16 must finish with test (FF) and has 4 days; old is done.
 	mk := func(id, start, end, col string, age int) (*workitems.WorkItem, *TaskSchedule) {
 		return item(id, id, col, day("2027-03-"+end), age), &TaskSchedule{WorkItemID: id, StartDate: sp("2027-03-" + start)}
 	}
-	in := Inputs{}
+	in := Inputs{WorkingDays: everyDay}
 	for i, r := range [][4]string{
 		{"design", "01", "05", workitems.ColumnTodo}, {"build", "06", "12", workitems.ColumnTodo},
 		{"test", "13", "20", workitems.ColumnTodo}, {"docs", "06", "08", workitems.ColumnTodo},
@@ -681,11 +692,20 @@ func TestCriticalPathIsTheTasksWithNoFloat(t *testing.T) {
 		t.Errorf("build runs 7 days: %v", d)
 	}
 	// Give build a day's gap before test and it gains a day of float, and so
-	// does design, which is tight against build: only test is left critical.
+	// does design, which is tight against build. The path still runs through
+	// both, since they are what test waits for, and build says how far its
+	// end can slip before it pushes test.
 	in.Items[1].DueDate = day("2027-03-11")
 	p = Build(in, now)
-	if *task(p, "build").FloatDays != 1 || *task(p, "design").FloatDays != 1 || task(p, "build").Critical || !task(p, "test").Critical {
-		t.Errorf("a gap is float for everything before it: build %d design %d", *task(p, "build").FloatDays, *task(p, "design").FloatDays)
+	build, design := task(p, "build"), task(p, "design")
+	if *build.FloatDays != 1 || *design.FloatDays != 1 || !build.Critical || !design.Critical || !task(p, "test").Critical {
+		t.Errorf("a gap is float, and the path still shows: build %d %v design %d %v", *build.FloatDays, build.Critical, *design.FloatDays, design.Critical)
+	}
+	if build.FloatUntil == nil || *build.FloatUntil != "2027-03-12" || design.FloatUntil != nil {
+		t.Errorf("build can slip to the day before test starts, design has no room: %v %v", build.FloatUntil, design.FloatUntil)
+	}
+	if task(p, "docs").Critical || task(p, "paint").Critical || task(p, "docs").FloatUntil != nil {
+		t.Errorf("tasks off the path stay off it")
 	}
 }
 
@@ -699,5 +719,156 @@ func TestATodoHasOneDateItsDeadline(t *testing.T) {
 	got := task(p, "a").Todos
 	if got[0].DueDate == nil || *got[0].DueDate != "2027-03-12" || got[1].DueDate != nil {
 		t.Fatalf("%+v", got)
+	}
+}
+
+func TestWorkingDaysDecideDurationAndFloat(t *testing.T) {
+	// March 2027: the 1st is a Monday, the 6th and 7th a weekend.
+	week := NewCalendar(nil)
+	if week.Span("2027-03-01", "2027-03-12") != 10 || week.Span("2027-03-05", "2027-03-08") != 2 || week.Span("2027-03-06", "2027-03-07") != 1 {
+		t.Fatal("a duration counts the working days from start to end, and is at least 1")
+	}
+	if week.End("2027-03-04", 3) != "2027-03-08" || week.End("2027-03-06", 1) != "2027-03-08" || week.Start("2027-03-08", 3) != "2027-03-04" || week.Start("2027-03-07", 1) != "2027-03-05" {
+		t.Fatal("a task's other date skips the days off")
+	}
+	if week.Between("2027-03-05", "2027-03-08") != 1 || week.Between("2027-03-08", "2027-03-05") != -1 || week.Between("2027-03-01", "2027-03-29") != 20 {
+		t.Fatal("slip is counted in working days")
+	}
+	if NewCalendar(everyDay).Span("2027-03-05", "2027-03-08") != 4 {
+		t.Fatal("a plan that works every day counts every day")
+	}
+	if _, err := CleanWorkingDays([]int{}); !errors.Is(err, ErrWorkingDays) {
+		t.Fatalf("no working days: %v", err)
+	}
+	if _, err := CleanWorkingDays([]int{0}); !errors.Is(err, ErrWorkingDays) {
+		t.Fatalf("day 0: %v", err)
+	}
+	if d, _ := CleanWorkingDays([]int{7, 1, 1}); len(d) != 2 || d[0] != 1 || d[1] != 7 {
+		t.Fatalf("sorted, each once: %v", d)
+	}
+
+	svc, repo, board, _ := newService()
+	if _, err := svc.SetWorkingDays("p", []int{9}); !errors.Is(err, ErrWorkingDays) {
+		t.Fatalf("a bad day: %v", err)
+	}
+	if days, err := svc.SetWorkingDays("p", []int{5, 4, 3, 2, 1}); err != nil || len(days) != 5 || days[0] != 1 {
+		t.Fatalf("%v %v", days, err)
+	}
+	n := 3
+	// b: three working days from Thursday the 4th end on Monday the 8th.
+	if err := svc.Schedule("b", ScheduleRequest{StartDate: sp("2027-03-04"), DurationDays: &n}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if got := board.items["b"].DueDate.Format(DateLayout); got != "2027-03-08" || *repo.schedules["b"].DurationDays != 3 {
+		t.Fatalf("due %s", got)
+	}
+	// Moved to start on Friday, it still takes three working days.
+	if err := svc.Schedule("b", ScheduleRequest{StartDate: sp("2027-03-05")}, "tester"); err != nil || board.items["b"].DueDate.Format(DateLayout) != "2027-03-09" {
+		t.Fatalf("%v %v", err, board.items["b"].DueDate)
+	}
+	p, _ := svc.Plan("p", Evidence{}, now)
+	if len(p.WorkingDays) != 5 || *task(p, "b").DurationDays != 3 {
+		t.Fatalf("the plan reports its working days and counts in them: %v", p.WorkingDays)
+	}
+	// a is due Wednesday the 10th, a day after b: one working day of float for b.
+	if f := task(p, "b").FloatDays; f == nil || *f != 1 {
+		t.Fatalf("float in working days: %v", f)
+	}
+}
+
+func TestATaskWithSubTasksTakesItsDatesFromThem(t *testing.T) {
+	effort := func(v float64) *float64 { return &v }
+	in := Inputs{
+		WorkingDays: everyDay,
+		Items: []*workitems.WorkItem{
+			// The folder has dates of its own from before it had sub-tasks: they no longer count.
+			item("folder", "Folder", workitems.ColumnTodo, day("2027-06-30"), 0),
+			item("x", "X", workitems.ColumnTodo, day("2027-03-05"), 1),
+			item("y", "Y", workitems.ColumnTodo, day("2027-03-20"), 2),
+			item("after", "After", workitems.ColumnTodo, day("2027-03-25"), 3),
+			item("empty", "Empty folder", workitems.ColumnTodo, day("2027-03-01"), 4),
+			item("unplaced", "Unplaced", workitems.ColumnTodo, nil, 5),
+		},
+		Schedules: []*TaskSchedule{
+			{WorkItemID: "folder", StartDate: sp("2027-01-01"), EffortDays: effort(99)},
+			{WorkItemID: "x", StartDate: sp("2027-03-01"), ParentID: sp("folder"), EffortDays: effort(2)},
+			{WorkItemID: "y", StartDate: sp("2027-03-06"), ParentID: sp("folder"), EffortDays: effort(3.5)},
+			{WorkItemID: "after", StartDate: sp("2027-03-21")},
+			{WorkItemID: "unplaced", ParentID: sp("empty")},
+		},
+		Dependencies: []Dependency{
+			{WorkItemID: "y", DependsOnID: "x", Type: RelFinishToStart},
+			{WorkItemID: "after", DependsOnID: "y", Type: RelFinishToStart},
+		},
+	}
+	p := Build(in, now)
+	f := task(p, "folder")
+	if f.Start != nil || f.End != nil || *f.SpanStart != "2027-03-01" || *f.SpanEnd != "2027-03-20" || *f.DurationDays != 20 || *f.EffortDays != 5.5 {
+		t.Fatalf("a folder spans its sub-tasks and adds up their effort: %+v", f)
+	}
+	if e := task(p, "empty"); e.SpanStart != nil || e.DurationDays != nil {
+		t.Fatalf("a folder whose sub-tasks have no dates has none: %+v", e)
+	}
+	// The path runs x, y, after: through the folder, which is not itself on it.
+	if f.Critical || !f.CriticalSubtasks || !task(p, "x").Critical || !task(p, "y").Critical || !task(p, "after").Critical {
+		t.Fatalf("the critical path runs through the folder's sub-tasks: %+v", f)
+	}
+	if task(p, "empty").CriticalSubtasks || p.Summary.Critical != 3 || p.Summary.EffortDays != 5.5 {
+		t.Fatalf("summary counts the tasks themselves, once: %+v", p.Summary)
+	}
+	// Each relationship is seen from both ends.
+	if d := task(p, "y").Drives; len(d) != 1 || d[0] != (TaskRelationship{TaskID: "after", Type: RelFinishToStart}) {
+		t.Fatalf("y drives after: %+v", d)
+	}
+	if d := task(p, "after").Drives; len(d) != 0 {
+		t.Fatalf("after drives nothing: %+v", d)
+	}
+}
+
+func TestARelationshipIsMadeFromEitherEnd(t *testing.T) {
+	svc, repo, _, _ := newService()
+	has := func(driven, driver, kind string) bool {
+		for _, d := range repo.deps[driven] {
+			if d.DependsOnID == driver && d.Type == kind {
+				return true
+			}
+		}
+		return false
+	}
+	// From a: a drives b, finish to start. It is stored on b, the driven task.
+	if err := svc.Relate("a", "b", "fs", true); err != nil || !has("b", "a", RelFinishToStart) {
+		t.Fatalf("a drives b: %v %+v", err, repo.deps)
+	}
+	// From b the same relationship is changed to start to start.
+	if err := svc.Relate("b", "a", RelStartToStart, false); err != nil || !has("b", "a", RelStartToStart) || len(repo.deps["b"]) != 1 {
+		t.Fatalf("retyped from the other end: %v %+v", err, repo.deps)
+	}
+	// Turned round from a: now b drives a, and the old one is gone.
+	if err := svc.Relate("a", "b", RelFinishToFinish, false); err != nil || !has("a", "b", RelFinishToFinish) || len(repo.deps["b"]) != 0 {
+		t.Fatalf("turned round: %v %+v", err, repo.deps)
+	}
+	// c drives b, so b -> a and c -> b: a driving c would close a loop.
+	if err := svc.Relate("c", "b", "", true); err != nil || !has("b", "c", RelFinishToStart) {
+		t.Fatal(err)
+	}
+	if err := svc.Relate("a", "c", RelFinishToStart, true); !errors.Is(err, ErrDependencyCycle) {
+		t.Fatalf("a loop: %v", err)
+	}
+	for want, call := range map[error]func() error{
+		ErrDependsOnSelf:    func() error { return svc.Relate("a", "a", "FS", true) },
+		ErrOtherProject:     func() error { return svc.Relate("a", "x", "FS", true) },
+		ErrTaskNotFound:     func() error { return svc.Relate("nope", "a", "FS", true) },
+		ErrRelationshipType: func() error { return svc.Relate("a", "c", "SF", true) },
+	} {
+		if err := call(); !errors.Is(err, want) {
+			t.Fatalf("want %v, got %v", want, err)
+		}
+	}
+	// Removed from either end, whichever way it runs.
+	if err := svc.Unrelate("a", "b"); err != nil || len(repo.deps["a"]) != 0 || !has("b", "c", RelFinishToStart) {
+		t.Fatalf("unrelate: %v %+v", err, repo.deps)
+	}
+	if err := svc.Unrelate("c", "b"); err != nil || len(repo.deps["b"]) != 0 {
+		t.Fatalf("unrelate from the driver: %v %+v", err, repo.deps)
 	}
 }

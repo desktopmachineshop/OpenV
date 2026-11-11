@@ -731,7 +731,7 @@
     {
       "name": "get_plan",
       "read_only": true,
-      "description": "Read a project's plan: every board task in outline order with its start and due dates, parent task, progress (from its to-dos and sub-tasks), its duration, effort and float in days, whether it is on the critical path, its relationships to the tasks that drive it (FS, SS or FF) and whether it is late; the milestones in date order, each target release among them, with their completion criteria measured against the project's artifacts; and every metric a criterion can name with its current value.",
+      "description": "Read a project's plan: every board task in outline order with its start and due dates, parent task, progress (from its to-dos and sub-tasks), its duration and float in working days, its effort in days, whether it is on the critical path (the chain of tasks that decides the plan's end, which may still have float) and the day its end can slip to before it pushes the next task, its relationships to the tasks that drive it (FS, SS or FF) and whether it is late; the milestones in date order, each target release among them, with their completion criteria measured against the project's artifacts; and every metric a criterion can name with its current value.",
       "input_schema": {
         "properties": {
           "project_id": {"description": "Project ID", "type": "string"}
@@ -745,7 +745,7 @@
     {
       "name": "schedule_work_item",
       "read_only": false,
-      "description": "Place a board task on the plan: its start date and due date (YYYY-MM-DD), its duration and effort in days, its parent task (making it a sub-task) and its relationships to the tasks that drive it. A relationship is written \"<work item id>:<type>\", where the type is FS (finish to start: this task starts after that one finishes), SS (start to start: it starts no earlier than that one starts) or FF (finish to finish: it finishes no earlier than that one finishes); with no type it is FS. A task may have several, so two tasks can together drive when it starts. Only the arguments you pass change; pass an empty string to clear a date or the parent, and an empty relationships list to clear them. Answers the task's row of the plan.",
+      "description": "Place a board task on the plan: its start date and due date (YYYY-MM-DD), its duration in working days and effort in days (a task with sub-tasks takes all four from them and refuses them), its parent task (making it a sub-task) and its relationships to the tasks that drive it. A relationship is written \"<work item id>:<type>\", where the type is FS (finish to start: this task starts after that one finishes), SS (start to start: it starts no earlier than that one starts) or FF (finish to finish: it finishes no earlier than that one finishes); with no type it is FS. A task may have several, so two tasks can together drive when it starts. Only the arguments you pass change; pass an empty string to clear a date or the parent, and an empty relationships list to clear them. Answers the task's row of the plan.",
       "input_schema": {
         "properties": {
           "depends_on": {
@@ -758,7 +758,7 @@
             "type": "string"
           },
           "duration_days": {
-            "description": "How long the task runs, in whole days counting its first and last; the task keeps it, so a start date sent alone moves the due date and a due date sent alone moves the start. \"0\" clears it",
+            "description": "How long the task runs, in whole working days counting its first and last; the task keeps it, so a start date sent alone moves the due date and a due date sent alone moves the start. \"0\" clears it",
             "type": "string"
           },
           "effort_days": {
@@ -786,6 +786,27 @@
       "calls": ["PUT /api/v1/work-items/{id}/schedule"],
       "requests": [
         "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"duration_days\":21,\"effort_days\":7.5,\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"relationships\":[{\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"\"}],\"start_date\":\"2027-01-11\"}"
+      ]
+    },
+    {
+      "name": "set_plan_working_days",
+      "read_only": false,
+      "description": "Set which days of the week a project's plan works, as ISO weekday numbers from \"1\" (Monday) to \"7\" (Sunday). A task's duration and float count only working days, so a plan that works Monday to Friday (the default) leaves weekends out. Answers the working days as stored.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"},
+          "working_days": {
+            "description": "ISO weekday numbers, \"1\" (Monday) to \"7\" (Sunday); at least one",
+            "items": {"type": "string"},
+            "type": "array"
+          }
+        },
+        "required": ["project_id", "working_days"],
+        "type": "object"
+      },
+      "calls": ["PUT /api/v1/projects/{id}/plan/settings"],
+      "requests": [
+        "PUT /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/settings {\"working_days\":[1,2,3,4,6]}"
       ]
     }
   ],

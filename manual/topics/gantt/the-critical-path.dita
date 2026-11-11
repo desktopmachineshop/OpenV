@@ -6,12 +6,13 @@
     <resourceid appname="openv-web" appid="gantt.critical"/>
   </prolog>
   <conbody>
-    <p>The <b>critical path</b> is the chain of tasks that decides when the plan ends: each has no room to slip, so a day lost on any of them is a day lost at the end. OpenV works out, for every task with dates, its <b>float</b>: how many days it could slip before the plan's last task would end later. A task can slip until the plan's last day, or until it would push a task it drives:</p>
+    <p>The <b>critical path</b> is the chain of tasks that decides when the plan ends: each has no room to slip, so a day lost on any of them is a day lost at the end. OpenV works out, for every task with dates, its <b>float</b>: how many working days it could slip before the plan's last task would end later. A task can slip until the plan's last day, or until it would push a task it drives:</p>
     <ul>
       <li>a <b>finish to start</b> relationship lets it slip until the day before the other task starts;</li>
       <li>a <b>start to start</b> relationship lets its start slip until the other task's start;</li>
       <li>a <b>finish to finish</b> relationship lets its end slip until the other task's end.</li>
     </ul>
-    <p>A task with no float, and not yet done, is <b>critical</b>. With <b>Critical path</b> on, which it is when the page opens, critical tasks have an amber outline and an amber dot in the outline, and the arrows between them are amber and heavier. A task's panel says <b>Critical</b>, or how many days of float it has. The float is worked out from the dates as they stand: OpenV does not move tasks for you. A task with no relationships has float up to the plan's last day, so only relationships make a path longer than one task.</p>
+    <p>The path starts at the tasks with no float and runs back from each task on it to the task that drives it most tightly. It is shown whole even where the dates leave room between two of its tasks: a task on the path, and not yet done, is <b>critical</b> whether or not it has float. With <b>Critical path</b> on, which it is when the page opens, critical tasks have an amber outline and an amber dot in the outline, and the arrows between them are amber and heavier.</p>
+    <p>Float is drawn on the chart as well. After the bar of a task that drives another, a thin line runs to the last day its end can slip to before it pushes that task, and ends in a tick, so the room between one task and the next is the length of the line. The line is amber on the critical path and grey elsewhere; a task with no room has none. A task's panel says <b>Critical</b> with any float it has, or how many days of float it has. A task with sub-tasks is never critical itself: its panel says <b>Critical sub-tasks</b> when the path runs through them, and it carries the amber marks on the chart while it is folded. The float is worked out from the dates as they stand: OpenV does not move tasks for you. A task with no relationships has float up to the plan's last day, so only relationships make a path longer than one task.</p>
   </conbody>
 </concept>

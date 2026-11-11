@@ -6,8 +6,10 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlanMilestone, PlanTask, ProjectPlan } from '../../api/client';
 import { ellipsis, eyebrowStyle, mutedStyle } from '../ui';
-import { DependencyLines, OpenIcon, OutlineCell, ROW_HEIGHT, TaskBar } from './GanttRows';
-import { Scale, Tick, Zoom, addDays, buildScale, buildTicks, openingScroll, shortDate, todayScroll } from './ganttScale';
+import { DependencyLines, LinkBand, OnLink, ROW_HEIGHT, useLinkDrag } from './GanttLinks';
+import { AddTaskRow, OpenIcon, OutlineCell, TaskBar } from './GanttRows';
+import { ScheduleTrack } from './GanttSchedule';
+import { Scale, Tick, Zoom, buildScale, buildTicks, openingScroll, shortDate, todayScroll } from './ganttScale';
 import { milestoneColor, visibleTasks } from './planModel';
 
 const HEAD_ROW = 24;
@@ -137,7 +139,7 @@ const MilestoneLane: React.FC<{
   );
 };
 
-/** The vertical guides behind the bars: weekends and period lines, each milestone, and today. */
+/** The vertical guides behind the bars: days off and period lines, each milestone, and today. */
 const Guides: React.FC<{ scale: Scale; ticks: Tick[]; milestones: PlanMilestone[]; today: string; height: number }> = ({
   scale,
   ticks,
@@ -169,10 +171,23 @@ export interface GanttChartProps {
   selectedTaskId: string;
   selectedMilestoneKey: string;
   onSelectTask: (t: PlanTask) => void;
+  /** Opens the task in full: its description, assignee, linked artifacts and activity. */
+  onOpenTask: (t: PlanTask) => void;
   onSelectMilestone: (m: PlanMilestone) => void;
-  /** Set where the reader may edit with a pointer: bars drag, and an unscheduled row offers Schedule. */
+  /** Set where the reader may edit with a pointer: bars drag, and an unscheduled row is clicked or dragged across to schedule it. */
   onReschedule?: (t: PlanTask, start: string, end: string) => void;
-  /** Marks the tasks with no float, and the arrows between them. */
+  /** Set where links can be drawn: a drag from the "+" at an end of a bar to another bar relates the two. */
+  onLink?: OnLink;
+  /** Set where tasks can be added: the chart ends in a row that takes a title. */
+  onAddTask?: (title: string) => void;
+  busy?: boolean;
+  /**
+   * On a touch screen the chart scrolls as the browser scrolls it. Elsewhere
+   * the timeline has a scroll bar of its own under it, which starts where
+   * the task column ends.
+   */
+  touch?: boolean;
+  /** Marks the critical path, the arrows along it, and each task's float after its bar. */
   showCritical: boolean;
   /** Counts presses of Today: each one scrolls today back to a third of the way in. */
   todaySignal: number;
@@ -185,14 +200,23 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   selectedTaskId,
   selectedMilestoneKey,
   onSelectTask,
+  onOpenTask,
   onSelectMilestone,
   onReschedule,
+  onLink,
+  onAddTask,
+  busy,
+  touch,
   showCritical,
   todaySignal,
 }) => {
   const scroller = useRef<HTMLDivElement>(null);
   const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
   const [viewWidth, setViewWidth] = useState(0);
+  const [pointed, setPointed] = useState('');
+  const body = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
+  const { link, begin: beginLink } = useLinkDrag(body, onLink);
 
   useLayoutEffect(() => {
     const el = scroller.current;
@@ -209,7 +233,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     () => buildScale(zoom, plan.start, plan.end, plan.today, Math.max(viewWidth - outlineWidth, 0)),
     [zoom, plan.start, plan.end, plan.today, viewWidth, outlineWidth],
   );
-  const ticks = useMemo(() => buildTicks(scale), [scale]);
+  const ticks = useMemo(() => buildTicks(scale, plan.working_days), [scale, plan.working_days]);
   const rows = useMemo(() => visibleTasks(plan.tasks, folded), [plan.tasks, folded]);
 
   const timelineWidth = Math.max(viewWidth - outlineWidth, 0);
@@ -244,7 +268,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const startPan = (e: React.PointerEvent) => {
     const el = scroller.current;
     if (!el || e.button !== 0 || e.pointerType !== 'mouse') return;
-    if ((e.target as HTMLElement).closest('button, a, input, select, [role="rowheader"]')) return;
+    if ((e.target as HTMLElement).closest('button, a, input, select, [role="rowheader"], [role="button"], [data-link-handle]')) return;
     pan.current = { x: e.clientX, y: e.clientY, left: el.scrollLeft, top: el.scrollTop };
     el.setPointerCapture(e.pointerId);
     setPanning(true);
@@ -269,7 +293,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   const bodyHeight = rows.length * ROW_HEIGHT;
   return (
-    <div
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+      <div
       ref={scroller}
       role="table"
       aria-label="Plan timeline"
@@ -279,14 +304,23 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       onPointerMove={movePan}
       onPointerUp={endPan}
       onPointerCancel={endPan}
+      onScroll={(e) => {
+        if (bar.current && bar.current.scrollLeft !== e.currentTarget.scrollLeft) bar.current.scrollLeft = e.currentTarget.scrollLeft;
+      }}
+      onWheel={(e) => {
+        // The chart's own horizontal bar is hidden: a sideways wheel or swipe still moves the timeline.
+        const dx = e.deltaX || (e.shiftKey ? e.deltaY : 0);
+        if (!touch && dx) e.currentTarget.scrollLeft += dx;
+      }}
       style={{
         position: 'relative',
-        overflow: 'auto',
-        maxHeight: 'calc(100dvh - 210px)',
+        overflowX: touch ? 'auto' : 'hidden',
+        overflowY: 'auto',
+        flex: 1,
         minHeight: 180,
         overscrollBehaviorX: 'contain',
-        cursor: panning ? 'grabbing' : 'grab',
-        userSelect: panning ? 'none' : undefined,
+        cursor: link ? 'crosshair' : panning ? 'grabbing' : 'grab',
+        userSelect: panning || link ? 'none' : undefined,
       }}
     >
       <div style={{ width: outlineWidth + scale.width, minWidth: '100%' }}>
@@ -313,71 +347,86 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           />
         </div>
 
-        <div style={{ position: 'relative' }}>
+        <div ref={body} style={{ position: 'relative' }}>
           <div style={{ position: 'absolute', left: outlineWidth, top: 0, width: scale.width, height: bodyHeight }}>
             <Guides scale={scale} ticks={ticks.lower} milestones={plan.milestones} today={plan.today} height={bodyHeight} />
           </div>
-          {rows.map((t) => (
-            <div role="row" key={t.id} style={{ display: 'flex', height: ROW_HEIGHT }}>
-              <OutlineCell
-                task={t}
-                width={outlineWidth}
-                selected={t.id === selectedTaskId}
-                folded={folded.has(t.id)}
-                onToggle={() => toggle(t.id)}
-                onSelect={() => onSelectTask(t)}
-                critical={showCritical && t.critical}
-              />
-              <div
-                role="cell"
-                style={{ position: 'relative', width: scale.width, height: ROW_HEIGHT, boxSizing: 'border-box', borderBottom: '1px solid var(--border-soft)', background: t.id === selectedTaskId ? 'color-mix(in srgb, var(--tint-blue) 45%, transparent)' : undefined }}
-              >
-                {t.span_start ? (
-                  <TaskBar
-                    task={t}
-                    scale={scale}
-                    today={plan.today}
-                    selected={t.id === selectedTaskId}
-                    critical={showCritical && t.critical}
-                    onSelect={() => onSelectTask(t)}
-                    onReschedule={onReschedule ? (start, end) => onReschedule(t, start, end) : undefined}
-                  />
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => (onReschedule ? onReschedule(t, plan.today, addDays(plan.today, 6)) : onSelectTask(t))}
-                    aria-label={onReschedule ? `Schedule ${t.title} for a week from today` : `${t.title}: not scheduled`}
-                    style={{
-                      position: 'absolute',
-                      left: scale.x(plan.today),
-                      top: 7,
-                      height: ROW_HEIGHT - 14,
-                      padding: '0 8px',
-                      border: '1px dashed var(--neutral-mid)',
-                      borderRadius: 4,
-                      background: 'var(--surface)',
-                      color: 'var(--text-muted)',
-                      fontSize: 11,
-                      cursor: 'pointer',
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {onReschedule ? '+ Schedule' : 'Not scheduled'}
-                  </button>
-                )}
+          {rows.map((t) => {
+            // A folded task stands for its sub-tasks: it carries their critical mark.
+            const critical = showCritical && (t.critical || (folded.has(t.id) && t.critical_subtasks));
+            return (
+              <div role="row" key={t.id} style={{ display: 'flex', height: ROW_HEIGHT }}>
+                <OutlineCell
+                  task={t}
+                  width={outlineWidth}
+                  selected={t.id === selectedTaskId}
+                  folded={folded.has(t.id)}
+                  onToggle={() => toggle(t.id)}
+                  onSelect={() => onSelectTask(t)}
+                  onOpen={() => onOpenTask(t)}
+                  critical={critical}
+                />
+                <div
+                  role="cell"
+                  onPointerEnter={() => setPointed(t.id)}
+                  onPointerLeave={() => setPointed((id) => (id === t.id ? '' : id))}
+                  style={{ position: 'relative', width: scale.width, height: ROW_HEIGHT, boxSizing: 'border-box', borderBottom: '1px solid var(--border-soft)', background: t.id === selectedTaskId ? 'color-mix(in srgb, var(--tint-blue) 45%, transparent)' : undefined }}
+                >
+                  {t.span_start ? (
+                    <TaskBar
+                      task={t}
+                      scale={scale}
+                      today={plan.today}
+                      selected={t.id === selectedTaskId}
+                      critical={critical}
+                      showFloat={showCritical}
+                      onSelect={() => onSelectTask(t)}
+                      onReschedule={onReschedule ? (start, end) => onReschedule(t, start, end) : undefined}
+                      onLinkStart={onLink && !link && (pointed === t.id || t.id === selectedTaskId) ? (end, e) => beginLink(t.id, end, e) : undefined}
+                    />
+                  ) : (
+                    <ScheduleTrack
+                      task={t}
+                      scale={scale}
+                      today={plan.today}
+                      onSchedule={onReschedule ? (start, end) => onReschedule(t, start, end) : undefined}
+                      onSelect={() => onSelectTask(t)}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           <div style={{ position: 'absolute', left: outlineWidth, top: 0, width: scale.width, height: bodyHeight, pointerEvents: 'none', zIndex: 1 }}>
-            <DependencyLines tasks={rows} scale={scale} showCritical={showCritical} />
+            <DependencyLines tasks={plan.tasks} rows={rows} folded={folded} scale={scale} showCritical={showCritical} />
           </div>
+          {link && <LinkBand link={link} />}
           {rows.length === 0 && (
             <p style={{ ...mutedStyle, margin: 0, padding: 16, position: 'sticky', left: 0, maxWidth: 520 }}>
               No tasks yet. Add one here, or on the Board: every card on the board is a task of the plan.
             </p>
           )}
         </div>
+        {onAddTask && <AddTaskRow width={outlineWidth} busy={busy} onAdd={onAddTask} />}
       </div>
+      </div>
+      {!touch && (
+        <div style={{ display: 'flex', borderTop: '1px solid var(--border-soft)' }}>
+          <div style={{ width: outlineWidth, flexShrink: 0, boxSizing: 'border-box', borderRight: '1px solid var(--border)', background: 'var(--surface-alt)' }} />
+          <div
+            ref={bar}
+            data-timeline-scrollbar
+            aria-hidden
+            onScroll={(e) => {
+              const el = scroller.current;
+              if (el && el.scrollLeft !== e.currentTarget.scrollLeft) el.scrollLeft = e.currentTarget.scrollLeft;
+            }}
+            style={{ flex: 1, minWidth: 0, overflowX: 'scroll', overflowY: 'hidden' }}
+          >
+            <div style={{ width: scale.width, height: 1 }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

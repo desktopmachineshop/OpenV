@@ -1,7 +1,8 @@
 // What the plan's views share beyond the API's answer: which rows a folded
 // outline shows, a task's descendants, the colours of a bar and a milestone,
 // and the phone's grouping of tasks under the milestone they lead to.
-import type { PlanMilestone, PlanRelationshipType, PlanTask } from '../../api/client';
+import type { PlanMilestone, PlanRelationshipDirection, PlanRelationshipType, PlanTask } from '../../api/client';
+import { addDays, isoWeekday } from './ganttScale';
 import type { ChipTone } from '../ui';
 import { BOARD_COLUMNS } from '../kanban/columns';
 
@@ -58,6 +59,96 @@ export const dependents = (tasks: PlanTask[], id: string): Set<string> => {
   }
   return out;
 };
+
+/** A relationship as the task that has it open reads it: its type, and which way it runs. */
+export interface RelationshipView {
+  type: PlanRelationshipType;
+  direction: PlanRelationshipDirection;
+}
+
+/**
+ * The six ways one task can relate to another, worded from the side of the
+ * task being edited, each named by the end of this task and then the end of
+ * the other that it joins, so one finish-to-start link reads "finish to
+ * start" on the task that comes first and "start to finish" on the one that
+ * follows. The first three are driven by the other task, the last three
+ * drive it.
+ */
+export const RELATIONSHIP_VIEWS: (RelationshipView & { label: string })[] = [
+  { direction: 'driven_by', type: 'FS', label: 'Start to finish: this starts after that finishes' },
+  { direction: 'driven_by', type: 'SS', label: 'Start to start: this starts after that starts' },
+  { direction: 'driven_by', type: 'FF', label: 'Finish to finish: this finishes after that finishes' },
+  { direction: 'drives', type: 'FS', label: 'Finish to start: that starts after this finishes' },
+  { direction: 'drives', type: 'SS', label: 'Start to start: that starts after this starts' },
+  { direction: 'drives', type: 'FF', label: 'Finish to finish: that finishes after this finishes' },
+];
+
+export const viewKey = (v: RelationshipView): string => `${v.direction}:${v.type}`;
+
+export const relationshipViewLabel = (v: RelationshipView): string =>
+  RELATIONSHIP_VIEWS.find((r) => r.direction === v.direction && r.type === v.type)?.label ?? v.type;
+
+/** An end of a task's bar: where a link drawn on the chart leaves or lands. */
+export type BarEnd = 'start' | 'end';
+
+/**
+ * The relationship a link dragged from one end of a bar to an end of another
+ * makes, from the first task's side. Finish to start, start to start and
+ * finish to finish drive the task the link lands on; a link from a start to
+ * a finish is finish to start the other way round.
+ */
+export const linkBetween = (from: BarEnd, to: BarEnd): RelationshipView => {
+  if (from === 'end') return { direction: 'drives', type: to === 'start' ? 'FS' : 'FF' };
+  return to === 'start' ? { direction: 'drives', type: 'SS' } : { direction: 'driven_by', type: 'FS' };
+};
+
+/** The row that stands for a task on the chart: itself, or the folded task it is under. */
+export const shownAs = (tasks: PlanTask[], folded: ReadonlySet<string>): Map<string, string> => {
+  const out = new Map<string, string>();
+  // The outline lists a parent before its sub-tasks.
+  for (const t of tasks) {
+    const parent = t.parent_id ? out.get(t.parent_id) : undefined;
+    out.set(t.id, parent !== undefined && (parent !== t.parent_id || folded.has(t.parent_id!)) ? parent : t.id);
+  }
+  return out;
+};
+
+/** Whether the plan works on a day. */
+export const worksOn = (workingDays: number[], date: string): boolean => workingDays.includes(isoWeekday(date));
+
+/** A task's duration from start to end in working days, counting both ends; at least 1. */
+export const workSpan = (workingDays: number[], start: string, end: string): number => {
+  let n = 0;
+  for (let d = start; d <= end; d = addDays(d, 1)) if (worksOn(workingDays, d)) n++;
+  return Math.max(n, 1);
+};
+
+const step = (workingDays: number[], from: string, duration: number, by: 1 | -1): string => {
+  if (workingDays.length === 0) return from;
+  let d = from;
+  while (!worksOn(workingDays, d)) d = addDays(d, by);
+  for (let left = duration - 1; left > 0; ) {
+    d = addDays(d, by);
+    if (worksOn(workingDays, d)) left--;
+  }
+  return d;
+};
+
+/** The due date of a task that starts on a day and runs for so many working days. */
+export const workEnd = (workingDays: number[], start: string, duration: number): string => step(workingDays, start, duration, 1);
+
+/** The start of a task that is due on a day and runs for so many working days. */
+export const workStart = (workingDays: number[], due: string, duration: number): string => step(workingDays, due, duration, -1);
+
+export const WEEKDAYS: { day: number; short: string; name: string }[] = [
+  { day: 1, short: 'M', name: 'Monday' },
+  { day: 2, short: 'T', name: 'Tuesday' },
+  { day: 3, short: 'W', name: 'Wednesday' },
+  { day: 4, short: 'T', name: 'Thursday' },
+  { day: 5, short: 'F', name: 'Friday' },
+  { day: 6, short: 'S', name: 'Saturday' },
+  { day: 7, short: 'S', name: 'Sunday' },
+];
 
 export const columnLabel = (column: string): string => BOARD_COLUMNS.find((c) => c.key === column)?.label ?? column;
 

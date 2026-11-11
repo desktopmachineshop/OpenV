@@ -29,7 +29,10 @@ func (h *Handler) registerPlanRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/plan/milestones/{milestoneId}", h.UpdatePlanMilestone).Methods("PUT")
 	router.HandleFunc("/api/v1/projects/{id}/plan/milestones/{milestoneId}", h.DeletePlanMilestone).Methods("DELETE")
 	router.HandleFunc("/api/v1/projects/{id}/plan/release-milestones/{releaseId}", h.SetReleaseMilestoneCriteria).Methods("PUT")
+	router.HandleFunc("/api/v1/projects/{id}/plan/settings", h.SetPlanSettings).Methods("PUT")
 	router.HandleFunc("/api/v1/work-items/{id}/schedule", h.ScheduleWorkItem).Methods("PUT")
+	router.HandleFunc("/api/v1/work-items/{id}/relationships/{otherId}", h.RelateWorkItems).Methods("PUT")
+	router.HandleFunc("/api/v1/work-items/{id}/relationships/{otherId}", h.UnrelateWorkItems).Methods("DELETE")
 	router.HandleFunc("/api/v1/work-items/{id}/todos", h.AddWorkItemTodo).Methods("POST")
 	router.HandleFunc("/api/v1/work-items/{id}/todos", h.ListWorkItemTodos).Methods("GET")
 }
@@ -43,7 +46,8 @@ func writePlanError(w http.ResponseWriter, r *http.Request, err error) {
 		writeJSONError(w, http.StatusNotFound, "work item not found")
 	case errors.Is(err, plan.ErrNameRequired), errors.Is(err, plan.ErrInvalidDate), errors.Is(err, plan.ErrDateOrder),
 		errors.Is(err, plan.ErrParentSelf), errors.Is(err, plan.ErrParentCycle), errors.Is(err, plan.ErrOtherProject),
-		errors.Is(err, plan.ErrDependsOnSelf), errors.Is(err, plan.ErrDependencyCycle), errors.Is(err, plan.ErrRelationshipType), errors.Is(err, plan.ErrInvalidDuration), errors.Is(err, plan.ErrInvalidEffort), errors.Is(err, plan.ErrUnknownMetric),
+		errors.Is(err, plan.ErrDependsOnSelf), errors.Is(err, plan.ErrDependencyCycle), errors.Is(err, plan.ErrRelationshipType), errors.Is(err, plan.ErrInvalidDuration), errors.Is(err, plan.ErrInvalidEffort),
+		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrUnknownMetric),
 		errors.Is(err, plan.ErrInvalidTarget), errors.Is(err, plan.ErrTooManyCriteria), errors.Is(err, plan.ErrDuplicateMetric),
 		errors.Is(err, plan.ErrReleaseMilestone), errors.Is(err, plan.ErrUnsupportedFormat),
 		errors.Is(err, todos.ErrTextRequired), errors.Is(err, todos.ErrTextTooLong), errors.Is(err, todos.ErrParagraphs):
@@ -416,4 +420,83 @@ func (h *Handler) ListWorkItemTodos(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusOK, list)
+}
+
+// SetPlanSettings sets the plan's working days: {"working_days": [1, 2, 3,
+// 4, 5]}, ISO weekday numbers from Monday (1) to Sunday (7). Durations and
+// float count only those days. It answers the days as stored.
+func (h *Handler) SetPlanSettings(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.planReady(w, r, projectID, members.RoleEditor, true) {
+		return
+	}
+	var req struct {
+		WorkingDays []int `json:"working_days"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	days, err := h.PlanService.SetWorkingDays(projectID, req.WorkingDays)
+	if err != nil {
+		writePlanError(w, r, err)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]interface{}{"working_days": days})
+}
+
+// planTaskRow answers the plan's row for a task after a write to it.
+func (h *Handler) planTaskRow(w http.ResponseWriter, r *http.Request, projectID, id string) {
+	p, ok := h.loadPlan(w, r, projectID)
+	if !ok {
+		return
+	}
+	for _, t := range p.Tasks {
+		if t.ID == id {
+			respondJSON(w, http.StatusOK, t)
+			return
+		}
+	}
+	writeJSONError(w, http.StatusNotFound, "work item not found")
+}
+
+// RelateWorkItems makes a relationship between the route's task and another
+// task of its project, from either end: {"type": "FS", "direction":
+// "drives"} says the route's task drives the other one, "driven_by" (the
+// default) that the other one drives it. Whatever relationship the two had
+// is replaced. It answers the route's task's row of the plan.
+func (h *Handler) RelateWorkItems(w http.ResponseWriter, r *http.Request) {
+	projectID, ok := h.planTask(w, r)
+	if !ok {
+		return
+	}
+	var req struct {
+		Type      string `json:"type"`
+		Direction string `json:"direction"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if req.Direction != "" && req.Direction != "drives" && req.Direction != "driven_by" {
+		writeJSONError(w, http.StatusBadRequest, "direction is drives or driven_by")
+		return
+	}
+	id := mux.Vars(r)["id"]
+	if err := h.PlanService.Relate(id, mux.Vars(r)["otherId"], req.Type, req.Direction == "drives"); err != nil {
+		writePlanError(w, r, err)
+		return
+	}
+	h.planTaskRow(w, r, projectID, id)
+}
+
+// UnrelateWorkItems removes the relationship between the route's task and
+// another, whichever way round it runs.
+func (h *Handler) UnrelateWorkItems(w http.ResponseWriter, r *http.Request) {
+	if _, ok := h.planTask(w, r); !ok {
+		return
+	}
+	if err := h.PlanService.Unrelate(mux.Vars(r)["id"], mux.Vars(r)["otherId"]); err != nil {
+		writePlanError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

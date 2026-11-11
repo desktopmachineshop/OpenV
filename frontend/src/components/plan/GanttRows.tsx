@@ -1,13 +1,12 @@
 // The rows of the Gantt (GanttChart.tsx): a task's cell in the outline, its
-// bar on the timeline with the drag that moves or resizes it, and the arrows
-// between a task and what it depends on.
+// bar on the timeline with the drag that moves or resizes it and the "+" at
+// each end that a link is dragged from. The arrows are in GanttLinks.tsx.
 import React, { useRef, useState } from 'react';
 import type { PlanTask } from '../../api/client';
 import { MONO, ellipsis } from '../ui';
-import { BAR_COLORS, barTone } from './planModel';
-import { Scale, addDays, spanLabel } from './ganttScale';
-
-export const ROW_HEIGHT = 34;
+import { ROW_HEIGHT } from './GanttLinks';
+import { BAR_COLORS, BarEnd, barTone } from './planModel';
+import { Scale, addDays, shortDate, spanLabel } from './ganttScale';
 
 const caret: React.CSSProperties = {
   width: 20,
@@ -28,7 +27,11 @@ export const OpenIcon: React.FC = () => (
   </svg>
 );
 
-/** A task in the outline: its fold control, outline number, title, progress and the button that opens it. */
+/**
+ * A task in the outline: its fold control, outline number, title and
+ * progress. The title selects the task, showing it in the panel beside the
+ * chart; the small open button opens the task in full, as the board does.
+ */
 export const OutlineCell: React.FC<{
   task: PlanTask;
   width: number;
@@ -38,7 +41,8 @@ export const OutlineCell: React.FC<{
   critical?: boolean;
   onToggle: () => void;
   onSelect: () => void;
-}> = ({ task, width, selected, folded, critical, onToggle, onSelect }) => {
+  onOpen: () => void;
+}> = ({ task, width, selected, folded, critical, onToggle, onSelect, onOpen }) => {
   return (
     <div
       role="rowheader"
@@ -100,9 +104,9 @@ export const OutlineCell: React.FC<{
       </span>
       <button
         type="button"
-        onClick={onSelect}
+        onClick={onOpen}
         aria-label={`Open ${task.title}`}
-        title="Open task"
+        title="Open the full task"
         data-open-task={task.id}
         style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, padding: 0, flexShrink: 0, border: '1px solid transparent', borderRadius: 4, background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
       >
@@ -120,6 +124,29 @@ interface Drag {
   days: number;
   moved: boolean;
 }
+
+/** The "+" beside an end of a bar: press it and drag to another bar to relate the two tasks. */
+const linkHandle = (left: number): React.CSSProperties => ({
+  position: 'absolute',
+  left,
+  top: (ROW_HEIGHT - 14) / 2,
+  width: 14,
+  height: 14,
+  boxSizing: 'border-box',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: '50%',
+  border: '1px solid var(--accent)',
+  background: 'var(--surface)',
+  color: 'var(--accent-text)',
+  fontSize: 12,
+  lineHeight: 1,
+  cursor: 'crosshair',
+  touchAction: 'none',
+  userSelect: 'none',
+  zIndex: 2,
+});
 
 const handle = (side: 'left' | 'right'): React.CSSProperties => ({
   position: 'absolute',
@@ -143,9 +170,13 @@ export const TaskBar: React.FC<{
   selected: boolean;
   /** Drawn as on the critical path: an amber ring. */
   critical?: boolean;
+  /** Draws the task's float after its bar: a line to the last day it can slip to, ended by a tick. */
+  showFloat?: boolean;
   onSelect: () => void;
   onReschedule?: (start: string, end: string) => void;
-}> = ({ task, scale, today, selected, critical, onSelect, onReschedule }) => {
+  /** Set while the row is pointed at, where links can be drawn: the "+" at each end begins one. */
+  onLinkStart?: (end: BarEnd, e: React.PointerEvent) => void;
+}> = ({ task, scale, today, selected, critical, showFloat, onSelect, onReschedule, onLinkStart }) => {
   const [drag, setDrag] = useState<Drag | null>(null);
   const live = useRef<Drag | null>(null);
   // A drag ends in a click on the bar, which must not also select the task.
@@ -197,7 +228,7 @@ export const TaskBar: React.FC<{
   };
   const pointer = draggable ? { onPointerMove: move, onPointerUp: finish, onPointerCancel: cancel } : {};
 
-  const label = `${task.title}: ${spanLabel(start, end, today)}, ${task.progress}% complete${task.late ? ', late' : ''}${task.critical ? ', critical' : ''}`;
+  const label = `${task.title}: ${spanLabel(start, end, today)}, ${task.progress}% complete${task.late ? ', late' : ''}${task.critical ? ', critical' : critical ? ', the critical path runs through its sub-tasks' : ''}`;
   return (
     <>
       <button
@@ -250,80 +281,70 @@ export const TaskBar: React.FC<{
       >
         {drag ? spanLabel(start, end, today) : ''}
       </span>
+      {showFloat && !drag && !task.done && task.float_until && task.float_until > end && (
+        <span
+          role="img"
+          data-float={task.id}
+          aria-label={`Float: ${task.title} can slip to ${shortDate(task.float_until, today)} before it pushes the next task`}
+          title={`Float: can slip to ${shortDate(task.float_until, today)} before it pushes the next task`}
+          style={{
+            position: 'absolute',
+            left: left + width,
+            width: Math.max(scale.x(task.float_until) + scale.dayWidth - (left + width), 4),
+            top: ROW_HEIGHT / 2 - 5,
+            height: 10,
+            boxSizing: 'border-box',
+            borderRight: `2px solid ${critical ? 'var(--warning)' : 'var(--neutral)'}`,
+            background: `linear-gradient(${critical ? 'var(--warning)' : 'var(--neutral)'}, ${critical ? 'var(--warning)' : 'var(--neutral)'}) left center / 100% 2px no-repeat`,
+          }}
+        />
+      )}
+      {onLinkStart && !drag && (
+        <>
+          <span aria-hidden title="Drag to another bar to link from this task's start" data-link-handle={`${task.id}:start`} onPointerDown={(e) => onLinkStart('start', e)} style={linkHandle(left - 18)}>
+            +
+          </span>
+          <span aria-hidden title="Drag to another bar to link from this task's finish" data-link-handle={`${task.id}:end`} onPointerDown={(e) => onLinkStart('end', e)} style={linkHandle(left + width + 4)}>
+            +
+          </span>
+        </>
+      )}
     </>
   );
 };
 
-/**
- * The arrows between related tasks, drawn over the rows, each from the end
- * of the driving task its type names to the end it drives: finish to start
- * leaves the driver's right edge for the task's left edge, start to start
- * joins the two left edges, finish to finish the two right edges. A broken
- * relationship is dashed red.
- */
-export const DependencyLines: React.FC<{ tasks: PlanTask[]; scale: Scale; showCritical?: boolean }> = ({ tasks, scale, showCritical }) => {
-  const row = new Map(tasks.map((t, i) => [t.id, i]));
-  const byId = new Map(tasks.map((t) => [t.id, t]));
-  const paths: { key: string; d: string; conflict: boolean; critical: boolean }[] = [];
-  for (const t of tasks) {
-    for (const rel of t.relationships) {
-      const on = byId.get(rel.task_id);
-      if (!on || !on.span_start || !on.span_end || !t.span_start || !t.span_end) continue;
-      const y1 = row.get(on.id)! * ROW_HEIGHT + ROW_HEIGHT / 2;
-      const y2 = row.get(t.id)! * ROW_HEIGHT + ROW_HEIGHT / 2;
-      const left = (task: PlanTask) => scale.x(task.span_start!);
-      const right = (task: PlanTask) => Math.max(scale.x(task.span_end!) + scale.dayWidth, left(task) + 6);
-      let d: string;
-      if (rel.type === 'SS') {
-        // Out of the driver's start, down a gutter left of both, into the task's start.
-        const x1 = left(on);
-        const x2 = left(t);
-        const gutter = Math.min(x1, x2) - 8;
-        d = `M${x1} ${y1} H${gutter} V${y2} H${x2 - 1}`;
-      } else if (rel.type === 'FF') {
-        // Out of the driver's end, down a gutter right of both, back into the task's end.
-        const x1 = right(on);
-        const x2 = right(t);
-        const gutter = Math.max(x1, x2) + 8;
-        d = `M${x1} ${y1} H${gutter} V${y2} H${x2 + 1}`;
-      } else {
-        const x1 = right(on);
-        const x2 = left(t);
-        d =
-          x2 >= x1 + 14
-            ? `M${x1} ${y1} H${x1 + 7} V${y2} H${x2 - 1}`
-            : `M${x1} ${y1} H${x1 + 7} V${y1 + (y2 > y1 ? 1 : -1) * (ROW_HEIGHT / 2)} H${x2 - 9} V${y2} H${x2 - 1}`;
-      }
-      // The critical path runs along the arrows that join two critical tasks.
-      paths.push({ key: `${rel.task_id}>${t.id}`, d, conflict: rel.conflict, critical: Boolean(showCritical && t.critical && on.critical) });
-    }
-  }
-  if (paths.length === 0) return null;
+/** The last row of the chart: type a title and press Enter to add a task, which its new row then schedules. */
+export const AddTaskRow: React.FC<{ width: number; busy?: boolean; onAdd: (title: string) => void }> = ({ width, busy, onAdd }) => {
+  const [title, setTitle] = useState('');
   return (
-    <svg
-      aria-hidden
-      width={scale.width}
-      height={tasks.length * ROW_HEIGHT}
-      style={{ position: 'absolute', left: 0, top: 0, pointerEvents: 'none', overflow: 'visible' }}
-    >
-      <defs>
-        {(['ok', 'conflict', 'critical'] as const).map((k) => (
-          <marker key={k} id={`gantt-arrow-${k}`} viewBox="0 0 6 6" refX="5" refY="3" markerWidth="6" markerHeight="6" orient="auto">
-            <path d="M0 0 L6 3 L0 6 z" fill={k === 'ok' ? 'var(--neutral)' : k === 'conflict' ? 'var(--danger)' : 'var(--warning)'} />
-          </marker>
-        ))}
-      </defs>
-      {paths.map((p) => (
-        <path
-          key={p.key}
-          d={p.d}
-          fill="none"
-          stroke={p.conflict ? 'var(--danger)' : p.critical ? 'var(--warning)' : 'var(--neutral)'}
-          strokeWidth={p.critical && !p.conflict ? 2 : 1.25}
-          strokeDasharray={p.conflict ? '4 3' : undefined}
-          markerEnd={`url(#gantt-arrow-${p.conflict ? 'conflict' : p.critical ? 'critical' : 'ok'})`}
+    <div role="row" style={{ display: 'flex', height: ROW_HEIGHT }}>
+      <form
+        data-add-task-row
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!title.trim() || busy) return;
+          onAdd(title.trim());
+          setTitle('');
+        }}
+        style={{ position: 'sticky', left: 0, zIndex: 2, width, flexShrink: 0, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 6, height: ROW_HEIGHT, padding: '0 8px 0 12px', borderRight: '1px solid var(--border)', background: 'var(--surface)' }}
+      >
+        <span aria-hidden style={{ color: 'var(--text-muted)', width: 16, textAlign: 'center', flexShrink: 0 }}>
+          +
+        </span>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Add a task…"
+          aria-label="New task"
+          style={{ flex: 1, minWidth: 0, minHeight: 26, padding: '2px 6px', boxSizing: 'border-box', border: '1px solid transparent', background: 'transparent', fontSize: 13 }}
         />
-      ))}
-    </svg>
+        {title.trim() && (
+          <button type="submit" disabled={busy} style={{ flexShrink: 0, padding: '2px 8px', border: '1px solid var(--border)', borderRadius: 4, background: 'var(--surface-alt)', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}>
+            Add ↵
+          </button>
+        )}
+      </form>
+      <div role="cell" style={{ flex: 1 }} />
+    </div>
   );
 };

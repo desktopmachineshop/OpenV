@@ -170,6 +170,7 @@ SECTION_KEYS = {
     ('gantt', 'relationships-between-tasks'): ['gantt.relationships'],
     ('gantt', 'duration-and-effort'): ['gantt.schedule'],
     ('gantt', 'the-critical-path'): ['gantt.critical'],
+    ('gantt', 'working-days'): ['gantt.working-days'],
     ('gantt', 'progress-from-to-dos-and-sub-tasks'): ['gantt.todos'],
     ('gantt', 'milestones-and-their-criteria'): ['gantt.milestone', 'gantt.add-milestone'],
     ('gantt', 'exporting-the-plan'): ['gantt.export'],

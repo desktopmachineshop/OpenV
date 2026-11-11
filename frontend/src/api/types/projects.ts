@@ -347,14 +347,18 @@ export interface PlanTask {
   /** What the chart draws: the own dates widened to cover the sub-tasks. */
   span_start: string | null;
   span_end: string | null;
-  /** The task's length in days, counting its first and last; kept while it has no dates. */
+  /** The task's length in the plan's working days, counting its first and last; kept while it has no dates. */
   duration_days: number | null;
   /** The work in the task, in person-days. */
   effort_days: number | null;
   /** How many days it can slip before the plan's last task ends later; null with no dates. */
   float_days: number | null;
-  /** No float and not done: any slip moves the plan's end. */
+  /** On the critical path, the chain of tasks that decides when the plan ends, and not done. Never a task with sub-tasks. */
   critical: boolean;
+  /** The last day the task's end can slip to before it pushes a task it drives; null when it drives none or has no room. */
+  float_until: string | null;
+  /** The critical path runs through this task's sub-tasks. */
+  critical_subtasks: boolean;
   /** A whole percentage, from the to-dos ticked off and the sub-tasks. */
   progress: number;
   done: boolean;
@@ -367,6 +371,8 @@ export interface PlanTask {
   depends_on: string[];
   /** The tasks that drive this one, each with its type and whether the dates break it. */
   relationships: PlanRelationship[];
+  /** The tasks this one drives, in the same shape. */
+  drives: PlanRelationship[];
   /** The driving tasks whose relationship the dates break. */
   conflicts: string[];
 }
@@ -430,6 +436,8 @@ export interface PlanMetricValue {
 
 export interface ProjectPlan {
   project_id: string;
+  /** The days of the week the plan works, as ISO weekday numbers: Monday is 1, Sunday 7. */
+  working_days: number[];
   today: string;
   start: string | null;
   end: string | null;
@@ -440,6 +448,9 @@ export interface ProjectPlan {
   metric_catalogue: PlanMetric[];
   summary: { tasks: number; done: number; late: number; unscheduled: number; progress: number; critical: number; effort_days: number };
 }
+
+/** Which way a relationship made from a task runs: it drives the other, or is driven by it. */
+export type PlanRelationshipDirection = 'drives' | 'driven_by';
 
 /** A field left out stays as it is; an empty date or parent clears it. */
 export interface PlanScheduleInput {

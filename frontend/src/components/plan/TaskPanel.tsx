@@ -1,23 +1,15 @@
 // One task of the plan, opened beside the chart (or in a sheet on a phone):
-// its dates, the task it is a sub-task of, its relationships to the tasks
-// that drive it, its to-dos and its sub-tasks. A task keeps its duration, so
-// moving one of its dates moves the other; a to-do has one date, a deadline.
+// its dates, the task it is a sub-task of, its relationships (TaskRelationships.tsx),
+// its to-dos and its sub-tasks. A task keeps its duration, counted in the
+// plan's working days, so moving one of its dates moves the other; a task
+// with sub-tasks takes its dates from them. A to-do has one date, a deadline.
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import type { PlanRelationshipType, PlanScheduleInput, PlanTask, ProjectPlan } from '../../api/client';
+import type { PlanScheduleInput, PlanTask, ProjectPlan } from '../../api/client';
 import { Chip, Meter, PanelHeader, Picker, buttonStyle, eyebrowStyle, mutedStyle, panelStyle, type PickerOption } from '../ui';
-import { addDays, shortDate, spanLabel, toDay } from './ganttScale';
-import {
-  BAR_COLORS,
-  RELATIONSHIP_BROKEN,
-  RELATIONSHIP_TYPES,
-  TASK_TONE,
-  barTone,
-  columnLabel,
-  dependents,
-  descendants,
-  relationshipLabel,
-} from './planModel';
+import { shortDate, spanLabel } from './ganttScale';
+import { TaskRelationships, type TaskRelationshipsProps } from './TaskRelationships';
+import { BAR_COLORS, TASK_TONE, WEEKDAYS, barTone, columnLabel, descendants, workEnd, workSpan, workStart } from './planModel';
 
 export const fieldStyle: React.CSSProperties = {
   display: 'flex',
@@ -56,10 +48,14 @@ export interface TaskPanelProps {
   editable: boolean;
   busy: boolean;
   onSchedule: (task: PlanTask, change: PlanScheduleInput) => void;
+  onRelate: TaskRelationshipsProps['onRelate'];
+  onUnrelate: TaskRelationshipsProps['onUnrelate'];
   onAddSubtask: (task: PlanTask, title: string) => void;
   onAddTodo: (task: PlanTask, text: string, dueDate: string) => void;
   onTickTodo: (todoId: string, done: boolean) => void;
   onSelectTask: (task: PlanTask) => void;
+  /** Opens the task in full: its description, assignee, linked artifacts and activity. */
+  onOpenTask?: (task: PlanTask) => void;
   onClose: () => void;
 }
 
@@ -91,17 +87,47 @@ const QuickAdd: React.FC<{ label: string; placeholder: string; busy: boolean; on
 
 const whole = (v: string): number => Math.max(0, Math.floor(Number(v) || 0));
 
+const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
+
+/** The plan's working days in words: "Monday to Friday", or the days named. */
+const workingDaysText = (days: number[]): string => {
+  const names = WEEKDAYS.filter((w) => days.includes(w.day)).map((w) => w.name);
+  const run = days.length > 2 && days.every((d, i) => i === 0 || d === days[i - 1] + 1);
+  return run ? `${names[0]} to ${names[names.length - 1]}` : names.join(', ');
+};
+
+/** A task with sub-tasks: its dates, duration and effort are theirs, read here and set on them. */
+const FolderSchedule: React.FC<{ task: PlanTask; today: string }> = ({ task, today }) => (
+  <div style={sectionStyle} data-help-key="gantt.schedule">
+    <h3 style={eyebrowStyle}>Schedule</h3>
+    <div style={{ fontSize: 13, color: 'var(--text)' }}>
+      {task.span_start ? spanLabel(task.span_start, task.span_end, today) : 'No dates yet'}
+      {task.duration_days ? ` · ${plural(task.duration_days, 'working day')}` : ''}
+      {task.effort_days ? ` · ${plural(task.effort_days, 'day')} of effort` : ''}
+    </div>
+    <span style={mutedStyle}>
+      A task with sub-tasks has no dates of its own: it starts with its first sub-task and finishes with its last, and its effort is theirs added up. Schedule the sub-tasks to move it.
+    </span>
+  </div>
+);
+
 /**
- * A task's schedule: its start, its due date, its duration in days and the
- * effort in it. The duration is what the task keeps: a new start moves the
- * due date, a new due date moves the start, and a new duration moves the due
- * date. Effort is a number of its own, the work in person-days.
+ * A task's schedule: its start, its due date, its duration in working days
+ * and the effort in it. The duration is what the task keeps: a new start
+ * moves the due date, a new due date moves the start, and a new duration
+ * moves the due date. Effort is a number of its own, the work in person-days.
  */
-const Schedule: React.FC<Pick<TaskPanelProps, 'task' | 'editable' | 'busy' | 'onSchedule'>> = ({ task, editable, busy, onSchedule }) => {
+const Schedule: React.FC<Pick<TaskPanelProps, 'task' | 'editable' | 'busy' | 'onSchedule'> & { workingDays: number[] }> = ({
+  task,
+  editable,
+  busy,
+  onSchedule,
+  workingDays,
+}) => {
   const initial = () => ({
     start: task.start || '',
     end: task.end || '',
-    duration: task.subtasks_total > 0 && !(task.start && task.end) ? '' : task.duration_days ? String(task.duration_days) : '',
+    duration: task.duration_days ? String(task.duration_days) : '',
     effort: task.effort_days ? String(task.effort_days) : '',
   });
   const [v, setV] = useState(initial);
@@ -111,14 +137,14 @@ const Schedule: React.FC<Pick<TaskPanelProps, 'task' | 'editable' | 'busy' | 'on
   }, [task.id, task.start, task.end, task.duration_days, task.effort_days]);
 
   const days = whole(v.duration);
-  const setStart = (start: string) => setV((p) => ({ ...p, start, end: start && days ? addDays(start, days - 1) : p.end }));
-  const setEnd = (end: string) => setV((p) => ({ ...p, end, start: end && days ? addDays(end, 1 - days) : p.start }));
+  const setStart = (start: string) => setV((p) => ({ ...p, start, end: start && days ? workEnd(workingDays, start, days) : p.end }));
+  const setEnd = (end: string) => setV((p) => ({ ...p, end, start: end && days ? workStart(workingDays, end, days) : p.start }));
   const setDuration = (duration: string) =>
     setV((p) => {
       const n = whole(duration);
       if (!n) return { ...p, duration };
-      if (p.start) return { ...p, duration, end: addDays(p.start, n - 1) };
-      return { ...p, duration, start: p.end ? addDays(p.end, 1 - n) : p.start };
+      if (p.start) return { ...p, duration, end: workEnd(workingDays, p.start, n) };
+      return { ...p, duration, start: p.end ? workStart(workingDays, p.end, n) : p.start };
     });
 
   const was = initial();
@@ -130,14 +156,13 @@ const Schedule: React.FC<Pick<TaskPanelProps, 'task' | 'editable' | 'busy' | 'on
       start_date: v.start,
       due_date: v.end,
       // Both dates decide the duration; without them it is kept as typed.
-      duration_days: v.start && v.end ? toDay(v.end) - toDay(v.start) + 1 : days,
+      duration_days: v.start && v.end ? workSpan(workingDays, v.start, v.end) : days,
       effort_days: Number(v.effort) || 0,
     });
 
   return (
     <div style={sectionStyle} data-help-key="gantt.schedule">
       <h3 style={eyebrowStyle}>Schedule</h3>
-      {task.subtasks_total > 0 && <span style={mutedStyle}>The bar spans this task's sub-tasks as well as its own dates.</span>}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
         <label style={fieldStyle}>
           Start
@@ -148,7 +173,7 @@ const Schedule: React.FC<Pick<TaskPanelProps, 'task' | 'editable' | 'busy' | 'on
           <input type="date" value={v.end} disabled={!editable} onChange={(e) => setEnd(e.target.value)} style={inputStyle} />
         </label>
         <label style={fieldStyle}>
-          Duration (days)
+          Duration (working days)
           <input type="number" min={1} step={1} value={v.duration} disabled={!editable} placeholder="Not set" onChange={(e) => setDuration(e.target.value)} style={inputStyle} />
         </label>
         <label style={fieldStyle}>
@@ -157,7 +182,7 @@ const Schedule: React.FC<Pick<TaskPanelProps, 'task' | 'editable' | 'busy' | 'on
         </label>
       </div>
       <span style={mutedStyle}>
-        The task keeps its duration: a new start moves the due date, a new due date moves the start. Change the duration to make it longer or shorter. Effort is the work in it, in person-days.
+        The task keeps its duration, counted in the plan's working days ({workingDaysText(workingDays)}): a new start moves the due date, a new due date moves the start. Change the duration to make it longer or shorter. Effort is the work in it, in person-days.
       </span>
       {badOrder && <span style={{ ...mutedStyle, color: 'var(--danger-strong)' }}>A task cannot start after it is due.</span>}
       {editable && changed && (
@@ -243,111 +268,6 @@ const Todos: React.FC<Pick<TaskPanelProps, 'plan' | 'task' | 'editable' | 'busy'
   );
 };
 
-/**
- * A task's relationships: the tasks that drive it, each with its type (finish
- * to start, start to start, finish to finish), and a searchable picker that
- * adds another. Several may drive one task.
- */
-const Relationships: React.FC<Pick<TaskPanelProps, 'plan' | 'task' | 'editable' | 'busy' | 'onSchedule' | 'onSelectTask'>> = ({
-  plan,
-  task,
-  editable,
-  busy,
-  onSchedule,
-  onSelectTask,
-}) => {
-  const [type, setType] = useState<PlanRelationshipType>('FS');
-  const byId = useMemo(() => new Map(plan.tasks.map((t) => [t.id, t])), [plan.tasks]);
-  const current = task.relationships.map(({ task_id, type: kind }) => ({ task_id, type: kind }));
-  const candidates = useMemo(() => {
-    const loop = dependents(plan.tasks, task.id);
-    const has = new Set(task.depends_on);
-    return plan.tasks.filter((t) => !loop.has(t.id) && !has.has(t.id)).map((t) => taskOption(t, plan.today));
-  }, [plan.tasks, plan.today, task.id, task.depends_on]);
-  const save = (relationships: PlanScheduleInput['relationships']) => onSchedule(task, { relationships });
-
-  return (
-    <div style={sectionStyle} data-help-key="gantt.relationships">
-      <h3 style={eyebrowStyle}>Relationships · {task.relationships.length}</h3>
-      {task.relationships.length === 0 && <span style={mutedStyle}>None: no other task drives when this one starts or finishes.</span>}
-      {task.relationships.map((rel) => {
-        const on = byId.get(rel.task_id);
-        if (!on) return null;
-        return (
-          <div key={rel.task_id} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <button
-                type="button"
-                onClick={() => onSelectTask(on)}
-                style={{ flex: 1, minWidth: 0, padding: 0, border: 'none', background: 'none', font: 'inherit', color: 'var(--accent-text)', textAlign: 'left', cursor: 'pointer', overflowWrap: 'anywhere' }}
-              >
-                {on.wbs} {on.title}
-              </button>
-              {rel.conflict && (
-                <Chip tone="danger" title={RELATIONSHIP_BROKEN[rel.type]}>
-                  Broken
-                </Chip>
-              )}
-              {editable && (
-                <button
-                  type="button"
-                  disabled={busy}
-                  aria-label={`Remove the relationship to ${on.title}`}
-                  onClick={() => save(current.filter((r) => r.task_id !== rel.task_id))}
-                  style={buttonStyle('ghost', { compact: true, disabled: busy })}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-            {editable ? (
-              <select
-                value={rel.type}
-                disabled={busy}
-                aria-label={`Type of the relationship to ${on.title}`}
-                onChange={(e) => save(current.map((r) => (r.task_id === rel.task_id ? { ...r, type: e.target.value as PlanRelationshipType } : r)))}
-                style={inputStyle}
-              >
-                {RELATIONSHIP_TYPES.map((r) => (
-                  <option key={r.value} value={r.value}>
-                    {r.label} ({r.value})
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span style={mutedStyle}>{relationshipLabel(rel.type)}</span>
-            )}
-          </div>
-        );
-      })}
-      {editable && candidates.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 4 }}>
-          <label htmlFor="gantt-relationship-add" style={fieldStyle}>
-            Add a relationship
-          </label>
-          <select value={type} onChange={(e) => setType(e.target.value as PlanRelationshipType)} aria-label="Type of the new relationship" style={inputStyle}>
-            {RELATIONSHIP_TYPES.map((r) => (
-              <option key={r.value} value={r.value}>
-                {r.label} ({r.value}): {r.hint.toLowerCase()}
-              </option>
-            ))}
-          </select>
-          <Picker
-            id="gantt-relationship-add"
-            value=""
-            options={candidates}
-            searchable
-            disabled={busy}
-            placeholder="Search for the task that drives this one…"
-            noneLabel="Choose a task…"
-            onChange={(id) => id && save([...current, { task_id: id, type }])}
-          />
-        </div>
-      )}
-    </div>
-  );
-};
-
 export const TaskPanel: React.FC<TaskPanelProps> = ({
   plan,
   task,
@@ -355,10 +275,13 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
   editable,
   busy,
   onSchedule,
+  onRelate,
+  onUnrelate,
   onAddSubtask,
   onAddTodo,
   onTickTodo,
   onSelectTask,
+  onOpenTask,
   onClose,
 }) => {
   const parents = useMemo(() => {
@@ -369,7 +292,7 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
   const tone = barTone(task);
 
   return (
-    <aside aria-label={`Task ${task.title}`} data-help-key="gantt.task" style={{ ...panelStyle, display: 'flex', flexDirection: 'column' }}>
+    <aside aria-label={`Task ${task.title}`} data-help-key="gantt.task" style={{ ...panelStyle, display: 'flex', flexDirection: 'column', flex: '1 0 auto' }}>
       <PanelHeader
         title={`Task ${task.wbs}`}
         action={
@@ -383,14 +306,25 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <Chip tone={TASK_TONE[tone]}>{task.late ? 'Late' : columnLabel(task.column)}</Chip>
           {task.critical && (
-            <Chip tone="warning" title="On the critical path: it has no float, so any slip moves the plan's end">
+            <Chip tone="warning" title="On the critical path: the chain of tasks that decides when the plan ends">
               Critical
             </Chip>
           )}
+          {task.critical_subtasks && (
+            <Chip tone="warning" title="The critical path runs through its sub-tasks: a slip in one of them moves the plan's end">
+              Critical sub-tasks
+            </Chip>
+          )}
           <span style={mutedStyle}>{spanLabel(task.span_start, task.span_end, plan.today)}</span>
-          <Link to={`/projects/${projectId}/board`} style={{ fontSize: 12, marginLeft: 'auto' }}>
-            Open the board
-          </Link>
+          {onOpenTask ? (
+            <button type="button" onClick={() => onOpenTask(task)} style={{ marginLeft: 'auto', padding: 0, border: 'none', background: 'none', font: 'inherit', fontSize: 12, color: 'var(--accent-text)', textDecoration: 'underline', cursor: 'pointer' }}>
+              Open the full task
+            </button>
+          ) : (
+            <Link to={`/projects/${projectId}/board`} style={{ fontSize: 12, marginLeft: 'auto' }}>
+              Open the board
+            </Link>
+          )}
         </div>
         <Meter label="Done" value={task.progress} color={BAR_COLORS[tone].fill} />
         <span style={mutedStyle}>
@@ -405,16 +339,22 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
                   .filter(Boolean)
                   .join(', ') + '.'}
         </span>
-        {task.float_days !== null && !task.done && (
+        {task.float_days !== null && !task.done && task.subtasks_total === 0 && (
           <span style={mutedStyle}>
-            {task.critical
+            {task.critical && task.float_days > 0
+              ? `On the critical path, with ${plural(task.float_days, 'working day')} of float before it pushes the next task.`
+              : task.critical
               ? "No float: it is on the critical path, so a day's slip moves the end of the plan by a day."
-              : `Float: ${task.float_days} ${task.float_days === 1 ? 'day' : 'days'} before it would move the end of the plan.`}
+              : `Float: ${plural(task.float_days, 'working day')} before it would move the end of the plan.`}
           </span>
         )}
       </div>
 
-      <Schedule task={task} editable={editable} busy={busy} onSchedule={onSchedule} />
+      {task.subtasks_total > 0 ? (
+        <FolderSchedule task={task} today={plan.today} />
+      ) : (
+        <Schedule task={task} editable={editable} busy={busy} onSchedule={onSchedule} workingDays={plan.working_days} />
+      )}
 
       <div style={sectionStyle}>
         <label htmlFor="gantt-parent" style={fieldStyle}>
@@ -432,7 +372,7 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
         />
       </div>
 
-      <Relationships plan={plan} task={task} editable={editable} busy={busy} onSchedule={onSchedule} onSelectTask={onSelectTask} />
+      <TaskRelationships plan={plan} task={task} editable={editable} busy={busy} onRelate={onRelate} onUnrelate={onUnrelate} onSelectTask={onSelectTask} />
 
       <Todos plan={plan} task={task} editable={editable} busy={busy} onAddTodo={onAddTodo} onTickTodo={onTickTodo} />
 

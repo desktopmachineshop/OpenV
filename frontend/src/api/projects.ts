@@ -20,6 +20,8 @@ import type {
   Party,
   PlanExportFormat,
   PlanMilestoneInput,
+  PlanRelationshipDirection,
+  PlanRelationshipType,
   PlanScheduleInput,
   PlanTask,
   ProductProfile,
@@ -208,6 +210,14 @@ export const planAPI = {
   /** A task's dates, parent and dependencies; answers its row of the plan. */
   schedule: (workItemId: string, payload: PlanScheduleInput) =>
     client.put<PlanTask>(`/api/v1/work-items/${workItemId}/schedule`, payload),
+  /** A relationship between two tasks, made from either one; it replaces any the pair has. */
+  relate: (workItemId: string, otherId: string, type: PlanRelationshipType, direction: PlanRelationshipDirection) =>
+    client.put<PlanTask>(`/api/v1/work-items/${workItemId}/relationships/${otherId}`, { type, direction }),
+  /** Removes the relationship between two tasks, whichever way round it runs. */
+  unrelate: (workItemId: string, otherId: string) => client.delete(`/api/v1/work-items/${workItemId}/relationships/${otherId}`),
+  /** The days of the week the plan works: ISO weekday numbers, Monday is 1. */
+  setWorkingDays: (projectId: string, workingDays: number[]) =>
+    client.put<{ working_days: number[] }>(`/api/v1/projects/${projectId}/plan/settings`, { working_days: workingDays }),
   /** A to-do raised on a task, which counts toward its progress. */
   addTodo: (workItemId: string, text: string, dueDate?: string) =>
     client.post<Todo>(`/api/v1/work-items/${workItemId}/todos`, { text, ...(dueDate ? { due_date: dueDate } : {}) }),

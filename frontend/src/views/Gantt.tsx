@@ -11,10 +11,14 @@
 // panel beside it. On a phone the same plan is a schedule list
 // (components/plan/PlanPhone.tsx) and the selection opens in a sheet: a
 // timeline needs width a phone does not have. On a touch tablet the chart
-// shows but bars do not drag; dates are set in the task's panel.
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+// shows but bars do not drag; dates and relationships are set in the task's
+// panel. The plan's working days (Monday to Friday until set) decide which
+// days a duration counts and which the chart shades.
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
+  Artifact,
+  artifactAPI,
   planAPI,
   PlanExportFormat,
   PlanMilestone,
@@ -26,13 +30,15 @@ import {
   workItemsAPI,
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
-import { GanttChart } from '../components/plan/GanttChart';
-import { ZOOMS, Zoom, fitZoom } from '../components/plan/ganttScale';
+import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
+import { Zoom, fitZoom } from '../components/plan/ganttScale';
 import { MilestonePanel } from '../components/plan/MilestonePanel';
 import { AddMilestoneForm, AddTaskForm, ExportControl, NewTask } from '../components/plan/PlanForms';
 import { PlanPhone } from '../components/plan/PlanPhone';
+import { PlanChartPanel } from '../components/plan/PlanChartPanel';
 import { TaskPanel } from '../components/plan/TaskPanel';
-import { ErrorBanner, FeatureGate, PanelHeader, SegmentedControl, Sheet, buttonStyle, mutedStyle, pageType, panelStyle, useConfirm } from '../components/ui';
+import type { RelationshipView } from '../components/plan/planModel';
+import { ErrorBanner, FeatureGate, Sheet, buttonStyle, mutedStyle, pageType, useConfirm } from '../components/ui';
 import { GANTT_PLAN_FEATURE } from '../features';
 import { useViewport } from '../hooks/useViewport';
 
@@ -45,10 +51,35 @@ const Figure: React.FC<{ value: React.ReactNode; label: string; color?: string }
   </span>
 );
 
+/**
+ * The height that takes an element from where it sits to the bottom of the
+ * window, so the chart and the panel beside it fill the page however few
+ * tasks the plan has. Measured again on every render and resize, since a
+ * form or a banner above moves the element down.
+ */
+const useFillHeight = (min: number): [React.RefObject<HTMLDivElement>, number] => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(min);
+  const measure = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + (document.scrollingElement?.scrollTop ?? 0);
+    const next = Math.max(Math.floor(window.innerHeight - top - 16), min);
+    setHeight((h) => (h === next ? h : next));
+  }, [min]);
+  useLayoutEffect(measure);
+  useEffect(() => {
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [measure]);
+  return [ref, height];
+};
+
 const PlanPage: React.FC = () => {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const { isPhone, isCompact, coarsePointer, width } = useViewport();
   const confirm = useConfirm();
+  const [fill, fillHeight] = useFillHeight(360);
 
   const [plan, setPlan] = useState<ProjectPlan | null>(null);
   const [error, setError] = useState('');
@@ -57,8 +88,16 @@ const PlanPage: React.FC = () => {
   const [zoom, setZoom] = useState<Zoom | null>(null);
   const [adding, setAdding] = useState<'task' | 'milestone' | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
-  const [showCritical, setShowCritical] = useState(true);
-  const [todaySignal, setTodaySignal] = useState(0);
+  // The task opened in full, in the board's drawer, and the artifacts it names.
+  const [fullTaskId, setFullTaskId] = useState('');
+  const [artifactMap, setArtifactMap] = useState<Record<string, Artifact> | null>(null);
+  useEffect(() => {
+    if (!fullTaskId || artifactMap || !projectId) return;
+    artifactAPI
+      .list(projectId)
+      .then((res) => setArtifactMap(Object.fromEntries((res.data || []).map((a) => [a.id, a]))))
+      .catch(() => setArtifactMap({}));
+  }, [fullTaskId, artifactMap, projectId]);
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -101,7 +140,10 @@ const PlanPage: React.FC = () => {
 
   const schedule = (t: PlanTask, change: PlanScheduleInput) => run(() => planAPI.schedule(t.id, change), 'Failed to schedule the task');
 
-  const addTask = async (t: NewTask, parentId?: string) => {
+  const relate = (taskId: string, otherId: string, view: RelationshipView) =>
+    run(() => planAPI.relate(taskId, otherId, view.type, view.direction), 'Failed to relate the tasks');
+
+  const addTask = async (t: NewTask, parentId?: string, inline = false) => {
     const ok = await run(async () => {
       const created = await workItemsAPI.create(projectId, { title: t.title, column: 'todo' });
       const change: PlanScheduleInput = {
@@ -110,9 +152,9 @@ const PlanPage: React.FC = () => {
         ...(parentId ? { parent_id: parentId } : {}),
       };
       if (Object.keys(change).length > 0) await planAPI.schedule(created.data.id, change);
-      if (!parentId) setSelection({ kind: 'task', id: created.data.id });
+      if (!parentId && !inline) setSelection({ kind: 'task', id: created.data.id });
     }, 'Failed to add the task');
-    if (ok && !parentId) setAdding(null);
+    if (ok && !parentId && !inline) setAdding(null);
   };
 
   const addMilestone = async (m: PlanMilestoneInput) => {
@@ -171,6 +213,21 @@ const PlanPage: React.FC = () => {
   const openTask = (t: PlanTask) => setSelection({ kind: 'task', id: t.id });
   const openMilestone = (m: PlanMilestone) => setSelection({ kind: 'milestone', key: m.key });
   const close = () => setSelection(null);
+  const openFull = (t: PlanTask) => setFullTaskId(t.id);
+  const fullTask = fullTaskId ? (
+    <WorkItemDrawer
+      workItemId={fullTaskId}
+      projectId={projectId}
+      artifactMap={artifactMap || {}}
+      onClose={() => setFullTaskId('')}
+      onChanged={() => void load()}
+      onDeleted={() => {
+        setFullTaskId('');
+        setSelection(null);
+        void load();
+      }}
+    />
+  ) : null;
 
   const errorBanner = <ErrorBanner message={error} onDismiss={() => setError('')} />;
   if (!plan) {
@@ -211,10 +268,13 @@ const PlanPage: React.FC = () => {
       editable
       busy={busy}
       onSchedule={schedule}
+      onRelate={(t, otherId, view) => relate(t.id, otherId, view)}
+      onUnrelate={(t, otherId) => run(() => planAPI.unrelate(t.id, otherId), 'Failed to remove the relationship')}
       onAddSubtask={(t, title) => addTask({ title, start: '', end: '' }, t.id)}
       onAddTodo={(t, text, due) => run(() => planAPI.addTodo(t.id, text, due), 'Failed to add the to-do')}
       onTickTodo={(id, done) => run(() => todosAPI.setDone(id, done), 'Failed to save the to-do')}
       onSelectTask={openTask}
+      onOpenTask={openFull}
       onClose={close}
     />
   ) : selectedMilestone ? (
@@ -239,12 +299,12 @@ const PlanPage: React.FC = () => {
             {panel}
           </Sheet>
         )}
+        {fullTask}
       </>
     );
   }
 
   const s = plan.summary;
-  const undated = plan.milestones.filter((m) => !m.date);
   return (
     <div style={{ ...pageType(false), padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px 20px', flexWrap: 'wrap' }}>
@@ -262,67 +322,34 @@ const PlanPage: React.FC = () => {
       </div>
       {errorBanner}
       {forms}
-      <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-        <section aria-label="Plan" style={{ ...panelStyle, flex: 1, overflow: 'hidden' }}>
-          <PanelHeader
-            title="Plan"
-            action={
-              <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                <button
-                  type="button"
-                  aria-pressed={showCritical}
-                  onClick={() => setShowCritical((on) => !on)}
-                  data-help-key="gantt.critical"
-                  title="Mark the tasks with no float: any slip in one moves the end of the plan"
-                  style={{
-                    ...buttonStyle('secondary', { compact: true }),
-                    ...(showCritical ? { background: 'var(--tint-yellow)', borderColor: 'var(--tint-yellow-border)', color: 'var(--warning-text)' } : {}),
-                  }}
-                >
-                  <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--warning)' }} />
-                  Critical path
-                </button>
-                <button type="button" onClick={() => setTodaySignal((n) => n + 1)} style={buttonStyle('secondary', { compact: true })}>
-                  Today
-                </button>
-                <SegmentedControl aria-label="Zoom" options={ZOOMS} value={zoom || 'weeks'} onChange={setZoom} style={{ fontSize: 12 }} />
-              </span>
-            }
-          />
-          <GanttChart
-            plan={plan}
-            zoom={zoom || 'weeks'}
-            outlineWidth={isCompact ? 220 : 320}
-            selectedTaskId={selectedTask?.id || ''}
-            selectedMilestoneKey={selectedMilestone?.key || ''}
-            onSelectTask={openTask}
-            onSelectMilestone={openMilestone}
-            onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
-            showCritical={showCritical}
-            todaySignal={todaySignal}
-          />
-          {undated.length > 0 && (
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', borderTop: '1px solid var(--border-soft)' }}>
-              <span style={mutedStyle}>No date yet:</span>
-              {undated.map((m) => (
-                <button key={m.key} type="button" onClick={() => openMilestone(m)} style={buttonStyle('secondary', { compact: true })}>
-                  ◆ {m.name} · {m.progress}%
-                </button>
-              ))}
-            </div>
-          )}
-          <p style={{ ...mutedStyle, margin: 0, padding: '8px 12px', borderTop: '1px solid var(--border-soft)' }}>
-            A task's bar fills as its to-dos are ticked off and its sub-tasks finish. A milestone's band fills as its
-            criteria are met. {coarsePointer ? 'Select a task to set its dates.' : 'Drag a bar to move it, an end to resize it, or the empty timeline to scroll.'}
-          </p>
-        </section>
-        {panel && !isCompact && <div style={{ width: 340, flexShrink: 0 }}>{panel}</div>}
+      <div ref={fill} style={{ display: 'flex', gap: 12, alignItems: 'stretch', height: fillHeight }}>
+        <PlanChartPanel
+          plan={plan}
+          zoom={zoom || 'weeks'}
+          onZoom={setZoom}
+          onWorkingDays={(days) => run(() => planAPI.setWorkingDays(projectId, days), 'Failed to set the working days')}
+          outlineWidth={isCompact ? 220 : 320}
+          selectedTaskId={selectedTask?.id || ''}
+          selectedMilestoneKey={selectedMilestone?.key || ''}
+          onSelectTask={openTask}
+          onOpenTask={openFull}
+          onSelectMilestone={openMilestone}
+          onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
+          onLink={coarsePointer ? undefined : relate}
+          onAddTask={(title) => addTask({ title, start: '', end: '' }, undefined, true)}
+          busy={busy}
+          touch={coarsePointer}
+        />
+        {panel && !isCompact && (
+          <div data-plan-side style={{ width: 340, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>{panel}</div>
+        )}
       </div>
       {panel && isCompact && (
         <Sheet label={selectedTask ? `Task ${selectedTask.title}` : `Milestone ${selectedMilestone?.name}`} onClose={close}>
           {panel}
         </Sheet>
       )}
+      {fullTask}
     </div>
   );
 };

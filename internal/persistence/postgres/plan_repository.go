@@ -68,6 +68,40 @@ func (r *PlanRepository) SaveSchedule(s *plan.TaskSchedule) error {
 	return err
 }
 
+// WorkingDays returns the plan's working days as ISO weekday numbers
+// (Monday is 1), or nil when the project has never set them.
+func (r *PlanRepository) WorkingDays(projectID string) ([]int, error) {
+	var bits int
+	err := r.db.QueryRow(`SELECT working_days FROM plan_settings WHERE project_id = $1`, projectID).Scan(&bits)
+	if errors.Is(err, sql.ErrNoRows) || malformedID(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	days := []int{}
+	for d := 1; d <= 7; d++ {
+		if bits&(1<<(d-1)) != 0 {
+			days = append(days, d)
+		}
+	}
+	return days, nil
+}
+
+// SetWorkingDays stores the plan's working days, a bit per ISO weekday.
+func (r *PlanRepository) SetWorkingDays(projectID string, days []int) error {
+	bits := 0
+	for _, d := range days {
+		if d >= 1 && d <= 7 {
+			bits |= 1 << (d - 1)
+		}
+	}
+	_, err := r.db.Exec(`
+		INSERT INTO plan_settings (project_id, working_days, updated_at) VALUES ($1, $2, NOW())
+		ON CONFLICT (project_id) DO UPDATE SET working_days = EXCLUDED.working_days, updated_at = NOW()`, projectID, bits)
+	return err
+}
+
 // ListDependencies lists the project's dependencies.
 func (r *PlanRepository) ListDependencies(projectID string) ([]plan.Dependency, error) {
 	rows, err := r.db.Query(`

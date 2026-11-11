@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="tasks-with-sub-tasks">
+  <title>Tasks with sub-tasks</title>
+  <conbody>
+    <p>A task with sub-tasks is a folder for them, and has no dates of its own. It starts when its first sub-task starts and finishes when its last one finishes; its duration is the working days between the two, and its effort is its sub-tasks' effort added up. Its panel shows these, with no fields to set, and its bar does not drag: schedule the sub-tasks to move it. Dates a task had before it was given sub-tasks are no longer used.</p>
+    <p>Fold a task with the arrow in the outline and its bar stands for everything under it:</p>
+    <ul>
+      <li>A relationship between one of its sub-tasks and a task outside it is still drawn. The arrow leaves or lands on the folded bar at the point along it where the sub-task's own start or finish falls, marked with a small dot, so an arrow from a sub-task that finishes halfway through leaves the bar halfway along.</li>
+      <li>A relationship between two of its own sub-tasks is hidden with them.</li>
+      <li>If the critical path runs through its sub-tasks, the folded task carries the amber critical marks.</li>
+    </ul>
+  </conbody>
+</concept>

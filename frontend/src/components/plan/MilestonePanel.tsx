@@ -139,7 +139,7 @@ export const MilestonePanel: React.FC<MilestonePanelProps> = ({ plan, milestone:
     onSave(m, release ? { criteria } : { name: name.trim(), target_date: date, description, criteria });
 
   return (
-    <aside aria-label={`Milestone ${m.name}`} data-help-key="gantt.milestone" style={{ ...panelStyle, display: 'flex', flexDirection: 'column' }}>
+    <aside aria-label={`Milestone ${m.name}`} data-help-key="gantt.milestone" style={{ ...panelStyle, display: 'flex', flexDirection: 'column', flex: '1 0 auto' }}>
       <PanelHeader
         title={release ? 'Release milestone' : 'Milestone'}
         action={

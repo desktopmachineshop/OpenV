@@ -18,7 +18,7 @@ func planTools() []Tool {
 			Name:     "get_plan",
 			ReadOnly: true,
 			Description: "Read a project's plan: every board task in outline order with its start and due dates, parent task, progress " +
-				"(from its to-dos and sub-tasks), its duration, effort and float in days, whether it is on the critical path, its relationships to the tasks that drive it (FS, SS or FF) and whether it is late; the milestones in date order, each target " +
+				"(from its to-dos and sub-tasks), its duration and float in working days, its effort in days, whether it is on the critical path (the chain of tasks that decides the plan's end, which may still have float) and the day its end can slip to before it pushes the next task, its relationships to the tasks that drive it (FS, SS or FF) and whether it is late; the milestones in date order, each target " +
 				"release among them, with their completion criteria measured against the project's artifacts; and every metric a " +
 				"criterion can name with its current value.",
 			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
@@ -31,7 +31,8 @@ func planTools() []Tool {
 		},
 		{
 			Name: "schedule_work_item",
-			Description: "Place a board task on the plan: its start date and due date (YYYY-MM-DD), its duration and effort in days, " +
+			Description: "Place a board task on the plan: its start date and due date (YYYY-MM-DD), its duration in working days and effort in days " +
+				"(a task with sub-tasks takes all four from them and refuses them), " +
 				"its parent task (making it a sub-task) and its relationships to the tasks that drive it. A relationship is written \"<work item id>:<type>\", " +
 				"where the type is FS (finish to start: this task starts after that one finishes), SS (start to start: it starts no " +
 				"earlier than that one starts) or FF (finish to finish: it finishes no earlier than that one finishes); with no type it " +
@@ -42,7 +43,7 @@ func planTools() []Tool {
 				"id":            str("Work item ID"),
 				"start_date":    str("Start date, YYYY-MM-DD; an empty string clears it"),
 				"due_date":      str("Due date, YYYY-MM-DD; an empty string clears it"),
-				"duration_days": str("How long the task runs, in whole days counting its first and last; the task keeps it, so a start date sent alone moves the due date and a due date sent alone moves the start. \"0\" clears it"),
+				"duration_days": str("How long the task runs, in whole working days counting its first and last; the task keeps it, so a start date sent alone moves the due date and a due date sent alone moves the start. \"0\" clears it"),
 				"effort_days":   str("The work in the task, in person-days (may be a decimal); \"0\" clears it"),
 				"parent_id":     str("Work item ID of the parent task; an empty string makes it a top-level task"),
 				"relationships": strList("The tasks that drive this one, each \"<work item id>:FS\", \":SS\" or \":FF\"; replaces the task's relationships"),
@@ -81,6 +82,29 @@ func planTools() []Tool {
 					body["depends_on"] = deps
 				}
 				out, _, err := c.request("PUT", "/api/v1/work-items/"+strArg(args, "id")+"/schedule", nil, body)
+				return out, err
+			},
+		},
+		{
+			Name: "set_plan_working_days",
+			Description: "Set which days of the week a project's plan works, as ISO weekday numbers from \"1\" (Monday) to \"7\" " +
+				"(Sunday). A task's duration and float count only working days, so a plan that works Monday to Friday (the " +
+				"default) leaves weekends out. Answers the working days as stored.",
+			InputSchema: schema([]string{"project_id", "working_days"}, map[string]interface{}{
+				"project_id":   str("Project ID"),
+				"working_days": strList("ISO weekday numbers, \"1\" (Monday) to \"7\" (Sunday); at least one"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				days := []int{}
+				for _, d := range strListArg(args, "working_days") {
+					n, err := strconv.Atoi(strings.TrimSpace(d))
+					if err != nil {
+						return "", fmt.Errorf("working_days are weekday numbers from 1 (Monday) to 7 (Sunday)")
+					}
+					days = append(days, n)
+				}
+				out, _, err := c.request("PUT", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/settings", nil,
+					map[string]interface{}{"working_days": days})
 				return out, err
 			},
 		},

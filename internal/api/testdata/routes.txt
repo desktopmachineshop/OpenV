@@ -37,6 +37,7 @@ DELETE /api/v1/test-results/{id}/citations/{bundleId}
 DELETE /api/v1/test-runs/{id}
 DELETE /api/v1/todos/{id}
 DELETE /api/v1/work-items/{id}
+DELETE /api/v1/work-items/{id}/relationships/{otherId}
 DELETE /mcp
 GET /.well-known/oauth-authorization-server
 GET /.well-known/oauth-protected-resource
@@ -358,6 +359,7 @@ PUT /api/v1/projects/{id}/members/{userId}
 PUT /api/v1/projects/{id}/parties
 PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}
 PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}
+PUT /api/v1/projects/{id}/plan/settings
 PUT /api/v1/projects/{id}/priority-detection
 PUT /api/v1/projects/{id}/profile
 PUT /api/v1/projects/{id}/quality-rules
@@ -372,4 +374,5 @@ PUT /api/v1/shared-products/{id}/vote
 PUT /api/v1/test-runs/{id}
 PUT /api/v1/todos/{id}
 PUT /api/v1/work-items/{id}
+PUT /api/v1/work-items/{id}/relationships/{otherId}
 PUT /api/v1/work-items/{id}/schedule

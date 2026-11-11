@@ -50,6 +50,7 @@ DELETE /api/v1/test-results/{id}/citations/{bundleId}: 401, 404; phantom_matrix 
 DELETE /api/v1/test-runs/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/todos/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/work-items/{id}: 401, 404; phantom_matrix (errors only)
+DELETE /api/v1/work-items/{id}/relationships/{otherId}: 401, 404; phantom_matrix (errors only)
 DELETE /mcp: 405; phantom_matrix (errors only)
 GET /.well-known/oauth-authorization-server: 200; phantom_matrix
 GET /.well-known/oauth-protected-resource: 200; phantom_matrix
@@ -371,6 +372,7 @@ PUT /api/v1/projects/{id}/members/{userId}: 400, 401, 403, 404; phantom_matrix, 
 PUT /api/v1/projects/{id}/parties: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}: 401, 404; phantom_matrix (errors only)
+PUT /api/v1/projects/{id}/plan/settings: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/projects/{id}/priority-detection: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/projects/{id}/profile: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/projects/{id}/quality-rules: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
@@ -385,6 +387,7 @@ PUT /api/v1/shared-products/{id}/vote: 401, 403, 404; phantom_matrix (errors onl
 PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/todos/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+PUT /api/v1/work-items/{id}/relationships/{otherId}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/work-items/{id}/schedule: 401, 404; phantom_matrix (errors only)
 
-s5e: 374 of 375 routes reached (99.7%), 173 with a 2xx or 3xx answer (46.1%)
+s5e: 377 of 378 routes reached (99.7%), 173 with a 2xx or 3xx answer (45.8%)

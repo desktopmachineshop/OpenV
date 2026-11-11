@@ -49,6 +49,7 @@ DELETE /api/v1/test-results/{id}/citations/{bundleId}: s5b, s5e; 2xx or 3xx in s
 DELETE /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 DELETE /api/v1/todos/{id}: s5b, s5e; 2xx or 3xx in s5b
 DELETE /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
+DELETE /api/v1/work-items/{id}/relationships/{otherId}: s5b, s5e; 2xx or 3xx in s5b
 DELETE /mcp: s5d, s5e (errors only)
 GET /.well-known/oauth-authorization-server: s5d, s5e; 2xx or 3xx in s5d, s5e
 GET /.well-known/oauth-protected-resource: s5d, s5e; 2xx or 3xx in s5d, s5e
@@ -370,6 +371,7 @@ PUT /api/v1/projects/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
 PUT /api/v1/projects/{id}/parties: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/projects/{id}/plan/settings: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/priority-detection: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/profile: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/projects/{id}/quality-rules: s5b, s5e; 2xx or 3xx in s5b
@@ -384,6 +386,7 @@ PUT /api/v1/shared-products/{id}/vote: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/test-runs/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/todos/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
+PUT /api/v1/work-items/{id}/relationships/{otherId}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}/schedule: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 375 of 375 routes reached (100.0%), 361 with a 2xx or 3xx answer (96.3%); the floor is 90%, 338 routes
+the tour: 378 of 378 routes reached (100.0%), 364 with a 2xx or 3xx answer (96.3%); the floor is 90%, 341 routes
