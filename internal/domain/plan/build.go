@@ -109,6 +109,23 @@ type Task struct {
 	// Overallocated: someone on the task is asked for more than their
 	// capacity while it runs.
 	Overallocated bool `json:"overallocated"`
+	// ActualStart and ActualFinish are when the task really started and
+	// finished; ActualCost what it has cost. PercentComplete is the
+	// percentage typed by hand, nil when progress is the computed one.
+	ActualStart     *string  `json:"actual_start"`
+	ActualFinish    *string  `json:"actual_finish"`
+	PercentComplete *int     `json:"percent_complete"`
+	ActualCost      *float64 `json:"actual_cost"`
+	// Baseline is the task as the plan's active baseline has it, nil when
+	// it is not in it. The variances are the working days its start and its
+	// end have moved since: positive is later.
+	Baseline           *BaselineTask `json:"baseline"`
+	StartVarianceDays  *int          `json:"start_variance_days"`
+	FinishVarianceDays *int          `json:"finish_variance_days"`
+	// EarnedValue is the task's at the status date; nil for a task with
+	// sub-tasks. BehindSchedule: it has earned less than was planned by then.
+	EarnedValue    *EarnedValue `json:"earned_value"`
+	BehindSchedule bool         `json:"behind_schedule"`
 	// FloatUntil is the last day the task's end can slip to before it
 	// pushes a task it drives; nil when it drives none or has no room.
 	FloatUntil *string `json:"float_until"`
@@ -224,6 +241,15 @@ type Plan struct {
 	People    []Person       `json:"people"`
 	Currency  string         `json:"currency"`
 	Budget    *float64       `json:"budget"`
+	// Tracking is the status date and the baseline chosen; StatusDay the
+	// day progress is reported as of (the status date, or today);
+	// BaselineID the baseline the tasks are compared with; Baselines every
+	// one the plan keeps; EarnedValue the plan's at the status day.
+	Tracking
+	StatusDay   string         `json:"status_day"`
+	BaselineID  *string        `json:"baseline_id"`
+	Baselines   []BaselineInfo `json:"baselines"`
+	EarnedValue EarnedValue    `json:"earned_value"`
 	// Today is the day the plan was computed for (UTC), which decides late.
 	Today string `json:"today"`
 	// Start and End span every dated task and milestone.
@@ -264,9 +290,13 @@ type Inputs struct {
 	Resources   []Resource
 	Currency    string
 	Budget      *float64
-	Milestones  []*Milestone
-	Releases    []*targetreleases.Release
-	Evidence    Evidence
+	// Baselines are the plan's snapshots, oldest first; Tracking says which
+	// one it is compared with, and as of which day.
+	Baselines  []*Baseline
+	Tracking   Tracking
+	Milestones []*Milestone
+	Releases   []*targetreleases.Release
+	Evidence   Evidence
 }
 
 // Plan loads the project's board, to-dos, schedule and milestones and
@@ -296,7 +326,10 @@ func (s *DefaultService) Plan(projectID string, ev Evidence, now time.Time) (*Pl
 		return nil, err
 	}
 	in.WorkingDays, in.Holidays, in.CriticalSlackDays, in.Scheduling = set.WorkingDays, set.Holidays, set.CriticalSlackDays, set.Scheduling
-	in.Currency, in.Budget = set.Currency, set.Budget
+	in.Currency, in.Budget, in.Tracking = set.Currency, set.Budget, set.Tracking
+	if in.Baselines, err = s.repo.ListBaselines(projectID); err != nil {
+		return nil, err
+	}
 	if in.Assignments, err = s.repo.ListAssignments(projectID); err != nil {
 		return nil, err
 	}
@@ -382,6 +415,7 @@ func Build(in Inputs, now time.Time) *Plan {
 		}
 	}
 	p.Currency, p.Budget, p.People = in.Currency, in.Budget, []Person{}
+	b.tracking(p)
 
 	own := map[string]string{}
 	for _, sc := range in.Schedules {
@@ -457,6 +491,7 @@ func (b *builder) tasks() {
 		t.Elapsed, t.Deadline = sc.Elapsed, sc.Deadline
 		t.ModeOwn, t.ConstraintType, t.ConstraintDate = sc.Mode, sc.ConstraintType, sc.ConstraintDate
 		t.FixedCost, t.EffortDriven = sc.FixedCost, sc.EffortDriven
+		t.ActualStart, t.ActualFinish, t.PercentComplete, t.ActualCost = sc.ActualStart, sc.ActualFinish, sc.PercentComplete, sc.ActualCost
 		if t.ModeOwn != "" {
 			t.Mode = t.ModeOwn
 		}
@@ -547,6 +582,9 @@ func (b *builder) settle(t *Task) {
 	switch {
 	case t.Done:
 		t.fraction = 1
+	case t.PercentComplete != nil && len(b.children[t.ID]) == 0:
+		// Typed by hand: it stands in for the to-dos.
+		t.fraction = float64(*t.PercentComplete) / 100
 	case units > 0:
 		t.fraction = sum / units
 	}

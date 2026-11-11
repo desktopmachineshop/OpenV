@@ -189,6 +189,27 @@ func planTour(tr *tour) {
 	tr.step("the viewer may not level: 403", viewer, level, at("id", "{{p}}"))
 	tr.setup("Wiring unassigned, with no fixed cost, its duration its own again", o, schedule, at("id", "{{wiring}}"),
 		jsonBody(`{"assignments":[],"fixed_cost":0,"effort_driven":false}`))
+	baselines := "POST /api/v1/projects/{id}/plan/baselines"
+	tr.step("a baseline of the plan as it stands", o, baselines, at("id", "{{p}}"), jsonBody(`{"name":"As approved"}`)).capture("bl", "/id")
+	tr.step("the viewer may not save one: 403", viewer, baselines, at("id", "{{p}}"), jsonBody(`{}`))
+	tr.step("Wiring really started, is 40% complete by hand and has cost 120", o, schedule, at("id", "{{wiring}}"),
+		jsonBody(`{"actual_start":"2099-03-02","percent_complete":40,"actual_cost":120}`))
+	tr.step("140 percent complete: 400", o, schedule, at("id", "{{wiring}}"), jsonBody(`{"percent_complete":140}`))
+	tr.step("finished before it started: 400", o, schedule, at("id", "{{wiring}}"), jsonBody(`{"actual_finish":"2099-01-01"}`))
+	tr.step("progress is reported as of a status date, against that baseline", o, "PUT /api/v1/projects/{id}/plan/settings", at("id", "{{p}}"),
+		jsonBody(`{"status_date":"2099-03-10","active_baseline_id":"{{bl}}"}`))
+	tr.step("a status date that is not a date: 400", o, "PUT /api/v1/projects/{id}/plan/settings", at("id", "{{p}}"), jsonBody(`{"status_date":"now"}`))
+	remaining := "POST /api/v1/projects/{id}/plan/reschedule-remaining"
+	tr.step("the work that has not started moves to the status date", o, remaining, at("id", "{{p}}"))
+	tr.step("the viewer may not reschedule: 403", viewer, remaining, at("id", "{{p}}"))
+	tr.setup("Wiring's actuals cleared, the status date today again", o, schedule, at("id", "{{wiring}}"),
+		jsonBody(`{"actual_start":"","percent_complete":-1,"actual_cost":-1}`))
+	tr.setup("no status date or chosen baseline", o, "PUT /api/v1/projects/{id}/plan/settings", at("id", "{{p}}"),
+		jsonBody(`{"status_date":"","active_baseline_id":""}`))
+	baseline := "DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}"
+	tr.step("the viewer may not delete the baseline: 403", viewer, baseline, at("id", "{{p}}", "baselineId", "{{bl}}"))
+	tr.step("the baseline deleted", o, baseline, at("id", "{{p}}", "baselineId", "{{bl}}"))
+	tr.step("deleted again: 404", o, baseline, at("id", "{{p}}", "baselineId", "{{bl}}"))
 	tr.step("dates on Build, which has sub-tasks: 400", o, schedule, at("id", "{{build}}"), jsonBody(`{"start_date":"2099-03-01"}`))
 
 	settings := "PUT /api/v1/projects/{id}/plan/settings"

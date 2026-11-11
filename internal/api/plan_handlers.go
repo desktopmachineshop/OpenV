@@ -33,6 +33,9 @@ func (h *Handler) registerPlanRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/plan/settings", h.SetPlanSettings).Methods("PUT")
 	router.HandleFunc("/api/v1/projects/{id}/plan/recalculate", h.RecalculatePlan).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/plan/level", h.LevelPlan).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/plan/baselines", h.SavePlanBaseline).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/plan/baselines/{baselineId}", h.DeletePlanBaseline).Methods("DELETE")
+	router.HandleFunc("/api/v1/projects/{id}/plan/reschedule-remaining", h.RescheduleRemainingPlan).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/plan/resources/{assigneeId}", h.SetPlanResource).Methods("PUT")
 	router.HandleFunc("/api/v1/work-items/{id}/schedule", h.ScheduleWorkItem).Methods("PUT")
 	router.HandleFunc("/api/v1/work-items/{id}/relationships/{otherId}", h.RelateWorkItems).Methods("PUT")
@@ -51,7 +54,7 @@ func writePlanError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, plan.ErrNameRequired), errors.Is(err, plan.ErrInvalidDate), errors.Is(err, plan.ErrDateOrder),
 		errors.Is(err, plan.ErrParentSelf), errors.Is(err, plan.ErrParentCycle), errors.Is(err, plan.ErrOtherProject),
 		errors.Is(err, plan.ErrDependsOnSelf), errors.Is(err, plan.ErrDependencyCycle), errors.Is(err, plan.ErrRelationshipType), errors.Is(err, plan.ErrInvalidDuration), errors.Is(err, plan.ErrInvalidEffort),
-		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrMilestone), errors.Is(err, plan.ErrInvalidLag), errors.Is(err, plan.ErrHoliday), errors.Is(err, plan.ErrCriticalSlack), errors.Is(err, plan.ErrSchedulingMode), errors.Is(err, plan.ErrAssignment), errors.Is(err, plan.ErrResource), errors.Is(err, plan.ErrInvalidCost), errors.Is(err, plan.ErrConstraint), errors.Is(err, plan.ErrUnknownMetric),
+		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrMilestone), errors.Is(err, plan.ErrInvalidLag), errors.Is(err, plan.ErrHoliday), errors.Is(err, plan.ErrCriticalSlack), errors.Is(err, plan.ErrSchedulingMode), errors.Is(err, plan.ErrAssignment), errors.Is(err, plan.ErrTooManyBaselines), errors.Is(err, plan.ErrPercent), errors.Is(err, plan.ErrResource), errors.Is(err, plan.ErrInvalidCost), errors.Is(err, plan.ErrConstraint), errors.Is(err, plan.ErrUnknownMetric),
 		errors.Is(err, plan.ErrInvalidTarget), errors.Is(err, plan.ErrTooManyCriteria), errors.Is(err, plan.ErrDuplicateMetric),
 		errors.Is(err, plan.ErrReleaseMilestone), errors.Is(err, plan.ErrUnsupportedFormat),
 		errors.Is(err, todos.ErrTextRequired), errors.Is(err, todos.ErrTextTooLong), errors.Is(err, todos.ErrParagraphs):
@@ -483,6 +486,63 @@ func (h *Handler) RecalculatePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	moved, err := h.PlanService.Recalculate(projectID, Actor(r), req.OnlyLater, time.Now())
+	if err != nil {
+		writePlanError(w, r, err)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]int{"moved": moved})
+}
+
+// SavePlanBaseline records the plan as it stands as a baseline: {"name"},
+// which is "Baseline <today>" when left out. A plan keeps at most 11. It
+// answers the baseline, 201.
+func (h *Handler) SavePlanBaseline(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.planReady(w, r, projectID, members.RoleEditor, true) {
+		return
+	}
+	var req struct {
+		Name string `json:"name"`
+	}
+	if r.ContentLength != 0 && !decodeJSON(w, r, &req) {
+		return
+	}
+	b, err := h.PlanService.SaveBaseline(projectID, req.Name, time.Now())
+	if err != nil {
+		writePlanError(w, r, err)
+		return
+	}
+	respondJSON(w, http.StatusCreated, plan.BaselineInfo{ID: b.ID, Name: b.Name, CreatedAt: b.CreatedAt, Tasks: len(b.Tasks)})
+}
+
+// DeletePlanBaseline removes a baseline of the project; one the project
+// does not have is a 404.
+func (h *Handler) DeletePlanBaseline(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.planReady(w, r, projectID, members.RoleEditor, true) {
+		return
+	}
+	err := h.PlanService.DeleteBaseline(projectID, mux.Vars(r)["baselineId"])
+	if errors.Is(err, plan.ErrNotFound) {
+		writeJSONError(w, http.StatusNotFound, "baseline not found")
+		return
+	}
+	if err != nil {
+		writePlanError(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// RescheduleRemainingPlan moves the work that should have started by the
+// status date and has not to that date, and what it drives after it. It
+// answers {"moved": n}.
+func (h *Handler) RescheduleRemainingPlan(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.planReady(w, r, projectID, members.RoleEditor, true) {
+		return
+	}
+	moved, err := h.PlanService.RescheduleRemaining(projectID, Actor(r), time.Now())
 	if err != nil {
 		writePlanError(w, r, err)
 		return

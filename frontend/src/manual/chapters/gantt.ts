@@ -409,6 +409,41 @@ cost. Set the plan's **Currency** and **Budget** in the Resources dialog:
 the figures above the chart then show the plan's cost against its budget,
 in red when it is over.
 
+
+## Tracking progress against a baseline
+
+**Tracking**, above the chart, is where you compare the plan with what
+was agreed and with what has happened.
+
+**Baselines.** **Save a baseline** records every task's dates, duration,
+effort and cost as they stand. Save one when the plan is agreed. The
+chart then draws a thin grey bar under each task where the baseline had
+it, and the task's panel says how many working days later or earlier it
+now starts and finishes. A plan keeps up to 11 baselines. Pick the one
+to measure against in the list; the newest is used until you do.
+**Show on the chart** hides the grey bars.
+
+**What happened.** A task's panel has a **Tracking** section. **Actual
+start** and **Actual finish** record the days work really began and
+ended. **% complete** replaces the progress counted from to-dos and
+sub-tasks with a figure you type; clear it to go back to the counted
+one. **Actual cost** records what the task has cost so far; left empty,
+the task is taken to have cost its earned share of the planned cost.
+
+**The status date.** Progress is reported as of today unless you set a
+**Status date**. A dashed line marks it on the chart. A task that has
+done less than the status date asks is marked *Behind* in its panel.
+
+**Earned value.** With a baseline and costs on the plan, Tracking shows
+the baseline's budget, what was planned and earned by the status date,
+what was spent, the schedule and cost variances, the two indices (below
+1 is behind, or over cost) and the forecast cost at the present rate.
+
+**Reschedule remaining work** moves every task that should have started
+by the status date and has not to that date, keeping its duration, and
+moves the tasks those drive after them. Tasks with progress or an
+actual start stay where they are.
+
 ## Progress from to-dos and sub-tasks
 
 A task's progress is worked out, so it never goes stale:

@@ -40,23 +40,27 @@ func planTools() []Tool {
 				"pass an empty string to clear a date or the parent, and an empty relationships list to clear them. Answers the " +
 				"task's row of the plan.",
 			InputSchema: schema([]string{"id"}, map[string]interface{}{
-				"id":              str("Work item ID"),
-				"start_date":      str("Start date, YYYY-MM-DD; an empty string clears it"),
-				"due_date":        str("Due date, YYYY-MM-DD; an empty string clears it"),
-				"duration_days":   str("How long the task runs, in whole working days counting its first and last; the task keeps it, so a start date sent alone moves the due date and a due date sent alone moves the start. \"0\" clears it"),
-				"effort_days":     str("The work in the task, in person-days (may be a decimal); \"0\" clears it"),
-				"parent_id":       str("Work item ID of the parent task; an empty string makes it a top-level task"),
-				"deadline":        str("The day the task should be finished by, YYYY-MM-DD; it moves nothing, and the plan flags a task that misses it. An empty string clears it"),
-				"elapsed":         str("\"true\" makes the duration count calendar days, weekends and holidays included (a cure, a delivery); \"false\" counts working days"),
-				"mode":            str("The task's own scheduling mode: \"manual\" (it stays where it is put), \"auto\" (the platform places it from its relationships and constraint), or an empty string to take the plan's"),
-				"constraint_type": str("A date constraint: \"asap\" (none), \"alap\" (as late as possible), \"snet\"/\"snlt\" (start no earlier/later than), \"fnet\"/\"fnlt\" (finish no earlier/later than), \"mso\"/\"mfo\" (must start/finish on). Every one but asap and alap needs constraint_date"),
-				"constraint_date": str("The constraint's date, YYYY-MM-DD"),
-				"assignments":     strList("Who the task is assigned to on the plan, each \"user:<id>\" or \"agent:<id>\", with an optional share of their time after it as in \"user:<id>:50\" (percent; 100 when left out); replaces the task's assignments, and an empty list leaves it to the board's assignee"),
-				"fixed_cost":      str("What the task costs beyond the time of the people on it; \"0\" clears it"),
-				"effort_driven":   str("\"true\" lets the task's effort and the people on it decide its duration"),
-				"milestone":       str("Key of the milestone the task is assigned to, as get_plan lists it (a milestone's id, or \"release:<release id>\"); an empty string takes it off. The milestone then counts the task among its tasks done"),
-				"relationships":   strList("The tasks that drive this one, each \"<work item id>:FS\", \":SS\", \":FF\" or \":SF\", with an optional offset after it as in \"<id>:SS:5\" (working days; negative leads), \"<id>:FS:3ed\" (elapsed days) or \"<id>:SS:50%\" (of the driving task's duration); replaces the task's relationships"),
-				"depends_on":      strList("Earlier form of relationships: work item IDs, each finish to start unless it already has a type"),
+				"id":               str("Work item ID"),
+				"start_date":       str("Start date, YYYY-MM-DD; an empty string clears it"),
+				"due_date":         str("Due date, YYYY-MM-DD; an empty string clears it"),
+				"duration_days":    str("How long the task runs, in whole working days counting its first and last; the task keeps it, so a start date sent alone moves the due date and a due date sent alone moves the start. \"0\" clears it"),
+				"effort_days":      str("The work in the task, in person-days (may be a decimal); \"0\" clears it"),
+				"parent_id":        str("Work item ID of the parent task; an empty string makes it a top-level task"),
+				"deadline":         str("The day the task should be finished by, YYYY-MM-DD; it moves nothing, and the plan flags a task that misses it. An empty string clears it"),
+				"elapsed":          str("\"true\" makes the duration count calendar days, weekends and holidays included (a cure, a delivery); \"false\" counts working days"),
+				"mode":             str("The task's own scheduling mode: \"manual\" (it stays where it is put), \"auto\" (the platform places it from its relationships and constraint), or an empty string to take the plan's"),
+				"constraint_type":  str("A date constraint: \"asap\" (none), \"alap\" (as late as possible), \"snet\"/\"snlt\" (start no earlier/later than), \"fnet\"/\"fnlt\" (finish no earlier/later than), \"mso\"/\"mfo\" (must start/finish on). Every one but asap and alap needs constraint_date"),
+				"constraint_date":  str("The constraint's date, YYYY-MM-DD"),
+				"assignments":      strList("Who the task is assigned to on the plan, each \"user:<id>\" or \"agent:<id>\", with an optional share of their time after it as in \"user:<id>:50\" (percent; 100 when left out); replaces the task's assignments, and an empty list leaves it to the board's assignee"),
+				"fixed_cost":       str("What the task costs beyond the time of the people on it; \"0\" clears it"),
+				"effort_driven":    str("\"true\" lets the task's effort and the people on it decide its duration"),
+				"actual_start":     str("The day work really started, YYYY-MM-DD; an empty string clears it"),
+				"actual_finish":    str("The day work really finished, YYYY-MM-DD; an empty string clears it"),
+				"percent_complete": str("How complete the task is, \"0\" to \"100\", in place of the progress counted from its to-dos and sub-tasks; \"-1\" goes back to the counted progress"),
+				"actual_cost":      str("What the task has really cost so far; \"-1\" goes back to its earned share of the planned cost"),
+				"milestone":        str("Key of the milestone the task is assigned to, as get_plan lists it (a milestone's id, or \"release:<release id>\"); an empty string takes it off. The milestone then counts the task among its tasks done"),
+				"relationships":    strList("The tasks that drive this one, each \"<work item id>:FS\", \":SS\", \":FF\" or \":SF\", with an optional offset after it as in \"<id>:SS:5\" (working days; negative leads), \"<id>:FS:3ed\" (elapsed days) or \"<id>:SS:50%\" (of the driving task's duration); replaces the task's relationships"),
+				"depends_on":       strList("Earlier form of relationships: work item IDs, each finish to start unless it already has a type"),
 			}),
 			Handler: scheduleWorkItem,
 		},
@@ -74,18 +78,7 @@ func planTools() []Tool {
 		},
 		planCalendarTool(),
 		planResourceTool(),
-		{
-			Name: "level_plan",
-			Description: "Level a project's plan: delay tasks until no person or agent is asked for more than their capacity on any day. " +
-				"Where someone is over-allocated the task with the most float is delayed until after the first of the others ends, and the tasks it drives follow. Answers how many tasks moved.",
-			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
-				"project_id": str("Project ID"),
-			}),
-			Handler: func(c *Client, args map[string]interface{}) (string, error) {
-				out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/level", nil, nil)
-				return out, err
-			},
-		},
+		planLevelTool(),
 		{
 			Name: "set_plan_working_days",
 			Description: "Set which days of the week a project's plan works, as ISO weekday numbers from \"1\" (Monday) to \"7\" " +
@@ -109,6 +102,8 @@ func planTools() []Tool {
 				return out, err
 			},
 		},
+		planBaselineTool(),
+		planRescheduleTool(),
 	}
 }
 
@@ -116,7 +111,7 @@ func planTools() []Tool {
 // as the schedule route reads them.
 func scheduleWorkItem(c *Client, args map[string]interface{}) (string, error) {
 	body := map[string]interface{}{}
-	for _, key := range []string{"start_date", "due_date", "parent_id", "milestone", "deadline", "mode", "constraint_type", "constraint_date"} {
+	for _, key := range []string{"start_date", "due_date", "parent_id", "milestone", "deadline", "mode", "constraint_type", "constraint_date", "actual_start", "actual_finish"} {
 		if _, set := args[key]; set {
 			body[key] = strArg(args, key)
 		}
@@ -146,13 +141,13 @@ func scheduleWorkItem(c *Client, args map[string]interface{}) (string, error) {
 	if _, set := args["elapsed"]; set {
 		body["elapsed"] = strings.EqualFold(strings.TrimSpace(strArg(args, "elapsed")), "true")
 	}
-	for _, key := range []string{"duration_days", "effort_days", "fixed_cost"} {
+	for _, key := range []string{"duration_days", "effort_days", "fixed_cost", "actual_cost", "percent_complete"} {
 		if _, set := args[key]; !set {
 			continue
 		}
 		n, err := strconv.ParseFloat(strings.TrimSpace(strArg(args, key)), 64)
 		if err != nil {
-			return "", fmt.Errorf("%s must be a number of days", key)
+			return "", fmt.Errorf("%s must be a number", key)
 		}
 		body[key] = n
 	}
@@ -209,7 +204,7 @@ func setPlanCalendar(c *Client, args map[string]interface{}) (string, error) {
 		}
 		body["budget"] = n
 	}
-	for _, key := range []string{"scheduling_mode", "project_start", "project_finish", "schedule_from", "currency"} {
+	for _, key := range []string{"scheduling_mode", "project_start", "project_finish", "schedule_from", "currency", "status_date", "active_baseline_id"} {
 		if _, set := args[key]; set {
 			body[key] = strArg(args, key)
 		}
@@ -256,6 +251,8 @@ func planCalendarTool() Tool {
 			"schedule_from":           str("\"start\" (tasks as soon as possible) or \"finish\" (automatic tasks as late as possible)"),
 			"currency":                str("The money costs are in, as up to three letters, e.g. \"GBP\""),
 			"budget":                  str("What the plan may cost; \"0\" clears it"),
+			"status_date":             str("The day progress is reported as of, YYYY-MM-DD: earned value and behind-schedule marks are measured at it. An empty string means today"),
+			"active_baseline_id":      str("ID of the baseline variance and earned value are measured against, as get_plan lists under baselines; an empty string means the newest"),
 			"multiple_critical_paths": str("\"true\" gives each chain of tasks a critical path of its own, to its own last task"),
 		}),
 		Handler: setPlanCalendar,
@@ -294,6 +291,59 @@ func planResourceTool() Tool {
 				body["capacity"] = n
 			}
 			out, _, err := c.request("PUT", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/resources/"+strArg(args, "id"), nil, body)
+			return out, err
+		},
+	}
+}
+
+// planBaselineTool is save_plan_baseline: the plan as it stands, kept to
+// measure against.
+func planBaselineTool() Tool {
+	return Tool{
+		Name: "save_plan_baseline",
+		Description: "Save a baseline of a project's plan: every task's dates, duration, effort and cost as they stand, kept so " +
+			"get_plan can report how far each task has moved since (its variance) and the plan's earned value. A plan keeps " +
+			"at most 11. Answers the baseline's id and name.",
+		InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+			"project_id": str("Project ID"),
+			"name":       str("What to call it; \"Baseline <today>\" when left out"),
+		}),
+		Handler: func(c *Client, args map[string]interface{}) (string, error) {
+			out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/baselines", nil,
+				map[string]interface{}{"name": strArg(args, "name")})
+			return out, err
+		},
+	}
+}
+
+// planRescheduleTool is reschedule_remaining_work: unstarted work that is
+// behind the status date moves to it.
+func planRescheduleTool() Tool {
+	return Tool{
+		Name: "reschedule_remaining_work",
+		Description: "Move the work that should have started by the plan's status date and has not to that date, and the tasks it " +
+			"drives after it. A task with progress or an actual start, and a task that is done, stay where they are. Answers how many tasks moved.",
+		InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+			"project_id": str("Project ID"),
+		}),
+		Handler: func(c *Client, args map[string]interface{}) (string, error) {
+			out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/reschedule-remaining", nil, nil)
+			return out, err
+		},
+	}
+}
+
+// planLevelTool is level_plan: delays tasks until nobody is over-allocated.
+func planLevelTool() Tool {
+	return Tool{
+		Name: "level_plan",
+		Description: "Level a project's plan: delay tasks until no person or agent is asked for more than their capacity on any day. " +
+			"Where someone is over-allocated the task with the most float is delayed until after the first of the others ends, and the tasks it drives follow. Answers how many tasks moved.",
+		InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+			"project_id": str("Project ID"),
+		}),
+		Handler: func(c *Client, args map[string]interface{}) (string, error) {
+			out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/level", nil, nil)
 			return out, err
 		},
 	}

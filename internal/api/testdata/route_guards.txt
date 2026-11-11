@@ -31,6 +31,7 @@ DELETE /api/v1/orgs/{id}/runner-session: org:member, runner-sessions
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: org:admin
 DELETE /api/v1/projects/{id}: project:owner
 DELETE /api/v1/projects/{id}/members/{userId}: project:owner
+DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}: project:editor
 DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}: project:editor
 DELETE /api/v1/projects/{id}/releases/{releaseId}: project:editor
 DELETE /api/v1/projects/{id}/team-access/{teamId}: project:owner
@@ -290,9 +291,11 @@ POST /api/v1/projects/{id}/draft-test-cases: project:editor
 POST /api/v1/projects/{id}/evidence-bundles: project:editor
 POST /api/v1/projects/{id}/interviews: no-proposal-run, project:editor, project-visible
 POST /api/v1/projects/{id}/members: project:owner
+POST /api/v1/projects/{id}/plan/baselines: project:editor
 POST /api/v1/projects/{id}/plan/level: project:editor
 POST /api/v1/projects/{id}/plan/milestones: project:editor
 POST /api/v1/projects/{id}/plan/recalculate: project:editor
+POST /api/v1/projects/{id}/plan/reschedule-remaining: project:editor
 POST /api/v1/projects/{id}/reindex-embeddings: project:owner
 POST /api/v1/projects/{id}/releases: project:editor
 POST /api/v1/projects/{id}/repo-connections: project:owner

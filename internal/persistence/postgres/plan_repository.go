@@ -25,7 +25,8 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 	rows, err := r.db.Query(`
 		SELECT work_item_id, project_id, to_char(start_date, 'YYYY-MM-DD'), parent_id, duration_days, effort_days, milestone_key,
 			elapsed, to_char(deadline, 'YYYY-MM-DD'), mode, constraint_type, to_char(constraint_date, 'YYYY-MM-DD'),
-			fixed_cost, effort_driven
+			fixed_cost, effort_driven, to_char(actual_start, 'YYYY-MM-DD'), to_char(actual_finish, 'YYYY-MM-DD'),
+			percent_complete, actual_cost
 		FROM plan_tasks WHERE project_id = $1 ORDER BY work_item_id`, projectID)
 	if err != nil {
 		return nil, err
@@ -34,10 +35,13 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 	out := []*plan.TaskSchedule{}
 	for rows.Next() {
 		s := &plan.TaskSchedule{}
-		var start, parent, milestone, deadline, constraint sql.NullString
+		var start, parent, milestone, deadline, constraint, actualStart, actualFinish sql.NullString
+		var percent sql.NullInt64
+		var actualCost sql.NullFloat64
 		var duration sql.NullInt64
 		var effort sql.NullFloat64
-		if err := rows.Scan(&s.WorkItemID, &s.ProjectID, &start, &parent, &duration, &effort, &milestone, &s.Elapsed, &deadline, &s.Mode, &s.ConstraintType, &constraint, &s.FixedCost, &s.EffortDriven); err != nil {
+		if err := rows.Scan(&s.WorkItemID, &s.ProjectID, &start, &parent, &duration, &effort, &milestone, &s.Elapsed, &deadline, &s.Mode, &s.ConstraintType, &constraint, &s.FixedCost, &s.EffortDriven,
+			&actualStart, &actualFinish, &percent, &actualCost); err != nil {
 			return nil, err
 		}
 		if duration.Valid {
@@ -59,6 +63,19 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 		if constraint.Valid {
 			s.ConstraintDate = &constraint.String
 		}
+		if actualStart.Valid {
+			s.ActualStart = &actualStart.String
+		}
+		if actualFinish.Valid {
+			s.ActualFinish = &actualFinish.String
+		}
+		if percent.Valid {
+			n := int(percent.Int64)
+			s.PercentComplete = &n
+		}
+		if actualCost.Valid {
+			s.ActualCost = &actualCost.Float64
+		}
 		if milestone.Valid && milestone.String != "" {
 			s.MilestoneKey = &milestone.String
 		}
@@ -71,18 +88,22 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 func (r *PlanRepository) SaveSchedule(s *plan.TaskSchedule) error {
 	_, err := r.db.Exec(`
 		INSERT INTO plan_tasks (work_item_id, project_id, start_date, parent_id, duration_days, effort_days, milestone_key,
-			elapsed, deadline, mode, constraint_type, constraint_date, fixed_cost, effort_driven, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
+			elapsed, deadline, mode, constraint_type, constraint_date, fixed_cost, effort_driven,
+			actual_start, actual_finish, percent_complete, actual_cost, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, NOW())
 		ON CONFLICT (work_item_id) DO UPDATE
 		SET start_date = EXCLUDED.start_date, parent_id = EXCLUDED.parent_id,
 			duration_days = EXCLUDED.duration_days, effort_days = EXCLUDED.effort_days,
 			milestone_key = EXCLUDED.milestone_key, elapsed = EXCLUDED.elapsed, deadline = EXCLUDED.deadline,
 			mode = EXCLUDED.mode, constraint_type = EXCLUDED.constraint_type, constraint_date = EXCLUDED.constraint_date,
 			fixed_cost = EXCLUDED.fixed_cost, effort_driven = EXCLUDED.effort_driven,
+			actual_start = EXCLUDED.actual_start, actual_finish = EXCLUDED.actual_finish,
+			percent_complete = EXCLUDED.percent_complete, actual_cost = EXCLUDED.actual_cost,
 			updated_at = NOW()`,
 		s.WorkItemID, s.ProjectID, nullableString(s.StartDate), nullableString(s.ParentID), optInt(s.DurationDays), optFloat(s.EffortDays),
 		nullableString(s.MilestoneKey), s.Elapsed, nullableString(s.Deadline), s.Mode, constraintType(s.ConstraintType),
-		nullableString(s.ConstraintDate), s.FixedCost, s.EffortDriven)
+		nullableString(s.ConstraintDate), s.FixedCost, s.EffortDriven,
+		nullableString(s.ActualStart), nullableString(s.ActualFinish), optInt(s.PercentComplete), optFloat(s.ActualCost))
 	return err
 }
 
@@ -92,13 +113,14 @@ func (r *PlanRepository) SaveSchedule(s *plan.TaskSchedule) error {
 func (r *PlanRepository) Settings(projectID string) (plan.Settings, error) {
 	out := plan.Settings{Holidays: []plan.Holiday{}, Scheduling: plan.Scheduling{Mode: plan.ModeManual, ScheduleFrom: plan.FromStart}}
 	var bits int
-	var start, finish sql.NullString
+	var start, finish, status, baseline sql.NullString
 	var budget sql.NullFloat64
 	err := r.db.QueryRow(`
 		SELECT working_days, critical_slack_days, scheduling_mode, to_char(project_start, 'YYYY-MM-DD'),
-			to_char(project_finish, 'YYYY-MM-DD'), schedule_from, multiple_critical_paths, currency, budget
+			to_char(project_finish, 'YYYY-MM-DD'), schedule_from, multiple_critical_paths, currency, budget,
+			to_char(status_date, 'YYYY-MM-DD'), active_baseline_id
 		FROM plan_settings WHERE project_id = $1`, projectID).
-		Scan(&bits, &out.CriticalSlackDays, &out.Mode, &start, &finish, &out.ScheduleFrom, &out.MultipleCriticalPaths, &out.Currency, &budget)
+		Scan(&bits, &out.CriticalSlackDays, &out.Mode, &start, &finish, &out.ScheduleFrom, &out.MultipleCriticalPaths, &out.Currency, &budget, &status, &baseline)
 	switch {
 	case malformedID(err):
 		return out, nil
@@ -119,6 +141,12 @@ func (r *PlanRepository) Settings(projectID string) (plan.Settings, error) {
 		}
 		if budget.Valid {
 			out.Budget = &budget.Float64
+		}
+		if status.Valid {
+			out.StatusDate = &status.String
+		}
+		if baseline.Valid {
+			out.ActiveBaselineID = &baseline.String
 		}
 	}
 	rows, err := r.db.Query(`SELECT to_char(day, 'YYYY-MM-DD'), name FROM plan_holidays WHERE project_id = $1 ORDER BY day`, projectID)
@@ -148,16 +176,21 @@ func (r *PlanRepository) SaveSettings(projectID string, s plan.Settings) error {
 	return withTx(context.Background(), r.db, nil, func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`
 			INSERT INTO plan_settings (project_id, working_days, critical_slack_days, scheduling_mode, project_start,
-				project_finish, schedule_from, multiple_critical_paths, currency, budget, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
+				project_finish, schedule_from, multiple_critical_paths, currency, budget, status_date, active_baseline_id, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
 			ON CONFLICT (project_id) DO UPDATE SET working_days = EXCLUDED.working_days,
 				critical_slack_days = EXCLUDED.critical_slack_days, scheduling_mode = EXCLUDED.scheduling_mode,
 				project_start = EXCLUDED.project_start, project_finish = EXCLUDED.project_finish,
 				schedule_from = EXCLUDED.schedule_from, multiple_critical_paths = EXCLUDED.multiple_critical_paths,
 				currency = EXCLUDED.currency, budget = EXCLUDED.budget,
+				status_date = EXCLUDED.status_date, active_baseline_id = EXCLUDED.active_baseline_id,
 				updated_at = NOW()`,
 			projectID, bits, s.CriticalSlackDays, s.Mode, nullableString(s.ProjectStart), nullableString(s.ProjectFinish),
-			s.ScheduleFrom, s.MultipleCriticalPaths, s.Currency, optFloat(s.Budget)); err != nil {
+			s.ScheduleFrom, s.MultipleCriticalPaths, s.Currency, optFloat(s.Budget),
+			nullableString(s.StatusDate), nullableString(s.ActiveBaselineID)); err != nil {
+			if malformedID(err) {
+				return plan.ErrNotFound
+			}
 			return err
 		}
 		if _, err := tx.Exec(`DELETE FROM plan_holidays WHERE project_id = $1`, projectID); err != nil {
@@ -241,6 +274,57 @@ func (r *PlanRepository) SaveResource(projectID string, res plan.Resource) error
 		return plan.ErrResource
 	}
 	return err
+}
+
+// ListBaselines lists the project's baselines with their tasks, oldest
+// first.
+func (r *PlanRepository) ListBaselines(projectID string) ([]*plan.Baseline, error) {
+	rows, err := r.db.Query(`SELECT id, project_id, name, tasks, created_at FROM plan_baselines WHERE project_id = $1 ORDER BY created_at, id`, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	out := []*plan.Baseline{}
+	for rows.Next() {
+		b := &plan.Baseline{}
+		var tasks []byte
+		if err := rows.Scan(&b.ID, &b.ProjectID, &b.Name, &tasks, &b.CreatedAt); err != nil {
+			return nil, err
+		}
+		// Tasks of a shape this build does not read count as none.
+		if err := json.Unmarshal(tasks, &b.Tasks); err != nil || b.Tasks == nil {
+			b.Tasks = []plan.BaselineTask{}
+		}
+		b.CreatedAt = b.CreatedAt.UTC()
+		out = append(out, b)
+	}
+	return out, rows.Err()
+}
+
+// CreateBaseline inserts a baseline.
+func (r *PlanRepository) CreateBaseline(b *plan.Baseline) error {
+	tasks, err := json.Marshal(b.Tasks)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Exec(`INSERT INTO plan_baselines (id, project_id, name, tasks, created_at) VALUES ($1, $2, $3, $4, $5)`,
+		b.ID, b.ProjectID, b.Name, tasks, b.CreatedAt.UTC())
+	return err
+}
+
+// DeleteBaseline removes a baseline of the project.
+func (r *PlanRepository) DeleteBaseline(projectID, id string) error {
+	res, err := r.db.Exec(`DELETE FROM plan_baselines WHERE id = $1 AND project_id = $2`, id, projectID)
+	if malformedID(err) {
+		return plan.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return plan.ErrNotFound
+	}
+	return nil
 }
 
 // ListDependencies lists the project's dependencies.

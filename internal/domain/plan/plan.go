@@ -55,6 +55,8 @@ var (
 	ErrAssignment        = errors.New("a task is assigned to at most 20 users or agents, each for 1 to 1000 percent of their time")
 	ErrResource          = errors.New("a resource is a user or an agent with a daily rate of 0 or more and a capacity of 1 to 1000 percent")
 	ErrInvalidCost       = errors.New("a cost or a budget is 0 or more, and a currency is at most three letters")
+	ErrTooManyBaselines  = errors.New("a plan keeps at most 11 baselines")
+	ErrPercent           = errors.New("a percentage complete is a whole number from 0 to 100, or -1 to go back to the computed one")
 	ErrSchedulingMode    = errors.New("a scheduling mode is manual or auto, and a plan is scheduled from its start or its finish")
 	ErrConstraint        = errors.New("a constraint is asap, alap, snet, snlt, fnet, fnlt, mso or mfo, and every one but asap and alap needs a date")
 	ErrCriticalSlack     = errors.New("the critical threshold is a whole number of working days from 0 to 365")
@@ -102,6 +104,13 @@ type TaskSchedule struct {
 	// EffortDriven: the task's effort and the people on it decide its
 	// duration.
 	EffortDriven bool
+	// ActualStart and ActualFinish are when the task really started and
+	// finished. PercentComplete is typed by hand, in place of the progress
+	// computed from to-dos and sub-tasks. ActualCost is what it has cost.
+	ActualStart     *string
+	ActualFinish    *string
+	PercentComplete *int
+	ActualCost      *float64
 	// MilestoneKey is the milestone the task is assigned to, by the key the
 	// plan gives it: a stored milestone's id, or "release:<id>".
 	MilestoneKey *string
@@ -218,8 +227,15 @@ type ScheduleRequest struct {
 	// Assignments replaces who the task is assigned to.
 	Assignments *[]Assignment `json:"assignments"`
 	// FixedCost is 0 or more; EffortDriven lets effort decide the duration.
-	FixedCost     *float64        `json:"fixed_cost"`
-	EffortDriven  *bool           `json:"effort_driven"`
+	FixedCost    *float64 `json:"fixed_cost"`
+	EffortDriven *bool    `json:"effort_driven"`
+	// ActualStart and ActualFinish are YYYY-MM-DD, empty to clear.
+	ActualStart  *string `json:"actual_start"`
+	ActualFinish *string `json:"actual_finish"`
+	// PercentComplete is 0 to 100; -1 goes back to the computed progress.
+	PercentComplete *int `json:"percent_complete"`
+	// ActualCost is 0 or more; -1 clears it.
+	ActualCost    *float64        `json:"actual_cost"`
 	DependsOn     *[]string       `json:"depends_on"`
 	Relationships *[]Relationship `json:"relationships"`
 }
@@ -242,6 +258,11 @@ type Repository interface {
 	// ListResources lists the rates and capacities the project keeps.
 	ListResources(projectID string) ([]Resource, error)
 	SaveResource(projectID string, res Resource) error
+	// ListBaselines lists the project's baselines with their tasks, oldest
+	// first; DeleteBaseline answers ErrNotFound for one it has not.
+	ListBaselines(projectID string) ([]*Baseline, error)
+	CreateBaseline(b *Baseline) error
+	DeleteBaseline(projectID, id string) error
 	// SetDependencies replaces a task's relationships; each entry's
 	// DependsOnID and Type are read.
 	SetDependencies(projectID, workItemID string, relationships []Dependency) error
@@ -299,6 +320,13 @@ type Service interface {
 	Level(projectID, actor string, now time.Time) (int, error)
 	// SetResource stores a person's or an agent's daily rate and capacity.
 	SetResource(projectID string, res Resource) (Resource, error)
+	// SaveBaseline records the plan as it stands; DeleteBaseline removes
+	// one.
+	SaveBaseline(projectID, name string, now time.Time) (*Baseline, error)
+	DeleteBaseline(projectID, id string) error
+	// RescheduleRemaining moves unstarted work that should have started
+	// by the status date to that date, and answers how many tasks moved.
+	RescheduleRemaining(projectID, actor string, now time.Time) (int, error)
 	// Unrelate removes the relationship between two tasks, whichever way
 	// it runs.
 	Unrelate(taskID, otherID string) error

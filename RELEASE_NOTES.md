@@ -15,6 +15,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Baselines.** **Tracking**, above the Gantt, saves a baseline of the plan. The chart then shows where each task was as a grey bar under it, and a task's panel says how many working days it has moved.
+- **Actual dates, percent complete and cost.** A task's panel has **Tracking**: the days work really started and finished, a percentage complete you type in place of the counted one, and what the task has cost.
+- **Status date and earned value.** Report progress as of a status date, see planned, earned and spent value with the schedule and cost indices, and move work that has not started up to the status date with **Reschedule remaining work**.
 - **People on tasks.** A task's panel on the Gantt has **Resources**: assign several people or agents, each for a share of their time. **Effort decides the duration** makes a task as long as its effort and its people need.
 - **Who is over-allocated, and levelling.** **Resources**, above the chart, lists everyone with work on the plan, their work and the days they are asked for more than their capacity. **Level the plan** delays the tasks with the most float until nobody is.
 - **Cost and budget.** Give each person a day rate and a task a fixed cost, and the plan costs every task and itself, against a budget if you set one.

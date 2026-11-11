@@ -229,6 +229,7 @@ type fakeRepo struct {
 	set         Settings
 	assignments map[string][]Assignment
 	resources   []Resource
+	baselines   []*Baseline
 	todoTasks   map[string]string
 	milestones  map[string]*Milestone
 }
@@ -274,6 +275,20 @@ func (r *fakeRepo) ListResources(string) ([]Resource, error) { return r.resource
 func (r *fakeRepo) SaveResource(_ string, res Resource) error {
 	r.resources = append(r.resources, res)
 	return nil
+}
+func (r *fakeRepo) ListBaselines(string) ([]*Baseline, error) { return r.baselines, nil }
+func (r *fakeRepo) CreateBaseline(b *Baseline) error {
+	r.baselines = append(r.baselines, b)
+	return nil
+}
+func (r *fakeRepo) DeleteBaseline(_, id string) error {
+	for i, b := range r.baselines {
+		if b.ID == id {
+			r.baselines = append(r.baselines[:i], r.baselines[i+1:]...)
+			return nil
+		}
+	}
+	return ErrNotFound
 }
 func (r *fakeRepo) SaveSchedule(s *TaskSchedule) error { r.schedules[s.WorkItemID] = s; return nil }
 func (r *fakeRepo) ListDependencies(string) ([]Dependency, error) {
@@ -1438,5 +1453,83 @@ func TestEffortDrivesDurationAndLevellingClearsOverallocation(t *testing.T) {
 	budget, money := 5000.0, "gbp"
 	if set, err := svc.SetSettings("p", SettingsRequest{Budget: &budget, Currency: &money}); err != nil || set.Currency != "GBP" || *set.Budget != 5000 {
 		t.Fatalf("budget and currency: %+v %v", set, err)
+	}
+}
+
+func TestBaselinesVarianceActualsAndEarnedValue(t *testing.T) {
+	svc, repo, board, _ := newService()
+	repo.days = []int{1, 2, 3, 4, 5}
+	ann := []Assignment{{Type: "user", ID: "ann"}}
+	repo.resources = []Resource{{Type: "user", ID: "ann", DailyRate: 100, Capacity: 100}}
+	// A runs Monday 1 to Friday 12 March 2027: ten days of Ann at 100 a day.
+	if err := svc.Schedule("a", ScheduleRequest{StartDate: sp("2027-03-01"), DueDate: sp("2027-03-12"), Assignments: &ann}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	b, err := svc.SaveBaseline("p", "", now)
+	if err != nil || b.Name != "Baseline 2027-03-10" || len(b.Tasks) != 3 {
+		t.Fatalf("baseline: %+v %v", b, err)
+	}
+	// A then slips two working days, and is reported 30% complete by hand.
+	thirty := 30
+	if err := svc.Schedule("a", ScheduleRequest{StartDate: sp("2027-03-03"), PercentComplete: &thirty, ActualStart: sp("2027-03-03")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	p, err := svc.Plan("p", Evidence{}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	a := task(p, "a")
+	if a.Progress != 30 || a.PercentComplete == nil || *a.ActualStart != "2027-03-03" {
+		t.Fatalf("a percentage typed by hand is the progress: %d %v", a.Progress, a.PercentComplete)
+	}
+	if a.Baseline == nil || *a.Baseline.Start != "2027-03-01" || *a.StartVarianceDays != 2 || *a.FinishVarianceDays != 2 {
+		t.Fatalf("variance from the baseline: %+v %v %v", a.Baseline, a.StartVarianceDays, a.FinishVarianceDays)
+	}
+	// As of Wednesday 10 March the baseline had A 8 of 10 days in: 800
+	// planned, 300 earned, 300 spent.
+	ev := p.EarnedValue
+	if ev.BAC != 1000 || ev.PV != 800 || ev.EV != 300 || ev.AC != 300 || ev.SV != -500 || ev.SPI != 0.38 || ev.CPI != 1 || !a.BehindSchedule {
+		t.Fatalf("earned value: %+v behind %v", ev, a.BehindSchedule)
+	}
+	if p.StatusDay != "2027-03-10" || p.BaselineID == nil || *p.BaselineID != b.ID || len(p.Baselines) != 1 || p.Baselines[0].Tasks != 3 {
+		t.Fatalf("the plan names its status day and baseline: %s %v %+v", p.StatusDay, p.BaselineID, p.Baselines)
+	}
+	// What it has really cost, and a status date of its own.
+	cost := 450.0
+	if err := svc.Schedule("a", ScheduleRequest{ActualCost: &cost}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.SetSettings("p", SettingsRequest{StatusDate: sp("2027-03-05")}); err != nil {
+		t.Fatal(err)
+	}
+	p, _ = svc.Plan("p", Evidence{}, now)
+	if ev := p.EarnedValue; ev.PV != 500 || ev.AC != 450 || ev.CV != -150 || ev.CPI != 0.67 || ev.EAC != 1492.54 {
+		t.Fatalf("at the status date, with an actual cost: %+v", ev)
+	}
+	// Back to the computed progress.
+	back, over := -1, 140
+	if err := svc.Schedule("a", ScheduleRequest{PercentComplete: &back}, "tester"); err != nil || repo.schedules["a"].PercentComplete != nil {
+		t.Fatalf("cleared: %v", err)
+	}
+	if err := svc.Schedule("a", ScheduleRequest{PercentComplete: &over}, "tester"); !errors.Is(err, ErrPercent) {
+		t.Fatalf("140%%: %v", err)
+	}
+	if err := svc.Schedule("a", ScheduleRequest{ActualStart: sp("2027-03-09"), ActualFinish: sp("2027-03-08")}, "tester"); !errors.Is(err, ErrDateOrder) {
+		t.Fatalf("finished before it started: %v", err)
+	}
+	// B should have started on Monday 1 March and has not: it goes to the
+	// status date, Friday 5.
+	if err := svc.Schedule("b", ScheduleRequest{StartDate: sp("2027-03-01"), DueDate: sp("2027-03-02")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if moved, err := svc.RescheduleRemaining("p", "tester", now); err != nil || moved != 1 || *repo.schedules["b"].StartDate != "2027-03-05" ||
+		board.items["b"].DueDate.Format(DateLayout) != "2027-03-08" {
+		t.Fatalf("rescheduled %d: %v, b %s", moved, err, *repo.schedules["b"].StartDate)
+	}
+	if err := svc.DeleteBaseline("p", "nope"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("a baseline it has not: %v", err)
+	}
+	if err := svc.DeleteBaseline("p", b.ID); err != nil || len(repo.baselines) != 0 {
+		t.Fatalf("deleted: %v", err)
 	}
 }

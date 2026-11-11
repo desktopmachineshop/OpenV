@@ -63,6 +63,7 @@ type Settings struct {
 	// is what the plan may cost, nil when it has none.
 	Currency string   `json:"currency"`
 	Budget   *float64 `json:"budget"`
+	Tracking
 }
 
 // SettingsRequest changes the settings it names. An empty ProjectStart or
@@ -79,6 +80,9 @@ type SettingsRequest struct {
 	Currency              *string    `json:"currency"`
 	// Budget of 0 clears it.
 	Budget *float64 `json:"budget"`
+	// StatusDate (YYYY-MM-DD) and ActiveBaselineID are empty to clear.
+	StatusDate       *string `json:"status_date"`
+	ActiveBaselineID *string `json:"active_baseline_id"`
 }
 
 // MaxCriticalSlackDays bounds the critical threshold.
@@ -187,6 +191,17 @@ func applySettings(set *Settings, req SettingsRequest) error {
 		}
 		set.Currency = c
 	}
+	if req.StatusDate != nil {
+		if set.StatusDate, err = cleanDate(*req.StatusDate); err != nil {
+			return err
+		}
+	}
+	if req.ActiveBaselineID != nil {
+		set.ActiveBaselineID = nil
+		if id := strings.TrimSpace(*req.ActiveBaselineID); id != "" {
+			set.ActiveBaselineID = &id
+		}
+	}
 	if req.Budget != nil {
 		switch {
 		case *req.Budget < 0 || *req.Budget > 1e12:
@@ -260,6 +275,40 @@ func (s *DefaultService) taskSettings(projectID string, current *TaskSchedule, r
 	}
 	if req.EffortDriven != nil {
 		out.EffortDriven = *req.EffortDriven
+	}
+	out.ActualStart, out.ActualFinish, out.PercentComplete, out.ActualCost = current.ActualStart, current.ActualFinish, current.PercentComplete, current.ActualCost
+	if req.ActualStart != nil {
+		if out.ActualStart, err = cleanDate(*req.ActualStart); err != nil {
+			return nil, err
+		}
+	}
+	if req.ActualFinish != nil {
+		if out.ActualFinish, err = cleanDate(*req.ActualFinish); err != nil {
+			return nil, err
+		}
+	}
+	if out.ActualStart != nil && out.ActualFinish != nil && *out.ActualStart > *out.ActualFinish {
+		return nil, ErrDateOrder
+	}
+	if req.PercentComplete != nil {
+		switch {
+		case *req.PercentComplete == -1:
+			out.PercentComplete = nil
+		case *req.PercentComplete < 0 || *req.PercentComplete > 100:
+			return nil, ErrPercent
+		default:
+			out.PercentComplete = req.PercentComplete
+		}
+	}
+	if req.ActualCost != nil {
+		switch {
+		case *req.ActualCost == -1:
+			out.ActualCost = nil
+		case *req.ActualCost < 0 || *req.ActualCost > 1e12:
+			return nil, ErrInvalidCost
+		default:
+			out.ActualCost = req.ActualCost
+		}
 	}
 	if req.Elapsed != nil {
 		out.Elapsed = *req.Elapsed

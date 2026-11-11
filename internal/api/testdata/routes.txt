@@ -25,6 +25,7 @@ DELETE /api/v1/orgs/{id}/runner-session
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}
 DELETE /api/v1/projects/{id}
 DELETE /api/v1/projects/{id}/members/{userId}
+DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}
 DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}
 DELETE /api/v1/projects/{id}/releases/{releaseId}
 DELETE /api/v1/projects/{id}/team-access/{teamId}
@@ -284,9 +285,11 @@ POST /api/v1/projects/{id}/draft-test-cases
 POST /api/v1/projects/{id}/evidence-bundles
 POST /api/v1/projects/{id}/interviews
 POST /api/v1/projects/{id}/members
+POST /api/v1/projects/{id}/plan/baselines
 POST /api/v1/projects/{id}/plan/level
 POST /api/v1/projects/{id}/plan/milestones
 POST /api/v1/projects/{id}/plan/recalculate
+POST /api/v1/projects/{id}/plan/reschedule-remaining
 POST /api/v1/projects/{id}/reindex-embeddings
 POST /api/v1/projects/{id}/releases
 POST /api/v1/projects/{id}/repo-connections
