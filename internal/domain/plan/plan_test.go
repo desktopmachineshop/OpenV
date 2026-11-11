@@ -226,6 +226,7 @@ type fakeRepo struct {
 	days       []int
 	holidays   []Holiday
 	slack      int
+	set        Settings
 	todoTasks  map[string]string
 	milestones map[string]*Milestone
 }
@@ -241,13 +242,13 @@ func (r *fakeRepo) ListSchedules(string) ([]*TaskSchedule, error) {
 	}
 	return out, nil
 }
-func (r *fakeRepo) WorkingDays(string) ([]int, error)       { return r.days, nil }
-func (r *fakeRepo) SetWorkingDays(_ string, d []int) error  { r.days = d; return nil }
-func (r *fakeRepo) Holidays(string) ([]Holiday, error)      { return r.holidays, nil }
-func (r *fakeRepo) SetHolidays(_ string, h []Holiday) error { r.holidays = h; return nil }
-func (r *fakeRepo) CriticalSlackDays(string) (int, error)   { return r.slack, nil }
-func (r *fakeRepo) SetCriticalSlackDays(_ string, n int) error {
-	r.slack = n
+func (r *fakeRepo) Settings(string) (Settings, error) {
+	set := r.set
+	set.WorkingDays, set.Holidays, set.CriticalSlackDays = r.days, r.holidays, r.slack
+	return set, nil
+}
+func (r *fakeRepo) SaveSettings(_ string, s Settings) error {
+	r.set, r.days, r.holidays, r.slack = s, s.WorkingDays, s.Holidays, s.CriticalSlackDays
 	return nil
 }
 func (r *fakeRepo) SaveSchedule(s *TaskSchedule) error { r.schedules[s.WorkItemID] = s; return nil }
@@ -1006,8 +1007,10 @@ func TestARelationshipCarriesAnOffset(t *testing.T) {
 	if r := task(p, "c").Relationships[0]; r.LagDays != 3 || !r.Conflict {
 		t.Fatalf("c starts before its offset allows: %+v", r)
 	}
-	if f := task(p, "a").FloatDays; f == nil || *f != 0 {
-		t.Fatalf("a has no room: the offset is all it has: %v", f)
+	// C starts before its offset allows, by so many working days: that is
+	// negative float for C's drivers, all the way back to A.
+	if fa, fb := task(p, "a").FloatDays, task(p, "b").FloatDays; fa == nil || *fa >= 0 || *fa != *fb {
+		t.Fatalf("a broken offset is negative float along the chain: %v %v", fa, fb)
 	}
 }
 
@@ -1025,7 +1028,7 @@ func TestRecalculateMovesDrivenTasksToWhatTheirRelationshipsAsk(t *testing.T) {
 	repo.deps["b"] = []Dependency{{WorkItemID: "b", DependsOnID: "a", Type: RelStartToStart, LagDays: 5}}
 	repo.deps["c"] = []Dependency{{WorkItemID: "c", DependsOnID: "b", Type: RelFinishToStart}}
 	repo.deps["d"] = []Dependency{{WorkItemID: "d", DependsOnID: "a", Type: RelFinishToStart}}
-	moved, err := svc.Recalculate("p", "tester", now)
+	moved, err := svc.Recalculate("p", "tester", false, now)
 	if err != nil || moved != 2 {
 		t.Fatalf("moved %d: %v", moved, err)
 	}
@@ -1037,7 +1040,7 @@ func TestRecalculateMovesDrivenTasksToWhatTheirRelationshipsAsk(t *testing.T) {
 	if at("a") != "2027-03-01..2027-03-05" || at("b") != "2027-03-08..2027-03-09" || at("c") != "2027-03-10..2027-03-11" || at("d") != "2027-03-01..2027-03-02" {
 		t.Fatalf("a %s b %s c %s d %s", at("a"), at("b"), at("c"), at("d"))
 	}
-	if again, err := svc.Recalculate("p", "tester", now); err != nil || again != 0 {
+	if again, err := svc.Recalculate("p", "tester", false, now); err != nil || again != 0 {
 		t.Fatalf("a plan that agrees with its relationships does not move: %d %v", again, err)
 	}
 }
@@ -1077,9 +1080,15 @@ func TestHolidaysElapsedTimeDeadlinesAndTheCriticalThreshold(t *testing.T) {
 	if c := task(p, "cure"); *c.FloatDays != 1 || !c.Critical {
 		t.Fatalf("cure has a day of float: %d %v", *c.FloatDays, c.Critical)
 	}
-	// Nothing waits for A, which ends ten working days before the plan
-	// does: critical only once the threshold reaches its float.
-	if a := task(p, "a"); *a.FloatDays != 10 || a.Critical {
+	// A ends a day after its deadline: a day of negative float, which makes
+	// it critical.
+	if a := task(p, "a"); *a.FloatDays != -1 || !a.Critical {
+		t.Fatalf("a missed deadline is negative float: %d %v", *a.FloatDays, a.Critical)
+	}
+	// Without the deadline nothing waits for A, which ends ten working days
+	// before the plan does: critical only once the threshold reaches that.
+	in.Schedules[0].Deadline = nil
+	if a := task(Build(in, now), "a"); *a.FloatDays != 10 || a.Critical {
 		t.Fatalf("a: %d %v", *a.FloatDays, a.Critical)
 	}
 	in.CriticalSlackDays = 10
@@ -1136,5 +1145,158 @@ func TestOffsetUnitsAndStartToFinish(t *testing.T) {
 	set, err := svc.SetSettings("p", SettingsRequest{Holidays: &[]Holiday{{Date: "2027-12-27", Name: "Shutdown"}, {Date: "2027-01-01"}}})
 	if err != nil || len(set.Holidays) != 2 || set.Holidays[0].Date != "2027-01-01" || len(set.WorkingDays) == 0 {
 		t.Fatalf("holidays come back in date order with the rest: %+v %v", set, err)
+	}
+}
+
+func TestEarlyAndLateDatesConstraintsAndPathsPerChain(t *testing.T) {
+	week := []int{1, 2, 3, 4, 5}
+	in := Inputs{
+		WorkingDays: week,
+		Items: []*workitems.WorkItem{
+			// 1 March 2027 is a Monday.
+			item("a", "A", workitems.ColumnTodo, day("2027-03-05"), 0),
+			item("b", "B", workitems.ColumnTodo, day("2027-03-12"), 1),
+			item("solo", "Solo", workitems.ColumnTodo, day("2027-03-03"), 2),
+			item("late", "Late", workitems.ColumnTodo, day("2027-03-19"), 3),
+		},
+		Schedules: []*TaskSchedule{
+			{WorkItemID: "a", StartDate: sp("2027-03-01")},
+			// B starts Wednesday 10: two working days after it could.
+			{WorkItemID: "b", StartDate: sp("2027-03-10")},
+			{WorkItemID: "solo", StartDate: sp("2027-03-01"), ConstraintType: ConstraintFNLT, ConstraintDate: sp("2027-03-02")},
+			{WorkItemID: "late", StartDate: sp("2027-03-15"), ConstraintType: ConstraintSNET, ConstraintDate: sp("2027-03-17")},
+		},
+		Dependencies: []Dependency{{WorkItemID: "b", DependsOnID: "a", Type: RelFinishToStart}},
+	}
+	p := Build(in, now)
+	b := task(p, "b")
+	// B could start Monday 8 and finish Wednesday 10; the plan ends Friday
+	// 19, five working days after B does.
+	if *b.EarlyStart != "2027-03-08" || *b.EarlyFinish != "2027-03-10" || *b.LateFinish != "2027-03-19" || *b.FloatDays != 5 {
+		t.Fatalf("b: early %s..%s late ..%s float %d", *b.EarlyStart, *b.EarlyFinish, *b.LateFinish, *b.FloatDays)
+	}
+	// A can slip two days before it pushes B, seven before the plan ends later.
+	if a := task(p, "a"); *a.FreeFloatDays != 2 || *a.FloatDays != 7 || *a.LateStart != "2027-03-10" {
+		t.Fatalf("a: free %d total %d late start %s", *a.FreeFloatDays, *a.FloatDays, *a.LateStart)
+	}
+	// Solo finishes a day after its "finish no later than": negative float, and broken.
+	if s := task(p, "solo"); *s.FloatDays != -1 || !s.ConstraintViolated || !s.Critical {
+		t.Fatalf("solo: %d %v %v", *s.FloatDays, s.ConstraintViolated, s.Critical)
+	}
+	if l := task(p, "late"); !l.ConstraintViolated || *l.EarlyStart != "2027-03-17" {
+		t.Fatalf("late starts before its no-earlier-than date: %v %s", l.ConstraintViolated, *l.EarlyStart)
+	}
+	if p.Mode != ModeManual || p.ScheduleFrom != FromStart || b.Mode != ModeManual || b.ConstraintType != ConstraintASAP {
+		t.Fatalf("defaults: %s %s %s %s", p.Mode, p.ScheduleFrom, b.Mode, b.ConstraintType)
+	}
+	// With a path per chain, B ends its own chain: no float, and A has only its gap.
+	in.Scheduling.MultipleCriticalPaths = true
+	p = Build(in, now)
+	if b, a := task(p, "b"), task(p, "a"); *b.FloatDays != 0 || !b.Critical || *a.FloatDays != 2 {
+		t.Fatalf("a path per chain: b %d a %d", *b.FloatDays, *a.FloatDays)
+	}
+	// A plan that must finish by Wednesday 17 is two days over.
+	in.Scheduling = Scheduling{ProjectFinish: sp("2027-03-17")}
+	if l := task(Build(in, now), "late"); *l.FloatDays != -2 {
+		t.Fatalf("past the plan's finish date: %d", *l.FloatDays)
+	}
+}
+
+func TestAutomaticTasksArePlacedAfterEveryChange(t *testing.T) {
+	svc, repo, board, _ := newService()
+	repo.days = []int{1, 2, 3, 4, 5}
+	board.items["a"].DueDate = day("2027-03-05")
+	repo.schedules["a"] = &TaskSchedule{WorkItemID: "a", ProjectID: "p", StartDate: sp("2027-03-01")}
+	at := func(id string) string {
+		sc := repo.schedules[id]
+		if sc == nil || sc.StartDate == nil || board.items[id].DueDate == nil {
+			return "unscheduled"
+		}
+		return *sc.StartDate + ".." + board.items[id].DueDate.Format(DateLayout)
+	}
+	// A manual plan: relating two tasks moves nothing.
+	if err := svc.Relate("b", "a", RelFinishToStart, false, 0, ""); err != nil {
+		t.Fatal(err)
+	}
+	if at("b") != "unscheduled" {
+		t.Fatalf("a manual task stays where it is: %s", at("b"))
+	}
+	// Make the plan automatic: B, three days long, goes straight after A.
+	three := 3
+	if err := svc.Schedule("b", ScheduleRequest{DurationDays: &three}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	auto := ModeAuto
+	if _, err := svc.SetSettings("p", SettingsRequest{SchedulingMode: &auto}); err != nil {
+		t.Fatal(err)
+	}
+	if at("b") != "2027-03-08..2027-03-10" {
+		t.Fatalf("b follows a: %s", at("b"))
+	}
+	// Moving A moves B with it. A, typed to a date, is held there.
+	if err := svc.Schedule("a", ScheduleRequest{StartDate: sp("2027-03-03")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if at("a") != "2027-03-03..2027-03-09" || at("b") != "2027-03-10..2027-03-12" || repo.schedules["a"].ConstraintType != ConstraintSNET {
+		t.Fatalf("a %s b %s (%s)", at("a"), at("b"), repo.schedules["a"].ConstraintType)
+	}
+	// A task of its own mode: C is manual, and stays put though A drives it.
+	manual := ModeManual
+	if err := svc.Schedule("c", ScheduleRequest{StartDate: sp("2027-03-01"), DueDate: sp("2027-03-02"), Mode: &manual}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Relate("c", "a", RelFinishToStart, false, 0, ""); err != nil {
+		t.Fatal(err)
+	}
+	if at("c") != "2027-03-01..2027-03-02" {
+		t.Fatalf("a manual task in an automatic plan stays: %s", at("c"))
+	}
+	// A must-start-on constraint decides B alone.
+	mso := ConstraintMSO
+	if err := svc.Schedule("b", ScheduleRequest{ConstraintType: &mso, ConstraintDate: sp("2027-03-22")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if at("b") != "2027-03-22..2027-03-24" {
+		t.Fatalf("must start on: %s", at("b"))
+	}
+	bad := "sometime"
+	if err := svc.Schedule("b", ScheduleRequest{ConstraintType: &bad}, "tester"); !errors.Is(err, ErrConstraint) {
+		t.Fatalf("an unknown constraint: %v", err)
+	}
+	snet := ConstraintSNET
+	if err := svc.Schedule("b", ScheduleRequest{ConstraintType: &snet, ConstraintDate: sp("")}, "tester"); !errors.Is(err, ErrConstraint) {
+		t.Fatalf("a constraint without its date: %v", err)
+	}
+}
+
+func TestRecalculateOnlyLaterAndAsLateAsPossible(t *testing.T) {
+	svc, repo, board, _ := newService()
+	repo.days = []int{1, 2, 3, 4, 5}
+	board.items["a"].DueDate = day("2027-03-05")
+	board.items["b"].DueDate = day("2027-03-17")
+	board.items["c"].DueDate = day("2027-03-26")
+	repo.schedules["a"] = &TaskSchedule{WorkItemID: "a", ProjectID: "p", StartDate: sp("2027-03-01")}
+	// B already starts a week after A ends; C ends the plan.
+	repo.schedules["b"] = &TaskSchedule{WorkItemID: "b", ProjectID: "p", StartDate: sp("2027-03-15")}
+	repo.schedules["c"] = &TaskSchedule{WorkItemID: "c", ProjectID: "p", StartDate: sp("2027-03-22")}
+	repo.deps["b"] = []Dependency{{WorkItemID: "b", DependsOnID: "a", Type: RelFinishToStart}}
+	at := func(id string) string {
+		return *repo.schedules[id].StartDate + ".." + board.items[id].DueDate.Format(DateLayout)
+	}
+	// Relationships as minimums: B is already late enough, and stays.
+	if moved, err := svc.Recalculate("p", "tester", true, now); err != nil || moved != 0 || at("b") != "2027-03-15..2027-03-17" {
+		t.Fatalf("only later: moved %d, b %s, %v", moved, at("b"), err)
+	}
+	// As late as possible: A slides up against B, which it drives.
+	alap := ConstraintALAP
+	if err := svc.Schedule("a", ScheduleRequest{ConstraintType: &alap}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if moved, err := svc.Recalculate("p", "tester", true, now); err != nil || moved != 1 || at("a") != "2027-03-08..2027-03-12" {
+		t.Fatalf("as late as possible: moved %d, a %s, %v", moved, at("a"), err)
+	}
+	// Without "only later", B snaps back against A.
+	if moved, err := svc.Recalculate("p", "tester", false, now); err != nil || at("b") != "2027-03-15..2027-03-17" {
+		t.Fatalf("snap: moved %d, b %s, %v", moved, at("b"), err)
 	}
 }

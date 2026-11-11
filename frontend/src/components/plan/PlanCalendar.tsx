@@ -4,6 +4,9 @@
 // the header itself (WorkingDays.tsx).
 import React, { useState } from 'react';
 import type { PlanHoliday, PlanSettings, ProjectPlan } from '../../api/client';
+
+/** A change to the plan's settings: the fields it names; an empty date clears it. */
+export type PlanSettingsChange = Partial<Omit<PlanSettings, 'project_start' | 'project_finish'>> & { project_start?: string; project_finish?: string };
 import { Modal, buttonStyle, eyebrowStyle, mutedStyle } from '../ui';
 import { shortDate } from './ganttScale';
 
@@ -12,7 +15,7 @@ const inputStyle: React.CSSProperties = { padding: '5px 8px', minHeight: 32, box
 export const PlanCalendar: React.FC<{
   plan: ProjectPlan;
   busy?: boolean;
-  onChange: (change: Partial<PlanSettings>) => void;
+  onChange: (change: PlanSettingsChange) => void;
   onClose: () => void;
 }> = ({ plan, busy, onChange, onClose }) => {
   const [date, setDate] = useState('');
@@ -28,7 +31,7 @@ export const PlanCalendar: React.FC<{
   const remove = (h: PlanHoliday) => onChange({ holidays: holidays.filter((x) => x.date !== h.date) });
   const threshold = /^\d{1,3}$/.test(slack.trim()) ? Number(slack.trim()) : null;
   return (
-    <Modal title="Plan calendar" width={460} onClose={onClose}>
+    <Modal title="Plan calendar and scheduling" width={480} onClose={onClose}>
       <div data-help-key="gantt.holidays" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <h3 style={eyebrowStyle}>Holidays · {holidays.length}</h3>
         <span style={mutedStyle}>
@@ -61,6 +64,35 @@ export const PlanCalendar: React.FC<{
           </button>
         </form>
 
+        <h3 style={{ ...eyebrowStyle, marginTop: 8 }}>Scheduling</h3>
+        <div data-help-key="gantt.scheduling" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', gridColumn: '1 / -1' }}>
+            Tasks are scheduled
+            <select value={plan.scheduling_mode} disabled={busy} aria-label="Scheduling mode of the plan" onChange={(e) => onChange({ scheduling_mode: e.target.value as PlanSettings['scheduling_mode'] })} style={inputStyle}>
+              <option value="manual">Manually: they stay where they are put, until you recalculate</option>
+              <option value="auto">Automatically: placed after every change</option>
+            </select>
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+            Plan starts
+            <input type="date" value={plan.project_start || ''} disabled={busy} aria-label="Plan start date" onChange={(e) => onChange({ project_start: e.target.value })} style={inputStyle} />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)' }}>
+            Must finish by
+            <input type="date" value={plan.project_finish || ''} disabled={busy} aria-label="Plan finish date" onChange={(e) => onChange({ project_finish: e.target.value })} style={inputStyle} />
+          </label>
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', gridColumn: '1 / -1' }}>
+            Schedule from
+            <select value={plan.schedule_from} disabled={busy} aria-label="Schedule from" onChange={(e) => onChange({ schedule_from: e.target.value as PlanSettings['schedule_from'] })} style={inputStyle}>
+              <option value="start">The start: automatic tasks go as soon as possible</option>
+              <option value="finish">The finish: automatic tasks go as late as possible</option>
+            </select>
+          </label>
+        </div>
+        <span style={mutedStyle}>
+          An automatic task starts no earlier than the plan does. Float is counted to the finish date when there is one, and goes negative for work that runs past it.
+        </span>
+
         <h3 style={{ ...eyebrowStyle, marginTop: 8 }}>Critical path</h3>
         <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, flexWrap: 'wrap' }}>
           A task is critical when its float is at most
@@ -82,6 +114,10 @@ export const PlanCalendar: React.FC<{
           working days
         </label>
         <span style={mutedStyle}>0 marks only the tasks with no room at all. A higher number also marks the tasks that are nearly critical.</span>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13 }}>
+          <input type="checkbox" checked={plan.multiple_critical_paths} disabled={busy} onChange={(e) => onChange({ multiple_critical_paths: e.target.checked })} style={{ width: 'auto', flex: 'none', margin: 0 }} />
+          A critical path for each chain of tasks, to its own last task
+        </label>
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button type="button" onClick={onClose} style={buttonStyle('primary')}>
             Done

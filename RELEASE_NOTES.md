@@ -15,6 +15,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Automatic scheduling.** A plan can be scheduled automatically: after every change, each task goes straight after the tasks that drive it. Set it under **Calendar** on the Gantt, with the day the plan starts and the day it must finish by; a task can keep its own mode. Plans stay manual until you change them.
+- **Constraints.** A task can be held to a date: start or finish no earlier or no later than, must start or finish on, or as late as possible.
+- **Earliest and latest dates, and negative float.** A task's panel shows the earliest and latest it can run and its float, which goes negative, *N working days behind*, when it runs past a deadline, a constraint or the plan's finish.
+- **Recalculate, only later.** **Recalculate** can treat relationships as minimums and leave alone a task that already starts late enough. A plan can also have a critical path for each chain of tasks.
 - **Holidays.** **Holidays**, beside the Gantt's working days, lists the days the plan does not work whatever the weekday. Durations and float skip them and the chart shades them.
 - **Elapsed time and deadlines.** A task can count its duration in calendar days (**Elapsed time**), for a cure or a delivery, and can carry a **Deadline**: a marker on the chart that moves nothing and turns red when the task runs past it.
 - **Start to finish, and offsets in other units.** A relationship can be **start to finish**, and its offset can be in working days, elapsed days or a percentage of the driving task's duration.

@@ -26,6 +26,11 @@ func (b *builder) criticalPath(p *Plan) {
 	if last == nil {
 		return
 	}
+	// A plan with a finish date must end by it: float is counted to that
+	// day, and goes negative for a task that runs past it.
+	if b.in.Scheduling.ProjectFinish != nil {
+		last = b.in.Scheduling.ProjectFinish
+	}
 	drives, drivers := map[string][]drive{}, map[string][]drive{}
 	for _, d := range p.Dependencies {
 		t, on := b.byID[d.WorkItemID], b.byID[d.DependsOnID]
@@ -45,13 +50,21 @@ func (b *builder) criticalPath(p *Plan) {
 		if visiting[t.ID] {
 			return f
 		}
+		// With a path per chain, a task nothing waits for ends its own.
+		if b.in.Scheduling.MultipleCriticalPaths && len(drives[t.ID]) == 0 && b.in.Scheduling.ProjectFinish == nil {
+			f = 0
+		}
+		if limit := b.latest(t); limit != nil && *limit < f {
+			f = *limit
+		}
 		visiting[t.ID] = true
 		for _, d := range drives[t.ID] {
 			if g := b.gap(t, d) + slack(d.task); g < f {
 				f = g
 			}
 		}
-		if f < 0 {
+		// A task that is done has nothing left to slip, or to make up.
+		if t.Done {
 			f = 0
 		}
 		visiting[t.ID] = false
@@ -66,6 +79,7 @@ func (b *builder) criticalPath(p *Plan) {
 		f := slack(t)
 		t.FloatDays = &f
 		t.FloatUntil = b.floatUntil(t, drives[t.ID], f)
+		b.earlyLate(t, drives[t.ID], drivers[t.ID], f)
 		if f <= b.in.CriticalSlackDays {
 			path = append(path, t)
 		}
@@ -78,6 +92,85 @@ func (b *builder) criticalPath(p *Plan) {
 			b.byID[*t.ParentID].CriticalSubtasks = true
 		}
 	}
+}
+
+// latest is how many working days a task can slip before it breaks its own
+// deadline or its constraint (start or finish no later than, must start or
+// finish on); nil when it has neither. Negative: it is already past it.
+func (b *builder) latest(t *Task) *int {
+	var out *int
+	bound := func(from, to string) {
+		n := b.cal.Between(from, to)
+		if out == nil || n < *out {
+			out = &n
+		}
+	}
+	if t.Deadline != nil {
+		bound(*t.SpanEnd, *t.Deadline)
+	}
+	if t.ConstraintDate != nil {
+		switch t.ConstraintType {
+		case ConstraintFNLT, ConstraintMFO:
+			bound(*t.SpanEnd, *t.ConstraintDate)
+		case ConstraintSNLT, ConstraintMSO:
+			bound(*t.SpanStart, *t.ConstraintDate)
+		}
+	}
+	return out
+}
+
+// earlyLate gives a task its early and late dates and its free float. The
+// late dates are its dates moved by its float. The early start is the
+// latest of what the tasks that drive it ask, the plan's start and its own
+// "no earlier than" constraint; with none of those it is the task's start.
+func (b *builder) earlyLate(t *Task, drives, drivers []drive, float int) {
+	start, end := b.cal.OnOrAfter(*t.SpanStart), b.cal.OnOrBefore(*t.SpanEnd)
+	ls, lf := b.cal.Add(start, float), b.cal.Add(end, float)
+	t.LateStart, t.LateFinish = &ls, &lf
+	free := float
+	for i, d := range drives {
+		if g := b.gap(t, d); i == 0 || g < free {
+			free = g
+		}
+	}
+	t.FreeFloatDays = &free
+
+	own := b.cal
+	if t.Elapsed && len(b.children[t.ID]) == 0 {
+		own = elapsedCalendar
+	}
+	duration := own.Span(*t.SpanStart, *t.SpanEnd)
+	early := ""
+	bound := func(day string) {
+		if day > early {
+			early = day
+		}
+	}
+	for _, d := range drivers {
+		on := d.task
+		asked := askedDate(b.cal, d.kind, d.lag, d.unit, *on.SpanStart, *on.SpanEnd, b.cal.Span(*on.SpanStart, *on.SpanEnd))
+		if endDriven(d.kind) {
+			asked = own.Start(asked, duration)
+		}
+		bound(asked)
+	}
+	if b.in.Scheduling.ProjectStart != nil {
+		bound(*b.in.Scheduling.ProjectStart)
+	}
+	if t.ConstraintDate != nil {
+		switch t.ConstraintType {
+		case ConstraintSNET, ConstraintMSO:
+			bound(*t.ConstraintDate)
+		case ConstraintFNET, ConstraintMFO:
+			bound(own.Start(*t.ConstraintDate, duration))
+		}
+	}
+	if early == "" {
+		early = *t.SpanStart
+	}
+	es := b.cal.OnOrAfter(early)
+	ef := own.End(es, duration)
+	t.EarlyStart, t.EarlyFinish = &es, &ef
 }
 
 // drive is one end of a relationship seen from the other: the task driven,

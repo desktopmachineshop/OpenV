@@ -52,6 +52,8 @@ var (
 	ErrWorkingDays       = errors.New("working days are weekday numbers from 1 (Monday) to 7 (Sunday), at least one")
 	ErrInvalidLag        = errors.New("a relationship's offset is a whole number, at most 3650 either way, in working days (d), elapsed days (ed) or percent of the driving task's duration (%)")
 	ErrHoliday           = errors.New("a holiday is a date written YYYY-MM-DD with a name of at most 80 characters, and a plan has at most 366")
+	ErrSchedulingMode    = errors.New("a scheduling mode is manual or auto, and a plan is scheduled from its start or its finish")
+	ErrConstraint        = errors.New("a constraint is asap, alap, snet, snlt, fnet, fnlt, mso or mfo, and every one but asap and alap needs a date")
 	ErrCriticalSlack     = errors.New("the critical threshold is a whole number of working days from 0 to 365")
 	ErrMilestone         = errors.New("the milestone is not one of this project's")
 	ErrParentDates       = errors.New("a task with sub-tasks takes its dates, duration and effort from them")
@@ -85,6 +87,13 @@ type TaskSchedule struct {
 	// Deadline is the day the task should be finished by, YYYY-MM-DD; it
 	// moves nothing, and the plan flags a task that misses it.
 	Deadline *string
+	// Mode is the task's own scheduling mode, ModeManual or ModeAuto; empty
+	// takes the plan's.
+	Mode string
+	// ConstraintType and ConstraintDate hold the task to a date: see the
+	// Constraint constants.
+	ConstraintType string
+	ConstraintDate *string
 	// MilestoneKey is the milestone the task is assigned to, by the key the
 	// plan gives it: a stored milestone's id, or "release:<id>".
 	MilestoneKey *string
@@ -191,9 +200,15 @@ type ScheduleRequest struct {
 	// Elapsed makes the duration count calendar days.
 	Elapsed *bool `json:"elapsed"`
 	// Deadline is YYYY-MM-DD; empty clears it.
-	Deadline      *string         `json:"deadline"`
-	DependsOn     *[]string       `json:"depends_on"`
-	Relationships *[]Relationship `json:"relationships"`
+	Deadline *string `json:"deadline"`
+	// Mode is "manual", "auto" or empty for the plan's.
+	Mode *string `json:"mode"`
+	// ConstraintType is one of the Constraint constants; ConstraintDate is
+	// YYYY-MM-DD, needed by every type but asap and alap.
+	ConstraintType *string         `json:"constraint_type"`
+	ConstraintDate *string         `json:"constraint_date"`
+	DependsOn      *[]string       `json:"depends_on"`
+	Relationships  *[]Relationship `json:"relationships"`
 }
 
 // Repository stores what the plan adds to the board.
@@ -202,16 +217,11 @@ type Repository interface {
 	// SaveSchedule inserts or replaces a task's schedule.
 	SaveSchedule(s *TaskSchedule) error
 	ListDependencies(projectID string) ([]Dependency, error)
-	// WorkingDays returns the plan's working days as ISO weekday numbers,
-	// or nil when the project has never set them.
-	WorkingDays(projectID string) ([]int, error)
-	SetWorkingDays(projectID string, days []int) error
-	// Holidays lists the plan's holidays in date order.
-	Holidays(projectID string) ([]Holiday, error)
-	SetHolidays(projectID string, holidays []Holiday) error
-	// CriticalSlackDays is the float at or below which a task is critical.
-	CriticalSlackDays(projectID string) (int, error)
-	SetCriticalSlackDays(projectID string, days int) error
+	// Settings returns the plan's calendar, critical threshold and
+	// scheduling settings; WorkingDays is nil for a project that never set
+	// them. SaveSettings stores them whole.
+	Settings(projectID string) (Settings, error)
+	SaveSettings(projectID string, s Settings) error
 	// SetDependencies replaces a task's relationships; each entry's
 	// DependsOnID and Type are read.
 	SetDependencies(projectID, workItemID string, relationships []Dependency) error
@@ -263,7 +273,7 @@ type Service interface {
 	Relate(taskID, otherID, kind string, drives bool, lagDays int, lagUnit string) error
 	// Recalculate moves each task that another drives to the dates its
 	// relationships ask for, and answers how many tasks it moved.
-	Recalculate(projectID, actor string, now time.Time) (int, error)
+	Recalculate(projectID, actor string, onlyLater bool, now time.Time) (int, error)
 	// Unrelate removes the relationship between two tasks, whichever way
 	// it runs.
 	Unrelate(taskID, otherID string) error
@@ -343,9 +353,22 @@ func dayOf(t *time.Time) *string {
 	return &d
 }
 
-// Schedule changes a task's dates, parent and dependencies. The due date is
-// the work item's own, so the board shows the same day.
+// Schedule changes a task's dates, parent and dependencies, then places the
+// plan's automatic tasks. The due date is the work item's own, so the board
+// shows the same day.
 func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor string) error {
+	item, err := s.board.Get(workItemID)
+	if err != nil || item == nil {
+		return ErrTaskNotFound
+	}
+	if err := s.schedule(workItemID, req, actor); err != nil {
+		return err
+	}
+	return s.autoSchedule(item.ProjectID, actor)
+}
+
+// schedule is Schedule without the automatic placing that follows it.
+func (s *DefaultService) schedule(workItemID string, req ScheduleRequest, actor string) error {
 	item, err := s.board.Get(workItemID)
 	if err != nil || item == nil {
 		return ErrTaskNotFound
@@ -405,17 +428,12 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 	if err != nil {
 		return err
 	}
-	elapsed, deadline := current.Elapsed, current.Deadline
-	if req.Elapsed != nil {
-		elapsed = *req.Elapsed
+	next, err := s.taskSettings(item.ProjectID, current, req, start)
+	if err != nil {
+		return err
 	}
-	if req.Deadline != nil {
-		if deadline, err = cleanDate(*req.Deadline); err != nil {
-			return err
-		}
-	}
-	if err := s.repo.SaveSchedule(&TaskSchedule{WorkItemID: item.ID, ProjectID: item.ProjectID, StartDate: start, ParentID: parent,
-		DurationDays: duration, EffortDays: effort, MilestoneKey: milestone, Elapsed: elapsed, Deadline: deadline}); err != nil {
+	next.StartDate, next.ParentID, next.DurationDays, next.EffortDays, next.MilestoneKey = start, parent, duration, effort, milestone
+	if err := s.repo.SaveSchedule(next); err != nil {
 		return err
 	}
 	if setRelationships {
@@ -488,7 +506,7 @@ func (s *DefaultService) placeTask(item *workitems.WorkItem, current *TaskSchedu
 	if hasSubtasks && (req.StartDate != nil || req.DueDate != nil || req.DurationDays != nil || req.EffortDays != nil) {
 		return nil, nil, nil, nil, ErrParentDates
 	}
-	cal, err := s.calendar(item.ProjectID)
+	cal, _, err := s.calendar(item.ProjectID)
 	if err != nil {
 		return nil, nil, nil, nil, err
 	}
@@ -598,121 +616,6 @@ func checkParent(id, want string, parents map[string]string, onBoard map[string]
 		seen[up] = true
 	}
 	return &p, nil
-}
-
-// MaxLagDays bounds a relationship's offset, either way.
-const MaxLagDays = 3650
-
-// The units of a relationship's offset.
-const (
-	LagWorkingDays = "d"
-	LagElapsedDays = "ed"
-	LagPercent     = "%"
-)
-
-// ValidLagUnit reports whether u names an offset's unit; the empty unit is
-// working days.
-func ValidLagUnit(u string) bool {
-	return u == "" || u == LagWorkingDays || u == LagElapsedDays || u == LagPercent
-}
-
-func lagUnit(u string) string {
-	if u == "" {
-		return LagWorkingDays
-	}
-	return u
-}
-
-// Settings are a plan's calendar and its critical threshold.
-type Settings struct {
-	WorkingDays []int     `json:"working_days"`
-	Holidays    []Holiday `json:"holidays"`
-	// CriticalSlackDays: a task with that much float or less is critical.
-	CriticalSlackDays int `json:"critical_slack_days"`
-}
-
-// SettingsRequest changes the settings it names.
-type SettingsRequest struct {
-	WorkingDays       *[]int     `json:"working_days"`
-	Holidays          *[]Holiday `json:"holidays"`
-	CriticalSlackDays *int       `json:"critical_slack_days"`
-}
-
-// MaxCriticalSlackDays bounds the critical threshold.
-const MaxCriticalSlackDays = 365
-
-// wantedRelationships reads the relationships a request asks for: its
-// Relationships, or its DependsOn with each task keeping the type it has now.
-func wantedRelationships(id string, req ScheduleRequest, existing []Dependency) []Relationship {
-	if req.Relationships != nil {
-		return *req.Relationships
-	}
-	has := map[string]Dependency{}
-	for _, d := range existing {
-		if d.WorkItemID == id {
-			has[d.DependsOnID] = d
-		}
-	}
-	out := make([]Relationship, 0, len(*req.DependsOn))
-	for _, dep := range *req.DependsOn {
-		dep = strings.TrimSpace(dep)
-		out = append(out, Relationship{TaskID: dep, Type: has[dep].Type, LagDays: has[dep].LagDays, LagUnit: has[dep].LagUnit})
-	}
-	return out
-}
-
-// checkDependencies checks the relationships id is to have: each to a task
-// on the project's board, none to id itself, each of a known type, and none
-// to a task that id already drives, whatever the types along the way. A task
-// named twice keeps its first entry.
-func checkDependencies(id string, want []Relationship, existing []Dependency, onBoard map[string]bool, known bool) ([]Dependency, error) {
-	waitsOn := map[string][]string{}
-	for _, d := range existing {
-		if d.WorkItemID != id {
-			waitsOn[d.WorkItemID] = append(waitsOn[d.WorkItemID], d.DependsOnID)
-		}
-	}
-	out := []Dependency{}
-	seen := map[string]bool{}
-	for _, rel := range want {
-		dep, kind := strings.TrimSpace(rel.TaskID), strings.ToUpper(strings.TrimSpace(rel.Type))
-		if dep == "" || seen[dep] {
-			continue
-		}
-		if kind == "" {
-			kind = RelFinishToStart
-		}
-		switch {
-		case dep == id:
-			return nil, ErrDependsOnSelf
-		case !known && !onBoard[dep]:
-			return nil, ErrOtherProject
-		case !ValidRelationshipType(kind):
-			return nil, ErrRelationshipType
-		case rel.LagDays > MaxLagDays || rel.LagDays < -MaxLagDays || !ValidLagUnit(rel.LagUnit):
-			return nil, ErrInvalidLag
-		}
-		seen[dep] = true
-		out = append(out, Dependency{WorkItemID: id, DependsOnID: dep, Type: kind, LagDays: rel.LagDays, LagUnit: lagUnit(rel.LagUnit)})
-	}
-	visited := map[string]bool{}
-	stack := make([]string, 0, len(out))
-	for _, d := range out {
-		stack = append(stack, d.DependsOnID)
-	}
-	for len(stack) > 0 {
-		cur := stack[len(stack)-1]
-		stack = stack[:len(stack)-1]
-		if cur == id {
-			return nil, ErrDependencyCycle
-		}
-		if visited[cur] {
-			continue
-		}
-		visited[cur] = true
-		stack = append(stack, waitsOn[cur]...)
-	}
-	return out, nil
 }
 
 // TaskTodos lists the to-dos on a task, in the project list's order: open

@@ -216,14 +216,15 @@ export const planAPI = {
   relate: (workItemId: string, otherId: string, type: PlanRelationshipType, direction: PlanRelationshipDirection, lagDays = 0, lagUnit: PlanLagUnit = 'd') =>
     client.put<PlanTask>(`/api/v1/work-items/${workItemId}/relationships/${otherId}`, { type, direction, lag_days: lagDays, lag_unit: lagUnit }),
   /** Moves each task another drives to the dates its relationships ask for; answers how many moved. */
-  recalculate: (projectId: string) => client.post<{ moved: number }>(`/api/v1/projects/${projectId}/plan/recalculate`),
+  recalculate: (projectId: string, onlyLater = false) =>
+    client.post<{ moved: number }>(`/api/v1/projects/${projectId}/plan/recalculate`, { only_later: onlyLater }),
   /** Removes the relationship between two tasks, whichever way round it runs. */
   unrelate: (workItemId: string, otherId: string) => client.delete(`/api/v1/work-items/${workItemId}/relationships/${otherId}`),
   /** The days of the week the plan works: ISO weekday numbers, Monday is 1. */
   setWorkingDays: (projectId: string, workingDays: number[]) =>
     client.put<PlanSettings>(`/api/v1/projects/${projectId}/plan/settings`, { working_days: workingDays }),
   /** The plan's holidays and critical threshold, whichever the change names. */
-  setSettings: (projectId: string, change: Partial<PlanSettings>) =>
+  setSettings: (projectId: string, change: Partial<Omit<PlanSettings, 'project_start' | 'project_finish'>> & { project_start?: string; project_finish?: string }) =>
     client.put<PlanSettings>(`/api/v1/projects/${projectId}/plan/settings`, change),
   /** A to-do raised on a task, which counts toward its progress. */
   addTodo: (workItemId: string, text: string, dueDate?: string) =>

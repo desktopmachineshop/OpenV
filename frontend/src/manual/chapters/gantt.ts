@@ -281,9 +281,12 @@ float and the critical path count the offset as time the task cannot use.
 
 ### Recalculating the plan
 
-OpenV never moves a task on its own. **Recalculate**, above the chart,
-moves them when you ask: every task that another task drives goes to the
-dates its relationships and their offsets ask for.
+In a manual plan, OpenV never moves a task on its own. **Recalculate**,
+above the chart, moves them when you ask: every task that another task
+drives, or that a constraint holds to a date, goes to the dates those ask
+for. Tick **Only move tasks later** to treat relationships as minimums: a
+task that already starts on or after the day asked is left where it is,
+and nothing is pulled earlier.
 
 | Relationship | The driven task |
 | --- | --- |
@@ -320,6 +323,51 @@ the relationship **Broken**, draws its arrow dashed and red, and leaves the
 dates to you. A relationship to a task that is done is never broken. A
 relationship that would make a loop, where two tasks end up waiting on each
 other, is refused.
+
+## Automatic scheduling and constraints
+
+**Calendar**, above the chart, also says how the plan is scheduled.
+
+| Setting | What it does |
+| --- | --- |
+| **Tasks are scheduled** manually | Tasks stay where they are put until you recalculate. This is how every plan starts |
+| **Tasks are scheduled** automatically | After every change, each task is placed from its relationships and its constraint |
+| **Plan starts** | An automatic task starts no earlier than this day |
+| **Must finish by** | Float is counted to this day, and goes negative for work that runs past it |
+| **Schedule from** the finish | Automatic tasks go as late as their float allows, not as early |
+
+A task can go its own way: under **Scheduling** in its panel, set its
+**Mode** to manual in an automatic plan, or automatic in a manual one.
+
+An automatic task goes straight after the tasks that drive it. A task that
+nothing drives stays where you put it: type a start, or drag its bar, and
+it is held to **start no earlier than** that day, so the next change does
+not put it back.
+
+A **constraint** holds a task to a date:
+
+| Constraint | The task |
+| --- | --- |
+| As soon as possible | Has no constraint |
+| As late as possible | Goes as late as its float allows |
+| Start no earlier than, finish no earlier than | Cannot be placed before the date |
+| Start no later than, finish no later than | Loses float as it nears the date, and is flagged past it |
+| Must start on, must finish on | Is placed on the date, whatever drives it |
+
+A manual task is not moved by its constraint until you recalculate; until
+then its panel says when its dates do not keep to it.
+
+The same section shows what the plan works out for the task: the
+**earliest** it can run (after the tasks that drive it, the plan's start
+and its constraint), the **latest** it can run before the plan ends later,
+and its **float**. Float is **negative**, shown as *N working days behind*,
+when a task runs past its deadline, a "no later than" constraint or the
+plan's finish date, or when a relationship it drives is broken; such a task
+is critical.
+
+Tick **A critical path for each chain of tasks** in the calendar to give
+every independent chain its own path, to its own last task, where the
+default is one path to the end of the plan.
 
 ## Progress from to-dos and sub-tasks
 

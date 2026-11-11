@@ -35,7 +35,7 @@
     </section>
     <section id="recalculating-the-plan">
       <title>Recalculating the plan</title>
-      <p>OpenV never moves a task on its own. <b>Recalculate</b>, above the chart, moves them when you ask: every task that another task drives goes to the dates its relationships and their offsets ask for.</p>
+      <p>In a manual plan, OpenV never moves a task on its own. <b>Recalculate</b>, above the chart, moves them when you ask: every task that another task drives, or that a constraint holds to a date, goes to the dates those ask for. Tick <b>Only move tasks later</b> to treat relationships as minimums: a task that already starts on or after the day asked is left where it is, and nothing is pulled earlier.</p>
       <simpletable>
         <sthead><stentry>Relationship</stentry><stentry>The driven task</stentry></sthead>
         <strow><stentry>Finish to start</stentry><stentry>Starts the working day after the other ends, plus the offset</stentry></strow>

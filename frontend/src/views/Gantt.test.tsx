@@ -35,6 +35,16 @@ const task = (id: string, title: string, extra: Partial<PlanTask> = {}): PlanTas
   elapsed: false,
   deadline: null,
   deadline_missed: false,
+  mode: 'manual',
+  mode_own: '',
+  constraint_type: 'asap',
+  constraint_date: null,
+  constraint_violated: false,
+  early_start: null,
+  early_finish: null,
+  late_start: null,
+  late_finish: null,
+  free_float_days: null,
   progress: 0,
   done: false,
   late: false,
@@ -92,6 +102,11 @@ const plan: ProjectPlan = {
   working_days: [1, 2, 3, 4, 5, 6, 7],
   holidays: [],
   critical_slack_days: 0,
+  scheduling_mode: 'manual',
+  project_start: null,
+  project_finish: null,
+  schedule_from: 'start',
+  multiple_critical_paths: false,
   today: '2027-03-10',
   start: '2027-03-01',
   end: '2027-04-01',
@@ -125,6 +140,11 @@ const plan: ProjectPlan = {
       duration_days: 13,
       effort_days: 6.5,
       float_days: 0,
+      free_float_days: 0,
+      early_start: '2027-03-08',
+      early_finish: '2027-03-20',
+      late_start: '2027-03-08',
+      late_finish: '2027-03-20',
       float_until: '2027-03-25',
       critical: true,
       progress: 50,
@@ -457,15 +477,16 @@ describe('Plan page', () => {
 
     await click(button('Recalculate'));
     expect(vi.mocked(planAPI.recalculate)).not.toHaveBeenCalled();
-    // It asks first: recalculating moves tasks.
-    await click(Array.from(document.querySelectorAll('[role="dialog"] button, [role="alertdialog"] button')).find((b) => b.textContent === 'Recalculate'));
-    expect(vi.mocked(planAPI.recalculate)).toHaveBeenCalledWith('p1');
+    // It asks first: recalculating moves tasks. Relationships can be minimums.
+    await click(document.querySelector('[role="dialog"] input[type="checkbox"]'));
+    await click(document.querySelector('[data-recalculate-confirm]'));
+    expect(vi.mocked(planAPI.recalculate)).toHaveBeenCalledWith('p1', true);
     expect(container.querySelector('[role="status"]')?.textContent).toContain('2 tasks moved.');
   });
 
   it('sets holidays and the critical threshold, a deadline and elapsed time, and lists only the critical path', async () => {
     await mount();
-    await click(Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.startsWith('Holidays')));
+    await click(Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.startsWith('Calendar')));
     const dialog = document.querySelector('[data-help-key="gantt.holidays"]:not(button)')!;
     const set = async (el: Element | null, value: string) => {
       await act(async () => {
@@ -487,6 +508,11 @@ describe('Plan page', () => {
     });
     await flush();
     expect(vi.mocked(planAPI.setSettings)).toHaveBeenLastCalledWith('p1', { critical_slack_days: 2 });
+    // How the plan is scheduled: automatic, from a start date.
+    await change(dialog.querySelector('select[aria-label="Scheduling mode of the plan"]'), 'auto');
+    expect(vi.mocked(planAPI.setSettings)).toHaveBeenLastCalledWith('p1', { scheduling_mode: 'auto' });
+    await set(dialog.querySelector('input[aria-label="Plan start date"]'), '2027-03-01');
+    expect(vi.mocked(planAPI.setSettings)).toHaveBeenLastCalledWith('p1', { project_start: '2027-03-01' });
     await click(Array.from(dialog.querySelectorAll('button')).find((b) => b.textContent === 'Done'));
 
     // Only the critical path: Wiring, and Build, which it sits under.
@@ -495,6 +521,15 @@ describe('Plan page', () => {
     await click(button('Only critical'));
 
     await click(container.querySelector('[data-task-bar="wiring"]'));
+    // A task's own mode and constraint; a constraint that needs a date is saved once it has one.
+    const scheduling = container.querySelector('aside [data-help-key="gantt.scheduling"]')!;
+    expect(scheduling.querySelector('[data-task-dates]')?.textContent).toBe('Earliest8 Mar – 20 MarLatest8 Mar – 20 MarFloat0 working days');
+    await change(scheduling.querySelector('select[aria-label="Scheduling mode"]'), 'auto');
+    expect(vi.mocked(planAPI.schedule)).toHaveBeenLastCalledWith('wiring', { mode: 'auto' });
+    await change(scheduling.querySelector('select[aria-label="Constraint"]'), 'snet');
+    expect(vi.mocked(planAPI.schedule)).toHaveBeenLastCalledWith('wiring', { mode: 'auto' });
+    await set(scheduling.querySelector('input[aria-label="Constraint date"]'), '2027-03-09');
+    expect(vi.mocked(planAPI.schedule)).toHaveBeenLastCalledWith('wiring', { constraint_type: 'snet', constraint_date: '2027-03-09' });
     const schedule = container.querySelector('[data-help-key="gantt.schedule"]')!;
     const [, , , , deadline, elapsed] = Array.from(schedule.querySelectorAll('input')) as HTMLInputElement[];
     await set(deadline, '2027-03-31');

@@ -351,7 +351,7 @@ export interface PlanTask {
   duration_days: number | null;
   /** The work in the task, in person-days. */
   effort_days: number | null;
-  /** How many days it can slip before the plan's last task ends later; null with no dates. */
+  /** How many working days it can slip before the plan ends later or it breaks a deadline or constraint; negative when it is already past one; null with no dates. */
   float_days: number | null;
   /** On the critical path, the chain of tasks that decides when the plan ends, and not done. Never a task with sub-tasks. */
   critical: boolean;
@@ -363,6 +363,20 @@ export interface PlanTask {
   deadline: string | null;
   /** Not done, and it ends or has run past its deadline. */
   deadline_missed: boolean;
+  /** The scheduling mode in force, and the task's own (empty: the plan's). */
+  mode: PlanSchedulingMode;
+  mode_own: PlanSchedulingMode | '';
+  constraint_type: PlanConstraintType;
+  constraint_date: string | null;
+  /** Its dates do not keep to its constraint. */
+  constraint_violated: boolean;
+  /** The earliest and latest it can run; null with no dates. */
+  early_start: string | null;
+  early_finish: string | null;
+  late_start: string | null;
+  late_finish: string | null;
+  /** How far it can slip before it moves a task it drives. */
+  free_float_days: number | null;
   /** The critical path runs through this task's sub-tasks. */
   critical_subtasks: boolean;
   /** A whole percentage, from the to-dos ticked off and the sub-tasks. */
@@ -393,6 +407,12 @@ export type PlanRelationshipType = 'FS' | 'SS' | 'FF' | 'SF';
 /** An offset's unit: working days, elapsed (calendar) days, or percent of the driving task's duration. */
 export type PlanLagUnit = 'd' | 'ed' | '%';
 
+/** A date constraint: none, as late as possible, start/finish no earlier/later than, must start/finish on. */
+export type PlanConstraintType = 'asap' | 'alap' | 'snet' | 'snlt' | 'fnet' | 'fnlt' | 'mso' | 'mfo';
+
+/** Placed by hand, or by the platform from relationships and constraints. */
+export type PlanSchedulingMode = 'manual' | 'auto';
+
 /** A day the plan does not work whatever its weekday. */
 export interface PlanHoliday {
   date: string;
@@ -405,6 +425,15 @@ export interface PlanSettings {
   holidays: PlanHoliday[];
   /** A task with this much float or less is critical. */
   critical_slack_days: number;
+  /** The mode of every task that has none of its own. */
+  scheduling_mode: PlanSchedulingMode;
+  /** The day the plan starts, and the day it must finish by; empty clears one. */
+  project_start: string | null;
+  project_finish: string | null;
+  /** From its start, tasks go as soon as possible; from its finish, as late. */
+  schedule_from: 'start' | 'finish';
+  /** Each chain of tasks has a critical path of its own. */
+  multiple_critical_paths: boolean;
 }
 
 export interface PlanRelationship {
@@ -472,6 +501,11 @@ export interface ProjectPlan {
   working_days: number[];
   holidays: PlanHoliday[];
   critical_slack_days: number;
+  scheduling_mode: PlanSchedulingMode;
+  project_start: string | null;
+  project_finish: string | null;
+  schedule_from: 'start' | 'finish';
+  multiple_critical_paths: boolean;
   today: string;
   start: string | null;
   end: string | null;
@@ -498,6 +532,10 @@ export interface PlanScheduleInput {
   elapsed?: boolean;
   /** YYYY-MM-DD; empty clears it. */
   deadline?: string;
+  /** The task's own mode; empty takes the plan's. */
+  mode?: PlanSchedulingMode | '';
+  constraint_type?: PlanConstraintType;
+  constraint_date?: string;
   parent_id?: string;
   /** The key of the milestone the task is assigned to; empty takes it off. */
   milestone?: string;

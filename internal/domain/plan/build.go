@@ -78,6 +78,25 @@ type Task struct {
 	// says it is not done and ends, or has run, past it.
 	Deadline       *string `json:"deadline"`
 	DeadlineMissed bool    `json:"deadline_missed"`
+	// ModeOwn is the task's own scheduling mode, empty when it takes the
+	// plan's; Mode is the one in force, "manual" or "auto".
+	ModeOwn string `json:"mode_own"`
+	Mode    string `json:"mode"`
+	// ConstraintType and ConstraintDate hold the task to a date;
+	// ConstraintViolated says its dates do not keep to it.
+	ConstraintType     string  `json:"constraint_type"`
+	ConstraintDate     *string `json:"constraint_date"`
+	ConstraintViolated bool    `json:"constraint_violated"`
+	// EarlyStart and EarlyFinish are the earliest the task's relationships,
+	// its constraint and the plan's start allow; LateStart and LateFinish
+	// the latest before the plan would end later (its dates plus its
+	// float). FreeFloatDays is how far it can slip before it moves a task
+	// it drives. All nil for a task with no dates.
+	EarlyStart    *string `json:"early_start"`
+	EarlyFinish   *string `json:"early_finish"`
+	LateStart     *string `json:"late_start"`
+	LateFinish    *string `json:"late_finish"`
+	FreeFloatDays *int    `json:"free_float_days"`
 	// FloatUntil is the last day the task's end can slip to before it
 	// pushes a task it drives; nil when it drives none or has no room.
 	FloatUntil *string `json:"float_until"`
@@ -178,6 +197,9 @@ type Plan struct {
 	Holidays []Holiday `json:"holidays"`
 	// CriticalSlackDays: a task with that much float or less is critical.
 	CriticalSlackDays int `json:"critical_slack_days"`
+	// Scheduling is how the plan is scheduled: its mode, its start and
+	// finish, and whether each chain has its own critical path.
+	Scheduling
 	// Today is the day the plan was computed for (UTC), which decides late.
 	Today string `json:"today"`
 	// Start and End span every dated task and milestone.
@@ -209,9 +231,12 @@ type Inputs struct {
 	// float at or below which a task is critical.
 	Holidays          []Holiday
 	CriticalSlackDays int
-	Milestones        []*Milestone
-	Releases          []*targetreleases.Release
-	Evidence          Evidence
+	// Scheduling is how the plan is scheduled; the zero value is manual,
+	// from its start.
+	Scheduling Scheduling
+	Milestones []*Milestone
+	Releases   []*targetreleases.Release
+	Evidence   Evidence
 }
 
 // Plan loads the project's board, to-dos, schedule and milestones and
@@ -236,15 +261,11 @@ func (s *DefaultService) Plan(projectID string, ev Evidence, now time.Time) (*Pl
 	if in.TodoTasks, err = s.repo.ListTodoTasks(projectID); err != nil {
 		return nil, err
 	}
-	if in.WorkingDays, err = s.repo.WorkingDays(projectID); err != nil {
+	set, err := s.settings(projectID)
+	if err != nil {
 		return nil, err
 	}
-	if in.Holidays, err = s.repo.Holidays(projectID); err != nil {
-		return nil, err
-	}
-	if in.CriticalSlackDays, err = s.repo.CriticalSlackDays(projectID); err != nil {
-		return nil, err
-	}
+	in.WorkingDays, in.Holidays, in.CriticalSlackDays, in.Scheduling = set.WorkingDays, set.Holidays, set.CriticalSlackDays, set.Scheduling
 	if in.Milestones, err = s.repo.ListMilestones(projectID); err != nil {
 		return nil, err
 	}
@@ -288,6 +309,13 @@ func Build(in Inputs, now time.Time) *Plan {
 		Dependencies: []Dependency{}, Catalogue: Metrics}
 	b := &builder{in: in, today: today, cal: NewCalendar(in.WorkingDays).WithHolidays(in.Holidays), byID: map[string]*Task{}, created: map[string]time.Time{}, children: map[string][]*Task{}}
 	p.WorkingDays, p.Holidays, p.CriticalSlackDays = DefaultWorkingDays, []Holiday{}, in.CriticalSlackDays
+	p.Scheduling = in.Scheduling
+	if p.Mode == "" {
+		p.Mode = ModeManual
+	}
+	if p.ScheduleFrom == "" {
+		p.ScheduleFrom = FromStart
+	}
 	if in.Holidays != nil {
 		p.Holidays = in.Holidays
 	}
@@ -368,6 +396,13 @@ func (b *builder) tasks() {
 			Todos: []TaskTodo{}, DependsOn: []string{}, Relationships: []TaskRelationship{}, Drives: []TaskRelationship{}, Conflicts: []string{}}
 		b.created[it.ID] = it.CreatedAt
 	}
+	mode := b.in.Scheduling.Mode
+	if mode == "" {
+		mode = ModeManual
+	}
+	for _, t := range b.byID {
+		t.Mode, t.ConstraintType = mode, ConstraintASAP
+	}
 	for _, sc := range b.in.Schedules {
 		t := b.byID[sc.WorkItemID]
 		if t == nil {
@@ -376,6 +411,13 @@ func (b *builder) tasks() {
 		t.Start = sc.StartDate
 		t.DurationDays, t.EffortDays = sc.DurationDays, sc.EffortDays
 		t.Elapsed, t.Deadline = sc.Elapsed, sc.Deadline
+		t.ModeOwn, t.ConstraintType, t.ConstraintDate = sc.Mode, sc.ConstraintType, sc.ConstraintDate
+		if t.ModeOwn != "" {
+			t.Mode = t.ModeOwn
+		}
+		if t.ConstraintType == "" {
+			t.ConstraintType = ConstraintASAP
+		}
 		if sc.ParentID != nil && b.byID[*sc.ParentID] != nil && *sc.ParentID != t.ID {
 			t.ParentID = sc.ParentID
 		}
@@ -455,6 +497,7 @@ func (b *builder) settle(t *Task) {
 	if d := spanDays(cal, start, end); d != nil {
 		t.DurationDays = d
 	}
+	t.ConstraintViolated = constraintViolated(t.ConstraintType, t.ConstraintDate, start, end)
 	t.DeadlineMissed = t.Deadline != nil && !t.Done && ((end != nil && *end > *t.Deadline) || b.today > *t.Deadline)
 	switch {
 	case t.Done:
@@ -588,136 +631,25 @@ func itoa(n int) string {
 	return string(digits)
 }
 
-// milestones measures every milestone: each release of the project, then
-// the custom ones, in date order with the undated last.
-func milestones(in Inputs, tasks []*Task, counted map[string][]*Task, today string) []MilestoneProgress {
-	ix := indexEvidence(in.Evidence)
-	whole := ix.measure(nil)
-	order := targetreleases.NewOrder(in.Releases)
-	ranges := targetreleases.Resolve(in.Evidence.Artifacts, order)
-
-	stored := map[string]*Milestone{}
-	out := []MilestoneProgress{}
-	for _, m := range in.Milestones {
-		if m.ReleaseID != nil {
-			stored[*m.ReleaseID] = m
-		}
+// constraintViolated reports whether a task's dates break its constraint.
+// A task with no dates breaks none.
+func constraintViolated(kind string, date, start, end *string) bool {
+	if date == nil || start == nil || end == nil {
+		return false
 	}
-	position := map[string]int{}
-
-	measure := func(mp *MilestoneProgress, criteria []Criterion, values map[string]MetricValue) {
-		measureMilestone(mp, criteria, values, tasks, counted[mp.Key])
+	switch kind {
+	case ConstraintSNET:
+		return *start < *date
+	case ConstraintSNLT:
+		return *start > *date
+	case ConstraintFNET:
+		return *end < *date
+	case ConstraintFNLT:
+		return *end > *date
+	case ConstraintMSO:
+		return *start != *date
+	case ConstraintMFO:
+		return *end != *date
 	}
-
-	for _, rel := range in.Releases {
-		id := rel.ID
-		mp := MilestoneProgress{Key: "release:" + id, Kind: KindRelease, ReleaseID: &id, Name: rel.Name,
-			Description: rel.Description, Date: rel.TargetDate, ReleaseStatus: rel.Status}
-		criteria := DefaultReleaseCriteria()
-		mp.DefaultCriteria = true
-		if m := stored[id]; m != nil {
-			mp.ID, mp.DefaultCriteria, criteria = m.ID, false, m.Criteria
-		}
-		scope := map[string]bool{}
-		idx := order[id]
-		for artifactID, r := range ranges {
-			if r.Contains(order, idx) {
-				scope[artifactID] = true
-			}
-		}
-		measure(&mp, criteria, ix.measure(scope))
-		if rel.Status == targetreleases.StatusReleased {
-			mp.Met, mp.Progress = true, 100
-		}
-		position[mp.Key] = idx
-		out = append(out, mp)
-	}
-	for _, m := range in.Milestones {
-		if m.ReleaseID != nil {
-			continue
-		}
-		mp := MilestoneProgress{Key: m.ID, Kind: KindCustom, ID: m.ID, Name: m.Name, Description: m.Description, Date: m.TargetDate}
-		measure(&mp, m.Criteria, whole)
-		out = append(out, mp)
-	}
-	for i := range out {
-		out[i].Late = !out[i].Met && out[i].Date != nil && *out[i].Date < today
-	}
-	sort.SliceStable(out, func(i, j int) bool {
-		a, b := out[i], out[j]
-		switch {
-		case a.Date != nil && b.Date == nil:
-			return true
-		case a.Date == nil && b.Date != nil:
-			return false
-		case a.Date != nil && *a.Date != *b.Date:
-			return *a.Date < *b.Date
-		}
-		if a.Kind != b.Kind {
-			return a.Kind == KindRelease
-		}
-		if a.Kind == KindRelease {
-			return position[a.Key] < position[b.Key]
-		}
-		return a.Name < b.Name
-	})
-	return out
-}
-
-// measureMilestone measures a milestone's criteria against values,
-// MetricTasksDone against the tasks due by its date and
-// MetricMilestoneTasks against the tasks that count toward it. A milestone
-// with tasks counts them whether or not its criteria say so: finishing them
-// is part of reaching it.
-func measureMilestone(mp *MilestoneProgress, criteria []Criterion, values map[string]MetricValue, tasks, counted []*Task) {
-	mp.Criteria, mp.Tasks = []CriterionResult{}, []string{}
-	named := false
-	for _, c := range criteria {
-		named = named || c.Metric == MetricMilestoneTasks
-	}
-	for _, t := range counted {
-		mp.Tasks = append(mp.Tasks, t.ID)
-	}
-	if len(counted) > 0 && !named {
-		criteria = append(append([]Criterion{}, criteria...), Criterion{MetricMilestoneTasks, 100})
-	}
-	var sum float64
-	met := len(criteria) > 0
-	for _, c := range criteria {
-		v, ok := values[c.Metric]
-		switch c.Metric {
-		case MetricTasksDone:
-			v, ok = tasksDone(tasks, mp.Date), true
-		case MetricMilestoneTasks:
-			v, ok = milestoneTasks(counted), true
-		}
-		if !ok {
-			continue
-		}
-		r := CriterionResult{Metric: c.Metric, Label: v.Label, Target: c.Target, Actual: v.Percent, Count: v.Count, Total: v.Total}
-		// Count against the target without the rounding of Percent, so
-		// 199 of 200 is not 100%.
-		r.Met = v.Total > 0 && v.Count*100 >= c.Target*v.Total
-		way := 0.0
-		if v.Total > 0 {
-			way = float64(v.Count) * 100 / float64(v.Total) / float64(c.Target)
-		}
-		if way > 1 {
-			way = 1
-		}
-		r.Percent = percentOf(way)
-		if !r.Met && r.Percent == 100 {
-			r.Percent = 99
-		}
-		sum += way
-		met = met && r.Met
-		mp.Criteria = append(mp.Criteria, r)
-	}
-	if len(mp.Criteria) > 0 {
-		mp.Progress = percentOf(sum / float64(len(mp.Criteria)))
-		if !met && mp.Progress == 100 {
-			mp.Progress = 99
-		}
-	}
-	mp.Met = met
+	return false
 }

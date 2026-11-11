@@ -1,7 +1,7 @@
 // What the plan's views share beyond the API's answer: which rows a folded
 // outline shows, a task's descendants, the colours of a bar and a milestone,
 // and the phone's grouping of tasks under the milestone they lead to.
-import type { PlanLagUnit, PlanMilestone, PlanRelationshipDirection, PlanRelationshipType, PlanTask } from '../../api/client';
+import type { PlanConstraintType, PlanLagUnit, PlanMilestone, PlanRelationshipDirection, PlanRelationshipType, PlanTask } from '../../api/client';
 import { addDays, isoWeekday } from './ganttScale';
 import type { ChipTone } from '../ui';
 import { BOARD_COLUMNS } from '../kanban/columns';
@@ -147,6 +147,18 @@ export const workEnd = (workingDays: number[], start: string, duration: number, 
 /** The start of a task that is due on a day and runs for so many working days. */
 export const workStart = (workingDays: number[], due: string, duration: number, holidays: readonly string[] = []): string =>
   step(workingDays, due, duration, -1, holidays);
+
+/** The date constraints, in the order a chooser shows them. */
+export const CONSTRAINTS: { value: PlanConstraintType; label: string }[] = [
+  { value: 'asap', label: 'As soon as possible' },
+  { value: 'alap', label: 'As late as possible' },
+  { value: 'snet', label: 'Start no earlier than' },
+  { value: 'snlt', label: 'Start no later than' },
+  { value: 'fnet', label: 'Finish no earlier than' },
+  { value: 'fnlt', label: 'Finish no later than' },
+  { value: 'mso', label: 'Must start on' },
+  { value: 'mfo', label: 'Must finish on' },
+];
 
 /** An offset's units, as a chooser names them. */
 export const LAG_UNITS: { value: PlanLagUnit; label: string }[] = [

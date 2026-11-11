@@ -34,6 +34,9 @@ import (
 //   - the plan has holidays and a critical threshold; a task has a
 //     deadline and may count its duration in calendar days; a relationship
 //     may be start to finish, and its offset has a unit;
+//   - a task has a scheduling mode and a date constraint; a plan has a
+//     mode, a start and a finish, and may have a critical path per chain;
+//     an automatic task is placed after each change;
 //   - a relationship carries an offset in working days, and the plan is
 //     recalculated: the driven tasks move to what their relationships ask,
 //     and a second recalculation moves nothing;
@@ -154,6 +157,12 @@ func planTour(tr *tour) {
 		jsonBody(`{"type":"SS","direction":"drives","lag_days":99999}`))
 	recalculate := "POST /api/v1/projects/{id}/plan/recalculate"
 	tr.step("the plan recalculated: the driven tasks move to what their relationships ask", o, recalculate, at("id", "{{p}}"))
+	tr.step("recalculated with relationships as minimums: nothing is pulled earlier", o, recalculate, at("id", "{{p}}"), jsonBody(`{"only_later":true}`))
+	tr.step("Wiring must start on a date, in its own automatic mode: it is placed at once", o, schedule, at("id", "{{wiring}}"),
+		jsonBody(`{"mode":"auto","constraint_type":"mso","constraint_date":"2099-06-01"}`))
+	tr.step("a constraint with no date: 400", o, schedule, at("id", "{{wiring}}"), jsonBody(`{"constraint_type":"snet","constraint_date":""}`))
+	tr.step("an unknown mode: 400", o, schedule, at("id", "{{wiring}}"), jsonBody(`{"mode":"sometimes"}`))
+	tr.setup("Wiring back to the plan's mode, with no constraint", o, schedule, at("id", "{{wiring}}"), jsonBody(`{"mode":"","constraint_type":"asap"}`))
 	tr.step("recalculated again: nothing moves", o, recalculate, at("id", "{{p}}"))
 	tr.step("the viewer may not recalculate: 403", viewer, recalculate, at("id", "{{p}}"))
 	tr.setup("Order and Wiring unrelated again", o, "DELETE /api/v1/work-items/{id}/relationships/{otherId}",
@@ -164,6 +173,11 @@ func planTour(tr *tour) {
 	tr.step("the plan works Monday to Saturday", o, settings, at("id", "{{p}}"), jsonBody(`{"working_days":[6,1,2,3,4,5]}`))
 	tr.step("holidays, and a critical threshold of two days", o, settings, at("id", "{{p}}"),
 		jsonBody(`{"holidays":[{"date":"2099-12-25","name":"Christmas"},{"date":"2099-01-01"}],"critical_slack_days":2}`))
+	tr.step("an automatic plan from 1 January 2099, a path per chain, to finish by 2100", o, settings, at("id", "{{p}}"),
+		jsonBody(`{"scheduling_mode":"auto","project_start":"2099-01-01","project_finish":"2100-01-01","multiple_critical_paths":true}`))
+	tr.step("a mode that is neither: 400", o, settings, at("id", "{{p}}"), jsonBody(`{"scheduling_mode":"magic"}`))
+	tr.setup("the plan manual again, with no start or finish", o, settings, at("id", "{{p}}"),
+		jsonBody(`{"scheduling_mode":"manual","project_start":"","project_finish":"","multiple_critical_paths":false}`))
 	tr.step("a holiday that is not a date: 400", o, settings, at("id", "{{p}}"), jsonBody(`{"holidays":[{"date":"Christmas"}]}`))
 	tr.step("a threshold over a year: 400", o, settings, at("id", "{{p}}"), jsonBody(`{"critical_slack_days":999}`))
 	tr.setup("the holidays and the threshold cleared", o, settings, at("id", "{{p}}"), jsonBody(`{"holidays":[],"critical_slack_days":0}`))
