@@ -7,7 +7,7 @@
     <resourceid appname="openv-web" appid="gantt.add-task"/>
   </prolog>
   <conbody>
-    <p><b>Add task</b> makes a card in the board's To Do column and places it on the plan, with a start and a due date if you give them.</p>
+    <p><b>Add task</b> makes a card in the board's To Do column and places it on the plan, with a start and a due date if you give them. Or add one in the chart itself: type a title in the last row of the outline, <b>Add a task…</b>, and press Enter. The task appears as a new row with no dates, ready to be scheduled on the timeline.</p>
     <p>To move a task, drag its bar. To change one date, drag that end of the bar. Both move in whole days.</p>
     <p>To place a task that has no dates, use its empty row on the timeline:</p>
     <ul>

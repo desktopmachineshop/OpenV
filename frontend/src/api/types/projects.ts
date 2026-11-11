@@ -353,8 +353,10 @@ export interface PlanTask {
   effort_days: number | null;
   /** How many days it can slip before the plan's last task ends later; null with no dates. */
   float_days: number | null;
-  /** No float and not done: any slip moves the plan's end. Never a task with sub-tasks. */
+  /** On the critical path, the chain of tasks that decides when the plan ends, and not done. Never a task with sub-tasks. */
   critical: boolean;
+  /** The last day the task's end can slip to before it pushes a task it drives; null when it drives none or has no room. */
+  float_until: string | null;
   /** The critical path runs through this task's sub-tasks. */
   critical_subtasks: boolean;
   /** A whole percentage, from the to-dos ticked off and the sub-tasks. */

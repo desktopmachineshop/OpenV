@@ -34,6 +34,9 @@ On the timeline, each task is a bar from its start to its due date:
   relationship: see [Relationships between tasks](#relationships-between-tasks).
   A dashed red arrow is a relationship the dates break; the outline marks
   that task with a warning sign.
+- With **Critical path** on, a thin line after a bar, ended by a tick, is
+  the task's float: how far its end can slip before it pushes the next
+  task.
 - A task with no dates yet has an empty row that you click, or drag across,
   to schedule it.
 - Days the plan does not work are shaded at the **Days** scale: see
@@ -51,7 +54,9 @@ most of what you see is ahead of you.
 
 The timeline scrolls sideways past both ends of the plan, further forward
 than back: use the scroll bar, a trackpad or a wheel, or drag an empty part
-of the timeline. **Today** brings today back into view.
+of the timeline. The scroll bar under the chart belongs to the timeline, so
+it starts where the task column ends. **Today** brings today back into
+view.
 
 The figures above the chart count the plan: how far it is complete, its
 tasks, those done, late, on the critical path and not yet scheduled, the
@@ -60,7 +65,10 @@ effort in it, and the milestones met.
 ## Scheduling tasks
 
 **Add task** makes a card in the board's To Do column and places it on the
-plan, with a start and a due date if you give them.
+plan, with a start and a due date if you give them. Or add one in the
+chart itself: type a title in the last row of the outline, **Add a
+task…**, and press Enter. The task appears as a new row with no dates,
+ready to be scheduled on the timeline.
 
 To move a task, drag its bar. To change one date, drag that end of the
 bar. Both move in whole days.
@@ -166,11 +174,20 @@ slip until the plan's last day, or until it would push a task it drives:
 - a **finish to finish** relationship lets its end slip until the other
   task's end.
 
-A task with no float, and not yet done, is **critical**. With **Critical
+The path starts at the tasks with no float and runs back from each task on
+it to the task that drives it most tightly. It is shown whole even where
+the dates leave room between two of its tasks: a task on the path, and not
+yet done, is **critical** whether or not it has float. With **Critical
 path** on, which it is when the page opens, critical tasks have an amber
 outline and an amber dot in the outline, and the arrows between them are
-amber and heavier. A task's panel says **Critical**, or how many days of
-float it has. A task with sub-tasks is never critical itself: its panel
+amber and heavier.
+
+Float is drawn on the chart as well. After the bar of a task that drives
+another, a thin line runs to the last day its end can slip to before it
+pushes that task, and ends in a tick, so the room between one task and the
+next is the length of the line. The line is amber on the critical path and
+grey elsewhere; a task with no room has none. A task's panel says **Critical** with any float it
+has, or how many days of float it has. A task with sub-tasks is never critical itself: its panel
 says **Critical sub-tasks** when the path runs through them, and it carries
 the amber marks on the chart while it is folded. The float is worked out from the dates as they stand: OpenV
 does not move tasks for you. A task with no relationships has float up to

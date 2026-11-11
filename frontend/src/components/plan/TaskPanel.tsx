@@ -303,7 +303,7 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <Chip tone={TASK_TONE[tone]}>{task.late ? 'Late' : columnLabel(task.column)}</Chip>
           {task.critical && (
-            <Chip tone="warning" title="On the critical path: it has no float, so any slip moves the plan's end">
+            <Chip tone="warning" title="On the critical path: the chain of tasks that decides when the plan ends">
               Critical
             </Chip>
           )}
@@ -332,7 +332,9 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
         </span>
         {task.float_days !== null && !task.done && task.subtasks_total === 0 && (
           <span style={mutedStyle}>
-            {task.critical
+            {task.critical && task.float_days > 0
+              ? `On the critical path, with ${plural(task.float_days, 'working day')} of float before it pushes the next task.`
+              : task.critical
               ? "No float: it is on the critical path, so a day's slip moves the end of the plan by a day."
               : `Float: ${plural(task.float_days, 'working day')} before it would move the end of the plan.`}
           </span>

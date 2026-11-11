@@ -731,7 +731,7 @@
     {
       "name": "get_plan",
       "read_only": true,
-      "description": "Read a project's plan: every board task in outline order with its start and due dates, parent task, progress (from its to-dos and sub-tasks), its duration and float in working days, its effort in days, whether it is on the critical path, its relationships to the tasks that drive it (FS, SS or FF) and whether it is late; the milestones in date order, each target release among them, with their completion criteria measured against the project's artifacts; and every metric a criterion can name with its current value.",
+      "description": "Read a project's plan: every board task in outline order with its start and due dates, parent task, progress (from its to-dos and sub-tasks), its duration and float in working days, its effort in days, whether it is on the critical path (the chain of tasks that decides the plan's end, which may still have float) and the day its end can slip to before it pushes the next task, its relationships to the tasks that drive it (FS, SS or FF) and whether it is late; the milestones in date order, each target release among them, with their completion criteria measured against the project's artifacts; and every metric a criterion can name with its current value.",
       "input_schema": {
         "properties": {
           "project_id": {"description": "Project ID", "type": "string"}

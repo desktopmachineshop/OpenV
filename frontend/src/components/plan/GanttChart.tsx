@@ -7,7 +7,7 @@ import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 're
 import type { PlanMilestone, PlanTask, ProjectPlan } from '../../api/client';
 import { ellipsis, eyebrowStyle, mutedStyle } from '../ui';
 import { DependencyLines, LinkBand, OnLink, ROW_HEIGHT, useLinkDrag } from './GanttLinks';
-import { OpenIcon, OutlineCell, TaskBar } from './GanttRows';
+import { AddTaskRow, OpenIcon, OutlineCell, TaskBar } from './GanttRows';
 import { ScheduleTrack } from './GanttSchedule';
 import { Scale, Tick, Zoom, buildScale, buildTicks, openingScroll, shortDate, todayScroll } from './ganttScale';
 import { milestoneColor, visibleTasks } from './planModel';
@@ -176,7 +176,16 @@ export interface GanttChartProps {
   onReschedule?: (t: PlanTask, start: string, end: string) => void;
   /** Set where links can be drawn: a drag from the "+" at an end of a bar to another bar relates the two. */
   onLink?: OnLink;
-  /** Marks the tasks with no float, and the arrows between them. */
+  /** Set where tasks can be added: the chart ends in a row that takes a title. */
+  onAddTask?: (title: string) => void;
+  busy?: boolean;
+  /**
+   * On a touch screen the chart scrolls as the browser scrolls it. Elsewhere
+   * the timeline has a scroll bar of its own under it, which starts where
+   * the task column ends.
+   */
+  touch?: boolean;
+  /** Marks the critical path, the arrows along it, and each task's float after its bar. */
   showCritical: boolean;
   /** Counts presses of Today: each one scrolls today back to a third of the way in. */
   todaySignal: number;
@@ -192,6 +201,9 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   onSelectMilestone,
   onReschedule,
   onLink,
+  onAddTask,
+  busy,
+  touch,
   showCritical,
   todaySignal,
 }) => {
@@ -200,6 +212,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const [viewWidth, setViewWidth] = useState(0);
   const [pointed, setPointed] = useState('');
   const body = useRef<HTMLDivElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
   const { link, begin: beginLink } = useLinkDrag(body, onLink);
 
   useLayoutEffect(() => {
@@ -277,7 +290,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
   const bodyHeight = rows.length * ROW_HEIGHT;
   return (
-    <div
+    <div>
+      <div
       ref={scroller}
       role="table"
       aria-label="Plan timeline"
@@ -287,9 +301,18 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       onPointerMove={movePan}
       onPointerUp={endPan}
       onPointerCancel={endPan}
+      onScroll={(e) => {
+        if (bar.current && bar.current.scrollLeft !== e.currentTarget.scrollLeft) bar.current.scrollLeft = e.currentTarget.scrollLeft;
+      }}
+      onWheel={(e) => {
+        // The chart's own horizontal bar is hidden: a sideways wheel or swipe still moves the timeline.
+        const dx = e.deltaX || (e.shiftKey ? e.deltaY : 0);
+        if (!touch && dx) e.currentTarget.scrollLeft += dx;
+      }}
       style={{
         position: 'relative',
-        overflow: 'auto',
+        overflowX: touch ? 'auto' : 'hidden',
+        overflowY: 'auto',
         maxHeight: 'calc(100dvh - 210px)',
         minHeight: 180,
         overscrollBehaviorX: 'contain',
@@ -352,6 +375,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       today={plan.today}
                       selected={t.id === selectedTaskId}
                       critical={critical}
+                      showFloat={showCritical}
                       onSelect={() => onSelectTask(t)}
                       onReschedule={onReschedule ? (start, end) => onReschedule(t, start, end) : undefined}
                       onLinkStart={onLink && !link && (pointed === t.id || t.id === selectedTaskId) ? (end, e) => beginLink(t.id, end, e) : undefined}
@@ -379,7 +403,26 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             </p>
           )}
         </div>
+        {onAddTask && <AddTaskRow width={outlineWidth} busy={busy} onAdd={onAddTask} />}
       </div>
+      </div>
+      {!touch && (
+        <div style={{ display: 'flex', borderTop: '1px solid var(--border-soft)' }}>
+          <div style={{ width: outlineWidth, flexShrink: 0, boxSizing: 'border-box', borderRight: '1px solid var(--border)', background: 'var(--surface-alt)' }} />
+          <div
+            ref={bar}
+            data-timeline-scrollbar
+            aria-hidden
+            onScroll={(e) => {
+              const el = scroller.current;
+              if (el && el.scrollLeft !== e.currentTarget.scrollLeft) el.scrollLeft = e.currentTarget.scrollLeft;
+            }}
+            style={{ flex: 1, minWidth: 0, overflowX: 'scroll', overflowY: 'hidden' }}
+          >
+            <div style={{ width: scale.width, height: 1 }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

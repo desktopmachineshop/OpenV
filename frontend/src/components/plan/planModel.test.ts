@@ -24,6 +24,7 @@ const task = (id: string, extra: Partial<PlanTask> = {}): PlanTask => ({
   float_days: null,
   critical: false,
   critical_subtasks: false,
+  float_until: null,
   progress: 0,
   done: false,
   late: false,

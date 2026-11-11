@@ -4,7 +4,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { mockApi } from '../test/mockApi';
 import { Gantt } from './Gantt';
 import { DialogProvider } from '../components/ui';
-import { planAPI, todosAPI, type PlanMilestone, type PlanTask, type ProjectPlan } from '../api/client';
+import { planAPI, todosAPI, workItemsAPI, type PlanMilestone, type PlanTask, type ProjectPlan } from '../api/client';
 import { useAppStore } from '../state/store';
 
 // The Plan page: the chart's rows, bars and milestones from the plan the API
@@ -31,6 +31,7 @@ const task = (id: string, title: string, extra: Partial<PlanTask> = {}): PlanTas
   float_days: null,
   critical: false,
   critical_subtasks: false,
+  float_until: null,
   progress: 0,
   done: false,
   late: false,
@@ -110,6 +111,7 @@ const plan: ProjectPlan = {
       duration_days: 13,
       effort_days: 6.5,
       float_days: 0,
+      float_until: '2027-03-25',
       critical: true,
       progress: 50,
       todos_done: 1,
@@ -136,6 +138,7 @@ const plan: ProjectPlan = {
 
 vi.mock('../api/client', async (orig) =>
   mockApi(await orig(), {
+    workItemsAPI: { create: () => ok({ id: 'new' }) },
     planAPI: {
       get: () => ok(plan),
       schedule: () => ok(plan.tasks[2]),
@@ -221,6 +224,10 @@ describe('Plan page', () => {
       'Weld the frame: 1 Mar – 9 Mar, 100% complete',
       'Wire the rig: 8 Mar – 20 Mar, 50% complete, critical',
     ]);
+    // Wiring's float is drawn after its bar, to the day it would push the next task.
+    expect(container.querySelector('[data-float="wiring"]')?.getAttribute('aria-label')).toBe(
+      'Float: Wire the rig can slip to 25 Mar before it pushes the next task',
+    );
     // To-dos are not in the chart: no bar carries their count.
     expect(container.querySelector('[role="table"]')?.textContent).not.toContain('to-dos');
     // A task with no dates is scheduled on its row: a click for one period of the zoom, a drag for a range.
@@ -378,6 +385,25 @@ describe('Plan page', () => {
     await click(container.querySelector('button[aria-label="Remove the relationship to Wire the rig"]'));
     await flush();
     expect(vi.mocked(planAPI.unrelate)).toHaveBeenLastCalledWith('frame', 'wiring');
+  });
+
+  it('adds a task from the last row of the chart, and gives the timeline a scroll bar of its own', async () => {
+    await mount();
+    const row = container.querySelector('form[data-add-task-row]')!;
+    await act(async () => {
+      const input = row.querySelector('input[aria-label="New task"]')!;
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(input, 'Paint the rig');
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await act(async () => {
+      row.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+    await flush();
+    expect(vi.mocked(workItemsAPI.create)).toHaveBeenLastCalledWith('p1', { title: 'Paint the rig', column: 'todo' });
+    // The bar under the chart spans the timeline only: it starts where the task column ends.
+    const bar = container.querySelector('[data-timeline-scrollbar]') as HTMLElement;
+    expect((bar.previousElementSibling as HTMLElement).style.width).toBe('320px');
+    expect((container.querySelector('[role="table"]') as HTMLElement).style.overflowX).toBe('hidden');
   });
 
   it('gives a task with sub-tasks no dates of its own, and no bar to drag', async () => {

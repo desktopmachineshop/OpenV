@@ -6,7 +6,7 @@ import type { PlanTask } from '../../api/client';
 import { MONO, ellipsis } from '../ui';
 import { ROW_HEIGHT } from './GanttLinks';
 import { BAR_COLORS, BarEnd, barTone } from './planModel';
-import { Scale, addDays, spanLabel } from './ganttScale';
+import { Scale, addDays, shortDate, spanLabel } from './ganttScale';
 
 const caret: React.CSSProperties = {
   width: 20,
@@ -165,11 +165,13 @@ export const TaskBar: React.FC<{
   selected: boolean;
   /** Drawn as on the critical path: an amber ring. */
   critical?: boolean;
+  /** Draws the task's float after its bar: a line to the last day it can slip to, ended by a tick. */
+  showFloat?: boolean;
   onSelect: () => void;
   onReschedule?: (start: string, end: string) => void;
   /** Set while the row is pointed at, where links can be drawn: the "+" at each end begins one. */
   onLinkStart?: (end: BarEnd, e: React.PointerEvent) => void;
-}> = ({ task, scale, today, selected, critical, onSelect, onReschedule, onLinkStart }) => {
+}> = ({ task, scale, today, selected, critical, showFloat, onSelect, onReschedule, onLinkStart }) => {
   const [drag, setDrag] = useState<Drag | null>(null);
   const live = useRef<Drag | null>(null);
   // A drag ends in a click on the bar, which must not also select the task.
@@ -274,6 +276,24 @@ export const TaskBar: React.FC<{
       >
         {drag ? spanLabel(start, end, today) : ''}
       </span>
+      {showFloat && !drag && !task.done && task.float_until && task.float_until > end && (
+        <span
+          role="img"
+          data-float={task.id}
+          aria-label={`Float: ${task.title} can slip to ${shortDate(task.float_until, today)} before it pushes the next task`}
+          title={`Float: can slip to ${shortDate(task.float_until, today)} before it pushes the next task`}
+          style={{
+            position: 'absolute',
+            left: left + width,
+            width: Math.max(scale.x(task.float_until) + scale.dayWidth - (left + width), 4),
+            top: ROW_HEIGHT / 2 - 5,
+            height: 10,
+            boxSizing: 'border-box',
+            borderRight: `2px solid ${critical ? 'var(--warning)' : 'var(--neutral)'}`,
+            background: `linear-gradient(${critical ? 'var(--warning)' : 'var(--neutral)'}, ${critical ? 'var(--warning)' : 'var(--neutral)'}) left center / 100% 2px no-repeat`,
+          }}
+        />
+      )}
       {onLinkStart && !drag && (
         <>
           <span aria-hidden title="Drag to another bar to link from this task's start" data-link-handle={`${task.id}:start`} onPointerDown={(e) => onLinkStart('start', e)} style={linkHandle(left - 18)}>
@@ -285,5 +305,41 @@ export const TaskBar: React.FC<{
         </>
       )}
     </>
+  );
+};
+
+/** The last row of the chart: type a title and press Enter to add a task, which its new row then schedules. */
+export const AddTaskRow: React.FC<{ width: number; busy?: boolean; onAdd: (title: string) => void }> = ({ width, busy, onAdd }) => {
+  const [title, setTitle] = useState('');
+  return (
+    <div role="row" style={{ display: 'flex', height: ROW_HEIGHT }}>
+      <form
+        data-add-task-row
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!title.trim() || busy) return;
+          onAdd(title.trim());
+          setTitle('');
+        }}
+        style={{ position: 'sticky', left: 0, zIndex: 2, width, flexShrink: 0, boxSizing: 'border-box', display: 'flex', alignItems: 'center', gap: 6, height: ROW_HEIGHT, padding: '0 8px 0 12px', borderRight: '1px solid var(--border)', background: 'var(--surface)' }}
+      >
+        <span aria-hidden style={{ color: 'var(--text-muted)', width: 16, textAlign: 'center', flexShrink: 0 }}>
+          +
+        </span>
+        <input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Add a task…"
+          aria-label="New task"
+          style={{ flex: 1, minWidth: 0, minHeight: 26, padding: '2px 6px', boxSizing: 'border-box', border: '1px solid transparent', background: 'transparent', fontSize: 13 }}
+        />
+        {title.trim() && (
+          <button type="submit" disabled={busy} style={{ flexShrink: 0, padding: '2px 8px', border: '1px solid var(--border)', borderRadius: 4, background: 'var(--surface-alt)', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}>
+            Add ↵
+          </button>
+        )}
+      </form>
+      <div role="cell" style={{ flex: 1 }} />
+    </div>
   );
 };

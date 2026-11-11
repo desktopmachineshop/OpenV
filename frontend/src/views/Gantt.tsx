@@ -108,7 +108,7 @@ const PlanPage: React.FC = () => {
   const relate = (taskId: string, otherId: string, view: RelationshipView) =>
     run(() => planAPI.relate(taskId, otherId, view.type, view.direction), 'Failed to relate the tasks');
 
-  const addTask = async (t: NewTask, parentId?: string) => {
+  const addTask = async (t: NewTask, parentId?: string, inline = false) => {
     const ok = await run(async () => {
       const created = await workItemsAPI.create(projectId, { title: t.title, column: 'todo' });
       const change: PlanScheduleInput = {
@@ -117,9 +117,9 @@ const PlanPage: React.FC = () => {
         ...(parentId ? { parent_id: parentId } : {}),
       };
       if (Object.keys(change).length > 0) await planAPI.schedule(created.data.id, change);
-      if (!parentId) setSelection({ kind: 'task', id: created.data.id });
+      if (!parentId && !inline) setSelection({ kind: 'task', id: created.data.id });
     }, 'Failed to add the task');
-    if (ok && !parentId) setAdding(null);
+    if (ok && !parentId && !inline) setAdding(null);
   };
 
   const addMilestone = async (m: PlanMilestoneInput) => {
@@ -287,7 +287,7 @@ const PlanPage: React.FC = () => {
                   aria-pressed={showCritical}
                   onClick={() => setShowCritical((on) => !on)}
                   data-help-key="gantt.critical"
-                  title="Mark the tasks with no float: any slip in one moves the end of the plan"
+                  title="Mark the chain of tasks that decides when the plan ends, and show each task's float after its bar"
                   style={{
                     ...buttonStyle('secondary', { compact: true }),
                     ...(showCritical ? { background: 'var(--tint-yellow)', borderColor: 'var(--tint-yellow-border)', color: 'var(--warning-text)' } : {}),
@@ -313,6 +313,9 @@ const PlanPage: React.FC = () => {
             onSelectMilestone={openMilestone}
             onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
             onLink={coarsePointer ? undefined : relate}
+            onAddTask={(title) => addTask({ title, start: '', end: '' }, undefined, true)}
+            busy={busy}
+            touch={coarsePointer}
             showCritical={showCritical}
             todaySignal={todaySignal}
           />

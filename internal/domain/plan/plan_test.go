@@ -640,7 +640,7 @@ func TestATaskKeepsItsDuration(t *testing.T) {
 	}
 }
 
-func TestCriticalPathIsTheTasksWithNoFloat(t *testing.T) {
+func TestCriticalPathIsTheChainThatDecidesThePlansEnd(t *testing.T) {
 	// design 1-5, build 6-12 after design (FS, tight), test 13-20 after build
 	// (tight) and the last task; docs 6-8 after design, with room to slip;
 	// paint 14-16 must finish with test (FF) and has 4 days; old is done.
@@ -692,11 +692,20 @@ func TestCriticalPathIsTheTasksWithNoFloat(t *testing.T) {
 		t.Errorf("build runs 7 days: %v", d)
 	}
 	// Give build a day's gap before test and it gains a day of float, and so
-	// does design, which is tight against build: only test is left critical.
+	// does design, which is tight against build. The path still runs through
+	// both, since they are what test waits for, and build says how far its
+	// end can slip before it pushes test.
 	in.Items[1].DueDate = day("2027-03-11")
 	p = Build(in, now)
-	if *task(p, "build").FloatDays != 1 || *task(p, "design").FloatDays != 1 || task(p, "build").Critical || !task(p, "test").Critical {
-		t.Errorf("a gap is float for everything before it: build %d design %d", *task(p, "build").FloatDays, *task(p, "design").FloatDays)
+	build, design := task(p, "build"), task(p, "design")
+	if *build.FloatDays != 1 || *design.FloatDays != 1 || !build.Critical || !design.Critical || !task(p, "test").Critical {
+		t.Errorf("a gap is float, and the path still shows: build %d %v design %d %v", *build.FloatDays, build.Critical, *design.FloatDays, design.Critical)
+	}
+	if build.FloatUntil == nil || *build.FloatUntil != "2027-03-12" || design.FloatUntil != nil {
+		t.Errorf("build can slip to the day before test starts, design has no room: %v %v", build.FloatUntil, design.FloatUntil)
+	}
+	if task(p, "docs").Critical || task(p, "paint").Critical || task(p, "docs").FloatUntil != nil {
+		t.Errorf("tasks off the path stay off it")
 	}
 }
 

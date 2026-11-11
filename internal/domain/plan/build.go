@@ -67,6 +67,9 @@ type Task struct {
 	// the task is not done, so any slip moves the plan's end.
 	FloatDays *int `json:"float_days"`
 	Critical  bool `json:"critical"`
+	// FloatUntil is the last day the task's end can slip to before it
+	// pushes a task it drives; nil when it drives none or has no room.
+	FloatUntil *string `json:"float_until"`
 	// CriticalSubtasks: the critical path runs through this task's
 	// sub-tasks, at any depth; a folded row shows it for them.
 	CriticalSubtasks bool `json:"critical_subtasks"`
@@ -486,7 +489,7 @@ func relationshipBroken(kind string, t, on *Task) bool {
 }
 
 // criticalPath gives each scheduled task its float and marks the critical
-// ones. The plan's dates are the team's, so this is the float of the plan as
+// path. The plan's dates are the team's, so this is the float of the plan as
 // it stands: a task can slip until the plan's last day, or until it would
 // push a task it drives, whichever comes first.
 //
@@ -494,8 +497,13 @@ func relationshipBroken(kind string, t, on *Task) bool {
 //	start to start:   the driven task's start bounds the start
 //	finish to finish: the driven task's end bounds the end
 //
-// A task with no float left, which is not done, is critical: any slip moves
-// the end of the plan. A broken relationship leaves no float.
+// The critical path is the chain of tasks that decides when the plan ends.
+// It starts at the tasks with no float and runs back from each task on it
+// to the task that drives it most tightly, so it is shown whole even where
+// the dates leave a gap between two of its tasks: FloatUntil says how far
+// each task's end can slip before it pushes the next. A task on the path
+// that is done, or has sub-tasks, is not marked. A broken relationship
+// leaves no float.
 func (b *builder) criticalPath(p *Plan) {
 	var last *string
 	for _, t := range p.Tasks {
@@ -504,14 +512,12 @@ func (b *builder) criticalPath(p *Plan) {
 	if last == nil {
 		return
 	}
-	type drive struct {
-		task *Task
-		kind string
-	}
-	drives := map[string][]drive{}
+	drives, drivers := map[string][]drive{}, map[string][]drive{}
 	for _, d := range p.Dependencies {
-		if t := b.byID[d.WorkItemID]; t != nil && t.SpanStart != nil {
-			drives[d.DependsOnID] = append(drives[d.DependsOnID], drive{t, d.Type})
+		t, on := b.byID[d.WorkItemID], b.byID[d.DependsOnID]
+		if t != nil && on != nil && t.SpanStart != nil && on.SpanStart != nil {
+			drives[on.ID] = append(drives[on.ID], drive{t, d.Type})
+			drivers[t.ID] = append(drivers[t.ID], drive{on, d.Type})
 		}
 	}
 	float := map[string]int{}
@@ -527,20 +533,7 @@ func (b *builder) criticalPath(p *Plan) {
 		}
 		visiting[t.ID] = true
 		for _, d := range drives[t.ID] {
-			var gap int
-			switch d.kind {
-			case RelStartToStart:
-				gap = b.cal.Between(*t.SpanStart, *d.task.SpanStart)
-			case RelFinishToFinish:
-				gap = b.cal.Between(*t.SpanEnd, *d.task.SpanEnd)
-			default:
-				// The working days strictly between its end and that start.
-				gap = b.cal.Between(*t.SpanEnd, *d.task.SpanStart)
-				if b.cal.Works(*d.task.SpanStart) {
-					gap--
-				}
-			}
-			if g := gap + slack(d.task); g < f {
+			if g := b.gap(t, d) + slack(d.task); g < f {
 				f = g
 			}
 		}
@@ -551,15 +544,19 @@ func (b *builder) criticalPath(p *Plan) {
 		float[t.ID] = f
 		return f
 	}
+	var path []*Task
 	for _, t := range p.Tasks {
 		if t.SpanStart == nil {
 			continue
 		}
 		f := slack(t)
 		t.FloatDays = &f
-		// A task with sub-tasks is not itself on the path: its sub-tasks are.
-		t.Critical = f == 0 && !t.Done && len(b.children[t.ID]) == 0
+		t.FloatUntil = b.floatUntil(t, drives[t.ID])
+		if f == 0 {
+			path = append(path, t)
+		}
 	}
+	b.markPath(path, drivers)
 	// A folder knows when the path runs through it, at any depth.
 	for i := len(p.Tasks) - 1; i >= 0; i-- {
 		t := p.Tasks[i]
@@ -567,6 +564,90 @@ func (b *builder) criticalPath(p *Plan) {
 			b.byID[*t.ParentID].CriticalSubtasks = true
 		}
 	}
+}
+
+// drive is one end of a relationship seen from the other: the task driven,
+// or the task that drives, and the relationship's type.
+type drive struct {
+	task *Task
+	kind string
+}
+
+// gap is how many working days the driving task t can slip before it pushes
+// the task it drives.
+func (b *builder) gap(t *Task, d drive) int {
+	switch d.kind {
+	case RelStartToStart:
+		return b.cal.Between(*t.SpanStart, *d.task.SpanStart)
+	case RelFinishToFinish:
+		return b.cal.Between(*t.SpanEnd, *d.task.SpanEnd)
+	}
+	// The working days strictly between its end and that start.
+	gap := b.cal.Between(*t.SpanEnd, *d.task.SpanStart)
+	if b.cal.Works(*d.task.SpanStart) {
+		gap--
+	}
+	return gap
+}
+
+// markPath walks the critical path back from the tasks with no float: from
+// each task on it to the driver, or drivers, with the least room before
+// they push it.
+func (b *builder) markPath(path []*Task, drivers map[string][]drive) {
+	seen := map[string]bool{}
+	for len(path) > 0 {
+		t := path[0]
+		path = path[1:]
+		if seen[t.ID] {
+			continue
+		}
+		seen[t.ID] = true
+		// A task with sub-tasks is not itself on the path: its sub-tasks are.
+		t.Critical = !t.Done && len(b.children[t.ID]) == 0
+		least := -1
+		for _, d := range drivers[t.ID] {
+			if g := b.gap(d.task, drive{t, d.kind}); least < 0 || g < least {
+				least = g
+			}
+		}
+		for _, d := range drivers[t.ID] {
+			if b.gap(d.task, drive{t, d.kind}) == least {
+				path = append(path, d.task)
+			}
+		}
+	}
+}
+
+// floatUntil is the last day a task's end can slip to before it pushes a
+// task it drives: nil when it drives none, or has no room at all.
+func (b *builder) floatUntil(t *Task, drives []drive) *string {
+	var until *string
+	for _, d := range drives {
+		var day string
+		switch d.kind {
+		case RelStartToStart:
+			day = addDays(*t.SpanEnd, daysApart(*t.SpanStart, *d.task.SpanStart))
+		case RelFinishToFinish:
+			day = *d.task.SpanEnd
+		default:
+			day = addDays(*d.task.SpanStart, -1)
+		}
+		if until == nil || day < *until {
+			until = &day
+		}
+	}
+	if until == nil || *until <= *t.SpanEnd {
+		return nil
+	}
+	return until
+}
+
+func addDays(day string, n int) string {
+	return parseDay(day).AddDate(0, 0, n).Format(DateLayout)
+}
+
+func daysApart(a, b string) int {
+	return int(parseDay(b).Sub(parseDay(a)).Hours() / 24)
 }
 
 // summary counts the tasks and spans their dates.
