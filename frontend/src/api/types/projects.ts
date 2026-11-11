@@ -387,6 +387,8 @@ export type PlanRelationshipType = 'FS' | 'SS' | 'FF';
 export interface PlanRelationship {
   task_id: string;
   type: PlanRelationshipType;
+  /** The offset: working days the driven task keeps after what the type asks for; negative leads. */
+  lag_days: number;
   conflict: boolean;
 }
 

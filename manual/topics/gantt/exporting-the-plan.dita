@@ -8,14 +8,14 @@
   <conbody>
     <p><b>Export</b> saves the plan as a file:</p>
     <ul>
-      <li><b>PDF</b>: the chart on landscape pages, with the outline, dates, bars, milestones and today's line, then the milestones with their criteria.</li>
+      <li><b>PDF</b>: the chart on landscape pages, with the outline, dates, bars, the lines between related tasks, milestones and today's line, then the milestones with their criteria.</li>
       <li><b>Excel</b>: the tasks with a timeline of weeks drawn beside them, and the milestones on a second sheet.</li>
       <li><b>CSV</b>: the tasks, then the milestones and their criteria.</li>
     </ul>
-    <p>In Excel and CSV, the <b>relationships</b> column names each driving task by its outline number and type, as in <i>1.1FS, 2SS</i>, and each task has its duration and float in working days, its effort and whether it is critical. The PDF and the Excel timeline mark critical tasks in amber.</p>
+    <p>In Excel and CSV, the <b>relationships</b> column names each driving task by its outline number and type, with any offset after it, as in <i>1.1FS, 2SS+5</i>, and each task has its duration and float in working days, its effort and whether it is critical. The PDF and the Excel timeline mark critical tasks in amber.</p>
     <ul>
       <li><b>JSON</b>: the whole plan as the app reads it.</li>
     </ul>
-    <p>Agents read the plan with the <codeph>get_plan</codeph> tool, place a task, with its relationships, with <codeph>schedule_work_item</codeph>, which also assigns it to a milestone, and set the working days with <codeph>set_plan_working_days</codeph>.</p>
+    <p>Agents read the plan with the <codeph>get_plan</codeph> tool, place a task, with its relationships, with <codeph>schedule_work_item</codeph>, which also assigns it to a milestone, recalculate the plan with <codeph>recalculate_plan</codeph>, and set the working days with <codeph>set_plan_working_days</codeph>.</p>
   </conbody>
 </concept>

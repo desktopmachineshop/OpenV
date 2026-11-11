@@ -61,8 +61,8 @@ when it is longer than the window.
 The timeline scrolls sideways past both ends of the plan, further forward
 than back: use the scroll bar, a trackpad or a wheel, or drag an empty part
 of the timeline. The scroll bar under the chart belongs to the timeline, so
-it starts where the task column ends. **Today** brings today back into
-view.
+it starts where the task column ends. **Today** scrolls the timeline so that today
+sits a third of the way in from the left.
 
 The figures above the chart count the plan: how far it is complete, its
 tasks, those done, late, on the critical path and not yet scheduled, the
@@ -237,6 +237,39 @@ design* and for *Electronics* to finish. Two tasks have one relationship
 between them: setting another replaces it. Change a relationship in its
 row, or remove it with the cross.
 
+### Offsets
+
+A relationship can carry an **offset**: a number of working days the
+driven task keeps after what the type asks for. *Start to start* with an
+offset of 5 means the second task starts five working days after the first
+one starts; *finish to start* with an offset of 2 leaves two working days
+between the first task's end and the second's start. A negative offset
+lets the driven task begin that many days earlier.
+
+Set it in the **Offset** field under the relationship, on either task, and
+press Enter or leave the field; a new relationship takes one in the add
+form. A relationship whose task does not keep its offset is **Broken**, and
+float and the critical path count the offset as time the task cannot use.
+
+### Recalculating the plan
+
+OpenV never moves a task on its own. **Recalculate**, above the chart,
+moves them when you ask: every task that another task drives goes to the
+dates its relationships and their offsets ask for.
+
+| Relationship | The driven task |
+| --- | --- |
+| Finish to start | Starts the working day after the other ends, plus the offset |
+| Start to start | Starts the day the other starts, plus the offset |
+| Finish to finish | Ends the day the other ends, plus the offset |
+
+Each task keeps its duration. A task driven by several others takes the
+latest date any of them asks for. A task that nothing drives stays where
+it is, and so does a task that is done. A driven task with sub-tasks moves
+them, by as many working days as it has to move. The page asks before it
+recalculates, and then says how many tasks moved; recalculating a plan that
+already agrees with its relationships moves nothing.
+
 ### Drawing a relationship on the chart
 
 Point at a bar, or select its task, and a small **+** appears at each end.
@@ -353,19 +386,22 @@ that release. A release marked **Released** is met.
 **Export** saves the plan as a file:
 
 - **PDF**: the chart on landscape pages, with the outline, dates, bars,
-  milestones and today's line, then the milestones with their criteria.
+  the lines between related tasks, milestones and today's line, then the
+  milestones with their criteria.
 - **Excel**: the tasks with a timeline of weeks drawn beside them, and the
   milestones on a second sheet.
 - **CSV**: the tasks, then the milestones and their criteria.
 
 In Excel and CSV, the **relationships** column names each driving task by
-its outline number and type, as in *1.1FS, 2SS*, and each task has its
+its outline number and type, with any offset after it, as in *1.1FS,
+2SS+5*, and each task has its
 duration and float in working days, its effort and whether it is critical. The PDF and
 the Excel timeline mark critical tasks in amber.
 - **JSON**: the whole plan as the app reads it.
 
 Agents read the plan with the \`get_plan\` tool, place a task, with its
-relationships, with \`schedule_work_item\`, which also assigns it to a milestone, and set the working days with
+relationships, with \`schedule_work_item\`, which also assigns it to a milestone, recalculate the plan with
+\`recalculate_plan\`, and set the working days with
 \`set_plan_working_days\`.
 
 ## On a phone

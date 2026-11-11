@@ -167,7 +167,7 @@ SECTION_KEYS = {
     ('releases', 'the-burn-up'): ['releases.burnup'],
     ('gantt', 'reading-the-chart'): ['gantt.chart', 'gantt.summary'],
     ('gantt', 'scheduling-tasks'): ['gantt.task', 'gantt.add-task'],
-    ('gantt', 'relationships-between-tasks'): ['gantt.relationships'],
+    ('gantt', 'relationships-between-tasks'): ['gantt.relationships', 'gantt.recalculate'],
     ('gantt', 'duration-and-effort'): ['gantt.schedule'],
     ('gantt', 'the-critical-path'): ['gantt.critical'],
     ('gantt', 'working-days'): ['gantt.working-days'],

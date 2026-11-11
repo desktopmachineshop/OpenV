@@ -21,7 +21,7 @@
     <p>The row of <b>Milestones</b> above the tasks holds a diamond for each milestone, with its name and progress. The thin band leading up to a diamond, from the milestone before it, fills as that milestone's criteria are met. The red vertical line is today.</p>
     <p><b>Days</b>, <b>Weeks</b>, <b>Months</b> and <b>Quarters</b> change the scale. The page opens at the scale that shows the whole plan, on the whole plan. A plan too long to fit opens with today a third of the way in from the left, so that most of what you see is ahead of you.</p>
     <p>On a computer the chart reaches the bottom of the window, and so does the panel of a task or a milestone opened beside it; each scrolls on its own when it is longer than the window.</p>
-    <p>The timeline scrolls sideways past both ends of the plan, further forward than back: use the scroll bar, a trackpad or a wheel, or drag an empty part of the timeline. The scroll bar under the chart belongs to the timeline, so it starts where the task column ends. <b>Today</b> brings today back into view.</p>
+    <p>The timeline scrolls sideways past both ends of the plan, further forward than back: use the scroll bar, a trackpad or a wheel, or drag an empty part of the timeline. The scroll bar under the chart belongs to the timeline, so it starts where the task column ends. <b>Today</b> scrolls the timeline so that today sits a third of the way in from the left.</p>
     <p>The figures above the chart count the plan: how far it is complete, its tasks, those done, late, on the critical path and not yet scheduled, the effort in it, and the milestones met.</p>
   </conbody>
 </concept>
