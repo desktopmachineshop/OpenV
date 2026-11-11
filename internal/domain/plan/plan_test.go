@@ -97,7 +97,7 @@ func TestTaskProgressComesFromToDosAndSubTasks(t *testing.T) {
 	if want := "1 parent,1.1 a,1.2 b,2 lone,3 free"; strings.Join(got, ",") != want {
 		t.Fatalf("outline %v, want %s", got, want)
 	}
-	if p.Summary != (Summary{Tasks: 5, Done: 1, Late: 1, Unscheduled: 1, Progress: 26}) {
+	if p.Summary != (Summary{Tasks: 5, Done: 1, Late: 1, Unscheduled: 1, Progress: 26, Critical: 2}) {
 		t.Fatalf("summary %+v", p.Summary)
 	}
 	if *p.Start != "2027-03-01" || *p.End != "2027-03-20" {
@@ -367,17 +367,17 @@ func TestScheduleChecksDatesParentsAndDependencies(t *testing.T) {
 
 func TestAddTodoAttachesItToTheTask(t *testing.T) {
 	svc, repo, _, td := newService()
-	todo, err := svc.AddTodo("a", "org", "  Crimp the connectors ", sp("me"))
+	todo, err := svc.AddTodo("a", "org", "  Crimp the connectors ", nil, sp("me"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if todo.Text != "Crimp the connectors" || *todo.ProjectID != "p" || repo.todoTasks[todo.ID] != "a" {
 		t.Fatalf("%+v on %v", todo, repo.todoTasks)
 	}
-	if _, err := svc.AddTodo("a", "org", " ", nil); !errors.Is(err, todos.ErrTextRequired) || len(td.made) != 1 {
+	if _, err := svc.AddTodo("a", "org", " ", nil, nil); !errors.Is(err, todos.ErrTextRequired) || len(td.made) != 1 {
 		t.Fatalf("an empty to-do: %v", err)
 	}
-	if _, err := svc.AddTodo("nope", "org", "x", nil); !errors.Is(err, ErrTaskNotFound) {
+	if _, err := svc.AddTodo("nope", "org", "x", nil, nil); !errors.Is(err, ErrTaskNotFound) {
 		t.Fatalf("unknown task: %v", err)
 	}
 	p, err := svc.Plan("p", Evidence{}, now)
@@ -460,8 +460,8 @@ func TestRenderEveryFormat(t *testing.T) {
 	csvOut, _ := Render(doc, FormatCSV)
 	text := string(csvOut.Data)
 	for _, want := range []string{
-		`1,"'=Frame, ""welded""",Done,,2027-03-01,2027-03-20,100,`,
-		"1.1,Wiring,In Progress,Sam,2027-03-06,2027-03-20,0,0,0,0,0,1FS,false",
+		`1,"'=Frame, ""welded""",Done,,2027-03-01,2027-03-20,20,,0,false,100,`,
+		"1.1,Wiring,In Progress,Sam,2027-03-06,2027-03-20,15,,0,true,0,0,0,0,0,1FS,false",
 		"\n\nmilestone,kind,date,",
 		"Definition complete,custom,2027-03-15,50,false,User needs addressed,100,50,1,2,false",
 		"Kick-off,custom,,0,false,,,,,,",
@@ -544,8 +544,8 @@ func TestEachRelationshipTypeIsBrokenByItsOwnDates(t *testing.T) {
 
 func TestTaskTodosListsOnlyThatTasks(t *testing.T) {
 	svc, _, _, _ := newService()
-	first, _ := svc.AddTodo("a", "org", "Crimp", nil)
-	if _, err := svc.AddTodo("b", "org", "Label", nil); err != nil {
+	first, _ := svc.AddTodo("a", "org", "Crimp", nil, nil)
+	if _, err := svc.AddTodo("b", "org", "Label", nil, nil); err != nil {
 		t.Fatal(err)
 	}
 	list, err := svc.TaskTodos("a")
@@ -557,5 +557,147 @@ func TestTaskTodosListsOnlyThatTasks(t *testing.T) {
 	}
 	if _, err := svc.TaskTodos("nope"); !errors.Is(err, ErrTaskNotFound) {
 		t.Fatalf("unknown task: %v", err)
+	}
+}
+
+func TestATaskKeepsItsDuration(t *testing.T) {
+	svc, repo, board, _ := newService()
+	dates := func(id string) (string, string, int) {
+		t.Helper()
+		sc := repo.schedules[id]
+		start, due, dur := "", "", 0
+		if sc != nil && sc.StartDate != nil {
+			start = *sc.StartDate
+		}
+		if d := board.items[id].DueDate; d != nil {
+			due = d.Format(DateLayout)
+		}
+		if sc != nil && sc.DurationDays != nil {
+			dur = *sc.DurationDays
+		}
+		return start, due, dur
+	}
+	must := func(id string, req ScheduleRequest, start, due string, dur int) {
+		t.Helper()
+		if err := svc.Schedule(id, req, "tester"); err != nil {
+			t.Fatal(err)
+		}
+		if s, d, n := dates(id); s != start || d != due || n != dur {
+			t.Fatalf("%s: %s to %s, %d days; want %s to %s, %d days", id, s, d, n, start, due, dur)
+		}
+	}
+	n := func(i int) *int { return &i }
+	// b has no dates: a duration alone is kept for later.
+	must("b", ScheduleRequest{DurationDays: n(5)}, "", "", 5)
+	// A start then gives it its due date, counting both ends.
+	must("b", ScheduleRequest{StartDate: sp("2027-03-01")}, "2027-03-01", "2027-03-05", 5)
+	// Moving the start moves the end; moving the end moves the start.
+	must("b", ScheduleRequest{StartDate: sp("2027-03-08")}, "2027-03-08", "2027-03-12", 5)
+	must("b", ScheduleRequest{DueDate: sp("2027-03-20")}, "2027-03-16", "2027-03-20", 5)
+	// A new duration moves the end, the start staying put.
+	must("b", ScheduleRequest{DurationDays: n(10)}, "2027-03-16", "2027-03-25", 10)
+	// Both dates together (a bar resized) decide the duration.
+	must("b", ScheduleRequest{StartDate: sp("2027-03-16"), DueDate: sp("2027-03-18")}, "2027-03-16", "2027-03-18", 3)
+	// a has only a due date: a duration places its start before it.
+	must("a", ScheduleRequest{DurationDays: n(4)}, "2027-03-07", "2027-03-10", 4)
+	// The board moved a's due date behind the plan's back: the dates win.
+	later := time.Date(2027, 3, 12, 0, 0, 0, 0, time.UTC)
+	board.items["a"].DueDate = &later
+	must("a", ScheduleRequest{StartDate: sp("2027-03-08")}, "2027-03-08", "2027-03-13", 6)
+
+	if err := svc.Schedule("a", ScheduleRequest{DurationDays: n(-1)}, "tester"); !errors.Is(err, ErrInvalidDuration) {
+		t.Fatalf("a negative duration: %v", err)
+	}
+	f := func(v float64) *float64 { return &v }
+	if err := svc.Schedule("a", ScheduleRequest{EffortDays: f(-2)}, "tester"); !errors.Is(err, ErrInvalidEffort) {
+		t.Fatalf("negative effort: %v", err)
+	}
+	if err := svc.Schedule("a", ScheduleRequest{EffortDays: f(7.5)}, "tester"); err != nil || *repo.schedules["a"].EffortDays != 7.5 {
+		t.Fatalf("effort: %v", err)
+	}
+	// Effort is its own number: it survives a move, and 0 clears it.
+	must("a", ScheduleRequest{StartDate: sp("2027-03-09")}, "2027-03-09", "2027-03-14", 6)
+	if *repo.schedules["a"].EffortDays != 7.5 {
+		t.Fatal("a move dropped the effort")
+	}
+	if err := svc.Schedule("a", ScheduleRequest{EffortDays: f(0)}, "tester"); err != nil || repo.schedules["a"].EffortDays != nil {
+		t.Fatalf("clearing the effort: %v", err)
+	}
+	p, _ := svc.Plan("p", Evidence{}, now)
+	if d := task(p, "b").DurationDays; d == nil || *d != 3 {
+		t.Fatalf("the plan reports the duration: %v", d)
+	}
+}
+
+func TestCriticalPathIsTheTasksWithNoFloat(t *testing.T) {
+	// design 1-5, build 6-12 after design (FS, tight), test 13-20 after build
+	// (tight) and the last task; docs 6-8 after design, with room to slip;
+	// paint 14-16 must finish with test (FF) and has 4 days; old is done.
+	mk := func(id, start, end, col string, age int) (*workitems.WorkItem, *TaskSchedule) {
+		return item(id, id, col, day("2027-03-"+end), age), &TaskSchedule{WorkItemID: id, StartDate: sp("2027-03-" + start)}
+	}
+	in := Inputs{}
+	for i, r := range [][4]string{
+		{"design", "01", "05", workitems.ColumnTodo}, {"build", "06", "12", workitems.ColumnTodo},
+		{"test", "13", "20", workitems.ColumnTodo}, {"docs", "06", "08", workitems.ColumnTodo},
+		{"paint", "14", "16", workitems.ColumnTodo}, {"old", "18", "20", workitems.ColumnDone},
+	} {
+		it, sc := mk(r[0], r[1], r[2], r[3], i)
+		in.Items, in.Schedules = append(in.Items, it), append(in.Schedules, sc)
+	}
+	in.Items = append(in.Items, item("someday", "someday", workitems.ColumnBacklog, nil, 9))
+	effort := 6.5
+	in.Schedules[1].EffortDays = &effort
+	in.Dependencies = []Dependency{
+		{WorkItemID: "build", DependsOnID: "design", Type: RelFinishToStart},
+		{WorkItemID: "test", DependsOnID: "build", Type: RelFinishToStart},
+		{WorkItemID: "docs", DependsOnID: "design", Type: RelFinishToStart},
+		{WorkItemID: "paint", DependsOnID: "test", Type: RelStartToStart},
+		{WorkItemID: "test", DependsOnID: "paint", Type: RelFinishToFinish},
+	}
+	p := Build(in, now)
+	want := map[string]struct {
+		float    int
+		critical bool
+	}{
+		"design": {0, true}, "build": {0, true}, "test": {0, true},
+		"docs":  {12, false}, // nothing waits for it: it can run to the plan's last day
+		"paint": {4, false},  // test must not finish before it, and test finishes 4 days after
+		"old":   {0, false},  // done: nothing left to slip
+	}
+	for id, w := range want {
+		got := task(p, id)
+		if got.FloatDays == nil || *got.FloatDays != w.float || got.Critical != w.critical {
+			t.Errorf("%s: float %v critical %v, want %d %v", id, got.FloatDays, got.Critical, w.float, w.critical)
+		}
+	}
+	if s := task(p, "someday"); s.FloatDays != nil || s.Critical {
+		t.Errorf("an unscheduled task has no float: %+v", s)
+	}
+	if p.Summary.Critical != 3 || p.Summary.EffortDays != 6.5 {
+		t.Errorf("summary: %+v", p.Summary)
+	}
+	if d := task(p, "build").DurationDays; d == nil || *d != 7 {
+		t.Errorf("build runs 7 days: %v", d)
+	}
+	// Give build a day's gap before test and it gains a day of float, and so
+	// does design, which is tight against build: only test is left critical.
+	in.Items[1].DueDate = day("2027-03-11")
+	p = Build(in, now)
+	if *task(p, "build").FloatDays != 1 || *task(p, "design").FloatDays != 1 || task(p, "build").Critical || !task(p, "test").Critical {
+		t.Errorf("a gap is float for everything before it: build %d design %d", *task(p, "build").FloatDays, *task(p, "design").FloatDays)
+	}
+}
+
+func TestATodoHasOneDateItsDeadline(t *testing.T) {
+	due := time.Date(2027, 3, 12, 15, 0, 0, 0, time.UTC)
+	p := Build(Inputs{
+		Items:     []*workitems.WorkItem{item("a", "A", workitems.ColumnTodo, nil, 0)},
+		Todos:     []*todos.Todo{{ID: "t1", Text: "Crimp", DueDate: &due}, {ID: "t2", Text: "Label"}},
+		TodoTasks: map[string]string{"t1": "a", "t2": "a"},
+	}, now)
+	got := task(p, "a").Todos
+	if got[0].DueDate == nil || *got[0].DueDate != "2027-03-12" || got[1].DueDate != nil {
+		t.Fatalf("%+v", got)
 	}
 }

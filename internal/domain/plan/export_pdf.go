@@ -37,6 +37,7 @@ var (
 	pdfSuccess = [3]int{39, 174, 96}
 	pdfDanger  = [3]int{231, 76, 60}
 	pdfPurple  = [3]int{142, 68, 173}
+	pdfWarning = [3]int{243, 156, 18}
 )
 
 type pdfChart struct {
@@ -133,7 +134,8 @@ func (c *pdfChart) newPage() float64 {
 	pdf.SetFont("Go", "", pdfTextSize)
 	rgb(pdf.SetTextColor, pdfMuted)
 	s := c.doc.Plan.Summary
-	line := fmt.Sprintf("%d tasks · %d done · %d late · %d%% complete · as of %s", s.Tasks, s.Done, s.Late, s.Progress, c.doc.Plan.Today)
+	line := fmt.Sprintf("%d tasks · %d done · %d late · %d critical (amber outline) · %d%% complete · as of %s",
+		s.Tasks, s.Done, s.Late, s.Critical, s.Progress, c.doc.Plan.Today)
 	pdf.Text(pdfW-pdfMargin-pdf.GetStringWidth(line), pdfMargin+4, line)
 
 	top := pdfMargin + 8
@@ -300,8 +302,15 @@ func (c *pdfChart) taskRow(t *Task, y float64) {
 		rgb(pdf.SetFillColor, fill)
 		pdf.RoundedRect(a, top, (b-a)*float64(t.Progress)/100, h, 0.8, "1234", "F")
 	}
-	rgb(pdf.SetDrawColor, fill)
+	// A critical task is outlined in amber, heavier than the rest.
+	if t.Critical {
+		rgb(pdf.SetDrawColor, pdfWarning)
+		pdf.SetLineWidth(0.5)
+	} else {
+		rgb(pdf.SetDrawColor, fill)
+	}
 	pdf.RoundedRect(a, top, b-a, h, 0.8, "1234", "D")
+	pdf.SetLineWidth(0.2)
 }
 
 // milestoneTable writes the milestones and their criteria on pages of

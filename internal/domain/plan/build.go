@@ -20,6 +20,9 @@ type TaskTodo struct {
 	ID   string `json:"id"`
 	Text string `json:"text"`
 	Done bool   `json:"done"`
+	// DueDate is the to-do's one date, its deadline (YYYY-MM-DD): a to-do
+	// is a small job with no start or duration of its own.
+	DueDate *string `json:"due_date"`
 }
 
 // TaskRelationship is one relationship of a task, as the plan shows it.
@@ -54,6 +57,16 @@ type Task struct {
 	// when only one is known. Both nil: the task is not scheduled.
 	SpanStart *string `json:"span_start"`
 	SpanEnd   *string `json:"span_end"`
+	// DurationDays is the task's length, counting its first and last day:
+	// what its span covers, or the duration it keeps while not scheduled.
+	DurationDays *int `json:"duration_days"`
+	// EffortDays is the work in the task, in person-days.
+	EffortDays *float64 `json:"effort_days"`
+	// FloatDays is how many days the task can slip before the plan's last
+	// task ends later; nil for a task with no dates. Critical: it is 0 and
+	// the task is not done, so any slip moves the plan's end.
+	FloatDays *int `json:"float_days"`
+	Critical  bool `json:"critical"`
 	// Progress is a whole percentage: 100 for a task in Done, else the
 	// share of its to-dos ticked off and its sub-tasks' progress.
 	Progress      int        `json:"progress"`
@@ -121,6 +134,10 @@ type Summary struct {
 	Unscheduled int `json:"unscheduled"`
 	// Progress is the mean progress of the top-level tasks.
 	Progress int `json:"progress"`
+	// Critical counts the tasks on the critical path.
+	Critical int `json:"critical"`
+	// EffortDays is the effort of every task, added up.
+	EffortDays float64 `json:"effort_days"`
 }
 
 // Plan is a project's plan as computed for a reader.
@@ -233,6 +250,7 @@ func Build(in Inputs, now time.Time) *Plan {
 	}
 	b.outline(p, b.roots, 0, "")
 	b.dependencies(p)
+	b.criticalPath(p)
 	b.summary(p)
 
 	p.Milestones = milestones(in, p.Tasks, today)
@@ -275,6 +293,7 @@ func (b *builder) tasks() {
 			continue
 		}
 		t.Start = sc.StartDate
+		t.DurationDays, t.EffortDays = sc.DurationDays, sc.EffortDays
 		if sc.ParentID != nil && b.byID[*sc.ParentID] != nil && *sc.ParentID != t.ID {
 			t.ParentID = sc.ParentID
 		}
@@ -303,7 +322,7 @@ func (b *builder) todos() {
 		if t == nil {
 			continue
 		}
-		t.Todos = append(t.Todos, TaskTodo{ID: td.ID, Text: td.Text, Done: td.Done})
+		t.Todos = append(t.Todos, TaskTodo{ID: td.ID, Text: td.Text, Done: td.Done, DueDate: dayOf(td.DueDate)})
 		t.TodosTotal++
 		if td.Done {
 			t.TodosDone++
@@ -335,6 +354,9 @@ func (b *builder) settle(t *Task) {
 		end = start
 	}
 	t.SpanStart, t.SpanEnd = start, end
+	if d := spanDays(start, end); d != nil {
+		t.DurationDays = d
+	}
 	switch {
 	case t.Done:
 		t.fraction = 1
@@ -429,6 +451,78 @@ func relationshipBroken(kind string, t, on *Task) bool {
 	return *t.SpanStart <= *on.SpanEnd
 }
 
+// criticalPath gives each scheduled task its float and marks the critical
+// ones. The plan's dates are the team's, so this is the float of the plan as
+// it stands: a task can slip until the plan's last day, or until it would
+// push a task it drives, whichever comes first.
+//
+//	finish to start:  the driven task's start, less a day, bounds the end
+//	start to start:   the driven task's start bounds the start
+//	finish to finish: the driven task's end bounds the end
+//
+// A task with no float left, which is not done, is critical: any slip moves
+// the end of the plan. A broken relationship leaves no float.
+func (b *builder) criticalPath(p *Plan) {
+	var last *string
+	for _, t := range p.Tasks {
+		last = maxDate(last, t.SpanEnd)
+	}
+	if last == nil {
+		return
+	}
+	type drive struct {
+		task *Task
+		kind string
+	}
+	drives := map[string][]drive{}
+	for _, d := range p.Dependencies {
+		if t := b.byID[d.WorkItemID]; t != nil && t.SpanStart != nil {
+			drives[d.DependsOnID] = append(drives[d.DependsOnID], drive{t, d.Type})
+		}
+	}
+	float := map[string]int{}
+	visiting := map[string]bool{}
+	var slack func(t *Task) int
+	slack = func(t *Task) int {
+		if f, ok := float[t.ID]; ok {
+			return f
+		}
+		f := daysBetween(*t.SpanEnd, *last)
+		if visiting[t.ID] {
+			return f
+		}
+		visiting[t.ID] = true
+		for _, d := range drives[t.ID] {
+			var gap int
+			switch d.kind {
+			case RelStartToStart:
+				gap = daysBetween(*t.SpanStart, *d.task.SpanStart)
+			case RelFinishToFinish:
+				gap = daysBetween(*t.SpanEnd, *d.task.SpanEnd)
+			default:
+				gap = daysBetween(*t.SpanEnd, *d.task.SpanStart) - 1
+			}
+			if g := gap + slack(d.task); g < f {
+				f = g
+			}
+		}
+		if f < 0 {
+			f = 0
+		}
+		visiting[t.ID] = false
+		float[t.ID] = f
+		return f
+	}
+	for _, t := range p.Tasks {
+		if t.SpanStart == nil {
+			continue
+		}
+		f := slack(t)
+		t.FloatDays = &f
+		t.Critical = f == 0 && !t.Done
+	}
+}
+
 // summary counts the tasks and spans their dates.
 func (b *builder) summary(p *Plan) {
 	var rootSum float64
@@ -439,6 +533,12 @@ func (b *builder) summary(p *Plan) {
 		}
 		if t.Late {
 			p.Summary.Late++
+		}
+		if t.Critical {
+			p.Summary.Critical++
+		}
+		if t.EffortDays != nil {
+			p.Summary.EffortDays += *t.EffortDays
 		}
 		if t.SpanStart == nil {
 			p.Summary.Unscheduled++

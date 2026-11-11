@@ -731,7 +731,7 @@
     {
       "name": "get_plan",
       "read_only": true,
-      "description": "Read a project's plan: every board task in outline order with its start and due dates, parent task, progress (from its to-dos and sub-tasks), its relationships to the tasks that drive it (FS, SS or FF) and whether it is late; the milestones in date order, each target release among them, with their completion criteria measured against the project's artifacts; and every metric a criterion can name with its current value.",
+      "description": "Read a project's plan: every board task in outline order with its start and due dates, parent task, progress (from its to-dos and sub-tasks), its duration, effort and float in days, whether it is on the critical path, its relationships to the tasks that drive it (FS, SS or FF) and whether it is late; the milestones in date order, each target release among them, with their completion criteria measured against the project's artifacts; and every metric a criterion can name with its current value.",
       "input_schema": {
         "properties": {
           "project_id": {"description": "Project ID", "type": "string"}
@@ -745,7 +745,7 @@
     {
       "name": "schedule_work_item",
       "read_only": false,
-      "description": "Place a board task on the plan: its start date and due date (YYYY-MM-DD), its parent task (making it a sub-task) and its relationships to the tasks that drive it. A relationship is written \"<work item id>:<type>\", where the type is FS (finish to start: this task starts after that one finishes), SS (start to start: it starts no earlier than that one starts) or FF (finish to finish: it finishes no earlier than that one finishes); with no type it is FS. A task may have several, so two tasks can together drive when it starts. Only the arguments you pass change; pass an empty string to clear a date or the parent, and an empty relationships list to clear them. Answers the task's row of the plan.",
+      "description": "Place a board task on the plan: its start date and due date (YYYY-MM-DD), its duration and effort in days, its parent task (making it a sub-task) and its relationships to the tasks that drive it. A relationship is written \"<work item id>:<type>\", where the type is FS (finish to start: this task starts after that one finishes), SS (start to start: it starts no earlier than that one starts) or FF (finish to finish: it finishes no earlier than that one finishes); with no type it is FS. A task may have several, so two tasks can together drive when it starts. Only the arguments you pass change; pass an empty string to clear a date or the parent, and an empty relationships list to clear them. Answers the task's row of the plan.",
       "input_schema": {
         "properties": {
           "depends_on": {
@@ -755,6 +755,14 @@
           },
           "due_date": {
             "description": "Due date, YYYY-MM-DD; an empty string clears it",
+            "type": "string"
+          },
+          "duration_days": {
+            "description": "How long the task runs, in whole days counting its first and last; the task keeps it, so a start date sent alone moves the due date and a due date sent alone moves the start. \"0\" clears it",
+            "type": "string"
+          },
+          "effort_days": {
+            "description": "The work in the task, in person-days (may be a decimal); \"0\" clears it",
             "type": "string"
           },
           "id": {"description": "Work item ID", "type": "string"},
@@ -777,7 +785,7 @@
       },
       "calls": ["PUT /api/v1/work-items/{id}/schedule"],
       "requests": [
-        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"relationships\":[{\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"\"}],\"start_date\":\"2027-01-11\"}"
+        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"duration_days\":21,\"effort_days\":7.5,\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"relationships\":[{\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"\"}],\"start_date\":\"2027-01-11\"}"
       ]
     }
   ],

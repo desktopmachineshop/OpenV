@@ -43,7 +43,7 @@ func writePlanError(w http.ResponseWriter, r *http.Request, err error) {
 		writeJSONError(w, http.StatusNotFound, "work item not found")
 	case errors.Is(err, plan.ErrNameRequired), errors.Is(err, plan.ErrInvalidDate), errors.Is(err, plan.ErrDateOrder),
 		errors.Is(err, plan.ErrParentSelf), errors.Is(err, plan.ErrParentCycle), errors.Is(err, plan.ErrOtherProject),
-		errors.Is(err, plan.ErrDependsOnSelf), errors.Is(err, plan.ErrDependencyCycle), errors.Is(err, plan.ErrRelationshipType), errors.Is(err, plan.ErrUnknownMetric),
+		errors.Is(err, plan.ErrDependsOnSelf), errors.Is(err, plan.ErrDependencyCycle), errors.Is(err, plan.ErrRelationshipType), errors.Is(err, plan.ErrInvalidDuration), errors.Is(err, plan.ErrInvalidEffort), errors.Is(err, plan.ErrUnknownMetric),
 		errors.Is(err, plan.ErrInvalidTarget), errors.Is(err, plan.ErrTooManyCriteria), errors.Is(err, plan.ErrDuplicateMetric),
 		errors.Is(err, plan.ErrReleaseMilestone), errors.Is(err, plan.ErrUnsupportedFormat),
 		errors.Is(err, todos.ErrTextRequired), errors.Is(err, todos.ErrTextTooLong), errors.Is(err, todos.ErrParagraphs):
@@ -357,7 +357,7 @@ func (h *Handler) ScheduleWorkItem(w http.ResponseWriter, r *http.Request) {
 	writeJSONError(w, http.StatusNotFound, "work item not found")
 }
 
-// AddWorkItemTodo raises a to-do on a task: {"text": ...}. The to-do is the
+// AddWorkItemTodo raises a to-do on a task: {"text": ..., "due_date"?}. The to-do is the
 // project's, listed with its others, and counts toward the task's progress.
 func (h *Handler) AddWorkItemTodo(w http.ResponseWriter, r *http.Request) {
 	projectID, ok := h.planTask(w, r)
@@ -370,11 +370,22 @@ func (h *Handler) AddWorkItemTodo(w http.ResponseWriter, r *http.Request) {
 	}
 	var req struct {
 		Text string `json:"text"`
+		// DueDate is the to-do's deadline, YYYY-MM-DD: the one date it has.
+		DueDate string `json:"due_date"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	t, err := h.PlanService.AddTodo(mux.Vars(r)["id"], h.orgIDForProject(projectID), req.Text, CurrentUserID(r))
+	var due *time.Time
+	if d := strings.TrimSpace(req.DueDate); d != "" {
+		day, err := time.Parse(plan.DateLayout, d)
+		if err != nil {
+			writeJSONError(w, http.StatusBadRequest, plan.ErrInvalidDate.Error())
+			return
+		}
+		due = &day
+	}
+	t, err := h.PlanService.AddTodo(mux.Vars(r)["id"], h.orgIDForProject(projectID), req.Text, due, CurrentUserID(r))
 	if err != nil {
 		writePlanError(w, r, err)
 		return

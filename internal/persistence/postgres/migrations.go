@@ -131,4 +131,5 @@ var migrations = []Migration{
 	{Version: 74, Name: "agents_archived", Run: m0074AgentsArchived},
 	{Version: 75, Name: "plan", Run: m0075Plan},
 	{Version: 76, Name: "plan_relationship_types", Run: m0076PlanRelationshipTypes},
+	{Version: 77, Name: "plan_duration_effort", Run: m0077PlanDurationEffort},
 }

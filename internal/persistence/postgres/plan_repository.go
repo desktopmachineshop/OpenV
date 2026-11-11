@@ -23,7 +23,7 @@ func NewPlanRepository(db *sql.DB) *PlanRepository {
 // ListSchedules lists the project's task schedules.
 func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, error) {
 	rows, err := r.db.Query(`
-		SELECT work_item_id, project_id, to_char(start_date, 'YYYY-MM-DD'), parent_id
+		SELECT work_item_id, project_id, to_char(start_date, 'YYYY-MM-DD'), parent_id, duration_days, effort_days
 		FROM plan_tasks WHERE project_id = $1 ORDER BY work_item_id`, projectID)
 	if err != nil {
 		return nil, err
@@ -33,8 +33,17 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 	for rows.Next() {
 		s := &plan.TaskSchedule{}
 		var start, parent sql.NullString
-		if err := rows.Scan(&s.WorkItemID, &s.ProjectID, &start, &parent); err != nil {
+		var duration sql.NullInt64
+		var effort sql.NullFloat64
+		if err := rows.Scan(&s.WorkItemID, &s.ProjectID, &start, &parent, &duration, &effort); err != nil {
 			return nil, err
+		}
+		if duration.Valid {
+			d := int(duration.Int64)
+			s.DurationDays = &d
+		}
+		if effort.Valid {
+			s.EffortDays = &effort.Float64
 		}
 		if start.Valid {
 			s.StartDate = &start.String
@@ -50,11 +59,12 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 // SaveSchedule inserts or replaces a task's schedule.
 func (r *PlanRepository) SaveSchedule(s *plan.TaskSchedule) error {
 	_, err := r.db.Exec(`
-		INSERT INTO plan_tasks (work_item_id, project_id, start_date, parent_id, updated_at)
-		VALUES ($1, $2, $3, $4, NOW())
+		INSERT INTO plan_tasks (work_item_id, project_id, start_date, parent_id, duration_days, effort_days, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, NOW())
 		ON CONFLICT (work_item_id) DO UPDATE
-		SET start_date = EXCLUDED.start_date, parent_id = EXCLUDED.parent_id, updated_at = NOW()`,
-		s.WorkItemID, s.ProjectID, nullableString(s.StartDate), nullableString(s.ParentID))
+		SET start_date = EXCLUDED.start_date, parent_id = EXCLUDED.parent_id,
+			duration_days = EXCLUDED.duration_days, effort_days = EXCLUDED.effort_days, updated_at = NOW()`,
+		s.WorkItemID, s.ProjectID, nullableString(s.StartDate), nullableString(s.ParentID), optInt(s.DurationDays), optFloat(s.EffortDays))
 	return err
 }
 
@@ -230,4 +240,19 @@ func (r *PlanRepository) DeleteMilestone(id string) error {
 		return plan.ErrNotFound
 	}
 	return nil
+}
+
+// optInt and optFloat pass a NULL for a value that is not set.
+func optInt(v *int) interface{} {
+	if v == nil {
+		return nil
+	}
+	return *v
+}
+
+func optFloat(v *float64) interface{} {
+	if v == nil {
+		return nil
+	}
+	return *v
 }

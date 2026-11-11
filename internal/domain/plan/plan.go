@@ -49,6 +49,8 @@ var (
 	ErrOtherProject      = errors.New("the task is not on this project's board")
 	ErrDependsOnSelf     = errors.New("a task cannot depend on itself")
 	ErrDependencyCycle   = errors.New("these dependencies would make a loop")
+	ErrInvalidDuration   = errors.New("a duration is a whole number of days, 1 or more")
+	ErrInvalidEffort     = errors.New("effort is a number of days, 0 or more")
 	ErrRelationshipType  = errors.New("a relationship is FS (finish to start), SS (start to start) or FF (finish to finish)")
 	ErrUnknownMetric     = errors.New("unknown criterion metric")
 	ErrInvalidTarget     = errors.New("a criterion's target is a percentage from 1 to 100")
@@ -68,6 +70,11 @@ type TaskSchedule struct {
 	StartDate *string
 	// ParentID is the task this one is a sub-task of.
 	ParentID *string
+	// DurationDays is how long the task runs, counting its first and last
+	// day; nil when it has never been set or derived.
+	DurationDays *int
+	// EffortDays is the work in the task, in person-days.
+	EffortDays *float64
 }
 
 // The types of a relationship between two tasks, as a Gantt names them.
@@ -141,9 +148,17 @@ type MilestoneRequest struct {
 // form of the same list, without types: a task it names keeps the type it
 // has, and a new one is finish to start. Relationships wins when both are
 // sent.
+//
+// A task keeps its duration: a StartDate sent alone moves the due date with
+// it, a DueDate sent alone moves the start, and a DurationDays sent alone
+// moves the due date (or the start, for a task with only a due date). Both
+// dates sent together set the duration to what they span. A DurationDays or
+// EffortDays of 0 clears it.
 type ScheduleRequest struct {
 	StartDate     *string         `json:"start_date"`
 	DueDate       *string         `json:"due_date"`
+	DurationDays  *int            `json:"duration_days"`
+	EffortDays    *float64        `json:"effort_days"`
 	ParentID      *string         `json:"parent_id"`
 	DependsOn     *[]string       `json:"depends_on"`
 	Relationships *[]Relationship `json:"relationships"`
@@ -196,7 +211,7 @@ type Service interface {
 	// Schedule changes a task's dates, parent and dependencies.
 	Schedule(workItemID string, req ScheduleRequest, actor string) error
 	// AddTodo raises a to-do on a task.
-	AddTodo(workItemID, orgID, text string, createdBy *string) (*todos.Todo, error)
+	AddTodo(workItemID, orgID, text string, due *time.Time, createdBy *string) (*todos.Todo, error)
 	// TaskTodos lists the to-dos on a task, open ones first.
 	TaskTodos(workItemID string) ([]*todos.Todo, error)
 	GetMilestone(id string) (*Milestone, error)
@@ -303,23 +318,22 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 		}
 	}
 
-	start, due := current.StartDate, dayOf(item.DueDate)
-	if req.StartDate != nil {
-		if start, err = cleanDate(*req.StartDate); err != nil {
-			return err
-		}
+	was := dayOf(item.DueDate)
+	start, due, duration, err := placeDates(current, was, req)
+	if err != nil {
+		return err
 	}
-	dueChanged := false
-	if req.DueDate != nil {
-		next, err := cleanDate(*req.DueDate)
-		if err != nil {
-			return err
+	dueChanged := (due == nil) != (was == nil) || (due != nil && *due != *was)
+	effort := current.EffortDays
+	if req.EffortDays != nil {
+		switch {
+		case *req.EffortDays < 0:
+			return ErrInvalidEffort
+		case *req.EffortDays == 0:
+			effort = nil
+		default:
+			effort = req.EffortDays
 		}
-		dueChanged = (next == nil) != (due == nil) || (next != nil && *next != *due)
-		due = next
-	}
-	if start != nil && due != nil && *start > *due {
-		return ErrDateOrder
 	}
 
 	parent := current.ParentID
@@ -341,7 +355,8 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 		}
 	}
 
-	if err := s.repo.SaveSchedule(&TaskSchedule{WorkItemID: item.ID, ProjectID: item.ProjectID, StartDate: start, ParentID: parent}); err != nil {
+	if err := s.repo.SaveSchedule(&TaskSchedule{WorkItemID: item.ID, ProjectID: item.ProjectID, StartDate: start, ParentID: parent,
+		DurationDays: duration, EffortDays: effort}); err != nil {
 		return err
 	}
 	if setRelationships {
@@ -368,6 +383,80 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 		}
 	}
 	return nil
+}
+
+// daysBetween is how many days b is after a; both are YYYY-MM-DD.
+func daysBetween(a, b string) int {
+	ta, _ := time.Parse(DateLayout, a)
+	tb, _ := time.Parse(DateLayout, b)
+	return int(tb.Sub(ta).Hours() / 24)
+}
+
+// shiftDay is the day n days after d.
+func shiftDay(d string, n int) *string {
+	t, _ := time.Parse(DateLayout, d)
+	out := t.AddDate(0, 0, n).Format(DateLayout)
+	return &out
+}
+
+// spanDays is a task's length from start to end, counting both days.
+func spanDays(start, end *string) *int {
+	if start == nil || end == nil {
+		return nil
+	}
+	n := daysBetween(*start, *end) + 1
+	return &n
+}
+
+// placeDates works out a task's start, due date and duration from what it
+// has and what a request sends. The duration is what the task keeps: one
+// date sent alone drags the other along, and a duration sent alone moves
+// the due date, or the start of a task that has only a due date. Both dates
+// sent together decide the duration.
+func placeDates(current *TaskSchedule, was *string, req ScheduleRequest) (start, due *string, duration *int, err error) {
+	start, due = current.StartDate, was
+	duration = current.DurationDays
+	if d := spanDays(start, due); d != nil {
+		duration = d
+	}
+	if req.StartDate != nil {
+		if start, err = cleanDate(*req.StartDate); err != nil {
+			return nil, nil, nil, err
+		}
+	}
+	if req.DueDate != nil {
+		if due, err = cleanDate(*req.DueDate); err != nil {
+			return nil, nil, nil, err
+		}
+	}
+	if req.DurationDays != nil {
+		switch {
+		case *req.DurationDays < 0:
+			return nil, nil, nil, ErrInvalidDuration
+		case *req.DurationDays == 0:
+			duration = nil
+		default:
+			duration = req.DurationDays
+		}
+	}
+	switch {
+	case req.StartDate != nil && req.DueDate != nil:
+		// Both ends are given: they decide the length.
+	case duration == nil:
+	case req.DueDate != nil && due != nil:
+		start = shiftDay(*due, 1-*duration)
+	case start != nil && (req.StartDate != nil || req.DurationDays != nil):
+		due = shiftDay(*start, *duration-1)
+	case due != nil && req.DurationDays != nil:
+		start = shiftDay(*due, 1-*duration)
+	}
+	if start != nil && due != nil {
+		if *start > *due {
+			return nil, nil, nil, ErrDateOrder
+		}
+		duration = spanDays(start, due)
+	}
+	return start, due, duration, nil
 }
 
 // checkParent checks the task id is to become a sub-task of: on the
@@ -493,7 +582,7 @@ func (s *DefaultService) TaskTodos(workItemID string) ([]*todos.Todo, error) {
 }
 
 // AddTodo raises a to-do in the task's project and attaches it to the task.
-func (s *DefaultService) AddTodo(workItemID, orgID, text string, createdBy *string) (*todos.Todo, error) {
+func (s *DefaultService) AddTodo(workItemID, orgID, text string, due *time.Time, createdBy *string) (*todos.Todo, error) {
 	item, err := s.board.Get(workItemID)
 	if err != nil || item == nil {
 		return nil, ErrTaskNotFound
@@ -501,7 +590,7 @@ func (s *DefaultService) AddTodo(workItemID, orgID, text string, createdBy *stri
 	if s.todos == nil {
 		return nil, errors.New("to-dos are not available")
 	}
-	t, err := s.todos.Create(todos.CreateRequest{OrgID: orgID, ProjectID: &item.ProjectID, Text: text}, createdBy)
+	t, err := s.todos.Create(todos.CreateRequest{OrgID: orgID, ProjectID: &item.ProjectID, Text: text, DueDate: due}, createdBy)
 	if err != nil {
 		return nil, err
 	}
