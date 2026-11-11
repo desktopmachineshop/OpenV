@@ -31,6 +31,7 @@ func (h *Handler) registerPlanRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/plan/release-milestones/{releaseId}", h.SetReleaseMilestoneCriteria).Methods("PUT")
 	router.HandleFunc("/api/v1/work-items/{id}/schedule", h.ScheduleWorkItem).Methods("PUT")
 	router.HandleFunc("/api/v1/work-items/{id}/todos", h.AddWorkItemTodo).Methods("POST")
+	router.HandleFunc("/api/v1/work-items/{id}/todos", h.ListWorkItemTodos).Methods("GET")
 }
 
 // writePlanError answers a plan write's domain error.
@@ -42,7 +43,7 @@ func writePlanError(w http.ResponseWriter, r *http.Request, err error) {
 		writeJSONError(w, http.StatusNotFound, "work item not found")
 	case errors.Is(err, plan.ErrNameRequired), errors.Is(err, plan.ErrInvalidDate), errors.Is(err, plan.ErrDateOrder),
 		errors.Is(err, plan.ErrParentSelf), errors.Is(err, plan.ErrParentCycle), errors.Is(err, plan.ErrOtherProject),
-		errors.Is(err, plan.ErrDependsOnSelf), errors.Is(err, plan.ErrDependencyCycle), errors.Is(err, plan.ErrUnknownMetric),
+		errors.Is(err, plan.ErrDependsOnSelf), errors.Is(err, plan.ErrDependencyCycle), errors.Is(err, plan.ErrRelationshipType), errors.Is(err, plan.ErrUnknownMetric),
 		errors.Is(err, plan.ErrInvalidTarget), errors.Is(err, plan.ErrTooManyCriteria), errors.Is(err, plan.ErrDuplicateMetric),
 		errors.Is(err, plan.ErrReleaseMilestone), errors.Is(err, plan.ErrUnsupportedFormat),
 		errors.Is(err, todos.ErrTextRequired), errors.Is(err, todos.ErrTextTooLong), errors.Is(err, todos.ErrParagraphs):
@@ -325,7 +326,8 @@ func (h *Handler) planTask(w http.ResponseWriter, r *http.Request) (projectID st
 }
 
 // ScheduleWorkItem places a task on the plan: its start and due dates, its
-// parent task and the tasks it depends on. A field the body leaves out
+// parent task and its relationships to the tasks that drive it (finish to
+// start, start to start or finish to finish). A field the body leaves out
 // stays as it is; an empty date or parent clears it. It answers the plan's
 // row for the task as the change left it.
 func (h *Handler) ScheduleWorkItem(w http.ResponseWriter, r *http.Request) {
@@ -378,4 +380,29 @@ func (h *Handler) AddWorkItemTodo(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respondJSON(w, http.StatusCreated, t)
+}
+
+// ListWorkItemTodos answers the to-dos on a task to the project's readers,
+// open ones first: what the board's card lists, and what the task's
+// progress counts.
+func (h *Handler) ListWorkItemTodos(w http.ResponseWriter, r *http.Request) {
+	if h.PlanService == nil {
+		writeJSONError(w, http.StatusNotFound, "the plan is not available")
+		return
+	}
+	id := mux.Vars(r)["id"]
+	item, err := h.WorkItemService.Get(id)
+	if err != nil {
+		respondError(w, r, http.StatusNotFound, "work item not found", err)
+		return
+	}
+	if !h.requireProjectRoleFor(w, r, item.ProjectID, members.RoleViewer, missing("work item not found")) {
+		return
+	}
+	list, err := h.PlanService.TaskTodos(id)
+	if err != nil {
+		writePlanError(w, r, err)
+		return
+	}
+	respondJSON(w, http.StatusOK, list)
 }

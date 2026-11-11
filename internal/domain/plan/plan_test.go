@@ -219,13 +219,13 @@ func TestACriterionIsNotMetByRounding(t *testing.T) {
 // fakeRepo is a plan.Repository in memory.
 type fakeRepo struct {
 	schedules  map[string]*TaskSchedule
-	deps       map[string][]string
+	deps       map[string][]Dependency
 	todoTasks  map[string]string
 	milestones map[string]*Milestone
 }
 
 func newFakeRepo() *fakeRepo {
-	return &fakeRepo{schedules: map[string]*TaskSchedule{}, deps: map[string][]string{}, todoTasks: map[string]string{}, milestones: map[string]*Milestone{}}
+	return &fakeRepo{schedules: map[string]*TaskSchedule{}, deps: map[string][]Dependency{}, todoTasks: map[string]string{}, milestones: map[string]*Milestone{}}
 }
 
 func (r *fakeRepo) ListSchedules(string) ([]*TaskSchedule, error) {
@@ -238,16 +238,14 @@ func (r *fakeRepo) ListSchedules(string) ([]*TaskSchedule, error) {
 func (r *fakeRepo) SaveSchedule(s *TaskSchedule) error { r.schedules[s.WorkItemID] = s; return nil }
 func (r *fakeRepo) ListDependencies(string) ([]Dependency, error) {
 	out := []Dependency{}
-	for id, on := range r.deps {
-		for _, d := range on {
-			out = append(out, Dependency{WorkItemID: id, DependsOnID: d})
-		}
+	for _, on := range r.deps {
+		out = append(out, on...)
 	}
 	return out, nil
 }
-func (r *fakeRepo) SetDependencies(_, id string, on []string) error { r.deps[id] = on; return nil }
-func (r *fakeRepo) ListTodoTasks(string) (map[string]string, error) { return r.todoTasks, nil }
-func (r *fakeRepo) AttachTodo(_, todoID, id string) error           { r.todoTasks[todoID] = id; return nil }
+func (r *fakeRepo) SetDependencies(_, id string, on []Dependency) error { r.deps[id] = on; return nil }
+func (r *fakeRepo) ListTodoTasks(string) (map[string]string, error)     { return r.todoTasks, nil }
+func (r *fakeRepo) AttachTodo(_, todoID, id string) error               { r.todoTasks[todoID] = id; return nil }
 func (r *fakeRepo) ListMilestones(string) ([]*Milestone, error) {
 	out := []*Milestone{}
 	for _, m := range r.milestones {
@@ -349,7 +347,7 @@ func TestScheduleChecksDatesParentsAndDependencies(t *testing.T) {
 	if board.updates != 1 || board.items["b"].DueDate.Format(DateLayout) != "2027-03-08" || board.items["b"].Title != "B" {
 		t.Fatalf("the due date is the work item's: %+v", board.items["b"])
 	}
-	if got := repo.deps["b"]; len(got) != 1 || got[0] != "c" {
+	if got := repo.deps["b"]; len(got) != 1 || got[0] != (Dependency{WorkItemID: "b", DependsOnID: "c", Type: RelFinishToStart}) {
 		t.Fatalf("dependencies are deduplicated: %v", got)
 	}
 	ok("c", ScheduleRequest{ParentID: sp("b")})
@@ -463,7 +461,7 @@ func TestRenderEveryFormat(t *testing.T) {
 	text := string(csvOut.Data)
 	for _, want := range []string{
 		`1,"'=Frame, ""welded""",Done,,2027-03-01,2027-03-20,100,`,
-		"1.1,Wiring,In Progress,Sam,2027-03-06,2027-03-20,0,0,0,0,0,1,false",
+		"1.1,Wiring,In Progress,Sam,2027-03-06,2027-03-20,0,0,0,0,0,1FS,false",
 		"\n\nmilestone,kind,date,",
 		"Definition complete,custom,2027-03-15,50,false,User needs addressed,100,50,1,2,false",
 		"Kick-off,custom,,0,false,,,,,,",
@@ -478,5 +476,86 @@ func TestRenderEveryFormat(t *testing.T) {
 		if _, err := Render(Document{ProjectName: "Empty", ExportedAt: now, Plan: Build(Inputs{}, now)}, f); err != nil {
 			t.Fatalf("empty %s: %v", f, err)
 		}
+	}
+}
+
+func TestRelationshipsHaveATypeAndATaskMayHaveSeveral(t *testing.T) {
+	svc, repo, _, _ := newService()
+	rels := func(r ...Relationship) ScheduleRequest { return ScheduleRequest{Relationships: &r} }
+	if err := svc.Schedule("a", rels(Relationship{"b", "XX"}), "tester"); !errors.Is(err, ErrRelationshipType) {
+		t.Fatalf("an unknown type: %v", err)
+	}
+	// Two tasks drive c: it starts with a and after b finishes.
+	if err := svc.Schedule("c", rels(Relationship{"a", "ss"}, Relationship{"b", ""}, Relationship{"a", "FF"}), "tester"); err != nil {
+		t.Fatal(err)
+	}
+	want := []Dependency{{"c", "a", RelStartToStart}, {"c", "b", RelFinishToStart}}
+	if got := repo.deps["c"]; len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
+		t.Fatalf("relationships %+v, want %+v (a pair has one relationship, the first named)", got, want)
+	}
+	// A loop is a loop whatever the types along it.
+	if err := svc.Schedule("a", rels(Relationship{"c", "FF"}), "tester"); !errors.Is(err, ErrDependencyCycle) {
+		t.Fatalf("a loop through SS and FF: %v", err)
+	}
+	// The earlier depends_on form keeps the type a task has, and a new one is FS.
+	if err := svc.Schedule("c", ScheduleRequest{DependsOn: &[]string{"a"}}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if got := repo.deps["c"]; len(got) != 1 || got[0].Type != RelStartToStart {
+		t.Fatalf("depends_on changed a type: %+v", got)
+	}
+}
+
+func TestEachRelationshipTypeIsBrokenByItsOwnDates(t *testing.T) {
+	in := Inputs{
+		Items: []*workitems.WorkItem{
+			item("on", "Driver", workitems.ColumnTodo, day("2027-03-10"), 0),
+			item("t", "Driven", workitems.ColumnTodo, day("2027-03-08"), 1),
+		},
+		Schedules: []*TaskSchedule{{WorkItemID: "on", StartDate: sp("2027-03-05")}, {WorkItemID: "t", StartDate: sp("2027-03-04")}},
+	}
+	// Driven runs 4 to 8 March, the driver 5 to 10 March: it starts before
+	// the driver starts, ends before it ends, and starts before it ends.
+	for _, kind := range RelationshipTypes {
+		in.Dependencies = []Dependency{{WorkItemID: "t", DependsOnID: "on", Type: kind}}
+		got := task(Build(in, now), "t")
+		if len(got.Relationships) != 1 || got.Relationships[0] != (TaskRelationship{TaskID: "on", Type: kind, Conflict: true}) || len(got.Conflicts) != 1 {
+			t.Fatalf("%s: %+v", kind, got.Relationships)
+		}
+	}
+	cases := []struct{ kind, start, end string }{
+		{RelStartToStart, "2027-03-05", "2027-03-06"},   // starts with the driver, ends before it
+		{RelFinishToFinish, "2027-03-01", "2027-03-10"}, // starts before it, ends with it
+		{RelFinishToStart, "2027-03-11", "2027-03-12"},  // starts the day after it ends
+	}
+	for _, c := range cases {
+		in.Dependencies = []Dependency{{WorkItemID: "t", DependsOnID: "on", Type: c.kind}}
+		in.Items[1].DueDate, in.Schedules[1].StartDate = day(c.end), sp(c.start)
+		if got := task(Build(in, now), "t"); got.Relationships[0].Conflict || len(got.Conflicts) != 0 {
+			t.Fatalf("%s kept from %s to %s is not broken: %+v", c.kind, c.start, c.end, got.Relationships)
+		}
+	}
+	// A stored row with no type reads as finish to start.
+	in.Dependencies = []Dependency{{WorkItemID: "t", DependsOnID: "on"}}
+	if got := task(Build(in, now), "t"); got.Relationships[0].Type != RelFinishToStart {
+		t.Fatalf("an untyped row: %+v", got.Relationships)
+	}
+}
+
+func TestTaskTodosListsOnlyThatTasks(t *testing.T) {
+	svc, _, _, _ := newService()
+	first, _ := svc.AddTodo("a", "org", "Crimp", nil)
+	if _, err := svc.AddTodo("b", "org", "Label", nil); err != nil {
+		t.Fatal(err)
+	}
+	list, err := svc.TaskTodos("a")
+	if err != nil || len(list) != 1 || list[0].ID != first.ID {
+		t.Fatalf("%+v %v", list, err)
+	}
+	if list, _ = svc.TaskTodos("c"); list == nil || len(list) != 0 {
+		t.Fatalf("a task with none answers an empty list: %v", list)
+	}
+	if _, err := svc.TaskTodos("nope"); !errors.Is(err, ErrTaskNotFound) {
+		t.Fatalf("unknown task: %v", err)
 	}
 }

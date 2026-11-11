@@ -20,11 +20,13 @@ import (
 // What the golden shows:
 //   - an empty project's plan: no tasks, no milestones, every metric at 0;
 //   - a schedule sets a start, a due date (the work item's own), a parent
-//     and dependencies; a start after the due date, a task of Q as parent or
+//     and relationships, each finish to start, start to start or finish to
+//     finish, several to a task; an unknown type is a 400, and the earlier
+//     depends_on form keeps the type a task has; a start after the due date, a task of Q as parent or
 //     dependency, a task as its own parent, a loop of parents or of
 //     dependencies and a malformed date are a 400; the viewer's is a 403;
-//   - a to-do raised on a task is the project's, and ticking it moves the
-//     task's progress and its parent's;
+//   - a to-do raised on a task is the project's, a task lists its own, and
+//     ticking one moves the task's progress and its parent's;
 //   - a milestone takes criteria; an unknown metric, a target of 0 and a
 //     missing name are a 400; MVP is a release milestone with the default
 //     criteria until its own are set; its name cannot be set here (400);
@@ -87,6 +89,14 @@ func planTour(tr *tour) {
 	tr.step("Q's task as parent: 400", o, schedule, at("id", "{{build}}"), jsonBody(`{"parent_id":"{{q_task}}"}`))
 	tr.step("Q's task as dependency: 400", o, schedule, at("id", "{{build}}"), jsonBody(`{"depends_on":["{{q_task}}"]}`))
 	tr.step("a loop of dependencies: 400", o, schedule, at("id", "{{order}}"), jsonBody(`{"depends_on":["{{wiring}}"]}`))
+	tr.step("Wiring is driven by two tasks: it finishes no earlier than Frame (FF) and starts no earlier than Order (SS)", o, schedule,
+		at("id", "{{wiring}}"), jsonBody(`{"relationships":[{"task_id":"{{frame}}","type":"FF"},{"task_id":"{{order}}","type":"SS"}]}`))
+	tr.step("an unknown relationship type: 400", o, schedule, at("id", "{{wiring}}"),
+		jsonBody(`{"relationships":[{"task_id":"{{frame}}","type":"SF"}]}`))
+	tr.step("depends_on, the earlier form: Frame keeps FF, and Order is dropped", o, schedule, at("id", "{{wiring}}"),
+		jsonBody(`{"depends_on":["{{frame}}"]}`))
+	tr.step("Wiring back to finish to start on Frame", o, schedule, at("id", "{{wiring}}"),
+		jsonBody(`{"relationships":[{"task_id":"{{frame}}"}]}`))
 	tr.step("the viewer may not schedule: 403", viewer, schedule, at("id", "{{frame}}"), jsonBody(`{"start_date":"2099-03-02"}`))
 
 	todo := "POST /api/v1/work-items/{id}/todos"
@@ -94,6 +104,8 @@ func planTour(tr *tour) {
 	tr.step("a second to-do on Wiring", o, todo, at("id", "{{wiring}}"), jsonBody(`{"text":"Label the loom"}`)).capture("t2", "/id")
 	tr.step("no text: 400", o, todo, at("id", "{{wiring}}"), jsonBody(`{"text":" "}`))
 	tr.step("the viewer may not add one: 403", viewer, todo, at("id", "{{wiring}}"), jsonBody(`{"text":"x"}`))
+	tr.step("Wiring's to-dos, to the viewer: both open", viewer, "GET /api/v1/work-items/{id}/todos", at("id", "{{wiring}}"))
+	tr.step("Frame has none: []", o, "GET /api/v1/work-items/{id}/todos", at("id", "{{frame}}"))
 	tr.setup("the first to-do ticked off", o, "POST /api/v1/todos/{id}/done", at("id", "{{t1}}"), jsonBody(`{"done":true}`))
 
 	milestone := "POST /api/v1/projects/{id}/plan/milestones"

@@ -731,7 +731,7 @@
     {
       "name": "get_plan",
       "read_only": true,
-      "description": "Read a project's plan: every board task in outline order with its start and due dates, parent task, progress (from its to-dos and sub-tasks), what it depends on and whether it is late; the milestones in date order, each target release among them, with their completion criteria measured against the project's artifacts; and every metric a criterion can name with its current value.",
+      "description": "Read a project's plan: every board task in outline order with its start and due dates, parent task, progress (from its to-dos and sub-tasks), its relationships to the tasks that drive it (FS, SS or FF) and whether it is late; the milestones in date order, each target release among them, with their completion criteria measured against the project's artifacts; and every metric a criterion can name with its current value.",
       "input_schema": {
         "properties": {
           "project_id": {"description": "Project ID", "type": "string"}
@@ -745,11 +745,11 @@
     {
       "name": "schedule_work_item",
       "read_only": false,
-      "description": "Place a board task on the plan: its start date and due date (YYYY-MM-DD), its parent task (making it a sub-task) and the tasks it depends on (finish-to-start). Only the arguments you pass change; pass an empty string to clear a date or the parent, and an empty depends_on list to clear the dependencies. Answers the task's row of the plan.",
+      "description": "Place a board task on the plan: its start date and due date (YYYY-MM-DD), its parent task (making it a sub-task) and its relationships to the tasks that drive it. A relationship is written \"<work item id>:<type>\", where the type is FS (finish to start: this task starts after that one finishes), SS (start to start: it starts no earlier than that one starts) or FF (finish to finish: it finishes no earlier than that one finishes); with no type it is FS. A task may have several, so two tasks can together drive when it starts. Only the arguments you pass change; pass an empty string to clear a date or the parent, and an empty relationships list to clear them. Answers the task's row of the plan.",
       "input_schema": {
         "properties": {
           "depends_on": {
-            "description": "Work item IDs this task cannot start before the end of",
+            "description": "Earlier form of relationships: work item IDs, each finish to start unless it already has a type",
             "items": {"type": "string"},
             "type": "array"
           },
@@ -762,6 +762,11 @@
             "description": "Work item ID of the parent task; an empty string makes it a top-level task",
             "type": "string"
           },
+          "relationships": {
+            "description": "The tasks that drive this one, each \"<work item id>:FS\", \":SS\" or \":FF\"; replaces the task's relationships",
+            "items": {"type": "string"},
+            "type": "array"
+          },
           "start_date": {
             "description": "Start date, YYYY-MM-DD; an empty string clears it",
             "type": "string"
@@ -772,7 +777,7 @@
       },
       "calls": ["PUT /api/v1/work-items/{id}/schedule"],
       "requests": [
-        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"start_date\":\"2027-01-11\"}"
+        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"relationships\":[{\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"\"}],\"start_date\":\"2027-01-11\"}"
       ]
     }
   ],

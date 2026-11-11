@@ -61,7 +61,7 @@ func (r *PlanRepository) SaveSchedule(s *plan.TaskSchedule) error {
 // ListDependencies lists the project's dependencies.
 func (r *PlanRepository) ListDependencies(projectID string) ([]plan.Dependency, error) {
 	rows, err := r.db.Query(`
-		SELECT work_item_id, depends_on_id FROM plan_dependencies
+		SELECT work_item_id, depends_on_id, kind FROM plan_dependencies
 		WHERE project_id = $1 ORDER BY work_item_id, depends_on_id`, projectID)
 	if err != nil {
 		return nil, err
@@ -70,7 +70,7 @@ func (r *PlanRepository) ListDependencies(projectID string) ([]plan.Dependency, 
 	out := []plan.Dependency{}
 	for rows.Next() {
 		var d plan.Dependency
-		if err := rows.Scan(&d.WorkItemID, &d.DependsOnID); err != nil {
+		if err := rows.Scan(&d.WorkItemID, &d.DependsOnID, &d.Type); err != nil {
 			return nil, err
 		}
 		out = append(out, d)
@@ -78,16 +78,20 @@ func (r *PlanRepository) ListDependencies(projectID string) ([]plan.Dependency, 
 	return out, rows.Err()
 }
 
-// SetDependencies replaces what a task depends on.
-func (r *PlanRepository) SetDependencies(projectID, workItemID string, dependsOn []string) error {
+// SetDependencies replaces a task's relationships.
+func (r *PlanRepository) SetDependencies(projectID, workItemID string, relationships []plan.Dependency) error {
 	return withTx(context.Background(), r.db, nil, func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`DELETE FROM plan_dependencies WHERE work_item_id = $1`, workItemID); err != nil {
 			return err
 		}
-		for _, dep := range dependsOn {
+		for _, rel := range relationships {
+			kind := rel.Type
+			if kind == "" {
+				kind = plan.RelFinishToStart
+			}
 			if _, err := tx.Exec(`
-				INSERT INTO plan_dependencies (work_item_id, depends_on_id, project_id)
-				VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`, workItemID, dep, projectID); err != nil {
+				INSERT INTO plan_dependencies (work_item_id, depends_on_id, project_id, kind)
+				VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`, workItemID, rel.DependsOnID, projectID, kind); err != nil {
 				return err
 			}
 		}

@@ -153,7 +153,8 @@ func toolGoldenArgs() map[string]map[string]interface{} {
 		"tick_todo":               {"id": goldenTodoID, "done": true},
 		"get_plan":                {"project_id": goldenProjectID},
 		"schedule_work_item": {"id": goldenWorkItemID, "start_date": "2027-01-11", "due_date": "2027-01-31", "parent_id": goldenDelegateRunID,
-			"depends_on": []interface{}{goldenDelegateRunID}},
+			"relationships": []interface{}{goldenDelegateRunID + ":SS", goldenAgentID},
+			"depends_on":    []interface{}{goldenDelegateRunID}},
 	}
 }
 

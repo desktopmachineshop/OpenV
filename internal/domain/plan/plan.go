@@ -49,6 +49,7 @@ var (
 	ErrOtherProject      = errors.New("the task is not on this project's board")
 	ErrDependsOnSelf     = errors.New("a task cannot depend on itself")
 	ErrDependencyCycle   = errors.New("these dependencies would make a loop")
+	ErrRelationshipType  = errors.New("a relationship is FS (finish to start), SS (start to start) or FF (finish to finish)")
 	ErrUnknownMetric     = errors.New("unknown criterion metric")
 	ErrInvalidTarget     = errors.New("a criterion's target is a percentage from 1 to 100")
 	ErrTooManyCriteria   = errors.New("a milestone carries at most 12 criteria")
@@ -69,10 +70,38 @@ type TaskSchedule struct {
 	ParentID *string
 }
 
-// Dependency says WorkItemID cannot start until DependsOnID has finished.
+// The types of a relationship between two tasks, as a Gantt names them.
+const (
+	// RelFinishToStart: the task starts after the other finishes.
+	RelFinishToStart = "FS"
+	// RelStartToStart: the task starts no earlier than the other starts.
+	RelStartToStart = "SS"
+	// RelFinishToFinish: the task finishes no earlier than the other finishes.
+	RelFinishToFinish = "FF"
+)
+
+// RelationshipTypes lists the types in the order a chooser shows them.
+var RelationshipTypes = []string{RelFinishToStart, RelStartToStart, RelFinishToFinish}
+
+// ValidRelationshipType reports whether t names a relationship type.
+func ValidRelationshipType(t string) bool {
+	return t == RelFinishToStart || t == RelStartToStart || t == RelFinishToFinish
+}
+
+// Dependency is a relationship between two tasks: WorkItemID is driven by
+// DependsOnID in the way Type says. A task may have several, so two tasks
+// can together drive when a third starts.
 type Dependency struct {
 	WorkItemID  string `json:"work_item_id"`
 	DependsOnID string `json:"depends_on_id"`
+	Type        string `json:"type"`
+}
+
+// Relationship names, in a schedule request, a task this one is driven by
+// and how. An empty Type is finish to start.
+type Relationship struct {
+	TaskID string `json:"task_id"`
+	Type   string `json:"type"`
 }
 
 // Criterion is one completion criterion of a milestone: a metric and the
@@ -108,11 +137,16 @@ type MilestoneRequest struct {
 
 // ScheduleRequest changes a task's place on the plan. A nil field is left
 // as it is; an empty StartDate, DueDate or ParentID clears it.
+// Relationships replaces the task's relationships. DependsOn is the earlier
+// form of the same list, without types: a task it names keeps the type it
+// has, and a new one is finish to start. Relationships wins when both are
+// sent.
 type ScheduleRequest struct {
-	StartDate *string   `json:"start_date"`
-	DueDate   *string   `json:"due_date"`
-	ParentID  *string   `json:"parent_id"`
-	DependsOn *[]string `json:"depends_on"`
+	StartDate     *string         `json:"start_date"`
+	DueDate       *string         `json:"due_date"`
+	ParentID      *string         `json:"parent_id"`
+	DependsOn     *[]string       `json:"depends_on"`
+	Relationships *[]Relationship `json:"relationships"`
 }
 
 // Repository stores what the plan adds to the board.
@@ -121,8 +155,9 @@ type Repository interface {
 	// SaveSchedule inserts or replaces a task's schedule.
 	SaveSchedule(s *TaskSchedule) error
 	ListDependencies(projectID string) ([]Dependency, error)
-	// SetDependencies replaces what a task depends on.
-	SetDependencies(projectID, workItemID string, dependsOn []string) error
+	// SetDependencies replaces a task's relationships; each entry's
+	// DependsOnID and Type are read.
+	SetDependencies(projectID, workItemID string, relationships []Dependency) error
 	// ListTodoTasks maps each of the project's attached to-dos to its task.
 	ListTodoTasks(projectID string) (map[string]string, error)
 	AttachTodo(projectID, todoID, workItemID string) error
@@ -162,6 +197,8 @@ type Service interface {
 	Schedule(workItemID string, req ScheduleRequest, actor string) error
 	// AddTodo raises a to-do on a task.
 	AddTodo(workItemID, orgID, text string, createdBy *string) (*todos.Todo, error)
+	// TaskTodos lists the to-dos on a task, open ones first.
+	TaskTodos(workItemID string) ([]*todos.Todo, error)
 	GetMilestone(id string) (*Milestone, error)
 	CreateMilestone(projectID string, req MilestoneRequest) (*Milestone, error)
 	UpdateMilestone(id string, req MilestoneRequest) (*Milestone, error)
@@ -256,7 +293,7 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 		}
 	}
 	onBoard := map[string]bool{}
-	if req.ParentID != nil || req.DependsOn != nil {
+	if req.ParentID != nil || req.DependsOn != nil || req.Relationships != nil {
 		items, err := s.board.ListByProject(item.ProjectID)
 		if err != nil {
 			return err
@@ -292,13 +329,14 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 		}
 	}
 
-	var dependsOn []string
-	if req.DependsOn != nil {
+	var relationships []Dependency
+	setRelationships := req.DependsOn != nil || req.Relationships != nil
+	if setRelationships {
 		deps, err := s.repo.ListDependencies(item.ProjectID)
 		if err != nil {
 			return err
 		}
-		if dependsOn, err = checkDependencies(item.ID, *req.DependsOn, deps, onBoard); err != nil {
+		if relationships, err = checkDependencies(item.ID, wantedRelationships(item.ID, req, deps), deps, onBoard); err != nil {
 			return err
 		}
 	}
@@ -306,8 +344,8 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 	if err := s.repo.SaveSchedule(&TaskSchedule{WorkItemID: item.ID, ProjectID: item.ProjectID, StartDate: start, ParentID: parent}); err != nil {
 		return err
 	}
-	if req.DependsOn != nil {
-		if err := s.repo.SetDependencies(item.ProjectID, item.ID, dependsOn); err != nil {
+	if setRelationships {
+		if err := s.repo.SetDependencies(item.ProjectID, item.ID, relationships); err != nil {
 			return err
 		}
 	}
@@ -355,33 +393,63 @@ func checkParent(id, want string, parents map[string]string, onBoard map[string]
 	return &p, nil
 }
 
-// checkDependencies checks the tasks id is to depend on: each on the
-// project's board, none id itself, and none that already waits on id.
-func checkDependencies(id string, want []string, existing []Dependency, onBoard map[string]bool) ([]string, error) {
+// wantedRelationships reads the relationships a request asks for: its
+// Relationships, or its DependsOn with each task keeping the type it has now.
+func wantedRelationships(id string, req ScheduleRequest, existing []Dependency) []Relationship {
+	if req.Relationships != nil {
+		return *req.Relationships
+	}
+	has := map[string]string{}
+	for _, d := range existing {
+		if d.WorkItemID == id {
+			has[d.DependsOnID] = d.Type
+		}
+	}
+	out := make([]Relationship, 0, len(*req.DependsOn))
+	for _, dep := range *req.DependsOn {
+		dep = strings.TrimSpace(dep)
+		out = append(out, Relationship{TaskID: dep, Type: has[dep]})
+	}
+	return out
+}
+
+// checkDependencies checks the relationships id is to have: each to a task
+// on the project's board, none to id itself, each of a known type, and none
+// to a task that id already drives, whatever the types along the way. A task
+// named twice keeps its first entry.
+func checkDependencies(id string, want []Relationship, existing []Dependency, onBoard map[string]bool) ([]Dependency, error) {
 	waitsOn := map[string][]string{}
 	for _, d := range existing {
 		if d.WorkItemID != id {
 			waitsOn[d.WorkItemID] = append(waitsOn[d.WorkItemID], d.DependsOnID)
 		}
 	}
-	out := []string{}
+	out := []Dependency{}
 	seen := map[string]bool{}
-	for _, dep := range want {
-		dep = strings.TrimSpace(dep)
+	for _, rel := range want {
+		dep, kind := strings.TrimSpace(rel.TaskID), strings.ToUpper(strings.TrimSpace(rel.Type))
 		if dep == "" || seen[dep] {
 			continue
 		}
-		if dep == id {
-			return nil, ErrDependsOnSelf
+		if kind == "" {
+			kind = RelFinishToStart
 		}
-		if !onBoard[dep] {
+		switch {
+		case dep == id:
+			return nil, ErrDependsOnSelf
+		case !onBoard[dep]:
 			return nil, ErrOtherProject
+		case !ValidRelationshipType(kind):
+			return nil, ErrRelationshipType
 		}
 		seen[dep] = true
-		out = append(out, dep)
+		out = append(out, Dependency{WorkItemID: id, DependsOnID: dep, Type: kind})
 	}
 	visited := map[string]bool{}
-	stack := append([]string(nil), out...)
+	stack := make([]string, 0, len(out))
+	for _, d := range out {
+		stack = append(stack, d.DependsOnID)
+	}
 	for len(stack) > 0 {
 		cur := stack[len(stack)-1]
 		stack = stack[:len(stack)-1]
@@ -393,6 +461,33 @@ func checkDependencies(id string, want []string, existing []Dependency, onBoard 
 		}
 		visited[cur] = true
 		stack = append(stack, waitsOn[cur]...)
+	}
+	return out, nil
+}
+
+// TaskTodos lists the to-dos on a task, in the project list's order: open
+// ones first.
+func (s *DefaultService) TaskTodos(workItemID string) ([]*todos.Todo, error) {
+	item, err := s.board.Get(workItemID)
+	if err != nil || item == nil {
+		return nil, ErrTaskNotFound
+	}
+	out := []*todos.Todo{}
+	if s.todos == nil {
+		return out, nil
+	}
+	on, err := s.repo.ListTodoTasks(item.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	all, err := s.todos.ListByProject(item.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	for _, t := range all {
+		if t != nil && on[t.ID] == item.ID {
+			out = append(out, t)
+		}
 	}
 	return out, nil
 }

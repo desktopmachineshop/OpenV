@@ -22,6 +22,17 @@ type TaskTodo struct {
 	Done bool   `json:"done"`
 }
 
+// TaskRelationship is one relationship of a task, as the plan shows it.
+type TaskRelationship struct {
+	TaskID string `json:"task_id"`
+	Type   string `json:"type"`
+	// Conflict: the dates break the relationship. Finish to start: this
+	// task starts on or before the day the other ends. Start to start: it
+	// starts before the other starts. Finish to finish: it ends before the
+	// other ends. A relationship to a task that is done is never broken.
+	Conflict bool `json:"conflict"`
+}
+
 // Task is one row of the plan: a work item with its schedule and progress.
 type Task struct {
 	ID           string  `json:"id"`
@@ -54,6 +65,9 @@ type Task struct {
 	SubtasksTotal int        `json:"subtasks_total"`
 	Todos         []TaskTodo `json:"todos"`
 	DependsOn     []string   `json:"depends_on"`
+	// Relationships are the tasks that drive this one, each with its type
+	// and whether the dates break it; DependsOn is the same tasks' ids.
+	Relationships []TaskRelationship `json:"relationships"`
 	// Conflicts are the tasks this one depends on that finish on or after
 	// the day it starts.
 	Conflicts []string `json:"conflicts"`
@@ -252,7 +266,7 @@ func (b *builder) tasks() {
 		}
 		b.byID[it.ID] = &Task{ID: it.ID, Title: it.Title, Column: it.Column, AssigneeType: it.AssigneeType, AssigneeID: it.AssigneeID,
 			End: dayOf(it.DueDate), Done: it.Column == workitems.ColumnDone,
-			Todos: []TaskTodo{}, DependsOn: []string{}, Conflicts: []string{}}
+			Todos: []TaskTodo{}, DependsOn: []string{}, Relationships: []TaskRelationship{}, Conflicts: []string{}}
 		b.created[it.ID] = it.CreatedAt
 	}
 	for _, sc := range b.in.Schedules {
@@ -365,9 +379,14 @@ func (b *builder) dependencies(p *Plan) {
 		if t == nil || on == nil {
 			continue
 		}
+		if !ValidRelationshipType(d.Type) {
+			d.Type = RelFinishToStart
+		}
+		conflict := relationshipBroken(d.Type, t, on)
 		t.DependsOn = append(t.DependsOn, on.ID)
+		t.Relationships = append(t.Relationships, TaskRelationship{TaskID: on.ID, Type: d.Type, Conflict: conflict})
 		p.Dependencies = append(p.Dependencies, d)
-		if t.SpanStart != nil && on.SpanEnd != nil && *on.SpanEnd >= *t.SpanStart && !on.Done {
+		if conflict {
 			t.Conflicts = append(t.Conflicts, on.ID)
 		}
 	}
@@ -389,7 +408,25 @@ func (b *builder) dependencies(p *Plan) {
 	for _, t := range p.Tasks {
 		byRow(t.DependsOn)
 		byRow(t.Conflicts)
+		rels := t.Relationships
+		sort.SliceStable(rels, func(i, j int) bool { return row[rels[i].TaskID] < row[rels[j].TaskID] })
 	}
+}
+
+// relationshipBroken reports whether t's dates break its relationship of
+// the given type to on. Unscheduled ends break nothing, and neither does a
+// task that is done.
+func relationshipBroken(kind string, t, on *Task) bool {
+	if on.Done || t.SpanStart == nil || on.SpanStart == nil {
+		return false
+	}
+	switch kind {
+	case RelStartToStart:
+		return *t.SpanStart < *on.SpanStart
+	case RelFinishToFinish:
+		return *t.SpanEnd < *on.SpanEnd
+	}
+	return *t.SpanStart <= *on.SpanEnd
 }
 
 // summary counts the tasks and spans their dates.

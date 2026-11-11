@@ -126,7 +126,7 @@ func (d Document) assignee(t *Task) string {
 	return *t.AssigneeID
 }
 
-var taskHeader = []string{"wbs", "task", "status", "assignee", "start", "end", "progress_percent", "todos_done", "todos_total", "subtasks_done", "subtasks_total", "depends_on", "late"}
+var taskHeader = []string{"wbs", "task", "status", "assignee", "start", "end", "progress_percent", "todos_done", "todos_total", "subtasks_done", "subtasks_total", "relationships", "late"}
 
 // taskRows is the task table every tabular format writes: one row per task
 // in outline order, the title indented by its depth, what it depends on by
@@ -138,9 +138,11 @@ func taskRows(doc Document, indent bool) [][]string {
 	}
 	rows := [][]string{}
 	for _, t := range doc.Plan.Tasks {
-		deps := make([]string, 0, len(t.DependsOn))
-		for _, d := range t.DependsOn {
-			deps = append(deps, wbs[d])
+		// The outline number with the type after it, as a Gantt writes a
+		// predecessor: "1.1FS, 2SS".
+		deps := make([]string, 0, len(t.Relationships))
+		for _, r := range t.Relationships {
+			deps = append(deps, wbs[r.TaskID]+r.Type)
 		}
 		title := t.Title
 		if indent {

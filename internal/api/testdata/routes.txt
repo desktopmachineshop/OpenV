@@ -198,6 +198,7 @@ GET /api/v1/todos/{id}
 GET /api/v1/users
 GET /api/v1/users/{id}/avatar
 GET /api/v1/work-items/{id}
+GET /api/v1/work-items/{id}/todos
 GET /health
 GET /mcp
 GET /oauth/authorize

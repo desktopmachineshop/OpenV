@@ -210,6 +210,7 @@ GET /api/v1/todos/{id}: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/users: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/users/{id}/avatar: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/work-items/{id}: s5b, s5d, s5e; 2xx or 3xx in s5b, s5d, s5e
+GET /api/v1/work-items/{id}/todos: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /health: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /mcp: s5d, s5e (errors only)
 GET /oauth/authorize: s5d, s5e; 2xx or 3xx in s5d
@@ -385,4 +386,4 @@ PUT /api/v1/todos/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}/schedule: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 374 of 374 routes reached (100.0%), 360 with a 2xx or 3xx answer (96.3%); the floor is 90%, 337 routes
+the tour: 375 of 375 routes reached (100.0%), 361 with a 2xx or 3xx answer (96.3%); the floor is 90%, 338 routes
