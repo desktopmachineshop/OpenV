@@ -195,6 +195,116 @@ func (r *PlanRepository) DeleteExternalLink(taskID, otherID string) error {
 	return nil
 }
 
+// daysOf is the ISO weekdays a stored bit set names, and bitsOf the bit set
+// of a list of them.
+func daysOf(bits int) []int {
+	out := []int{}
+	for d := 1; d <= 7; d++ {
+		if bits&(1<<(d-1)) != 0 {
+			out = append(out, d)
+		}
+	}
+	return out
+}
+
+func bitsOf(days []int) int {
+	bits := 0
+	for _, d := range days {
+		if d >= 1 && d <= 7 {
+			bits |= 1 << (d - 1)
+		}
+	}
+	return bits
+}
+
+const timeOffColumns = `id, assignee_type, assignee_id, to_char(start_date, 'YYYY-MM-DD'), to_char(end_date, 'YYYY-MM-DD'), name`
+
+func (r *PlanRepository) timeOff(query, id string) ([]plan.TimeOff, error) {
+	rows, err := r.db.Query(query, id)
+	if malformedID(err) {
+		return []plan.TimeOff{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	out := []plan.TimeOff{}
+	for rows.Next() {
+		var t plan.TimeOff
+		if err := rows.Scan(&t.ID, &t.Type, &t.AssigneeID, &t.Start, &t.End, &t.Name); err != nil {
+			return nil, err
+		}
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// WorkspaceCalendar answers a workspace's working days, nil until it sets
+// them, and its time off in date order.
+func (r *PlanRepository) WorkspaceCalendar(orgID string) ([]int, []plan.TimeOff, error) {
+	var days []int
+	var bits int
+	switch err := r.db.QueryRow(`SELECT working_days FROM plan_org_calendar WHERE org_id = $1`, orgID).Scan(&bits); {
+	case err == nil:
+		days = daysOf(bits)
+	case !errors.Is(err, sql.ErrNoRows) && !malformedID(err):
+		return nil, nil, err
+	}
+	off, err := r.timeOff(`SELECT `+timeOffColumns+` FROM plan_time_off WHERE org_id = $1 ORDER BY start_date, id`, orgID)
+	return days, off, err
+}
+
+// SaveWorkspaceWorkingDays sets the days every plan of the workspace works.
+func (r *PlanRepository) SaveWorkspaceWorkingDays(orgID string, days []int) error {
+	_, err := r.db.Exec(`
+		INSERT INTO plan_org_calendar (org_id, working_days, updated_at) VALUES ($1, $2, NOW())
+		ON CONFLICT (org_id) DO UPDATE SET working_days = EXCLUDED.working_days, updated_at = NOW()`, orgID, bitsOf(days))
+	return err
+}
+
+// SaveProjectWorkingDays sets the working days of the workspace the
+// project is in.
+func (r *PlanRepository) SaveProjectWorkingDays(projectID string, days []int) error {
+	_, err := r.db.Exec(`
+		INSERT INTO plan_org_calendar (org_id, working_days, updated_at)
+		SELECT org_id, $2, NOW() FROM projects WHERE id = $1 AND org_id IS NOT NULL
+		ON CONFLICT (org_id) DO UPDATE SET working_days = EXCLUDED.working_days, updated_at = NOW()`, projectID, bitsOf(days))
+	return err
+}
+
+// ListTimeOff lists the time off of the workspace the project is in.
+func (r *PlanRepository) ListTimeOff(projectID string) ([]plan.TimeOff, error) {
+	return r.timeOff(`
+		SELECT `+timeOffColumns+` FROM plan_time_off
+		WHERE org_id = (SELECT org_id FROM projects WHERE id = $1) ORDER BY start_date, id`, projectID)
+}
+
+// AddTimeOff stores days a person or an agent is away.
+func (r *PlanRepository) AddTimeOff(orgID string, t *plan.TimeOff) error {
+	_, err := r.db.Exec(`
+		INSERT INTO plan_time_off (id, org_id, assignee_type, assignee_id, start_date, end_date, name) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		t.ID, orgID, t.Type, t.AssigneeID, t.Start, t.End, t.Name)
+	if malformedID(err) {
+		return plan.ErrResource
+	}
+	return err
+}
+
+// DeleteTimeOff removes a time-off entry of the workspace.
+func (r *PlanRepository) DeleteTimeOff(orgID, id string) error {
+	res, err := r.db.Exec(`DELETE FROM plan_time_off WHERE id = $1 AND org_id = $2`, id, orgID)
+	if malformedID(err) {
+		return plan.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return plan.ErrNotFound
+	}
+	return nil
+}
+
 // SetOrder numbers tasks among their siblings; 0 clears a task's place. A
 // task with no row of the plan yet gets one.
 func (r *PlanRepository) SetOrder(projectID string, order map[string]int) error {
@@ -230,12 +340,7 @@ func (r *PlanRepository) Settings(projectID string) (plan.Settings, error) {
 	case err != nil && !errors.Is(err, sql.ErrNoRows):
 		return out, err
 	case err == nil:
-		out.WorkingDays = []int{}
-		for d := 1; d <= 7; d++ {
-			if bits&(1<<(d-1)) != 0 {
-				out.WorkingDays = append(out.WorkingDays, d)
-			}
-		}
+		out.WorkingDays = daysOf(bits)
 		if start.Valid {
 			out.ProjectStart = &start.String
 		}
@@ -251,6 +356,15 @@ func (r *PlanRepository) Settings(projectID string) (plan.Settings, error) {
 		if baseline.Valid {
 			out.ActiveBaselineID = &baseline.String
 		}
+	}
+	// The workspace's working days, once it has set them, are the plan's.
+	var shared int
+	switch err := r.db.QueryRow(`
+		SELECT c.working_days FROM plan_org_calendar c JOIN projects p ON p.org_id = c.org_id WHERE p.id = $1`, projectID).Scan(&shared); {
+	case err == nil:
+		out.WorkingDays = daysOf(shared)
+	case !errors.Is(err, sql.ErrNoRows) && !malformedID(err):
+		return out, err
 	}
 	rows, err := r.db.Query(`SELECT to_char(day, 'YYYY-MM-DD'), name FROM plan_holidays WHERE project_id = $1 ORDER BY day`, projectID)
 	if err != nil {
@@ -270,12 +384,7 @@ func (r *PlanRepository) Settings(projectID string) (plan.Settings, error) {
 // SaveSettings stores the plan's settings whole: the row, with a bit per
 // ISO working weekday, and its holidays.
 func (r *PlanRepository) SaveSettings(projectID string, s plan.Settings) error {
-	bits := 0
-	for _, d := range s.WorkingDays {
-		if d >= 1 && d <= 7 {
-			bits |= 1 << (d - 1)
-		}
-	}
+	bits := bitsOf(s.WorkingDays)
 	return withTx(context.Background(), r.db, nil, func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`
 			INSERT INTO plan_settings (project_id, working_days, critical_slack_days, scheduling_mode, project_start,

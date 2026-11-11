@@ -21,6 +21,7 @@ DELETE /api/v1/orgs/{id}/invitations/{invId}
 DELETE /api/v1/orgs/{id}/logo
 DELETE /api/v1/orgs/{id}/members/{userId}
 DELETE /api/v1/orgs/{id}/my-runner-key
+DELETE /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}
 DELETE /api/v1/orgs/{id}/runner-session
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}
 DELETE /api/v1/projects/{id}
@@ -120,6 +121,7 @@ GET /api/v1/orgs/{id}/limits
 GET /api/v1/orgs/{id}/logo
 GET /api/v1/orgs/{id}/members
 GET /api/v1/orgs/{id}/my-runner-key
+GET /api/v1/orgs/{id}/plan-calendar
 GET /api/v1/orgs/{id}/quality-rules
 GET /api/v1/orgs/{id}/runner-pool
 GET /api/v1/orgs/{id}/runner-session
@@ -275,6 +277,7 @@ POST /api/v1/orgs/{id}/invitations
 POST /api/v1/orgs/{id}/logo
 POST /api/v1/orgs/{id}/members
 POST /api/v1/orgs/{id}/my-runner-key
+POST /api/v1/orgs/{id}/plan-calendar/time-off
 POST /api/v1/orgs/{id}/restore
 POST /api/v1/orgs/{id}/runner-session
 POST /api/v1/orgs/{id}/runner-session/extend
@@ -361,6 +364,7 @@ PUT /api/v1/orgs/{id}
 PUT /api/v1/orgs/{id}/members/me/preview
 PUT /api/v1/orgs/{id}/members/{userId}
 PUT /api/v1/orgs/{id}/plan
+PUT /api/v1/orgs/{id}/plan-calendar
 PUT /api/v1/orgs/{id}/quality-rules
 PUT /api/v1/projects/{id}
 PUT /api/v1/projects/{id}/members/{userId}

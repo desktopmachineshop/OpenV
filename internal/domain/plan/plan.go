@@ -56,6 +56,7 @@ var (
 	ErrResource          = errors.New("a resource is a user or an agent with a daily rate of 0 or more and a capacity of 1 to 1000 percent")
 	ErrInvalidCost       = errors.New("a cost or a budget is 0 or more, and a currency is at most three letters")
 	ErrTooManyBaselines  = errors.New("a plan keeps at most 11 baselines")
+	ErrTimeOff           = errors.New("time off runs for at most a year, with a name of at most 80 characters")
 	ErrSameProject       = errors.New("the two tasks are in the same project: relate them on its plan")
 	ErrImport            = errors.New("the file is not a Microsoft Project XML plan this can read")
 	ErrPosition          = errors.New("a task is placed after one of its sibling tasks")
@@ -276,6 +277,16 @@ type Repository interface {
 	ListExternalLinks(projectID string) ([]ExternalLink, error)
 	SaveExternalLink(taskID, dependsOnID, kind string, lagDays int, lagUnit string) error
 	DeleteExternalLink(taskID, otherID string) error
+	// WorkspaceCalendar answers a workspace's working days (nil until it
+	// sets them) and its time off in date order. SaveProjectWorkingDays
+	// sets the working days of the workspace a project is in.
+	WorkspaceCalendar(orgID string) ([]int, []TimeOff, error)
+	SaveWorkspaceWorkingDays(orgID string, days []int) error
+	SaveProjectWorkingDays(projectID string, days []int) error
+	// ListTimeOff lists the time off of the workspace a project is in.
+	ListTimeOff(projectID string) ([]TimeOff, error)
+	AddTimeOff(orgID string, t *TimeOff) error
+	DeleteTimeOff(orgID, id string) error
 	// SetOrder numbers tasks among their siblings: work item id to place,
 	// where 0 clears it.
 	SetOrder(projectID string, order map[string]int) error
@@ -346,6 +357,12 @@ type Service interface {
 	// RescheduleRemaining moves unstarted work that should have started
 	// by the status date to that date, and answers how many tasks moved.
 	RescheduleRemaining(projectID, actor string, now time.Time) (int, error)
+	// The workspace's plan calendar: its working days and its people's
+	// time off.
+	WorkspaceCalendar(orgID string) (WorkspaceCalendar, error)
+	SetWorkspaceWorkingDays(orgID string, days []int) ([]int, error)
+	AddTimeOff(orgID string, t TimeOff) (*TimeOff, error)
+	DeleteTimeOff(orgID, id string) error
 	// RelateExternal makes a task driven by a task of another project;
 	// UnrelateExternal removes the link, whichever way round.
 	RelateExternal(taskID, otherID, kind string, lagDays int, lagUnit, actor string) error

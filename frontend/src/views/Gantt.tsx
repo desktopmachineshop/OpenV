@@ -80,7 +80,7 @@ const useFillHeight = (min: number): [React.RefObject<HTMLDivElement>, number] =
 };
 
 /** A task opened in full, in the board's drawer, with the project's artifacts it may name. */
-const FullTask: React.FC<{ workItemId: string; projectId: string; onClose: () => void; onChanged: () => void; onDeleted: () => void }> = ({ projectId, ...drawer }) => {
+const FullTask: React.FC<{ workItemId: string; projectId: string; aside?: React.ReactNode; onClose: () => void; onChanged: () => void; onDeleted: () => void }> = ({ projectId, ...drawer }) => {
   const [artifactMap, setArtifactMap] = useState<Record<string, Artifact>>({});
   useEffect(() => {
     artifactAPI
@@ -257,20 +257,7 @@ const PlanPage: React.FC = () => {
   const openTask = (t: PlanTask) => setSelection({ kind: 'task', id: t.id });
   const openMilestone = (m: PlanMilestone) => setSelection({ kind: 'milestone', key: m.key });
   const close = () => setSelection(null);
-  const openFull = (t: PlanTask) => setFullTaskId(t.id);
-  const fullTask = fullTaskId ? (
-    <FullTask
-      workItemId={fullTaskId}
-      projectId={projectId}
-      onClose={() => setFullTaskId('')}
-      onChanged={() => void load()}
-      onDeleted={() => {
-        setFullTaskId('');
-        setSelection(null);
-        void load();
-      }}
-    />
-  ) : null;
+  const openFull = (t: PlanTask) => (setSelection({ kind: 'task', id: t.id }), setFullTaskId(t.id));
 
   const errorBanner = <ErrorBanner message={error} onDismiss={() => setError('')} />;
   if (!plan) {
@@ -318,8 +305,8 @@ const PlanPage: React.FC = () => {
       onAddTodo={(t, text, due) => run(() => planAPI.addTodo(t.id, text, due), 'Failed to add the to-do')}
       onTickTodo={(id, done) => run(() => todosAPI.setDone(id, done), 'Failed to save the to-do')}
       onSelectTask={openTask}
-      onOpenTask={openFull}
-      onClose={close}
+      onOpenTask={fullTaskId ? undefined : openFull}
+      onClose={fullTaskId ? () => setFullTaskId('') : close}
     />
   ) : selectedMilestone ? (
     <MilestonePanel
@@ -333,6 +320,21 @@ const PlanPage: React.FC = () => {
       onAssign={(taskId, key) => run(() => planAPI.schedule(taskId, { milestone: key }), 'Failed to assign the task')}
       onSelectTask={openTask}
       onClose={close}
+    />
+  ) : null;
+
+  const fullTask = fullTaskId ? (
+    <FullTask
+      workItemId={fullTaskId}
+      projectId={projectId}
+      aside={isPhone ? undefined : panel}
+      onClose={() => setFullTaskId('')}
+      onChanged={() => void load()}
+      onDeleted={() => {
+        setFullTaskId('');
+        setSelection(null);
+        void load();
+      }}
     />
   ) : null;
 
@@ -383,7 +385,6 @@ const PlanPage: React.FC = () => {
           plan={plan}
           zoom={zoom || 'weeks'}
           onZoom={setZoom}
-          onWorkingDays={(days) => run(() => planAPI.setWorkingDays(projectId, days), 'Failed to set the working days')}
           outlineWidth={isCompact ? 220 : 320}
           selectedTaskId={selectedTask?.id || ''}
           selectedMilestoneKey={selectedMilestone?.key || ''}
@@ -403,7 +404,7 @@ const PlanPage: React.FC = () => {
           busy={busy}
           touch={coarsePointer}
         />
-        {panel && !isCompact && (
+        {panel && !isCompact && !fullTaskId && (
           <div data-plan-side style={{ width: 340, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>{panel}</div>
         )}
       </div>

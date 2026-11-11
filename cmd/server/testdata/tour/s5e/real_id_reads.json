@@ -165,6 +165,7 @@
           "GET /api/v1/orgs/{id}/logo | 401: authentication required | 200 png | 200 png | 200 png | 404: workspace not found | 401: authentication required | 401: authentication required | 200 png",
           "GET /api/v1/orgs/{id}/members | 401: authentication required | 200 text[3] | 200 text[3] | 200 text[3] | 404: workspace not found | 401: authentication required | 401: authentication required | 200 text[3]",
           "GET /api/v1/orgs/{id}/my-runner-key | 401: authentication required | 200 text | 200 text | 200 text | 404: workspace not found | 401: authentication required | 401: authentication required | 200 text",
+          "GET /api/v1/orgs/{id}/plan-calendar | 401: authentication required | 200 json | 200 json | 200 json | 404: workspace not found | 401: authentication required | 401: authentication required | 200 json",
           "GET /api/v1/orgs/{id}/quality-rules | 401: authentication required | 200 json | 200 json | 200 json | 404: workspace not found | 401: authentication required | 401: authentication required | 200 json",
           "GET /api/v1/orgs/{id}/runner-pool | 401: authentication required | 403: workspace admin access required | 403: workspace admin access required | 200 text | 404: workspace not found | 401: authentication required | 401: authentication required | 200 text",
           "GET /api/v1/orgs/{id}/runner-session | 401: authentication required | 200 text | 200 text | 200 text | 404: workspace not found | 401: authentication required | 401: authentication required | 200 text",

@@ -15,6 +15,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Time off for each person.** **Workspace settings** → **Plan calendar** records the days each member is away. A plan reports a task that asks for someone while they are away, under Resources. Members record their own time off; admins anyone's.
+- **Working days are a workspace setting.** The days of the week a plan works moved from the Gantt's header to **Workspace settings** → **Plan calendar**, set by a workspace admin and shared by every project in the workspace.
+- **A task opens in the middle of the window.** The open button on a Gantt row now opens the task in a wide pane over the page, with its description, to-dos and activity beside everything the plan holds on it.
+- **A cleaner Gantt.** The paragraph of instructions under the chart is gone, so the chart has the room; the help and the tooltips say the same. A relationship's line now starts at the end of the driving task's float line instead of running over it.
 - **The V&V Assistant plans with you.** Ask the assistant to plan a piece of work and it offers cards that add tasks with dates, durations and the tasks they wait on, add milestones with their criteria, add to-dos to a task and tick them off, update a task's dates or progress, and recalculate, level or baseline the plan. As with its other cards, nothing changes until you apply one.
 - **More views of the plan.** The Gantt page can show the plan as a network diagram, a month calendar, each person's work by week, or a one-band timeline.
 - **All projects on one chart.** **All projects** shows the plan of every project in the workspace that you can read, each on its own line with its milestones.

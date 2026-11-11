@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 348
-  axios instance calls: 338 (DELETE 41, GET 134, HEAD 1, POST 110, PUT 52)
+call sites: 352
+  axios instance calls: 342 (DELETE 42, GET 135, HEAD 1, POST 111, PUT 53)
   helper calls (a function that passes its argument to the instance): 1
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 6 (3 of them axios calls)
-distinct METHOD PATH lines below: 346; server routes reached: 346
+distinct METHOD PATH lines below: 350; server routes reached: 350
 
 GET     /api/v1/admin/metrics/usage                                       adminAPI.usage
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
@@ -193,6 +193,10 @@ DELETE  /api/v1/orgs/{id}/my-runner-key                                   myRunn
 GET     /api/v1/orgs/{id}/my-runner-key                                   myRunnerKeyAPI.get
 POST    /api/v1/orgs/{id}/my-runner-key                                   myRunnerKeyAPI.create
 PUT     /api/v1/orgs/{id}/plan                                            adminAPI.setPlan
+GET     /api/v1/orgs/{id}/plan-calendar                                   planAPI.workspaceCalendar
+PUT     /api/v1/orgs/{id}/plan-calendar                                   planAPI.setWorkspaceWorkingDays
+POST    /api/v1/orgs/{id}/plan-calendar/time-off                          planAPI.addTimeOff
+DELETE  /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}              planAPI.removeTimeOff
 GET     /api/v1/orgs/{id}/quality-rules                                   qualityRulesAPI.forWorkspace
 PUT     /api/v1/orgs/{id}/quality-rules                                   qualityRulesAPI.setForWorkspace
 POST    /api/v1/orgs/{id}/restore                                         orgsAPI.restore

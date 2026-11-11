@@ -20,8 +20,9 @@ The outline on the left lists the tasks, numbered as an outline (1, 1.1,
 1.2, 2). A task with sub-tasks has an arrow that folds them away. The
 figure at the end of each row is the task's progress. Select a task's
 title, or its bar, to show it in the panel beside the chart. The small
-**open** button at the end of the row opens the task in full, as the board
-does: its description, assignee, linked artifacts, to-dos and activity. A
+**open** button at the end of the row opens the task in full, in a pane in
+the middle of the window: its description, linked artifacts, to-dos and
+activity on the left, and everything the plan holds on it on the right. A
 milestone's open button shows the milestone beside the chart.
 
 On the timeline, each task is a bar from its start to its due date:
@@ -144,12 +145,19 @@ The bar under the chart's header changes how the tasks are listed. It changes no
 **Undo and redo.** **Undo** (Ctrl+Z) takes back your last edit to a task: its dates, duration, effort, progress, parent, order and the other fields of its panel. **Redo** (Ctrl+Y) makes it again. Up to 50 edits are kept until you leave the page. Relationships drawn on the chart, milestones and the plan's settings are not undone this way, and on an automatic plan the tasks an edit moved are placed again from where they now stand. 
 ## Working days
 
-**Working days**, above the chart, has a button for each day of the week.
-The days switched on are the days the plan works: Monday to Friday until
-you change it. Switch on Saturday for a six-day week, or switch a day off
-that your team never works. A plan works at least one day.
+The days of the week a plan works are the workspace's, the same for every
+project in it: Monday to Friday until a workspace admin changes them, under
+**Workspace settings** → **Plan calendar**. Switch on Saturday there for a
+six-day week, or switch a day off that your team never works. A plan works
+at least one day.
 
-**Holidays**, beside the working days, opens the plan's calendar. Add each
+**Time off**, on the same page, lists the days each member is away. A member
+records their own and an admin anyone's. A person who is away can give no
+time on any project: a task that asks for them on those days is reported
+under **Resources** as an over-allocation, marked *while away*, and the
+task is flagged. Time off does not move a task by itself.
+
+**Calendar**, above the chart, opens the plan's own calendar. Add each
 day the plan does not work whatever its weekday, a public holiday or a
 shutdown, with a name if you like; remove one with its cross. A holiday is
 skipped exactly as a weekend day is, and shaded on the chart.

@@ -27,6 +27,7 @@ DELETE /api/v1/orgs/{id}/invitations/{invId}: org:admin
 DELETE /api/v1/orgs/{id}/logo: org:admin
 DELETE /api/v1/orgs/{id}/members/{userId}: session, org:admin|org:member
 DELETE /api/v1/orgs/{id}/my-runner-key: org:member
+DELETE /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}: org:member
 DELETE /api/v1/orgs/{id}/runner-session: org:member, runner-sessions
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: org:admin
 DELETE /api/v1/projects/{id}: project:owner
@@ -126,6 +127,7 @@ GET /api/v1/orgs/{id}/limits: org:member
 GET /api/v1/orgs/{id}/logo: org:member
 GET /api/v1/orgs/{id}/members: org:member
 GET /api/v1/orgs/{id}/my-runner-key: org:member
+GET /api/v1/orgs/{id}/plan-calendar: org:member
 GET /api/v1/orgs/{id}/quality-rules: org:member
 GET /api/v1/orgs/{id}/runner-pool: org:admin
 GET /api/v1/orgs/{id}/runner-session: org:member
@@ -281,6 +283,7 @@ POST /api/v1/orgs/{id}/invitations: org:admin
 POST /api/v1/orgs/{id}/logo: org:admin
 POST /api/v1/orgs/{id}/members: org:admin
 POST /api/v1/orgs/{id}/my-runner-key: org:member
+POST /api/v1/orgs/{id}/plan-calendar/time-off: org:member
 POST /api/v1/orgs/{id}/restore: session
 POST /api/v1/orgs/{id}/runner-session: org:member, runner-sessions
 POST /api/v1/orgs/{id}/runner-session/extend: org:member, runner-sessions
@@ -367,6 +370,7 @@ PUT /api/v1/orgs/{id}: org:admin
 PUT /api/v1/orgs/{id}/members/me/preview: org:member
 PUT /api/v1/orgs/{id}/members/{userId}: org:admin
 PUT /api/v1/orgs/{id}/plan: platform-admin
+PUT /api/v1/orgs/{id}/plan-calendar: org:admin, org:member
 PUT /api/v1/orgs/{id}/quality-rules: org:admin
 PUT /api/v1/projects/{id}: project:editor, project-visible
 PUT /api/v1/projects/{id}/members/{userId}: project:owner

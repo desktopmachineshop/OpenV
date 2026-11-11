@@ -10,6 +10,7 @@ import { OrgTeamsTab } from '../components/org/OrgTeamsTab';
 import { OrgProvidersTab } from '../components/org/OrgProvidersTab';
 import { WorkerKeysTab } from '../components/org/WorkerKeysTab';
 import { OrgUsageTab } from '../components/org/OrgUsageTab';
+import { OrgPlanCalendarTab } from '../components/org/OrgPlanCalendarTab';
 import { Chip, ErrorBanner, SettingsLayout } from '../components/ui';
 import { QualityRulesEditor, QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
 import { useViewport } from '../hooks/useViewport';
@@ -29,6 +30,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'providers', label: 'AI Providers' },
   { key: 'worker-keys', label: 'Runners' },
   { key: 'quality', label: 'Quality rules' },
+  { key: 'plan', label: 'Plan calendar' },
   { key: 'usage', label: 'Usage' },
 ];
 
@@ -616,6 +618,7 @@ export const OrgSettings: React.FC = () => {
           </div>
         )}
 
+        {tab === 'plan' && <OrgPlanCalendarTab org={org} isAdmin={isAdmin} currentUserId={currentUser?.id} />}
         {tab === 'usage' && <OrgUsageTab org={org} />}
         </div>
       </SettingsLayout>

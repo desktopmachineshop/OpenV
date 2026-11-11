@@ -57,6 +57,8 @@ type Overallocation struct {
 	Start string `json:"start"`
 	End   string `json:"end"`
 	Units int    `json:"units"`
+	// Away: they are off on a day of the run.
+	Away bool `json:"away"`
 }
 
 // ResourceLoad is a resource with the plan's work on them.
@@ -71,6 +73,8 @@ type ResourceLoad struct {
 	// Peak is the most asked of them on any day, a percentage.
 	Peak            int              `json:"peak"`
 	Overallocations []Overallocation `json:"overallocations"`
+	// TimeOff is the days they are away, from the workspace's calendar.
+	TimeOff []TimeOff `json:"time_off"`
 }
 
 // CleanAssignments checks who a task is to be assigned to: each a user or
@@ -138,11 +142,12 @@ func (b *builder) resources(p *Plan) {
 		own[a.WorkItemID] = append(own[a.WorkItemID], Assignment{Type: a.Type, ID: a.ID, Units: a.Units})
 	}
 	loads := map[string]*ResourceLoad{}
+	off := away(b.in.TimeOff)
 	days := map[string]map[string]int{}
 	get := func(kind, id string) *ResourceLoad {
 		key := kind + ":" + id
 		if loads[key] == nil {
-			loads[key] = &ResourceLoad{Resource: Resource{Type: kind, ID: id, Capacity: 100}, Overallocations: []Overallocation{}}
+			loads[key] = &ResourceLoad{Resource: Resource{Type: kind, ID: id, Capacity: 100}, Overallocations: []Overallocation{}, TimeOff: []TimeOff{}}
 			days[key] = map[string]int{}
 		}
 		return loads[key]
@@ -182,7 +187,12 @@ func (b *builder) resources(p *Plan) {
 	over := map[string]map[string]bool{}
 	for key, l := range loads {
 		l.WorkDays, l.Cost = round2(l.WorkDays), round2(l.Cost)
-		l.Overallocations, over[key] = b.overallocations(days[key], l.Capacity)
+		l.Overallocations, over[key] = b.overallocations(days[key], l.Capacity, off[key])
+		for _, t := range b.in.TimeOff {
+			if t.Type+":"+t.AssigneeID == key {
+				l.TimeOff = append(l.TimeOff, t)
+			}
+		}
 		for _, n := range days[key] {
 			if n > l.Peak {
 				l.Peak = n
@@ -256,12 +266,14 @@ func (b *builder) work(t *Task, get func(kind, id string) *ResourceLoad, days ma
 }
 
 // overallocations turns a resource's load by day into the runs of days on
-// which more than their capacity is asked, and the set of those days.
-func (b *builder) overallocations(load map[string]int, capacity int) ([]Overallocation, map[string]bool) {
+// which more than their capacity is asked, or anything at all on a day
+// they are away, and the set of those days.
+func (b *builder) overallocations(load map[string]int, capacity int, away map[string]bool) ([]Overallocation, map[string]bool) {
 	over := map[string]bool{}
 	list := []string{}
 	for day, n := range load {
-		if n > capacity {
+		// A day they are away is a day they can give nothing.
+		if n > capacity || (n > 0 && away[day]) {
 			over[day] = true
 			list = append(list, day)
 		}
@@ -276,9 +288,10 @@ func (b *builder) overallocations(load map[string]int, capacity int) ([]Overallo
 			if load[day] > out[n-1].Units {
 				out[n-1].Units = load[day]
 			}
+			out[n-1].Away = out[n-1].Away || away[day]
 			continue
 		}
-		out = append(out, Overallocation{Start: day, End: day, Units: load[day]})
+		out = append(out, Overallocation{Start: day, End: day, Units: load[day], Away: away[day]})
 	}
 	return out, over
 }

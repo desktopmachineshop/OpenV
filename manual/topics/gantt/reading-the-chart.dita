@@ -7,7 +7,7 @@
     <resourceid appname="openv-web" appid="gantt.summary"/>
   </prolog>
   <conbody>
-    <p>The outline on the left lists the tasks, numbered as an outline (1, 1.1, 1.2, 2). A task with sub-tasks has an arrow that folds them away. The figure at the end of each row is the task's progress. Select a task's title, or its bar, to show it in the panel beside the chart. The small <b>open</b> button at the end of the row opens the task in full, as the board does: its description, assignee, linked artifacts, to-dos and activity. A milestone's open button shows the milestone beside the chart.</p>
+    <p>The outline on the left lists the tasks, numbered as an outline (1, 1.1, 1.2, 2). A task with sub-tasks has an arrow that folds them away. The figure at the end of each row is the task's progress. Select a task's title, or its bar, to show it in the panel beside the chart. The small <b>open</b> button at the end of the row opens the task in full, in a pane in the middle of the window: its description, linked artifacts, to-dos and activity on the left, and everything the plan holds on it on the right. A milestone's open button shows the milestone beside the chart.</p>
     <p>On the timeline, each task is a bar from its start to its due date:</p>
     <ul>
       <li>The bar <b>fills</b> from the left as the task progresses.</li>

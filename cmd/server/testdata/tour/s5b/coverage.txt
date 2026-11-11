@@ -13,6 +13,7 @@
 
 DELETE /api/v1/evidence-bundles/{id}: 204, 403, 404; evidence
 DELETE /api/v1/evidence-files/{id}: 204, 403, 404; evidence
+DELETE /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}: 204, 404; plan
 DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}: 204, 403, 404; plan
 DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}: 204, 403; plan
 DELETE /api/v1/projects/{id}/releases/{releaseId}: 204, 403, 404, 409; target_releases
@@ -40,6 +41,7 @@ GET /api/v1/guided-sessions/{id}/messages: 200, 404; guided_sessions
 GET /api/v1/interview-sessions/{id}/transcript: 200, 404; interviews
 GET /api/v1/interviews/{id}/invites: 200, 404; interviews
 GET /api/v1/interviews/{id}/sessions: 200, 404; interviews
+GET /api/v1/orgs/{id}/plan-calendar: 200, 404; plan
 GET /api/v1/orgs/{id}/quality-rules: 200, 404; quality_profile_parties
 GET /api/v1/plan/master: 200; plan
 GET /api/v1/projects/{id}/ai-map: 200; quality_profile_parties
@@ -90,6 +92,7 @@ POST /api/v1/guided-sessions/{id}/messages: 200, 400, 403, 404; guided_sessions
 POST /api/v1/interview-invites/{id}/revoke: 204, 403, 404; interviews
 POST /api/v1/interviews/{id}/close: 200, 403, 404; interviews
 POST /api/v1/interviews/{id}/invites: 201, 400, 403, 404; interviews
+POST /api/v1/orgs/{id}/plan-calendar/time-off: 201, 400; plan
 POST /api/v1/projects/{id}/evidence-bundles: 201, 400, 403, 404; evidence
 POST /api/v1/projects/{id}/interviews: 201, 400, 403; interviews
 POST /api/v1/projects/{id}/plan/baselines: 201, 403; plan
@@ -118,6 +121,7 @@ POST /api/v1/work-items/{id}/todos: 201, 400, 403; plan
 PUT /api/v1/evidence-bundles/{id}: 200, 400, 403, 404; evidence
 PUT /api/v1/guided-sessions/{id}/step: 200, 400, 403, 404; guided_sessions
 PUT /api/v1/interviews/{id}/persona: 200, 400, 403, 404; interviews
+PUT /api/v1/orgs/{id}/plan-calendar: 200, 400; plan
 PUT /api/v1/orgs/{id}/quality-rules: 200, 400, 403; quality_profile_parties
 PUT /api/v1/projects/{id}/parties: 200, 400, 403; quality_profile_parties
 PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}: 200, 400, 404; plan
@@ -137,4 +141,4 @@ PUT /api/v1/work-items/{id}/external-links/{otherId}: 200, 400, 403; plan
 PUT /api/v1/work-items/{id}/relationships/{otherId}: 200, 400, 403; plan
 PUT /api/v1/work-items/{id}/schedule: 200, 400, 403; plan
 
-s5b: 125 of 388 routes reached (32.2%), 125 with a 2xx or 3xx answer (32.2%)
+s5b: 129 of 392 routes reached (32.9%), 129 with a 2xx or 3xx answer (32.9%)

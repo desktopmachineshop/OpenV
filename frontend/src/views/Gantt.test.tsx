@@ -483,8 +483,8 @@ describe('Plan page', () => {
     expect(container.querySelector('[data-full-task]')).toBeNull();
     await click(container.querySelector('[data-open-task="frame"]'));
     expect(container.querySelector('[data-full-task="frame"]')).toBeTruthy();
-    // The panel beside the chart stays on the task that was selected.
-    expect(container.querySelector('aside[aria-label="Task Wire the rig"]')).toBeTruthy();
+    // The opened task takes the plan's panel into its own pane: none stays beside the chart.
+    expect(container.querySelector('[data-plan-side]')).toBeNull();
   });
 
   it('gives a relationship an offset in working days, and recalculates the plan when asked', async () => {
@@ -572,7 +572,7 @@ describe('Plan page', () => {
       currency: 'GBP',
       budget: 5000,
       people: [ann, { type: 'agent', id: 'bot', name: 'Builder' }],
-      resources: [{ ...ann, daily_rate: 400, capacity: 100, tasks: 2, work_days: 12, cost: 4800, peak: 150, overallocations: [{ start: '2027-03-08', end: '2027-03-09', units: 150 }] }],
+      resources: [{ ...ann, daily_rate: 400, capacity: 100, tasks: 2, work_days: 12, cost: 4800, peak: 150, overallocations: [{ start: '2027-03-08', end: '2027-03-09', units: 150, away: false }], time_off: [] }],
       summary: { ...plan.summary, cost: 5050, overallocated: 1 },
       tasks: plan.tasks.map((t) => (t.id === 'wiring' ? { ...t, assignments: [{ type: 'user', id: 'ann', units: 100 }], cost: 2600, fixed_cost: 250, overallocated: true } : t)),
     };
@@ -614,12 +614,10 @@ describe('Plan page', () => {
     expect(container.querySelector('aside')?.textContent).toContain('Critical sub-tasks');
   });
 
-  it('sets the working days, and schedules a task with no dates from its row', async () => {
+  it('leaves the working days to the workspace, and schedules a task with no dates from its row', async () => {
     await mount();
-    const days = container.querySelector('[data-help-key="gantt.working-days"]')!;
-    expect(Array.from(days.querySelectorAll('button')).map((b) => b.getAttribute('aria-pressed'))).toEqual(Array(7).fill('true'));
-    await click(days.querySelector('button[aria-label="Sunday"]'));
-    expect(vi.mocked(planAPI.setWorkingDays)).toHaveBeenLastCalledWith('p1', [1, 2, 3, 4, 5, 6]);
+    // The working days are a workspace setting: the chart has no control for them.
+    expect(container.querySelector('[data-help-key="gantt.working-days"]')).toBeNull();
 
     const track = container.querySelector('[data-schedule-track="loose"]')!;
     await act(async () => {

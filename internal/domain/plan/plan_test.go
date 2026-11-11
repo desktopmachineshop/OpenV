@@ -233,6 +233,8 @@ type fakeRepo struct {
 	resources   []Resource
 	baselines   []*Baseline
 	external    []ExternalLink
+	shared      []int
+	timeOff     []TimeOff
 	todoTasks   map[string]string
 	milestones  map[string]*Milestone
 }
@@ -291,6 +293,28 @@ func (r *fakeRepo) SetOrder(_ string, order map[string]int) error {
 		}
 	}
 	return nil
+}
+func (r *fakeRepo) WorkspaceCalendar(string) ([]int, []TimeOff, error) {
+	return r.shared, r.timeOff, nil
+}
+func (r *fakeRepo) SaveWorkspaceWorkingDays(_ string, days []int) error {
+	r.shared, r.days = days, days
+	return nil
+}
+func (r *fakeRepo) SaveProjectWorkingDays(_ string, days []int) error { r.shared = days; return nil }
+func (r *fakeRepo) ListTimeOff(string) ([]TimeOff, error)             { return r.timeOff, nil }
+func (r *fakeRepo) AddTimeOff(_ string, t *TimeOff) error {
+	r.timeOff = append(r.timeOff, *t)
+	return nil
+}
+func (r *fakeRepo) DeleteTimeOff(_, id string) error {
+	for i, t := range r.timeOff {
+		if t.ID == id {
+			r.timeOff = append(r.timeOff[:i], r.timeOff[i+1:]...)
+			return nil
+		}
+	}
+	return ErrNotFound
 }
 func (r *fakeRepo) ListExternalLinks(string) ([]ExternalLink, error) { return r.external, nil }
 func (r *fakeRepo) SaveExternalLink(taskID, on, kind string, lag int, unit string) error {
@@ -1755,5 +1779,60 @@ func TestATaskOfAnotherProjectDrivesOne(t *testing.T) {
 	}
 	if err := svc.UnrelateExternal("a", "x"); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("removed twice: %v", err)
+	}
+}
+
+func TestWorkspaceCalendarAndTimeOff(t *testing.T) {
+	svc, repo, _, _ := newService()
+	repo.days = []int{1, 2, 3, 4, 5}
+	cal, err := svc.WorkspaceCalendar("org")
+	if err != nil || len(cal.WorkingDays) != 5 || len(cal.TimeOff) != 0 {
+		t.Fatalf("to begin with: %+v %v", cal, err)
+	}
+	if days, err := svc.SetWorkspaceWorkingDays("org", []int{6, 1, 2}); err != nil || len(days) != 3 || days[0] != 1 {
+		t.Fatalf("set: %v %v", days, err)
+	}
+	if _, err := svc.SetWorkspaceWorkingDays("org", nil); !errors.Is(err, ErrWorkingDays) {
+		t.Fatalf("no days: %v", err)
+	}
+	// A project's own route writes the workspace's days.
+	if _, err := svc.SetSettings("p", SettingsRequest{WorkingDays: &[]int{1, 2, 3, 4, 5}}); err != nil || len(repo.shared) != 5 {
+		t.Fatalf("through a project: %v %v", repo.shared, err)
+	}
+	repo.days = []int{1, 2, 3, 4, 5}
+	// Ann is on A all week at half time, and away on the Wednesday and Thursday.
+	ann := []Assignment{{Type: "user", ID: "ann", Units: 50}}
+	if err := svc.Schedule("a", ScheduleRequest{StartDate: sp("2027-03-15"), DueDate: sp("2027-03-19"), Assignments: &ann}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	for name, bad := range map[string]TimeOff{
+		"nobody":      {Start: "2027-03-17", End: "2027-03-18"},
+		"not a date":  {AssigneeID: "ann", Start: "soon", End: "2027-03-18"},
+		"backwards":   {AssigneeID: "ann", Start: "2027-03-18", End: "2027-03-17"},
+		"over a year": {AssigneeID: "ann", Start: "2027-03-18", End: "2029-03-17"},
+	} {
+		if _, err := svc.AddTimeOff("org", bad); err == nil {
+			t.Fatalf("%s was accepted", name)
+		}
+	}
+	off, err := svc.AddTimeOff("org", TimeOff{AssigneeID: "ann", Start: "2027-03-17", End: "2027-03-18", Name: " Skiing "})
+	if err != nil || off.ID == "" || off.Type != "user" || off.Name != "Skiing" {
+		t.Fatalf("time off: %+v %v", off, err)
+	}
+	p, _ := svc.Plan("p", Evidence{}, now)
+	if len(p.Resources) != 1 || len(p.Resources[0].TimeOff) != 1 || len(p.Resources[0].Overallocations) != 1 {
+		t.Fatalf("her load: %+v", p.Resources)
+	}
+	if o := p.Resources[0].Overallocations[0]; o.Start != "2027-03-17" || o.End != "2027-03-18" || !o.Away || o.Units != 50 || !task(p, "a").Overallocated {
+		t.Fatalf("asked for while away: %+v", o)
+	}
+	if err := svc.DeleteTimeOff("org", off.ID); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.DeleteTimeOff("org", off.ID); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("removed twice: %v", err)
+	}
+	if p, _ := svc.Plan("p", Evidence{}, now); len(p.Resources[0].Overallocations) != 0 {
+		t.Fatalf("back at work: %+v", p.Resources[0].Overallocations)
 	}
 }

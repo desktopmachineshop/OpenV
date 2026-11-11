@@ -138,6 +138,12 @@ func (s *DefaultService) SetSettings(projectID string, req SettingsRequest) (Set
 	if err := s.repo.SaveSettings(projectID, set); err != nil {
 		return set, err
 	}
+	// The working days are the workspace's: a change here is a change there.
+	if req.WorkingDays != nil {
+		if err := s.repo.SaveProjectWorkingDays(projectID, set.WorkingDays); err != nil {
+			return set, err
+		}
+	}
 	return set, s.autoSchedule(projectID, "")
 }
 

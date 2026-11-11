@@ -34,6 +34,7 @@ func (h *Handler) registerPlanRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/plan/level", h.LevelPlan).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/plan/import", h.ImportPlan).Methods("POST")
 	h.registerPlanMasterRoutes(router)
+	h.registerPlanWorkspaceRoutes(router)
 	router.HandleFunc("/api/v1/projects/{id}/plan/baselines", h.SavePlanBaseline).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/plan/baselines/{baselineId}", h.DeletePlanBaseline).Methods("DELETE")
 	router.HandleFunc("/api/v1/projects/{id}/plan/reschedule-remaining", h.RescheduleRemainingPlan).Methods("POST")
@@ -537,6 +538,11 @@ func (h *Handler) SetPlanSettings(w http.ResponseWriter, r *http.Request) {
 	}
 	var req plan.SettingsRequest
 	if !decodeJSON(w, r, &req) {
+		return
+	}
+	// The working days are the workspace's, so its admins set them.
+	if req.WorkingDays != nil && !h.workspaceAdmin(r, h.orgIDForProject(projectID)) {
+		writeJSONError(w, http.StatusForbidden, "the working days are the workspace's: a workspace admin sets them, under the workspace's settings")
 		return
 	}
 	settings, err := h.PlanService.SetSettings(projectID, req)

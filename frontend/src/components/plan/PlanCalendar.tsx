@@ -1,7 +1,7 @@
 // The plan's calendar, in a dialog opened from the chart's header: its
 // holidays, days it does not work whatever the weekday, and the float at or
-// below which a task counts as critical. The working weekdays are set in
-// the header itself (WorkingDays.tsx).
+// below which a task counts as critical. The working weekdays, and each
+// person's time off, are the workspace's (components/org/OrgPlanCalendarTab.tsx).
 import React, { useState } from 'react';
 import type { PlanHoliday, PlanSettings, ProjectPlan } from '../../api/client';
 
@@ -35,7 +35,7 @@ export const PlanCalendar: React.FC<{
       <div data-help-key="gantt.holidays" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <h3 style={eyebrowStyle}>Holidays · {holidays.length}</h3>
         <span style={mutedStyle}>
-          Days the plan does not work whatever the weekday: public holidays, a shutdown. Durations and float skip them, and the chart shades them.
+          Days the plan does not work whatever the weekday: public holidays, a shutdown. Durations and float skip them, and the chart shades them. The working days of the week, and each person's own time off, are set for the whole workspace: Workspace settings, Plan calendar.
         </span>
         {holidays.length > 0 && (
           <ul style={{ listStyle: 'none', margin: 0, padding: 0, maxHeight: 220, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 2 }}>
