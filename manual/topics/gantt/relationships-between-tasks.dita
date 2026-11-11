@@ -5,6 +5,7 @@
   <shortdesc>A relationship says how one task drives another. Each has one of the three types project plans use:</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="gantt.relationships"/>
+    <resourceid appname="openv-web" appid="gantt.recalculate"/>
   </prolog>
   <conbody>
     <simpletable>
@@ -24,6 +25,22 @@
       <strow><stentry>Finish to finish: this finishes after that finishes</stentry><stentry>FF</stentry><stentry>The other task</stentry></strow>
     </simpletable>
     <p>To add one, choose how this task relates to the other, then the other task. A task can have several relationships, so two tasks can together decide when a third starts: <i>Build the prototype</i> can wait for <i>Wheel guard design</i> and for <i>Electronics</i> to finish. Two tasks have one relationship between them: setting another replaces it. Change a relationship in its row, or remove it with the cross.</p>
+    <section id="offsets">
+      <title>Offsets</title>
+      <p>A relationship can carry an <b>offset</b>: a number of working days the driven task keeps after what the type asks for. <i>Start to start</i> with an offset of 5 means the second task starts five working days after the first one starts; <i>finish to start</i> with an offset of 2 leaves two working days between the first task's end and the second's start. A negative offset lets the driven task begin that many days earlier.</p>
+      <p>Set it in the <b>Offset</b> field under the relationship, on either task, and press Enter or leave the field; a new relationship takes one in the add form. A relationship whose task does not keep its offset is <b>Broken</b>, and float and the critical path count the offset as time the task cannot use.</p>
+    </section>
+    <section id="recalculating-the-plan">
+      <title>Recalculating the plan</title>
+      <p>OpenV never moves a task on its own. <b>Recalculate</b>, above the chart, moves them when you ask: every task that another task drives goes to the dates its relationships and their offsets ask for.</p>
+      <simpletable>
+        <sthead><stentry>Relationship</stentry><stentry>The driven task</stentry></sthead>
+        <strow><stentry>Finish to start</stentry><stentry>Starts the working day after the other ends, plus the offset</stentry></strow>
+        <strow><stentry>Start to start</stentry><stentry>Starts the day the other starts, plus the offset</stentry></strow>
+        <strow><stentry>Finish to finish</stentry><stentry>Ends the day the other ends, plus the offset</stentry></strow>
+      </simpletable>
+      <p>Each task keeps its duration. A task driven by several others takes the latest date any of them asks for. A task that nothing drives stays where it is, and so does a task that is done. A driven task with sub-tasks moves them, by as many working days as it has to move. The page asks before it recalculates, and then says how many tasks moved; recalculating a plan that already agrees with its relationships moves nothing.</p>
+    </section>
     <section id="drawing-a-relationship-on-the-chart">
       <title>Drawing a relationship on the chart</title>
       <p>Point at a bar, or select its task, and a small <b>+</b> appears at each end. Press one and drag to another bar: a line follows the pointer, and a label says what releasing would make. Which ends you join decides the type:</p>

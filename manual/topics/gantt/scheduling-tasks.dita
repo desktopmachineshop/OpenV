@@ -18,6 +18,7 @@
     <ul>
       <li>set its <b>Start</b> and <b>Due</b> dates, its <b>Duration</b> and its <b>Effort</b>: see <xref href="#duration-and-effort" scope="external" format="html">Duration and effort</xref>. The due date is the card's own, so the board shows the same day;</li>
       <li>make it a <b>sub-task of</b> another task, or a top-level task again;</li>
+      <li>assign it to a <b>milestone</b>: see <xref href="#assigning-tasks-to-a-milestone" scope="external" format="html">Assigning tasks to a milestone</xref>;</li>
       <li>set its <b>relationships</b> to other tasks, whichever of the two drives;</li>
       <li>add <b>to-dos</b> and tick them off;</li>
       <li>add <b>sub-tasks</b>.</li>

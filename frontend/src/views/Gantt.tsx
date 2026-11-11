@@ -75,6 +75,18 @@ const useFillHeight = (min: number): [React.RefObject<HTMLDivElement>, number] =
   return [ref, height];
 };
 
+/** A task opened in full, in the board's drawer, with the project's artifacts it may name. */
+const FullTask: React.FC<{ workItemId: string; projectId: string; onClose: () => void; onChanged: () => void; onDeleted: () => void }> = ({ projectId, ...drawer }) => {
+  const [artifactMap, setArtifactMap] = useState<Record<string, Artifact>>({});
+  useEffect(() => {
+    artifactAPI
+      .list(projectId)
+      .then((res) => setArtifactMap(Object.fromEntries((res.data || []).map((a) => [a.id, a]))))
+      .catch(() => setArtifactMap({}));
+  }, [projectId]);
+  return <WorkItemDrawer {...drawer} projectId={projectId} artifactMap={artifactMap} />;
+};
+
 const PlanPage: React.FC = () => {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const { isPhone, isCompact, coarsePointer, width } = useViewport();
@@ -89,15 +101,8 @@ const PlanPage: React.FC = () => {
   const [adding, setAdding] = useState<'task' | 'milestone' | null>(null);
   const [selection, setSelection] = useState<Selection>(null);
   // The task opened in full, in the board's drawer, and the artifacts it names.
+  const [note, setNote] = useState('');
   const [fullTaskId, setFullTaskId] = useState('');
-  const [artifactMap, setArtifactMap] = useState<Record<string, Artifact> | null>(null);
-  useEffect(() => {
-    if (!fullTaskId || artifactMap || !projectId) return;
-    artifactAPI
-      .list(projectId)
-      .then((res) => setArtifactMap(Object.fromEntries((res.data || []).map((a) => [a.id, a]))))
-      .catch(() => setArtifactMap({}));
-  }, [fullTaskId, artifactMap, projectId]);
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -140,8 +145,25 @@ const PlanPage: React.FC = () => {
 
   const schedule = (t: PlanTask, change: PlanScheduleInput) => run(() => planAPI.schedule(t.id, change), 'Failed to schedule the task');
 
-  const relate = (taskId: string, otherId: string, view: RelationshipView) =>
-    run(() => planAPI.relate(taskId, otherId, view.type, view.direction), 'Failed to relate the tasks');
+  const relate = (taskId: string, otherId: string, view: RelationshipView, lagDays = 0) =>
+    run(() => planAPI.relate(taskId, otherId, view.type, view.direction, lagDays), 'Failed to relate the tasks');
+
+  /** Moves the driven tasks to what their relationships ask, once the reader agrees, and says how many moved. */
+  const recalculate = async () => {
+    const ok = await confirm({
+      title: 'Recalculate the plan',
+      message:
+        'Move every task that another task drives to the dates its relationships and their offsets ask for? Each keeps its duration. Tasks nothing drives, and tasks that are done, stay where they are.',
+      confirmLabel: 'Recalculate',
+    });
+    if (!ok) return;
+    setNote('');
+    await run(async () => {
+      const res = await planAPI.recalculate(projectId);
+      const n = res.data.moved;
+      setNote(n === 0 ? 'Nothing moved: every task already sits where its relationships ask.' : `${n} ${n === 1 ? 'task' : 'tasks'} moved.`);
+    }, 'Failed to recalculate the plan');
+  };
 
   const addTask = async (t: NewTask, parentId?: string, inline = false) => {
     const ok = await run(async () => {
@@ -215,10 +237,9 @@ const PlanPage: React.FC = () => {
   const close = () => setSelection(null);
   const openFull = (t: PlanTask) => setFullTaskId(t.id);
   const fullTask = fullTaskId ? (
-    <WorkItemDrawer
+    <FullTask
       workItemId={fullTaskId}
       projectId={projectId}
-      artifactMap={artifactMap || {}}
       onClose={() => setFullTaskId('')}
       onChanged={() => void load()}
       onDeleted={() => {
@@ -268,7 +289,7 @@ const PlanPage: React.FC = () => {
       editable
       busy={busy}
       onSchedule={schedule}
-      onRelate={(t, otherId, view) => relate(t.id, otherId, view)}
+      onRelate={(t, otherId, view, lagDays) => relate(t.id, otherId, view, lagDays)}
       onUnrelate={(t, otherId) => run(() => planAPI.unrelate(t.id, otherId), 'Failed to remove the relationship')}
       onAddSubtask={(t, title) => addTask({ title, start: '', end: '' }, t.id)}
       onAddTodo={(t, text, due) => run(() => planAPI.addTodo(t.id, text, due), 'Failed to add the to-do')}
@@ -286,6 +307,8 @@ const PlanPage: React.FC = () => {
       busy={busy}
       onSave={saveMilestone}
       onDelete={deleteMilestone}
+      onAssign={(taskId, key) => run(() => planAPI.schedule(taskId, { milestone: key }), 'Failed to assign the task')}
+      onSelectTask={openTask}
       onClose={close}
     />
   ) : null;
@@ -321,6 +344,14 @@ const PlanPage: React.FC = () => {
         {controls}
       </div>
       {errorBanner}
+      {note && (
+        <div role="status" style={{ ...mutedStyle, display: 'flex', alignItems: 'center', gap: 8 }}>
+          {note}
+          <button type="button" onClick={() => setNote('')} aria-label="Dismiss" style={buttonStyle('ghost', { compact: true })}>
+            ✕
+          </button>
+        </div>
+      )}
       {forms}
       <div ref={fill} style={{ display: 'flex', gap: 12, alignItems: 'stretch', height: fillHeight }}>
         <PlanChartPanel
@@ -336,6 +367,7 @@ const PlanPage: React.FC = () => {
           onSelectMilestone={openMilestone}
           onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
           onLink={coarsePointer ? undefined : relate}
+          onRecalculate={recalculate}
           onAddTask={(title) => addTask({ title, start: '', end: '' }, undefined, true)}
           busy={busy}
           touch={coarsePointer}

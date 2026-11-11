@@ -23,7 +23,7 @@ func NewPlanRepository(db *sql.DB) *PlanRepository {
 // ListSchedules lists the project's task schedules.
 func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, error) {
 	rows, err := r.db.Query(`
-		SELECT work_item_id, project_id, to_char(start_date, 'YYYY-MM-DD'), parent_id, duration_days, effort_days
+		SELECT work_item_id, project_id, to_char(start_date, 'YYYY-MM-DD'), parent_id, duration_days, effort_days, milestone_key
 		FROM plan_tasks WHERE project_id = $1 ORDER BY work_item_id`, projectID)
 	if err != nil {
 		return nil, err
@@ -32,10 +32,10 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 	out := []*plan.TaskSchedule{}
 	for rows.Next() {
 		s := &plan.TaskSchedule{}
-		var start, parent sql.NullString
+		var start, parent, milestone sql.NullString
 		var duration sql.NullInt64
 		var effort sql.NullFloat64
-		if err := rows.Scan(&s.WorkItemID, &s.ProjectID, &start, &parent, &duration, &effort); err != nil {
+		if err := rows.Scan(&s.WorkItemID, &s.ProjectID, &start, &parent, &duration, &effort, &milestone); err != nil {
 			return nil, err
 		}
 		if duration.Valid {
@@ -51,6 +51,9 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 		if parent.Valid {
 			s.ParentID = &parent.String
 		}
+		if milestone.Valid && milestone.String != "" {
+			s.MilestoneKey = &milestone.String
+		}
 		out = append(out, s)
 	}
 	return out, rows.Err()
@@ -59,12 +62,14 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 // SaveSchedule inserts or replaces a task's schedule.
 func (r *PlanRepository) SaveSchedule(s *plan.TaskSchedule) error {
 	_, err := r.db.Exec(`
-		INSERT INTO plan_tasks (work_item_id, project_id, start_date, parent_id, duration_days, effort_days, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, NOW())
+		INSERT INTO plan_tasks (work_item_id, project_id, start_date, parent_id, duration_days, effort_days, milestone_key, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
 		ON CONFLICT (work_item_id) DO UPDATE
 		SET start_date = EXCLUDED.start_date, parent_id = EXCLUDED.parent_id,
-			duration_days = EXCLUDED.duration_days, effort_days = EXCLUDED.effort_days, updated_at = NOW()`,
-		s.WorkItemID, s.ProjectID, nullableString(s.StartDate), nullableString(s.ParentID), optInt(s.DurationDays), optFloat(s.EffortDays))
+			duration_days = EXCLUDED.duration_days, effort_days = EXCLUDED.effort_days,
+			milestone_key = EXCLUDED.milestone_key, updated_at = NOW()`,
+		s.WorkItemID, s.ProjectID, nullableString(s.StartDate), nullableString(s.ParentID), optInt(s.DurationDays), optFloat(s.EffortDays),
+		nullableString(s.MilestoneKey))
 	return err
 }
 
@@ -105,7 +110,7 @@ func (r *PlanRepository) SetWorkingDays(projectID string, days []int) error {
 // ListDependencies lists the project's dependencies.
 func (r *PlanRepository) ListDependencies(projectID string) ([]plan.Dependency, error) {
 	rows, err := r.db.Query(`
-		SELECT work_item_id, depends_on_id, kind FROM plan_dependencies
+		SELECT work_item_id, depends_on_id, kind, lag_days FROM plan_dependencies
 		WHERE project_id = $1 ORDER BY work_item_id, depends_on_id`, projectID)
 	if err != nil {
 		return nil, err
@@ -114,7 +119,7 @@ func (r *PlanRepository) ListDependencies(projectID string) ([]plan.Dependency, 
 	out := []plan.Dependency{}
 	for rows.Next() {
 		var d plan.Dependency
-		if err := rows.Scan(&d.WorkItemID, &d.DependsOnID, &d.Type); err != nil {
+		if err := rows.Scan(&d.WorkItemID, &d.DependsOnID, &d.Type, &d.LagDays); err != nil {
 			return nil, err
 		}
 		out = append(out, d)
@@ -134,8 +139,8 @@ func (r *PlanRepository) SetDependencies(projectID, workItemID string, relations
 				kind = plan.RelFinishToStart
 			}
 			if _, err := tx.Exec(`
-				INSERT INTO plan_dependencies (work_item_id, depends_on_id, project_id, kind)
-				VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`, workItemID, rel.DependsOnID, projectID, kind); err != nil {
+				INSERT INTO plan_dependencies (work_item_id, depends_on_id, project_id, kind, lag_days)
+				VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`, workItemID, rel.DependsOnID, projectID, kind, rel.LagDays); err != nil {
 				return err
 			}
 		}

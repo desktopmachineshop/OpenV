@@ -29,6 +29,9 @@ type TaskTodo struct {
 type TaskRelationship struct {
 	TaskID string `json:"task_id"`
 	Type   string `json:"type"`
+	// LagDays is the relationship's offset in working days: the driven task
+	// keeps that many after what the type asks for, or before when negative.
+	LagDays int `json:"lag_days"`
 	// Conflict: the dates break the relationship. Finish to start: this
 	// task starts on or before the day the other ends. Start to start: it
 	// starts before the other starts. Finish to finish: it ends before the
@@ -75,15 +78,19 @@ type Task struct {
 	CriticalSubtasks bool `json:"critical_subtasks"`
 	// Progress is a whole percentage: 100 for a task in Done, else the
 	// share of its to-dos ticked off and its sub-tasks' progress.
-	Progress      int        `json:"progress"`
-	Done          bool       `json:"done"`
-	Late          bool       `json:"late"`
-	TodosDone     int        `json:"todos_done"`
-	TodosTotal    int        `json:"todos_total"`
-	SubtasksDone  int        `json:"subtasks_done"`
-	SubtasksTotal int        `json:"subtasks_total"`
-	Todos         []TaskTodo `json:"todos"`
-	DependsOn     []string   `json:"depends_on"`
+	Progress     int  `json:"progress"`
+	Done         bool `json:"done"`
+	Late         bool `json:"late"`
+	TodosDone    int  `json:"todos_done"`
+	TodosTotal   int  `json:"todos_total"`
+	SubtasksDone int  `json:"subtasks_done"`
+	// Milestone is the key of the milestone the task counts toward: the one
+	// it is assigned to, or (MilestoneInherited) the one a task above it is.
+	Milestone          *string    `json:"milestone"`
+	MilestoneInherited bool       `json:"milestone_inherited"`
+	SubtasksTotal      int        `json:"subtasks_total"`
+	Todos              []TaskTodo `json:"todos"`
+	DependsOn          []string   `json:"depends_on"`
 	// Relationships are the tasks that drive this one, each with its type
 	// and whether the dates break it; DependsOn is the same tasks' ids.
 	Relationships []TaskRelationship `json:"relationships"`
@@ -133,6 +140,10 @@ type MilestoneProgress struct {
 	Progress int  `json:"progress"`
 	Met      bool `json:"met"`
 	Late     bool `json:"late"`
+	// Tasks are the ids of the tasks that count toward the milestone, in
+	// outline order: those assigned to it, or under a task that is, that
+	// have no sub-tasks.
+	Tasks []string `json:"tasks"`
 }
 
 // Summary counts the plan's tasks.
@@ -275,12 +286,34 @@ func Build(in Inputs, now time.Time) *Plan {
 	b.criticalPath(p)
 	b.summary(p)
 
-	p.Milestones = milestones(in, p.Tasks, today)
+	own := map[string]string{}
+	for _, sc := range in.Schedules {
+		if sc.MilestoneKey != nil {
+			own[sc.WorkItemID] = *sc.MilestoneKey
+		}
+	}
+	counted := assignMilestones(p.Tasks, own)
+	p.Milestones = milestones(in, p.Tasks, counted, today)
+	onPlan := map[string]bool{}
+	for _, m := range p.Milestones {
+		onPlan[m.Key] = true
+	}
+	var assigned []*Task
+	for _, t := range p.Tasks {
+		// A key whose milestone has gone is no milestone.
+		if t.Milestone != nil && !onPlan[*t.Milestone] {
+			t.Milestone, t.MilestoneInherited = nil, false
+		}
+		if t.Milestone != nil && t.SubtasksTotal == 0 {
+			assigned = append(assigned, t)
+		}
+	}
 	for _, m := range p.Milestones {
 		p.Start, p.End = minDate(p.Start, m.Date), maxDate(p.End, m.Date)
 	}
 	whole := indexEvidence(in.Evidence).measure(nil)
 	whole[MetricTasksDone] = tasksDone(p.Tasks, nil)
+	whole[MetricMilestoneTasks] = milestoneTasks(assigned)
 	p.Metrics = make([]MetricValue, 0, len(Metrics))
 	for _, m := range Metrics {
 		p.Metrics = append(p.Metrics, whole[m.Key])
@@ -439,10 +472,10 @@ func (b *builder) dependencies(p *Plan) {
 		if !ValidRelationshipType(d.Type) {
 			d.Type = RelFinishToStart
 		}
-		conflict := relationshipBroken(d.Type, t, on)
+		conflict := b.broken(d, t, on)
 		t.DependsOn = append(t.DependsOn, on.ID)
-		t.Relationships = append(t.Relationships, TaskRelationship{TaskID: on.ID, Type: d.Type, Conflict: conflict})
-		on.Drives = append(on.Drives, TaskRelationship{TaskID: t.ID, Type: d.Type, Conflict: conflict})
+		t.Relationships = append(t.Relationships, TaskRelationship{TaskID: on.ID, Type: d.Type, LagDays: d.LagDays, Conflict: conflict})
+		on.Drives = append(on.Drives, TaskRelationship{TaskID: t.ID, Type: d.Type, LagDays: d.LagDays, Conflict: conflict})
 		p.Dependencies = append(p.Dependencies, d)
 		if conflict {
 			t.Conflicts = append(t.Conflicts, on.ID)
@@ -470,6 +503,18 @@ func (b *builder) dependencies(p *Plan) {
 			sort.SliceStable(rels, func(i, j int) bool { return row[rels[i].TaskID] < row[rels[j].TaskID] })
 		}
 	}
+}
+
+// broken reports whether t's dates break the relationship d to on: with an
+// offset, whether t keeps fewer working days than it asks for.
+func (b *builder) broken(d Dependency, t, on *Task) bool {
+	if d.LagDays == 0 {
+		return relationshipBroken(d.Type, t, on)
+	}
+	if on.Done || t.SpanStart == nil || on.SpanStart == nil {
+		return false
+	}
+	return b.gap(on, drive{t, d.Type, d.LagDays}) < 0
 }
 
 // relationshipBroken reports whether t's dates break its relationship of
@@ -531,7 +576,7 @@ func itoa(n int) string {
 
 // milestones measures every milestone: each release of the project, then
 // the custom ones, in date order with the undated last.
-func milestones(in Inputs, tasks []*Task, today string) []MilestoneProgress {
+func milestones(in Inputs, tasks []*Task, counted map[string][]*Task, today string) []MilestoneProgress {
 	ix := indexEvidence(in.Evidence)
 	whole := ix.measure(nil)
 	order := targetreleases.NewOrder(in.Releases)
@@ -547,7 +592,7 @@ func milestones(in Inputs, tasks []*Task, today string) []MilestoneProgress {
 	position := map[string]int{}
 
 	measure := func(mp *MilestoneProgress, criteria []Criterion, values map[string]MetricValue) {
-		measureMilestone(mp, criteria, values, tasks)
+		measureMilestone(mp, criteria, values, tasks, counted[mp.Key])
 	}
 
 	for _, rel := range in.Releases {
@@ -605,16 +650,32 @@ func milestones(in Inputs, tasks []*Task, today string) []MilestoneProgress {
 	return out
 }
 
-// measureMilestone measures a milestone's criteria against values, and
-// MetricTasksDone against the tasks due by its date.
-func measureMilestone(mp *MilestoneProgress, criteria []Criterion, values map[string]MetricValue, tasks []*Task) {
-	mp.Criteria = []CriterionResult{}
+// measureMilestone measures a milestone's criteria against values,
+// MetricTasksDone against the tasks due by its date and
+// MetricMilestoneTasks against the tasks that count toward it. A milestone
+// with tasks counts them whether or not its criteria say so: finishing them
+// is part of reaching it.
+func measureMilestone(mp *MilestoneProgress, criteria []Criterion, values map[string]MetricValue, tasks, counted []*Task) {
+	mp.Criteria, mp.Tasks = []CriterionResult{}, []string{}
+	named := false
+	for _, c := range criteria {
+		named = named || c.Metric == MetricMilestoneTasks
+	}
+	for _, t := range counted {
+		mp.Tasks = append(mp.Tasks, t.ID)
+	}
+	if len(counted) > 0 && !named {
+		criteria = append(append([]Criterion{}, criteria...), Criterion{MetricMilestoneTasks, 100})
+	}
 	var sum float64
 	met := len(criteria) > 0
 	for _, c := range criteria {
 		v, ok := values[c.Metric]
-		if c.Metric == MetricTasksDone {
+		switch c.Metric {
+		case MetricTasksDone:
 			v, ok = tasksDone(tasks, mp.Date), true
+		case MetricMilestoneTasks:
+			v, ok = milestoneTasks(counted), true
 		}
 		if !ok {
 			continue

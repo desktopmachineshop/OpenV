@@ -289,6 +289,11 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
     return plan.tasks.filter((t) => t.id !== task.id && !below.has(t.id)).map((t) => taskOption(t, plan.today));
   }, [plan.tasks, plan.today, task.id]);
   const subtasks = plan.tasks.filter((t) => t.parent_id === task.id);
+  const milestones = useMemo<PickerOption[]>(
+    () => plan.milestones.map((m) => ({ value: m.key, label: m.name, meta: m.date ? shortDate(m.date, plan.today) : 'No date' })),
+    [plan.milestones, plan.today],
+  );
+  const inherited = task.milestone_inherited ? plan.milestones.find((m) => m.key === task.milestone) : undefined;
   const tone = barTone(task);
 
   return (
@@ -370,6 +375,27 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
           placeholder="Search for a task…"
           onChange={(id) => onSchedule(task, { parent_id: id })}
         />
+      </div>
+
+      <div style={sectionStyle} data-help-key="gantt.task-milestone">
+        <label htmlFor="gantt-task-milestone" style={fieldStyle}>
+          Milestone
+        </label>
+        <Picker
+          id="gantt-task-milestone"
+          value={task.milestone && !task.milestone_inherited ? task.milestone : ''}
+          options={milestones}
+          searchable
+          disabled={!editable || busy}
+          noneLabel={inherited ? `From its parent task: ${inherited.name}` : 'No milestone'}
+          placeholder="Search for a milestone…"
+          onChange={(key) => onSchedule(task, { milestone: key })}
+        />
+        <span style={mutedStyle}>
+          {inherited
+            ? `It counts toward ${inherited.name} because a task above it is assigned there. Choose a milestone to give it its own.`
+            : 'The milestone counts this task among the tasks it needs done.'}
+        </span>
       </div>
 
       <TaskRelationships plan={plan} task={task} editable={editable} busy={busy} onRelate={onRelate} onUnrelate={onUnrelate} onSelectTask={onSelectTask} />

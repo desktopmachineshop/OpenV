@@ -211,8 +211,10 @@ export const planAPI = {
   schedule: (workItemId: string, payload: PlanScheduleInput) =>
     client.put<PlanTask>(`/api/v1/work-items/${workItemId}/schedule`, payload),
   /** A relationship between two tasks, made from either one; it replaces any the pair has. */
-  relate: (workItemId: string, otherId: string, type: PlanRelationshipType, direction: PlanRelationshipDirection) =>
-    client.put<PlanTask>(`/api/v1/work-items/${workItemId}/relationships/${otherId}`, { type, direction }),
+  relate: (workItemId: string, otherId: string, type: PlanRelationshipType, direction: PlanRelationshipDirection, lagDays = 0) =>
+    client.put<PlanTask>(`/api/v1/work-items/${workItemId}/relationships/${otherId}`, { type, direction, lag_days: lagDays }),
+  /** Moves each task another drives to the dates its relationships ask for; answers how many moved. */
+  recalculate: (projectId: string) => client.post<{ moved: number }>(`/api/v1/projects/${projectId}/plan/recalculate`),
   /** Removes the relationship between two tasks, whichever way round it runs. */
   unrelate: (workItemId: string, otherId: string) => client.delete(`/api/v1/work-items/${workItemId}/relationships/${otherId}`),
   /** The days of the week the plan works: ISO weekday numbers, Monday is 1. */

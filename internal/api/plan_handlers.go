@@ -30,6 +30,7 @@ func (h *Handler) registerPlanRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/plan/milestones/{milestoneId}", h.DeletePlanMilestone).Methods("DELETE")
 	router.HandleFunc("/api/v1/projects/{id}/plan/release-milestones/{releaseId}", h.SetReleaseMilestoneCriteria).Methods("PUT")
 	router.HandleFunc("/api/v1/projects/{id}/plan/settings", h.SetPlanSettings).Methods("PUT")
+	router.HandleFunc("/api/v1/projects/{id}/plan/recalculate", h.RecalculatePlan).Methods("POST")
 	router.HandleFunc("/api/v1/work-items/{id}/schedule", h.ScheduleWorkItem).Methods("PUT")
 	router.HandleFunc("/api/v1/work-items/{id}/relationships/{otherId}", h.RelateWorkItems).Methods("PUT")
 	router.HandleFunc("/api/v1/work-items/{id}/relationships/{otherId}", h.UnrelateWorkItems).Methods("DELETE")
@@ -47,7 +48,7 @@ func writePlanError(w http.ResponseWriter, r *http.Request, err error) {
 	case errors.Is(err, plan.ErrNameRequired), errors.Is(err, plan.ErrInvalidDate), errors.Is(err, plan.ErrDateOrder),
 		errors.Is(err, plan.ErrParentSelf), errors.Is(err, plan.ErrParentCycle), errors.Is(err, plan.ErrOtherProject),
 		errors.Is(err, plan.ErrDependsOnSelf), errors.Is(err, plan.ErrDependencyCycle), errors.Is(err, plan.ErrRelationshipType), errors.Is(err, plan.ErrInvalidDuration), errors.Is(err, plan.ErrInvalidEffort),
-		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrUnknownMetric),
+		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrMilestone), errors.Is(err, plan.ErrInvalidLag), errors.Is(err, plan.ErrUnknownMetric),
 		errors.Is(err, plan.ErrInvalidTarget), errors.Is(err, plan.ErrTooManyCriteria), errors.Is(err, plan.ErrDuplicateMetric),
 		errors.Is(err, plan.ErrReleaseMilestone), errors.Is(err, plan.ErrUnsupportedFormat),
 		errors.Is(err, todos.ErrTextRequired), errors.Is(err, todos.ErrTextTooLong), errors.Is(err, todos.ErrParagraphs):
@@ -422,6 +423,23 @@ func (h *Handler) ListWorkItemTodos(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, list)
 }
 
+// RecalculatePlan moves each task that another task drives to the dates its
+// relationships, with their offsets, ask for; a task nothing drives, and a
+// task that is done, stay where they are. It answers {"moved": n}, the
+// number of tasks whose dates changed.
+func (h *Handler) RecalculatePlan(w http.ResponseWriter, r *http.Request) {
+	projectID := mux.Vars(r)["id"]
+	if !h.planReady(w, r, projectID, members.RoleEditor, true) {
+		return
+	}
+	moved, err := h.PlanService.Recalculate(projectID, Actor(r), time.Now())
+	if err != nil {
+		writePlanError(w, r, err)
+		return
+	}
+	respondJSON(w, http.StatusOK, map[string]int{"moved": moved})
+}
+
 // SetPlanSettings sets the plan's working days: {"working_days": [1, 2, 3,
 // 4, 5]}, ISO weekday numbers from Monday (1) to Sunday (7). Durations and
 // float count only those days. It answers the days as stored.
@@ -462,8 +480,8 @@ func (h *Handler) planTaskRow(w http.ResponseWriter, r *http.Request, projectID,
 // RelateWorkItems makes a relationship between the route's task and another
 // task of its project, from either end: {"type": "FS", "direction":
 // "drives"} says the route's task drives the other one, "driven_by" (the
-// default) that the other one drives it. Whatever relationship the two had
-// is replaced. It answers the route's task's row of the plan.
+// default) that the other one drives it, and "lag_days" offsets it by that
+// many working days. Whatever relationship the two had is replaced. It answers the route's task's row of the plan.
 func (h *Handler) RelateWorkItems(w http.ResponseWriter, r *http.Request) {
 	projectID, ok := h.planTask(w, r)
 	if !ok {
@@ -472,6 +490,7 @@ func (h *Handler) RelateWorkItems(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Type      string `json:"type"`
 		Direction string `json:"direction"`
+		LagDays   int    `json:"lag_days"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
@@ -481,7 +500,7 @@ func (h *Handler) RelateWorkItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := mux.Vars(r)["id"]
-	if err := h.PlanService.Relate(id, mux.Vars(r)["otherId"], req.Type, req.Direction == "drives"); err != nil {
+	if err := h.PlanService.Relate(id, mux.Vars(r)["otherId"], req.Type, req.Direction == "drives", req.LagDays); err != nil {
 		writePlanError(w, r, err)
 		return
 	}

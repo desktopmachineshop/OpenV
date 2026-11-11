@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 261; members of exported objects: 334
+exports: 261; members of exported objects: 335
 
 interface AdminUsage
 interface AdminUser
@@ -448,6 +448,7 @@ const     planAPI
             .export
             .get
             .listTodos
+            .recalculate
             .relate
             .removeMilestone
             .schedule

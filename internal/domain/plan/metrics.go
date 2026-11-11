@@ -19,6 +19,7 @@ const (
 	MetricTestsPassing         = "tests_passing"
 	MetricHazardsMitigated     = "hazards_mitigated"
 	MetricTasksDone            = "tasks_done"
+	MetricMilestoneTasks       = "milestone_tasks"
 )
 
 // Metric describes one metric to a chooser.
@@ -40,6 +41,7 @@ var Metrics = []Metric{
 	{MetricTestsPassing, "Test cases passing", "Test cases whose latest result is a pass."},
 	{MetricHazardsMitigated, "Hazards mitigated", "Hazards that at least one design item mitigates."},
 	{MetricTasksDone, "Plan tasks done", "Tasks due by the milestone's date that are in the Done column; every task when the milestone has no date."},
+	{MetricMilestoneTasks, "Milestone tasks done", "Tasks assigned to the milestone that are in the Done column. A task with sub-tasks stands for them: each of its sub-tasks counts, not the task itself."},
 }
 
 // ValidMetric reports whether key names a metric.
@@ -191,4 +193,39 @@ func tasksDone(tasks []*Task, date *string) MetricValue {
 		}
 	}
 	return value(MetricTasksDone, done, total)
+}
+
+// milestoneTasks measures MetricMilestoneTasks: of the tasks a milestone
+// counts, those that are done.
+func milestoneTasks(tasks []*Task) MetricValue {
+	done := 0
+	for _, t := range tasks {
+		if t.Done {
+			done++
+		}
+	}
+	return value(MetricMilestoneTasks, done, len(tasks))
+}
+
+// assignMilestones gives each task the milestone it counts toward: the one
+// it is assigned to, or else the one of the nearest task above it that has
+// one, so assigning a task assigns its sub-tasks. It answers, per milestone
+// key, the tasks that count: those with no sub-tasks. tasks is in outline
+// order, a parent before its sub-tasks.
+func assignMilestones(tasks []*Task, own map[string]string) map[string][]*Task {
+	byID := map[string]*Task{}
+	counted := map[string][]*Task{}
+	for _, t := range tasks {
+		byID[t.ID] = t
+		if key, ok := own[t.ID]; ok {
+			k := key
+			t.Milestone = &k
+		} else if t.ParentID != nil && byID[*t.ParentID] != nil && byID[*t.ParentID].Milestone != nil {
+			t.Milestone, t.MilestoneInherited = byID[*t.ParentID].Milestone, true
+		}
+		if t.Milestone != nil && t.SubtasksTotal == 0 {
+			counted[*t.Milestone] = append(counted[*t.Milestone], t)
+		}
+	}
+	return counted
 }

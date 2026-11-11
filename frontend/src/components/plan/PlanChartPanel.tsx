@@ -13,10 +13,12 @@ export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'sho
   zoom: Zoom;
   onZoom: (zoom: Zoom) => void;
   onWorkingDays: (days: number[]) => void;
+  /** Moves the driven tasks to the dates their relationships ask for. */
+  onRecalculate: () => void;
   onSelectMilestone: (m: PlanMilestone) => void;
 }
 
-export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onWorkingDays, onSelectMilestone, busy, touch, ...chart }) => {
+export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onWorkingDays, onRecalculate, onSelectMilestone, busy, touch, ...chart }) => {
   const [showCritical, setShowCritical] = useState(true);
   const [todaySignal, setTodaySignal] = useState(0);
   const undated = plan.milestones.filter((m) => !m.date);
@@ -29,6 +31,16 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
             action={
               <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
                 <WorkingDays days={plan.working_days} busy={busy} onChange={onWorkingDays} />
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onRecalculate}
+                  data-help-key="gantt.recalculate"
+                  title="Move each task that another drives to the dates its relationships and their offsets ask for"
+                  style={buttonStyle('secondary', { compact: true, disabled: busy })}
+                >
+                  Recalculate
+                </button>
                 <button
                   type="button"
                   aria-pressed={showCritical}

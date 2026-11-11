@@ -291,6 +291,7 @@ POST /api/v1/projects/{id}/evidence-bundles: project:editor
 POST /api/v1/projects/{id}/interviews: no-proposal-run, project:editor, project-visible
 POST /api/v1/projects/{id}/members: project:owner
 POST /api/v1/projects/{id}/plan/milestones: project:editor
+POST /api/v1/projects/{id}/plan/recalculate: project:editor
 POST /api/v1/projects/{id}/reindex-embeddings: project:owner
 POST /api/v1/projects/{id}/releases: project:editor
 POST /api/v1/projects/{id}/repo-connections: project:owner

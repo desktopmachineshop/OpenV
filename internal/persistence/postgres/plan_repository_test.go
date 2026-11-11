@@ -38,6 +38,16 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 	}
 	a, b, c := card("A"), card("B"), card("C")
 
+	key := "release:11111111-1111-1111-1111-111111111111"
+	if err := repo.SaveSchedule(&plan.TaskSchedule{WorkItemID: a, ProjectID: project, MilestoneKey: &key}); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := repo.ListSchedules(project); len(got) != 1 || got[0].MilestoneKey == nil || *got[0].MilestoneKey != key {
+		t.Fatalf("milestone key: %+v", got)
+	}
+	if _, err := db.Exec(`DELETE FROM plan_tasks WHERE work_item_id = $1`, a); err != nil {
+		t.Fatal(err)
+	}
 	if days, err := repo.WorkingDays(project); err != nil || days != nil {
 		t.Fatalf("a project that never set its working days has none stored: %v %v", days, err)
 	}
@@ -68,11 +78,11 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 		t.Fatalf("a second save replaces the first: %+v", list[0])
 	}
 
-	if err := repo.SetDependencies(project, c, []plan.Dependency{{DependsOnID: a, Type: plan.RelStartToStart}, {DependsOnID: b}}); err != nil {
+	if err := repo.SetDependencies(project, c, []plan.Dependency{{DependsOnID: a, Type: plan.RelStartToStart, LagDays: 5}, {DependsOnID: b}}); err != nil {
 		t.Fatal(err)
 	}
-	if deps, _ := repo.ListDependencies(project); len(deps) != 2 {
-		t.Fatalf("a task has several relationships: %+v", deps)
+	if deps, _ := repo.ListDependencies(project); len(deps) != 2 || deps[0].LagDays+deps[1].LagDays != 5 {
+		t.Fatalf("a task has several relationships, one with its offset: %+v", deps)
 	}
 	if err := repo.SetDependencies(project, c, []plan.Dependency{{DependsOnID: b, Type: plan.RelFinishToFinish}}); err != nil {
 		t.Fatal(err)

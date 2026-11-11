@@ -36,7 +36,7 @@ On the timeline, each task is a bar from its start to its due date:
   relationship: see [Relationships between tasks](#relationships-between-tasks).
   A dashed red arrow is a relationship the dates break; the outline marks
   that task with a warning sign.
-- With **Critical path** on, a thin line after a bar, ended by a tick, is
+- With **Critical path** on, a thin dashed line after a bar, ended by a tick, is
   the task's float: how far its end can slip before it pushes the next
   task.
 - A task with no dates yet has an empty row that you click, or drag across,
@@ -61,8 +61,8 @@ when it is longer than the window.
 The timeline scrolls sideways past both ends of the plan, further forward
 than back: use the scroll bar, a trackpad or a wheel, or drag an empty part
 of the timeline. The scroll bar under the chart belongs to the timeline, so
-it starts where the task column ends. **Today** brings today back into
-view.
+it starts where the task column ends. **Today** scrolls the timeline so that today
+sits a third of the way in from the left.
 
 The figures above the chart count the plan: how far it is complete, its
 tasks, those done, late, on the critical path and not yet scheduled, the
@@ -96,6 +96,8 @@ the row, shows everything else about it. In the panel you can:
   see [Duration and effort](#duration-and-effort). The due date is the
   card's own, so the board shows the same day;
 - make it a **sub-task of** another task, or a top-level task again;
+- assign it to a **milestone**: see
+  [Assigning tasks to a milestone](#assigning-tasks-to-a-milestone);
 - set its **relationships** to other tasks, whichever of the two drives;
 - add **to-dos** and tick them off;
 - add **sub-tasks**.
@@ -190,7 +192,7 @@ outline and an amber dot in the outline, and the arrows between them are
 amber and heavier.
 
 Float is drawn on the chart as well. After the bar of a task that drives
-another, a thin line runs to the last day its end can slip to before it
+another, a thin dashed line runs to the last day its end can slip to before it
 pushes that task, and ends in a tick, so the room between one task and the
 next is the length of the line. The line is amber on the critical path and
 grey elsewhere; a task with no room has none. A task's panel says **Critical** with any float it
@@ -234,6 +236,39 @@ when a third starts: *Build the prototype* can wait for *Wheel guard
 design* and for *Electronics* to finish. Two tasks have one relationship
 between them: setting another replaces it. Change a relationship in its
 row, or remove it with the cross.
+
+### Offsets
+
+A relationship can carry an **offset**: a number of working days the
+driven task keeps after what the type asks for. *Start to start* with an
+offset of 5 means the second task starts five working days after the first
+one starts; *finish to start* with an offset of 2 leaves two working days
+between the first task's end and the second's start. A negative offset
+lets the driven task begin that many days earlier.
+
+Set it in the **Offset** field under the relationship, on either task, and
+press Enter or leave the field; a new relationship takes one in the add
+form. A relationship whose task does not keep its offset is **Broken**, and
+float and the critical path count the offset as time the task cannot use.
+
+### Recalculating the plan
+
+OpenV never moves a task on its own. **Recalculate**, above the chart,
+moves them when you ask: every task that another task drives goes to the
+dates its relationships and their offsets ask for.
+
+| Relationship | The driven task |
+| --- | --- |
+| Finish to start | Starts the working day after the other ends, plus the offset |
+| Start to start | Starts the day the other starts, plus the offset |
+| Finish to finish | Ends the day the other ends, plus the offset |
+
+Each task keeps its duration. A task driven by several others takes the
+latest date any of them asks for. A task that nothing drives stays where
+it is, and so does a task that is done. A driven task with sub-tasks moves
+them, by as many working days as it has to move. The page asks before it
+recalculates, and then says how many tasks moved; recalculating a plan that
+already agrees with its relationships moves nothing.
 
 ### Drawing a relationship on the chart
 
@@ -292,6 +327,7 @@ measure of the project's artifacts and the percentage it must reach.
 | Test cases passing | Test cases whose latest result is a pass |
 | Hazards mitigated | Hazards that a design item mitigates |
 | Plan tasks done | Tasks due by the milestone's date that are in Done |
+| Milestone tasks done | Tasks assigned to the milestone that are in Done |
 
 **Add milestone** starts from a preset, such as **Definition complete**
 (user needs addressed: 100%), which you can change: give the milestone a
@@ -304,6 +340,33 @@ targets, averaged. It is **met** when every criterion has reached its
 target, and **late** when its date has passed and it is not met. Select a
 milestone to see each criterion's figure and the count behind it, and to
 edit or delete it. A milestone with no criteria shows no progress.
+
+## Assigning tasks to a milestone
+
+A milestone can own tasks: the work that has to be finished to reach it.
+Assign them from either side:
+
+- In a **task's** panel, choose its **Milestone**.
+- In a **milestone's** panel, under **Tasks**, choose **Assign a task**.
+  The list there shows each of the milestone's tasks with its progress,
+  and the cross takes a task off the milestone.
+
+A task belongs to one milestone at a time, which may be a release's.
+Assigning a task that has sub-tasks brings them with it: each sub-task
+counts toward the milestone unless it is given a milestone of its own. The
+milestone counts the tasks that have no sub-tasks, so a task and its
+sub-tasks are not counted twice.
+
+A milestone with tasks measures **Milestone tasks done**, the share of
+those tasks in Done, as one of its criteria, with a target of 100%. You do
+not have to add it: it is there as soon as the milestone has a task, so
+finishing the tasks is part of the milestone's percentage alongside its
+other criteria. To ask for less than all of them, add the criterion
+yourself and set its target. A milestone whose only criterion is its tasks
+is met when they are all done.
+
+**Plan tasks done** is a different measure: it counts every task of the
+plan due by the milestone's date, assigned or not.
 
 ## Release milestones
 
@@ -323,26 +386,30 @@ that release. A release marked **Released** is met.
 **Export** saves the plan as a file:
 
 - **PDF**: the chart on landscape pages, with the outline, dates, bars,
-  milestones and today's line, then the milestones with their criteria.
+  the lines between related tasks, milestones and today's line, then the
+  milestones with their criteria.
 - **Excel**: the tasks with a timeline of weeks drawn beside them, and the
   milestones on a second sheet.
 - **CSV**: the tasks, then the milestones and their criteria.
 
 In Excel and CSV, the **relationships** column names each driving task by
-its outline number and type, as in *1.1FS, 2SS*, and each task has its
+its outline number and type, with any offset after it, as in *1.1FS,
+2SS+5*, and each task has its
 duration and float in working days, its effort and whether it is critical. The PDF and
 the Excel timeline mark critical tasks in amber.
 - **JSON**: the whole plan as the app reads it.
 
 Agents read the plan with the \`get_plan\` tool, place a task, with its
-relationships, with \`schedule_work_item\`, and set the working days with
+relationships, with \`schedule_work_item\`, which also assigns it to a milestone, recalculate the plan with
+\`recalculate_plan\`, and set the working days with
 \`set_plan_working_days\`.
 
 ## On a phone
 
 A timeline needs more width than a phone has, so the phone shows the same
 plan as a schedule. Four tiles give the figures. Under **Schedule**, the
-tasks are grouped by the milestone they are due before, each with its
+tasks are grouped by the milestone they are assigned to, or else the one
+they are due before, each with its
 dates, duration and a progress bar, and **Critical** on a task with no
 float; **Milestones** lists the milestones with their
 progress. Tap a task or a milestone to open it and make the same edits as

@@ -367,6 +367,10 @@ export interface PlanTask {
   todos_total: number;
   subtasks_done: number;
   subtasks_total: number;
+  /** The key of the milestone the task counts toward: its own, or one a task above it is assigned to. */
+  milestone: string | null;
+  /** The milestone is a task above's, not this task's own. */
+  milestone_inherited: boolean;
   todos: PlanTaskTodo[];
   depends_on: string[];
   /** The tasks that drive this one, each with its type and whether the dates break it. */
@@ -383,6 +387,8 @@ export type PlanRelationshipType = 'FS' | 'SS' | 'FF';
 export interface PlanRelationship {
   task_id: string;
   type: PlanRelationshipType;
+  /** The offset: working days the driven task keeps after what the type asks for; negative leads. */
+  lag_days: number;
   conflict: boolean;
 }
 
@@ -418,6 +424,8 @@ export interface PlanMilestone {
   progress: number;
   met: boolean;
   late: boolean;
+  /** The ids of the tasks that count toward the milestone, in outline order. */
+  tasks: string[];
 }
 
 export interface PlanMetric {
@@ -461,6 +469,8 @@ export interface PlanScheduleInput {
   /** Person-days; 0 clears it. */
   effort_days?: number;
   parent_id?: string;
+  /** The key of the milestone the task is assigned to; empty takes it off. */
+  milestone?: string;
   /** Replaces the task's relationships to the tasks that drive it. */
   relationships?: { task_id: string; type: PlanRelationshipType }[];
   /** The earlier form: ids, each keeping the type it has. */

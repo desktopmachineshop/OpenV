@@ -146,7 +146,7 @@ export const PlanPhone: React.FC<PlanPhoneProps> = ({ plan, head, forms, error, 
             ) : (
               <PanelHeader title={g.title} count={g.tasks.length} />
             )}
-            {g.tasks.length === 0 && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>No task is due by this milestone.</p>}
+            {g.tasks.length === 0 && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>No task is assigned to this milestone or due by it.</p>}
             {g.tasks.map((t) => (
               <React.Fragment key={t.id}>
                 <TaskRow task={t} today={plan.today} onOpen={() => onOpenTask(t)} />

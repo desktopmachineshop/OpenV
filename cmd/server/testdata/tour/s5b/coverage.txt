@@ -90,6 +90,7 @@ POST /api/v1/interviews/{id}/invites: 201, 400, 403, 404; interviews
 POST /api/v1/projects/{id}/evidence-bundles: 201, 400, 403, 404; evidence
 POST /api/v1/projects/{id}/interviews: 201, 400, 403; interviews
 POST /api/v1/projects/{id}/plan/milestones: 201, 400, 403; plan
+POST /api/v1/projects/{id}/plan/recalculate: 200, 403; plan
 POST /api/v1/projects/{id}/releases: 201, 400, 403, 409; target_releases
 POST /api/v1/projects/{id}/test-runs: 201, 400, 403, 404; test_runs_results
 POST /api/v1/projects/{id}/todos: 201, 400, 403; todos
@@ -127,4 +128,4 @@ PUT /api/v1/work-items/{id}: 200, 400, 403, 404; work_items
 PUT /api/v1/work-items/{id}/relationships/{otherId}: 200, 400, 403; plan
 PUT /api/v1/work-items/{id}/schedule: 200, 400, 403; plan
 
-s5b: 115 of 378 routes reached (30.4%), 115 with a 2xx or 3xx answer (30.4%)
+s5b: 116 of 379 routes reached (30.6%), 116 with a 2xx or 3xx answer (30.6%)

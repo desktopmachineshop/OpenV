@@ -15,6 +15,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Offsets on relationships.** A relationship on the Gantt takes an **Offset** in working days: start to start with an offset of 5 starts the second task five working days after the first. A negative offset starts it earlier. A relationship whose task does not keep its offset shows as broken.
+- **Recalculate the plan.** **Recalculate**, above the Gantt, moves every task that another drives to the dates its relationships and offsets ask for, keeping each task's duration. It asks first and says how many tasks moved; nothing else moves a task.
+- **Assign tasks to a milestone.** A task's panel on the Gantt has a **Milestone**, and a milestone's panel lists its **Tasks** and assigns more; a release's milestone takes tasks too. A task with sub-tasks brings them with it. A milestone with tasks counts the share of them done, **Milestone tasks done**, as part of its percentage without being asked, and the criterion can be added with a lower target.
 - **Relationships on the Gantt follow the standard types.** A task's **Depends on** is now **Relationships**, and each one is **finish to start**, **start to start** or **finish to finish**. A task can have several, so two tasks can together drive when a third starts, and the arrows on the chart join the ends each type names. Relationships you had already set are finish to start, as before.
 - **Find a task by typing.** **Sub-task of** and the task chooser under **Relationships** are searchable: type part of a task's name or its outline number, however long the plan.
 - **To-dos are off the chart, and have a deadline.** A bar no longer carries a to-do count. A task's to-dos are listed in its panel beside the chart and on its card on the **Board**; add one with an optional **deadline**, the one date a to-do has, and a deadline that has passed shows in red. They still fill the task's bar.
@@ -27,13 +30,18 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 - **Relationships from either task.** A relationship is listed on both of its tasks, named from the side of the one you have open: **Finish to start** on the task that comes first is **Start to finish** on the one that follows. Add, change or remove it from either.
 - **Draw a relationship on the chart.** Point at a bar and drag the **+** at its start or end to another bar. The ends you join decide whether it is finish to start, start to start or finish to finish.
 - **Click or drag to schedule.** On the row of a task with no dates, click a date to schedule it for that day, week, month or quarter, by the scale you are at, or drag across the row for the range you want, drawn as you drag.
-- **The whole critical path, with its float.** The critical path is now the chain of tasks that decides when the plan ends, shown even where the dates leave room between two of them. After a task's bar, a thin line ended by a tick shows how far it can slip before it pushes the next task.
+- **The whole critical path, with its float.** The critical path is now the chain of tasks that decides when the plan ends, shown even where the dates leave room between two of them. After a task's bar, a thin dashed line ended by a tick shows how far it can slip before it pushes the next task.
 - **Add a task in the chart.** Type a title in the last row of the Gantt's outline and press Enter.
 - **The scroll bar belongs to the timeline.** It sits under the timeline and starts where the task column ends.
 - **The Gantt fills the window.** On a computer, the chart and the task or milestone panel beside it reach the bottom of the window, however few tasks the plan has; each scrolls on its own when it is longer.
 - **The open button opens the full task.** The small open button on a Gantt row now opens the task in full, with its description, assignee, linked artifacts and activity, as the board does. Selecting the task's title or its bar still shows it in the panel beside the chart, which has **Open the full task** too.
 - **Open a task from its row.** Each row of the Gantt, and each milestone, has a small open button.
 - **Releases is under Plan.** The **Releases** page has moved from **Verify** to **Plan** in the project menu, beside the Gantt, where each release is a milestone. Links to it are unchanged.
+
+### Bug fixes
+
+- **Today on the Gantt.** **Today** scrolls the timeline so that today sits a third of the way in from the left; it had stopped after a first small step.
+- **Lines in the PDF plan.** The PDF export of the plan draws the lines between related tasks, as the chart does.
 
 ## 0.32.0 — 2026-11-10
 

@@ -216,6 +216,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const [pointed, setPointed] = useState('');
   const body = useRef<HTMLDivElement>(null);
   const bar = useRef<HTMLDivElement>(null);
+  // The chart and the bar under it follow each other. Each remembers the
+  // offset it was last given by the other, so following never echoes back:
+  // an echo would stop a smooth scroll (Today) after its first step.
+  const given = useRef({ bar: -9, chart: -9 });
   const { link, begin: beginLink } = useLinkDrag(body, onLink);
 
   useLayoutEffect(() => {
@@ -305,7 +309,15 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       onPointerUp={endPan}
       onPointerCancel={endPan}
       onScroll={(e) => {
-        if (bar.current && bar.current.scrollLeft !== e.currentTarget.scrollLeft) bar.current.scrollLeft = e.currentTarget.scrollLeft;
+        const left = e.currentTarget.scrollLeft;
+        if (Math.abs(given.current.chart - left) < 2) {
+          given.current.chart = -9;
+          return;
+        }
+        if (bar.current && Math.abs(bar.current.scrollLeft - left) >= 1) {
+          given.current.bar = left;
+          bar.current.scrollLeft = left;
+        }
       }}
       onWheel={(e) => {
         // The chart's own horizontal bar is hidden: a sideways wheel or swipe still moves the timeline.
@@ -419,7 +431,14 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             aria-hidden
             onScroll={(e) => {
               const el = scroller.current;
-              if (el && el.scrollLeft !== e.currentTarget.scrollLeft) el.scrollLeft = e.currentTarget.scrollLeft;
+              const left = e.currentTarget.scrollLeft;
+              // A scroll the chart gave it is not the reader's: do not send it back.
+              if (Math.abs(given.current.bar - left) < 2) return;
+              given.current.bar = -9;
+              if (el && Math.abs(el.scrollLeft - left) >= 1) {
+                given.current.chart = left;
+                el.scrollLeft = left;
+              }
             }}
             style={{ flex: 1, minWidth: 0, overflowX: 'scroll', overflowY: 'hidden' }}
           >

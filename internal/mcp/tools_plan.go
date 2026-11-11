@@ -46,42 +46,22 @@ func planTools() []Tool {
 				"duration_days": str("How long the task runs, in whole working days counting its first and last; the task keeps it, so a start date sent alone moves the due date and a due date sent alone moves the start. \"0\" clears it"),
 				"effort_days":   str("The work in the task, in person-days (may be a decimal); \"0\" clears it"),
 				"parent_id":     str("Work item ID of the parent task; an empty string makes it a top-level task"),
-				"relationships": strList("The tasks that drive this one, each \"<work item id>:FS\", \":SS\" or \":FF\"; replaces the task's relationships"),
+				"milestone":     str("Key of the milestone the task is assigned to, as get_plan lists it (a milestone's id, or \"release:<release id>\"); an empty string takes it off. The milestone then counts the task among its tasks done"),
+				"relationships": strList("The tasks that drive this one, each \"<work item id>:FS\", \":SS\" or \":FF\", with an optional offset in working days after it as in \"<id>:SS:5\" (negative leads); replaces the task's relationships"),
 				"depends_on":    strList("Earlier form of relationships: work item IDs, each finish to start unless it already has a type"),
 			}),
+			Handler: scheduleWorkItem,
+		},
+		{
+			Name: "recalculate_plan",
+			Description: "Recalculate a project's plan: move each task that another task drives to the dates its relationships, " +
+				"with their offsets, ask for. A task keeps its duration; a task nothing drives, and a task that is done, stay " +
+				"where they are. Answers how many tasks moved. The platform never moves a task otherwise.",
+			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+				"project_id": str("Project ID"),
+			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
-				body := map[string]interface{}{}
-				for _, key := range []string{"start_date", "due_date", "parent_id"} {
-					if _, set := args[key]; set {
-						body[key] = strArg(args, key)
-					}
-				}
-				for _, key := range []string{"duration_days", "effort_days"} {
-					if _, set := args[key]; !set {
-						continue
-					}
-					n, err := strconv.ParseFloat(strings.TrimSpace(strArg(args, key)), 64)
-					if err != nil {
-						return "", fmt.Errorf("%s must be a number of days", key)
-					}
-					body[key] = n
-				}
-				if _, set := args["relationships"]; set {
-					rels := []map[string]string{}
-					for _, r := range strListArg(args, "relationships") {
-						id, kind, _ := strings.Cut(r, ":")
-						rels = append(rels, map[string]string{"task_id": strings.TrimSpace(id), "type": strings.TrimSpace(kind)})
-					}
-					body["relationships"] = rels
-				}
-				if _, set := args["depends_on"]; set {
-					deps := strListArg(args, "depends_on")
-					if deps == nil {
-						deps = []string{}
-					}
-					body["depends_on"] = deps
-				}
-				out, _, err := c.request("PUT", "/api/v1/work-items/"+strArg(args, "id")+"/schedule", nil, body)
+				out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/plan/recalculate", nil, nil)
 				return out, err
 			},
 		},
@@ -109,4 +89,51 @@ func planTools() []Tool {
 			},
 		},
 	}
+}
+
+// scheduleWorkItem is schedule_work_item's call: the arguments that are set,
+// as the schedule route reads them.
+func scheduleWorkItem(c *Client, args map[string]interface{}) (string, error) {
+	body := map[string]interface{}{}
+	for _, key := range []string{"start_date", "due_date", "parent_id", "milestone"} {
+		if _, set := args[key]; set {
+			body[key] = strArg(args, key)
+		}
+	}
+	for _, key := range []string{"duration_days", "effort_days"} {
+		if _, set := args[key]; !set {
+			continue
+		}
+		n, err := strconv.ParseFloat(strings.TrimSpace(strArg(args, key)), 64)
+		if err != nil {
+			return "", fmt.Errorf("%s must be a number of days", key)
+		}
+		body[key] = n
+	}
+	if _, set := args["relationships"]; set {
+		rels := []map[string]interface{}{}
+		for _, r := range strListArg(args, "relationships") {
+			id, rest, _ := strings.Cut(r, ":")
+			kind, lag, _ := strings.Cut(rest, ":")
+			rel := map[string]interface{}{"task_id": strings.TrimSpace(id), "type": strings.TrimSpace(kind)}
+			if lag = strings.TrimSpace(lag); lag != "" {
+				n, err := strconv.Atoi(lag)
+				if err != nil {
+					return "", fmt.Errorf("a relationship's offset is a whole number of working days")
+				}
+				rel["lag_days"] = n
+			}
+			rels = append(rels, rel)
+		}
+		body["relationships"] = rels
+	}
+	if _, set := args["depends_on"]; set {
+		deps := strListArg(args, "depends_on")
+		if deps == nil {
+			deps = []string{}
+		}
+		body["depends_on"] = deps
+	}
+	out, _, err := c.request("PUT", "/api/v1/work-items/"+strArg(args, "id")+"/schedule", nil, body)
+	return out, err
 }

@@ -285,6 +285,7 @@ POST /api/v1/projects/{id}/evidence-bundles
 POST /api/v1/projects/{id}/interviews
 POST /api/v1/projects/{id}/members
 POST /api/v1/projects/{id}/plan/milestones
+POST /api/v1/projects/{id}/plan/recalculate
 POST /api/v1/projects/{id}/reindex-embeddings
 POST /api/v1/projects/{id}/releases
 POST /api/v1/projects/{id}/repo-connections

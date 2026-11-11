@@ -42,9 +42,9 @@ func without(deps []Dependency, taskID, other string) []Dependency {
 	return out
 }
 
-// Relate makes a relationship between two tasks from either end. The pair
-// has one relationship, so whatever it had, either way round, is replaced.
-func (s *DefaultService) Relate(taskID, otherID, kind string, drives bool) error {
+// Relate makes a relationship between two tasks from either end, with an
+// offset of lagDays working days. The pair has one relationship, so whatever it had, either way round, is replaced.
+func (s *DefaultService) Relate(taskID, otherID, kind string, drives bool, lagDays int) error {
 	a, b, err := s.pair(taskID, otherID)
 	if err != nil {
 		return err
@@ -72,9 +72,9 @@ func (s *DefaultService) Relate(taskID, otherID, kind string, drives bool) error
 			rest = append(rest, d)
 		}
 	}
-	want := []Relationship{{TaskID: driver, Type: kind}}
+	want := []Relationship{{TaskID: driver, Type: kind, LagDays: lagDays}}
 	for _, d := range without(rest, driven, driver) {
-		want = append(want, Relationship{TaskID: d.DependsOnID, Type: d.Type})
+		want = append(want, Relationship{TaskID: d.DependsOnID, Type: d.Type, LagDays: d.LagDays})
 	}
 	next, err := checkDependencies(driven, want, rest, map[string]bool{a.ID: true, b.ID: true, driver: true}, true)
 	if err != nil {

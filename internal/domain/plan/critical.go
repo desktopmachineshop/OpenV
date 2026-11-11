@@ -30,8 +30,8 @@ func (b *builder) criticalPath(p *Plan) {
 	for _, d := range p.Dependencies {
 		t, on := b.byID[d.WorkItemID], b.byID[d.DependsOnID]
 		if t != nil && on != nil && t.SpanStart != nil && on.SpanStart != nil {
-			drives[on.ID] = append(drives[on.ID], drive{t, d.Type})
-			drivers[t.ID] = append(drivers[t.ID], drive{on, d.Type})
+			drives[on.ID] = append(drives[on.ID], drive{t, d.Type, d.LagDays})
+			drivers[t.ID] = append(drivers[t.ID], drive{on, d.Type, d.LagDays})
 		}
 	}
 	float := map[string]int{}
@@ -85,6 +85,7 @@ func (b *builder) criticalPath(p *Plan) {
 type drive struct {
 	task *Task
 	kind string
+	lag  int
 }
 
 // gap is how many working days the driving task t can slip before it pushes
@@ -92,16 +93,16 @@ type drive struct {
 func (b *builder) gap(t *Task, d drive) int {
 	switch d.kind {
 	case RelStartToStart:
-		return b.cal.Between(*t.SpanStart, *d.task.SpanStart)
+		return b.cal.Between(*t.SpanStart, *d.task.SpanStart) - d.lag
 	case RelFinishToFinish:
-		return b.cal.Between(*t.SpanEnd, *d.task.SpanEnd)
+		return b.cal.Between(*t.SpanEnd, *d.task.SpanEnd) - d.lag
 	}
 	// The working days strictly between its end and that start.
 	gap := b.cal.Between(*t.SpanEnd, *d.task.SpanStart)
 	if b.cal.Works(*d.task.SpanStart) {
 		gap--
 	}
-	return gap
+	return gap - d.lag
 }
 
 // markPath walks the critical path back from the tasks with no float: from
@@ -120,12 +121,12 @@ func (b *builder) markPath(path []*Task, drivers map[string][]drive) {
 		t.Critical = !t.Done && len(b.children[t.ID]) == 0
 		least := -1
 		for _, d := range drivers[t.ID] {
-			if g := b.gap(d.task, drive{t, d.kind}); least < 0 || g < least {
+			if g := b.gap(d.task, drive{t, d.kind, d.lag}); least < 0 || g < least {
 				least = g
 			}
 		}
 		for _, d := range drivers[t.ID] {
-			if b.gap(d.task, drive{t, d.kind}) == least {
+			if b.gap(d.task, drive{t, d.kind, d.lag}) == least {
 				path = append(path, d.task)
 			}
 		}
@@ -146,6 +147,7 @@ func (b *builder) floatUntil(t *Task, drives []drive) *string {
 		default:
 			day = addDays(*d.task.SpanStart, -1)
 		}
+		day = b.cal.Add(day, -d.lag)
 		if until == nil || day < *until {
 			until = &day
 		}

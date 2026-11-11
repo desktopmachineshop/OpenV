@@ -493,19 +493,19 @@ func TestRenderEveryFormat(t *testing.T) {
 func TestRelationshipsHaveATypeAndATaskMayHaveSeveral(t *testing.T) {
 	svc, repo, _, _ := newService()
 	rels := func(r ...Relationship) ScheduleRequest { return ScheduleRequest{Relationships: &r} }
-	if err := svc.Schedule("a", rels(Relationship{"b", "XX"}), "tester"); !errors.Is(err, ErrRelationshipType) {
+	if err := svc.Schedule("a", rels(Relationship{TaskID: "b", Type: "XX"}), "tester"); !errors.Is(err, ErrRelationshipType) {
 		t.Fatalf("an unknown type: %v", err)
 	}
 	// Two tasks drive c: it starts with a and after b finishes.
-	if err := svc.Schedule("c", rels(Relationship{"a", "ss"}, Relationship{"b", ""}, Relationship{"a", "FF"}), "tester"); err != nil {
+	if err := svc.Schedule("c", rels(Relationship{TaskID: "a", Type: "ss"}, Relationship{TaskID: "b", Type: ""}, Relationship{TaskID: "a", Type: "FF"}), "tester"); err != nil {
 		t.Fatal(err)
 	}
-	want := []Dependency{{"c", "a", RelStartToStart}, {"c", "b", RelFinishToStart}}
+	want := []Dependency{{WorkItemID: "c", DependsOnID: "a", Type: RelStartToStart}, {WorkItemID: "c", DependsOnID: "b", Type: RelFinishToStart}}
 	if got := repo.deps["c"]; len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
 		t.Fatalf("relationships %+v, want %+v (a pair has one relationship, the first named)", got, want)
 	}
 	// A loop is a loop whatever the types along it.
-	if err := svc.Schedule("a", rels(Relationship{"c", "FF"}), "tester"); !errors.Is(err, ErrDependencyCycle) {
+	if err := svc.Schedule("a", rels(Relationship{TaskID: "c", Type: "FF"}), "tester"); !errors.Is(err, ErrDependencyCycle) {
 		t.Fatalf("a loop through SS and FF: %v", err)
 	}
 	// The earlier depends_on form keeps the type a task has, and a new one is FS.
@@ -836,29 +836,29 @@ func TestARelationshipIsMadeFromEitherEnd(t *testing.T) {
 		return false
 	}
 	// From a: a drives b, finish to start. It is stored on b, the driven task.
-	if err := svc.Relate("a", "b", "fs", true); err != nil || !has("b", "a", RelFinishToStart) {
+	if err := svc.Relate("a", "b", "fs", true, 0); err != nil || !has("b", "a", RelFinishToStart) {
 		t.Fatalf("a drives b: %v %+v", err, repo.deps)
 	}
 	// From b the same relationship is changed to start to start.
-	if err := svc.Relate("b", "a", RelStartToStart, false); err != nil || !has("b", "a", RelStartToStart) || len(repo.deps["b"]) != 1 {
+	if err := svc.Relate("b", "a", RelStartToStart, false, 0); err != nil || !has("b", "a", RelStartToStart) || len(repo.deps["b"]) != 1 {
 		t.Fatalf("retyped from the other end: %v %+v", err, repo.deps)
 	}
 	// Turned round from a: now b drives a, and the old one is gone.
-	if err := svc.Relate("a", "b", RelFinishToFinish, false); err != nil || !has("a", "b", RelFinishToFinish) || len(repo.deps["b"]) != 0 {
+	if err := svc.Relate("a", "b", RelFinishToFinish, false, 0); err != nil || !has("a", "b", RelFinishToFinish) || len(repo.deps["b"]) != 0 {
 		t.Fatalf("turned round: %v %+v", err, repo.deps)
 	}
 	// c drives b, so b -> a and c -> b: a driving c would close a loop.
-	if err := svc.Relate("c", "b", "", true); err != nil || !has("b", "c", RelFinishToStart) {
+	if err := svc.Relate("c", "b", "", true, 0); err != nil || !has("b", "c", RelFinishToStart) {
 		t.Fatal(err)
 	}
-	if err := svc.Relate("a", "c", RelFinishToStart, true); !errors.Is(err, ErrDependencyCycle) {
+	if err := svc.Relate("a", "c", RelFinishToStart, true, 0); !errors.Is(err, ErrDependencyCycle) {
 		t.Fatalf("a loop: %v", err)
 	}
 	for want, call := range map[error]func() error{
-		ErrDependsOnSelf:    func() error { return svc.Relate("a", "a", "FS", true) },
-		ErrOtherProject:     func() error { return svc.Relate("a", "x", "FS", true) },
-		ErrTaskNotFound:     func() error { return svc.Relate("nope", "a", "FS", true) },
-		ErrRelationshipType: func() error { return svc.Relate("a", "c", "SF", true) },
+		ErrDependsOnSelf:    func() error { return svc.Relate("a", "a", "FS", true, 0) },
+		ErrOtherProject:     func() error { return svc.Relate("a", "x", "FS", true, 0) },
+		ErrTaskNotFound:     func() error { return svc.Relate("nope", "a", "FS", true, 0) },
+		ErrRelationshipType: func() error { return svc.Relate("a", "c", "SF", true, 0) },
 	} {
 		if err := call(); !errors.Is(err, want) {
 			t.Fatalf("want %v, got %v", want, err)
@@ -870,5 +870,156 @@ func TestARelationshipIsMadeFromEitherEnd(t *testing.T) {
 	}
 	if err := svc.Unrelate("c", "b"); err != nil || len(repo.deps["b"]) != 0 {
 		t.Fatalf("unrelate from the driver: %v %+v", err, repo.deps)
+	}
+}
+
+func TestATaskIsAssignedToAMilestoneAndCountsTowardIt(t *testing.T) {
+	in := Inputs{
+		WorkingDays: everyDay,
+		Items: []*workitems.WorkItem{
+			item("design", "Design", workitems.ColumnTodo, nil, 0),
+			item("d1", "Drive", workitems.ColumnDone, day("2027-03-05"), 1),
+			item("d2", "Guard", workitems.ColumnTodo, day("2027-03-20"), 2),
+			item("own", "Own", workitems.ColumnDone, day("2027-03-25"), 3),
+			item("free", "Free", workitems.ColumnTodo, day("2027-03-25"), 4),
+			item("lost", "Lost", workitems.ColumnTodo, day("2027-03-25"), 5),
+		},
+		Schedules: []*TaskSchedule{
+			// A folder on a milestone puts its sub-tasks on it; one of them is on another.
+			{WorkItemID: "design", MilestoneKey: sp("m1")},
+			{WorkItemID: "d1", ParentID: sp("design")},
+			{WorkItemID: "d2", ParentID: sp("design")},
+			{WorkItemID: "own", ParentID: sp("design"), MilestoneKey: sp("m2")},
+			// A milestone that has gone is no milestone.
+			{WorkItemID: "lost", MilestoneKey: sp("deleted")},
+		},
+		Milestones: []*Milestone{
+			{ID: "m1", ProjectID: "p", Name: "Review", TargetDate: sp("2027-03-21"), Criteria: []Criterion{{MetricNeedsAddressed, 100}}},
+			{ID: "m2", ProjectID: "p", Name: "Ship", TargetDate: sp("2027-04-01"), Criteria: []Criterion{{MetricMilestoneTasks, 50}}},
+			{ID: "m3", ProjectID: "p", Name: "Later", Criteria: []Criterion{}},
+		},
+	}
+	p := Build(in, now)
+	ms := map[string]MilestoneProgress{}
+	for _, m := range p.Milestones {
+		ms[m.Key] = m
+	}
+	if got := ms["m1"].Tasks; len(got) != 2 || got[0] != "d1" || got[1] != "d2" {
+		t.Fatalf("m1 counts the folder's sub-tasks left on it, not the folder: %v", got)
+	}
+	// m1's tasks join its criteria unasked: one of two done.
+	c := ms["m1"].Criteria
+	if len(c) != 2 || c[1].Metric != MetricMilestoneTasks || c[1].Count != 1 || c[1].Total != 2 || c[1].Target != 100 || ms["m1"].Met {
+		t.Fatalf("m1 criteria: %+v", c)
+	}
+	// m2 names the metric itself, with its own target.
+	if c := ms["m2"].Criteria; len(c) != 1 || c[0].Target != 50 || c[0].Count != 1 || c[0].Total != 1 || !ms["m2"].Met || ms["m2"].Progress != 100 {
+		t.Fatalf("m2 criteria: %+v", c)
+	}
+	if m := ms["m3"]; len(m.Criteria) != 0 || len(m.Tasks) != 0 {
+		t.Fatalf("a milestone with no tasks gains no criterion: %+v", m)
+	}
+	if d := task(p, "d2"); d.Milestone == nil || *d.Milestone != "m1" || !d.MilestoneInherited {
+		t.Fatalf("a sub-task takes its folder's milestone: %+v", d)
+	}
+	if o := task(p, "own"); *o.Milestone != "m2" || o.MilestoneInherited {
+		t.Fatalf("its own milestone wins: %+v", o)
+	}
+	if task(p, "free").Milestone != nil || task(p, "lost").Milestone != nil {
+		t.Fatalf("no milestone, and one that has gone, are both none")
+	}
+	for _, v := range p.Metrics {
+		if v.Metric == MetricMilestoneTasks && (v.Count != 2 || v.Total != 3) {
+			t.Fatalf("across the plan: %+v", v)
+		}
+	}
+}
+
+func TestScheduleAssignsAMilestoneOfTheSameProject(t *testing.T) {
+	svc, repo, _, _ := newService()
+	repo.milestones["m1"] = &Milestone{ID: "m1", ProjectID: "p", Name: "Review"}
+	repo.milestones["far"] = &Milestone{ID: "far", ProjectID: "other", Name: "Elsewhere"}
+	if err := svc.Schedule("a", ScheduleRequest{Milestone: sp("m1")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if got := repo.schedules["a"].MilestoneKey; got == nil || *got != "m1" {
+		t.Fatalf("assigned: %v", got)
+	}
+	// A request that names no milestone leaves it.
+	if err := svc.Schedule("a", ScheduleRequest{StartDate: sp("2027-03-08")}, "tester"); err != nil || repo.schedules["a"].MilestoneKey == nil {
+		t.Fatalf("kept: %v %v", err, repo.schedules["a"].MilestoneKey)
+	}
+	for _, key := range []string{"far", "nowhere", "release:none"} {
+		if err := svc.Schedule("a", ScheduleRequest{Milestone: sp(key)}, "tester"); !errors.Is(err, ErrMilestone) {
+			t.Fatalf("%s: %v", key, err)
+		}
+	}
+	if err := svc.Schedule("a", ScheduleRequest{Milestone: sp("")}, "tester"); err != nil || repo.schedules["a"].MilestoneKey != nil {
+		t.Fatalf("cleared: %v %v", err, repo.schedules["a"].MilestoneKey)
+	}
+}
+
+func TestARelationshipCarriesAnOffset(t *testing.T) {
+	week := []int{1, 2, 3, 4, 5}
+	in := Inputs{
+		WorkingDays: week,
+		Items: []*workitems.WorkItem{
+			// 1 March 2027 is a Monday.
+			item("a", "A", workitems.ColumnTodo, day("2027-03-05"), 0),
+			item("b", "B", workitems.ColumnTodo, day("2027-03-12"), 1),
+			item("c", "C", workitems.ColumnTodo, day("2027-03-19"), 2),
+		},
+		Schedules: []*TaskSchedule{
+			{WorkItemID: "a", StartDate: sp("2027-03-01")},
+			{WorkItemID: "b", StartDate: sp("2027-03-08")},
+			{WorkItemID: "c", StartDate: sp("2027-03-10")},
+		},
+		Dependencies: []Dependency{
+			// B starts 5 working days after A starts: 8 March exactly.
+			{WorkItemID: "b", DependsOnID: "a", Type: RelStartToStart, LagDays: 5},
+			// C starts 3 working days after B finishes: it starts too early.
+			{WorkItemID: "c", DependsOnID: "b", Type: RelFinishToStart, LagDays: 3},
+		},
+	}
+	p := Build(in, now)
+	if r := task(p, "b").Relationships[0]; r.LagDays != 5 || r.Conflict {
+		t.Fatalf("b keeps its 5 days: %+v", r)
+	}
+	if r := task(p, "c").Relationships[0]; r.LagDays != 3 || !r.Conflict {
+		t.Fatalf("c starts before its offset allows: %+v", r)
+	}
+	if f := task(p, "a").FloatDays; f == nil || *f != 0 {
+		t.Fatalf("a has no room: the offset is all it has: %v", f)
+	}
+}
+
+func TestRecalculateMovesDrivenTasksToWhatTheirRelationshipsAsk(t *testing.T) {
+	svc, repo, board, _ := newService()
+	repo.days = []int{1, 2, 3, 4, 5}
+	board.items["a"].DueDate = day("2027-03-05")
+	board.items["b"].DueDate = day("2027-03-03")
+	board.items["c"].DueDate = day("2027-03-02")
+	board.items["d"] = item("d", "D", workitems.ColumnDone, day("2027-03-02"), 3)
+	repo.schedules["a"] = &TaskSchedule{WorkItemID: "a", ProjectID: "p", StartDate: sp("2027-03-01")}
+	repo.schedules["b"] = &TaskSchedule{WorkItemID: "b", ProjectID: "p", StartDate: sp("2027-03-02")}
+	repo.schedules["c"] = &TaskSchedule{WorkItemID: "c", ProjectID: "p", StartDate: sp("2027-03-01")}
+	repo.schedules["d"] = &TaskSchedule{WorkItemID: "d", ProjectID: "p", StartDate: sp("2027-03-01")}
+	repo.deps["b"] = []Dependency{{WorkItemID: "b", DependsOnID: "a", Type: RelStartToStart, LagDays: 5}}
+	repo.deps["c"] = []Dependency{{WorkItemID: "c", DependsOnID: "b", Type: RelFinishToStart}}
+	repo.deps["d"] = []Dependency{{WorkItemID: "d", DependsOnID: "a", Type: RelFinishToStart}}
+	moved, err := svc.Recalculate("p", "tester", now)
+	if err != nil || moved != 2 {
+		t.Fatalf("moved %d: %v", moved, err)
+	}
+	at := func(id string) string {
+		return *repo.schedules[id].StartDate + ".." + board.items[id].DueDate.Format(DateLayout)
+	}
+	// A is not driven: it stays. B starts 5 working days after A starts and
+	// keeps its 2 days; C follows B's new end and keeps its 2; D is done.
+	if at("a") != "2027-03-01..2027-03-05" || at("b") != "2027-03-08..2027-03-09" || at("c") != "2027-03-10..2027-03-11" || at("d") != "2027-03-01..2027-03-02" {
+		t.Fatalf("a %s b %s c %s d %s", at("a"), at("b"), at("c"), at("d"))
+	}
+	if again, err := svc.Recalculate("p", "tester", now); err != nil || again != 0 {
+		t.Fatalf("a plan that agrees with its relationships does not move: %d %v", again, err)
 	}
 }
