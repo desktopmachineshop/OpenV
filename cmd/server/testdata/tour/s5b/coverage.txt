@@ -21,6 +21,7 @@ DELETE /api/v1/test-results/{id}/citations/{bundleId}: 204, 403, 404; evidence
 DELETE /api/v1/test-runs/{id}: 204, 403, 409; test_runs_results
 DELETE /api/v1/todos/{id}: 204, 403; todos
 DELETE /api/v1/work-items/{id}: 204, 403, 404; work_items
+DELETE /api/v1/work-items/{id}/relationships/{otherId}: 204; plan
 GET /api/v1/agent-runs/{id}: 200; guided_sessions, interviews
 GET /api/v1/artifacts: 200; guided_sessions
 GET /api/v1/artifacts/{id}: 200; guided_sessions
@@ -113,6 +114,7 @@ PUT /api/v1/orgs/{id}/quality-rules: 200, 400, 403; quality_profile_parties
 PUT /api/v1/projects/{id}/parties: 200, 400, 403; quality_profile_parties
 PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}: 200, 400, 404; plan
 PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}: 200, 404; plan
+PUT /api/v1/projects/{id}/plan/settings: 200, 400, 403; plan
 PUT /api/v1/projects/{id}/priority-detection: 200, 400, 403; quality_profile_parties
 PUT /api/v1/projects/{id}/profile: 200, 400, 403, 404; quality_profile_parties
 PUT /api/v1/projects/{id}/quality-rules: 200, 400, 403; quality_profile_parties
@@ -122,6 +124,7 @@ PUT /api/v1/shared-products/{id}/vote: 200, 403, 404; shared_products
 PUT /api/v1/test-runs/{id}: 200, 400, 403, 404, 409; test_runs_results
 PUT /api/v1/todos/{id}: 200; todos
 PUT /api/v1/work-items/{id}: 200, 400, 403, 404; work_items
+PUT /api/v1/work-items/{id}/relationships/{otherId}: 200, 400, 403; plan
 PUT /api/v1/work-items/{id}/schedule: 200, 400, 403; plan
 
-s5b: 112 of 375 routes reached (29.9%), 112 with a 2xx or 3xx answer (29.9%)
+s5b: 115 of 378 routes reached (30.4%), 115 with a 2xx or 3xx answer (30.4%)

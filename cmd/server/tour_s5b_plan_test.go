@@ -29,6 +29,10 @@ import (
 //     due date sent alone moves the start, a duration sent alone moves the
 //     due date; effort is stored beside it; a negative one is a 400; the
 //     plan reports each task's float and marks the critical path;
+//   - a relationship is made, retyped, turned round and removed from either
+//     task; a task with sub-tasks takes no dates of its own (400);
+//   - the plan's working days are set (Monday to Saturday), and durations
+//     and float count them; none, or a day 8, is a 400;
 //   - a to-do raised on a task is the project's, takes one date (its
 //     deadline), a task lists its own, and
 //     ticking one moves the task's progress and its parent's;
@@ -112,6 +116,26 @@ func planTour(tr *tour) {
 		jsonBody(`{"depends_on":["{{frame}}"]}`))
 	tr.step("Wiring back to finish to start on Frame", o, schedule, at("id", "{{wiring}}"),
 		jsonBody(`{"relationships":[{"task_id":"{{frame}}"}]}`))
+	rel := "PUT /api/v1/work-items/{id}/relationships/{otherId}"
+	tr.step("a relationship made from the driving end: Order drives Wiring, start to start", o, rel,
+		at("id", "{{order}}", "otherId", "{{wiring}}"), jsonBody(`{"type":"SS","direction":"drives"}`))
+	tr.step("the same pair turned round from Wiring's end: Wiring drives Order, finish to finish", o, rel,
+		at("id", "{{wiring}}", "otherId", "{{order}}"), jsonBody(`{"type":"FF","direction":"drives"}`))
+	tr.step("a relationship that would close a loop: 400", o, rel, at("id", "{{frame}}", "otherId", "{{wiring}}"),
+		jsonBody(`{"type":"FS","direction":"driven_by"}`))
+	tr.step("a direction that is neither: 400", o, rel, at("id", "{{order}}", "otherId", "{{wiring}}"),
+		jsonBody(`{"type":"FS","direction":"sideways"}`))
+	tr.step("Q's task: 400", o, rel, at("id", "{{order}}", "otherId", "{{q_task}}"), jsonBody(`{"type":"FS"}`))
+	tr.step("the viewer may not relate tasks: 403", viewer, rel, at("id", "{{order}}", "otherId", "{{wiring}}"), jsonBody(`{"type":"FS"}`))
+	tr.step("the relationship removed from Order's end: 204", o, "DELETE /api/v1/work-items/{id}/relationships/{otherId}",
+		at("id", "{{order}}", "otherId", "{{wiring}}"))
+	tr.step("dates on Build, which has sub-tasks: 400", o, schedule, at("id", "{{build}}"), jsonBody(`{"start_date":"2099-03-01"}`))
+
+	settings := "PUT /api/v1/projects/{id}/plan/settings"
+	tr.step("the plan works Monday to Saturday", o, settings, at("id", "{{p}}"), jsonBody(`{"working_days":[6,1,2,3,4,5]}`))
+	tr.step("no working days: 400", o, settings, at("id", "{{p}}"), jsonBody(`{"working_days":[]}`))
+	tr.step("a day 8: 400", o, settings, at("id", "{{p}}"), jsonBody(`{"working_days":[1,8]}`))
+	tr.step("the viewer may not set them: 403", viewer, settings, at("id", "{{p}}"), jsonBody(`{"working_days":[1]}`))
 	tr.step("the viewer may not schedule: 403", viewer, schedule, at("id", "{{frame}}"), jsonBody(`{"start_date":"2099-03-02"}`))
 
 	todo := "POST /api/v1/work-items/{id}/todos"

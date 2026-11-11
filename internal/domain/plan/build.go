@@ -67,6 +67,9 @@ type Task struct {
 	// the task is not done, so any slip moves the plan's end.
 	FloatDays *int `json:"float_days"`
 	Critical  bool `json:"critical"`
+	// CriticalSubtasks: the critical path runs through this task's
+	// sub-tasks, at any depth; a folded row shows it for them.
+	CriticalSubtasks bool `json:"critical_subtasks"`
 	// Progress is a whole percentage: 100 for a task in Done, else the
 	// share of its to-dos ticked off and its sub-tasks' progress.
 	Progress      int        `json:"progress"`
@@ -81,6 +84,9 @@ type Task struct {
 	// Relationships are the tasks that drive this one, each with its type
 	// and whether the dates break it; DependsOn is the same tasks' ids.
 	Relationships []TaskRelationship `json:"relationships"`
+	// Drives are the same relationships seen from the other end: the tasks
+	// this one drives, each with its type and whether the dates break it.
+	Drives []TaskRelationship `json:"drives"`
 	// Conflicts are the tasks this one depends on that finish on or after
 	// the day it starts.
 	Conflicts []string `json:"conflicts"`
@@ -143,6 +149,9 @@ type Summary struct {
 // Plan is a project's plan as computed for a reader.
 type Plan struct {
 	ProjectID string `json:"project_id"`
+	// WorkingDays are the days of the week the plan works, as ISO weekday
+	// numbers (Monday is 1, Sunday 7): the days durations and float count.
+	WorkingDays []int `json:"working_days"`
 	// Today is the day the plan was computed for (UTC), which decides late.
 	Today string `json:"today"`
 	// Start and End span every dated task and milestone.
@@ -166,10 +175,13 @@ type Inputs struct {
 	Schedules    []*TaskSchedule
 	Dependencies []Dependency
 	// TodoTasks maps an attached to-do to its task.
-	TodoTasks  map[string]string
-	Milestones []*Milestone
-	Releases   []*targetreleases.Release
-	Evidence   Evidence
+	TodoTasks map[string]string
+	// WorkingDays are the plan's working days as ISO weekday numbers; nil
+	// for the default, Monday to Friday.
+	WorkingDays []int
+	Milestones  []*Milestone
+	Releases    []*targetreleases.Release
+	Evidence    Evidence
 }
 
 // Plan loads the project's board, to-dos, schedule and milestones and
@@ -192,6 +204,9 @@ func (s *DefaultService) Plan(projectID string, ev Evidence, now time.Time) (*Pl
 		return nil, err
 	}
 	if in.TodoTasks, err = s.repo.ListTodoTasks(projectID); err != nil {
+		return nil, err
+	}
+	if in.WorkingDays, err = s.repo.WorkingDays(projectID); err != nil {
 		return nil, err
 	}
 	if in.Milestones, err = s.repo.ListMilestones(projectID); err != nil {
@@ -235,7 +250,11 @@ func Build(in Inputs, now time.Time) *Plan {
 	today := now.UTC().Format(DateLayout)
 	p := &Plan{ProjectID: in.ProjectID, Today: today, Tasks: []*Task{}, Milestones: []MilestoneProgress{},
 		Dependencies: []Dependency{}, Catalogue: Metrics}
-	b := &builder{in: in, today: today, byID: map[string]*Task{}, created: map[string]time.Time{}, children: map[string][]*Task{}}
+	b := &builder{in: in, today: today, cal: NewCalendar(in.WorkingDays), byID: map[string]*Task{}, created: map[string]time.Time{}, children: map[string][]*Task{}}
+	p.WorkingDays = DefaultWorkingDays
+	if clean, err := CleanWorkingDays(in.WorkingDays); err == nil {
+		p.WorkingDays = clean
+	}
 	b.tasks()
 	b.todos()
 	for _, t := range b.byID {
@@ -270,6 +289,7 @@ func Build(in Inputs, now time.Time) *Plan {
 type builder struct {
 	in       Inputs
 	today    string
+	cal      Calendar
 	byID     map[string]*Task
 	created  map[string]time.Time
 	children map[string][]*Task
@@ -284,7 +304,7 @@ func (b *builder) tasks() {
 		}
 		b.byID[it.ID] = &Task{ID: it.ID, Title: it.Title, Column: it.Column, AssigneeType: it.AssigneeType, AssigneeID: it.AssigneeID,
 			End: dayOf(it.DueDate), Done: it.Column == workitems.ColumnDone,
-			Todos: []TaskTodo{}, DependsOn: []string{}, Relationships: []TaskRelationship{}, Conflicts: []string{}}
+			Todos: []TaskTodo{}, DependsOn: []string{}, Relationships: []TaskRelationship{}, Drives: []TaskRelationship{}, Conflicts: []string{}}
 		b.created[it.ID] = it.CreatedAt
 	}
 	for _, sc := range b.in.Schedules {
@@ -336,6 +356,11 @@ func (b *builder) todos() {
 // settle works out a task's span and progress, its sub-tasks' first.
 func (b *builder) settle(t *Task) {
 	start, end := t.Start, t.End
+	// A task with sub-tasks is a folder for them: it has no dates, duration
+	// or effort of its own, only what they add up to.
+	if len(b.children[t.ID]) > 0 {
+		start, end, t.Start, t.End, t.DurationDays, t.EffortDays = nil, nil, nil, nil, nil, nil
+	}
 	units, sum := float64(t.TodosTotal), float64(t.TodosDone)
 	for _, c := range b.children[t.ID] {
 		b.settle(c)
@@ -346,6 +371,13 @@ func (b *builder) settle(t *Task) {
 		}
 		units++
 		sum += c.fraction
+		if c.EffortDays != nil {
+			total := *c.EffortDays
+			if t.EffortDays != nil {
+				total += *t.EffortDays
+			}
+			t.EffortDays = &total
+		}
 	}
 	if start == nil {
 		start = end
@@ -354,7 +386,7 @@ func (b *builder) settle(t *Task) {
 		end = start
 	}
 	t.SpanStart, t.SpanEnd = start, end
-	if d := spanDays(start, end); d != nil {
+	if d := spanDays(b.cal, start, end); d != nil {
 		t.DurationDays = d
 	}
 	switch {
@@ -407,6 +439,7 @@ func (b *builder) dependencies(p *Plan) {
 		conflict := relationshipBroken(d.Type, t, on)
 		t.DependsOn = append(t.DependsOn, on.ID)
 		t.Relationships = append(t.Relationships, TaskRelationship{TaskID: on.ID, Type: d.Type, Conflict: conflict})
+		on.Drives = append(on.Drives, TaskRelationship{TaskID: t.ID, Type: d.Type, Conflict: conflict})
 		p.Dependencies = append(p.Dependencies, d)
 		if conflict {
 			t.Conflicts = append(t.Conflicts, on.ID)
@@ -430,8 +463,9 @@ func (b *builder) dependencies(p *Plan) {
 	for _, t := range p.Tasks {
 		byRow(t.DependsOn)
 		byRow(t.Conflicts)
-		rels := t.Relationships
-		sort.SliceStable(rels, func(i, j int) bool { return row[rels[i].TaskID] < row[rels[j].TaskID] })
+		for _, rels := range [][]TaskRelationship{t.Relationships, t.Drives} {
+			sort.SliceStable(rels, func(i, j int) bool { return row[rels[i].TaskID] < row[rels[j].TaskID] })
+		}
 	}
 }
 
@@ -487,7 +521,7 @@ func (b *builder) criticalPath(p *Plan) {
 		if f, ok := float[t.ID]; ok {
 			return f
 		}
-		f := daysBetween(*t.SpanEnd, *last)
+		f := b.cal.Between(*t.SpanEnd, *last)
 		if visiting[t.ID] {
 			return f
 		}
@@ -496,11 +530,15 @@ func (b *builder) criticalPath(p *Plan) {
 			var gap int
 			switch d.kind {
 			case RelStartToStart:
-				gap = daysBetween(*t.SpanStart, *d.task.SpanStart)
+				gap = b.cal.Between(*t.SpanStart, *d.task.SpanStart)
 			case RelFinishToFinish:
-				gap = daysBetween(*t.SpanEnd, *d.task.SpanEnd)
+				gap = b.cal.Between(*t.SpanEnd, *d.task.SpanEnd)
 			default:
-				gap = daysBetween(*t.SpanEnd, *d.task.SpanStart) - 1
+				// The working days strictly between its end and that start.
+				gap = b.cal.Between(*t.SpanEnd, *d.task.SpanStart)
+				if b.cal.Works(*d.task.SpanStart) {
+					gap--
+				}
 			}
 			if g := gap + slack(d.task); g < f {
 				f = g
@@ -519,7 +557,15 @@ func (b *builder) criticalPath(p *Plan) {
 		}
 		f := slack(t)
 		t.FloatDays = &f
-		t.Critical = f == 0 && !t.Done
+		// A task with sub-tasks is not itself on the path: its sub-tasks are.
+		t.Critical = f == 0 && !t.Done && len(b.children[t.ID]) == 0
+	}
+	// A folder knows when the path runs through it, at any depth.
+	for i := len(p.Tasks) - 1; i >= 0; i-- {
+		t := p.Tasks[i]
+		if (t.Critical || t.CriticalSubtasks) && t.ParentID != nil {
+			b.byID[*t.ParentID].CriticalSubtasks = true
+		}
 	}
 }
 
@@ -537,7 +583,7 @@ func (b *builder) summary(p *Plan) {
 		if t.Critical {
 			p.Summary.Critical++
 		}
-		if t.EffortDays != nil {
+		if t.EffortDays != nil && t.SubtasksTotal == 0 {
 			p.Summary.EffortDays += *t.EffortDays
 		}
 		if t.SpanStart == nil {

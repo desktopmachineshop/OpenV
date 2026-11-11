@@ -132,4 +132,5 @@ var migrations = []Migration{
 	{Version: 75, Name: "plan", Run: m0075Plan},
 	{Version: 76, Name: "plan_relationship_types", Run: m0076PlanRelationshipTypes},
 	{Version: 77, Name: "plan_duration_effort", Run: m0077PlanDurationEffort},
+	{Version: 78, Name: "plan_settings", Run: m0078PlanSettings},
 }

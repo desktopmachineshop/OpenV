@@ -51,6 +51,8 @@ var (
 	ErrDependencyCycle   = errors.New("these dependencies would make a loop")
 	ErrInvalidDuration   = errors.New("a duration is a whole number of days, 1 or more")
 	ErrInvalidEffort     = errors.New("effort is a number of days, 0 or more")
+	ErrWorkingDays       = errors.New("working days are weekday numbers from 1 (Monday) to 7 (Sunday), at least one")
+	ErrParentDates       = errors.New("a task with sub-tasks takes its dates, duration and effort from them")
 	ErrRelationshipType  = errors.New("a relationship is FS (finish to start), SS (start to start) or FF (finish to finish)")
 	ErrUnknownMetric     = errors.New("unknown criterion metric")
 	ErrInvalidTarget     = errors.New("a criterion's target is a percentage from 1 to 100")
@@ -170,6 +172,10 @@ type Repository interface {
 	// SaveSchedule inserts or replaces a task's schedule.
 	SaveSchedule(s *TaskSchedule) error
 	ListDependencies(projectID string) ([]Dependency, error)
+	// WorkingDays returns the plan's working days as ISO weekday numbers,
+	// or nil when the project has never set them.
+	WorkingDays(projectID string) ([]int, error)
+	SetWorkingDays(projectID string, days []int) error
 	// SetDependencies replaces a task's relationships; each entry's
 	// DependsOnID and Type are read.
 	SetDependencies(projectID, workItemID string, relationships []Dependency) error
@@ -210,6 +216,15 @@ type Service interface {
 	Plan(projectID string, ev Evidence, now time.Time) (*Plan, error)
 	// Schedule changes a task's dates, parent and dependencies.
 	Schedule(workItemID string, req ScheduleRequest, actor string) error
+	// SetWorkingDays sets which days of the week the plan works.
+	SetWorkingDays(projectID string, days []int) ([]int, error)
+	// Relate makes a relationship between two tasks of one project, from
+	// either end: drives says the task drives the other one (else it is
+	// driven by it). Any relationship the pair already has is replaced.
+	Relate(taskID, otherID, kind string, drives bool) error
+	// Unrelate removes the relationship between two tasks, whichever way
+	// it runs.
+	Unrelate(taskID, otherID string) error
 	// AddTodo raises a to-do on a task.
 	AddTodo(workItemID, orgID, text string, due *time.Time, createdBy *string) (*todos.Todo, error)
 	// TaskTodos lists the to-dos on a task, open ones first.
@@ -318,23 +333,12 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 		}
 	}
 
-	was := dayOf(item.DueDate)
-	start, due, duration, err := placeDates(current, was, req)
+	start, due, duration, effort, err := s.placeTask(item, current, schedules, req)
 	if err != nil {
 		return err
 	}
+	was := dayOf(item.DueDate)
 	dueChanged := (due == nil) != (was == nil) || (due != nil && *due != *was)
-	effort := current.EffortDays
-	if req.EffortDays != nil {
-		switch {
-		case *req.EffortDays < 0:
-			return ErrInvalidEffort
-		case *req.EffortDays == 0:
-			effort = nil
-		default:
-			effort = req.EffortDays
-		}
-	}
 
 	parent := current.ParentID
 	if req.ParentID != nil {
@@ -350,7 +354,7 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 		if err != nil {
 			return err
 		}
-		if relationships, err = checkDependencies(item.ID, wantedRelationships(item.ID, req, deps), deps, onBoard); err != nil {
+		if relationships, err = checkDependencies(item.ID, wantedRelationships(item.ID, req, deps), deps, onBoard, false); err != nil {
 			return err
 		}
 	}
@@ -385,26 +389,46 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 	return nil
 }
 
-// daysBetween is how many days b is after a; both are YYYY-MM-DD.
-func daysBetween(a, b string) int {
-	ta, _ := time.Parse(DateLayout, a)
-	tb, _ := time.Parse(DateLayout, b)
-	return int(tb.Sub(ta).Hours() / 24)
+// placeTask works out a task's start, due date, duration and effort from a
+// request. A task with sub-tasks is a folder for them: its dates, duration
+// and effort are theirs, so none can be set on it.
+func (s *DefaultService) placeTask(item *workitems.WorkItem, current *TaskSchedule, schedules []*TaskSchedule,
+	req ScheduleRequest) (start, due *string, duration *int, effort *float64, err error) {
+	hasSubtasks := false
+	for _, sc := range schedules {
+		hasSubtasks = hasSubtasks || (sc.ParentID != nil && *sc.ParentID == item.ID)
+	}
+	if hasSubtasks && (req.StartDate != nil || req.DueDate != nil || req.DurationDays != nil || req.EffortDays != nil) {
+		return nil, nil, nil, nil, ErrParentDates
+	}
+	days, err := s.repo.WorkingDays(item.ProjectID)
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	if start, due, duration, err = placeDates(NewCalendar(days), current, dayOf(item.DueDate), req); err != nil {
+		return nil, nil, nil, nil, err
+	}
+	effort = current.EffortDays
+	if req.EffortDays != nil {
+		switch {
+		case *req.EffortDays < 0:
+			return nil, nil, nil, nil, ErrInvalidEffort
+		case *req.EffortDays == 0:
+			effort = nil
+		default:
+			effort = req.EffortDays
+		}
+	}
+	return start, due, duration, effort, nil
 }
 
-// shiftDay is the day n days after d.
-func shiftDay(d string, n int) *string {
-	t, _ := time.Parse(DateLayout, d)
-	out := t.AddDate(0, 0, n).Format(DateLayout)
-	return &out
-}
-
-// spanDays is a task's length from start to end, counting both days.
-func spanDays(start, end *string) *int {
+// spanDays is a task's duration from start to end in the calendar's
+// working days, counting both ends.
+func spanDays(cal Calendar, start, end *string) *int {
 	if start == nil || end == nil {
 		return nil
 	}
-	n := daysBetween(*start, *end) + 1
+	n := cal.Span(*start, *end)
 	return &n
 }
 
@@ -413,10 +437,10 @@ func spanDays(start, end *string) *int {
 // date sent alone drags the other along, and a duration sent alone moves
 // the due date, or the start of a task that has only a due date. Both dates
 // sent together decide the duration.
-func placeDates(current *TaskSchedule, was *string, req ScheduleRequest) (start, due *string, duration *int, err error) {
+func placeDates(cal Calendar, current *TaskSchedule, was *string, req ScheduleRequest) (start, due *string, duration *int, err error) {
 	start, due = current.StartDate, was
 	duration = current.DurationDays
-	if d := spanDays(start, due); d != nil {
+	if d := spanDays(cal, start, due); d != nil {
 		duration = d
 	}
 	if req.StartDate != nil {
@@ -444,17 +468,20 @@ func placeDates(current *TaskSchedule, was *string, req ScheduleRequest) (start,
 		// Both ends are given: they decide the length.
 	case duration == nil:
 	case req.DueDate != nil && due != nil:
-		start = shiftDay(*due, 1-*duration)
+		v := cal.Start(*due, *duration)
+		start = &v
 	case start != nil && (req.StartDate != nil || req.DurationDays != nil):
-		due = shiftDay(*start, *duration-1)
+		v := cal.End(*start, *duration)
+		due = &v
 	case due != nil && req.DurationDays != nil:
-		start = shiftDay(*due, 1-*duration)
+		v := cal.Start(*due, *duration)
+		start = &v
 	}
 	if start != nil && due != nil {
 		if *start > *due {
 			return nil, nil, nil, ErrDateOrder
 		}
-		duration = spanDays(start, due)
+		duration = spanDays(cal, start, due)
 	}
 	return start, due, duration, nil
 }
@@ -506,7 +533,7 @@ func wantedRelationships(id string, req ScheduleRequest, existing []Dependency) 
 // on the project's board, none to id itself, each of a known type, and none
 // to a task that id already drives, whatever the types along the way. A task
 // named twice keeps its first entry.
-func checkDependencies(id string, want []Relationship, existing []Dependency, onBoard map[string]bool) ([]Dependency, error) {
+func checkDependencies(id string, want []Relationship, existing []Dependency, onBoard map[string]bool, known bool) ([]Dependency, error) {
 	waitsOn := map[string][]string{}
 	for _, d := range existing {
 		if d.WorkItemID != id {
@@ -526,7 +553,7 @@ func checkDependencies(id string, want []Relationship, existing []Dependency, on
 		switch {
 		case dep == id:
 			return nil, ErrDependsOnSelf
-		case !onBoard[dep]:
+		case !known && !onBoard[dep]:
 			return nil, ErrOtherProject
 		case !ValidRelationshipType(kind):
 			return nil, ErrRelationshipType

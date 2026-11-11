@@ -38,6 +38,18 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 	}
 	a, b, c := card("A"), card("B"), card("C")
 
+	if days, err := repo.WorkingDays(project); err != nil || days != nil {
+		t.Fatalf("a project that never set its working days has none stored: %v %v", days, err)
+	}
+	if err := repo.SetWorkingDays(project, []int{1, 2, 3, 4, 6}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.SetWorkingDays(project, []int{7, 1}); err != nil {
+		t.Fatal(err)
+	}
+	if days, err := repo.WorkingDays(project); err != nil || len(days) != 2 || days[0] != 1 || days[1] != 7 {
+		t.Fatalf("working days: %v %v", days, err)
+	}
 	if list, err := repo.ListSchedules(project); err != nil || len(list) != 0 {
 		t.Fatalf("empty schedules: %v %v", list, err)
 	}
