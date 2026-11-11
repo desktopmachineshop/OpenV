@@ -39,15 +39,15 @@ func (s *DefaultService) autoSchedule(projectID, actor string) error {
 }
 
 func (s *DefaultService) place(projectID, actor string, how placing, now time.Time) (int, error) {
-	schedules, err := s.repo.ListSchedules(projectID)
-	if err != nil {
-		return 0, err
-	}
-	cal, set, err := s.calendar(projectID)
-	if err != nil {
-		return 0, err
-	}
 	if how.auto {
+		schedules, err := s.repo.ListSchedules(projectID)
+		if err != nil {
+			return 0, err
+		}
+		set, err := s.settings(projectID)
+		if err != nil {
+			return 0, err
+		}
 		any := set.Mode == ModeAuto
 		for _, sc := range schedules {
 			any = any || sc.Mode == ModeAuto
@@ -56,16 +56,10 @@ func (s *DefaultService) place(projectID, actor string, how placing, now time.Ti
 			return 0, nil
 		}
 	}
-	items, err := s.board.ListByProject(projectID)
+	in, cal, set, err := s.inputs(projectID)
 	if err != nil {
 		return 0, err
 	}
-	deps, err := s.repo.ListDependencies(projectID)
-	if err != nil {
-		return 0, err
-	}
-	in := Inputs{ProjectID: projectID, Items: items, Schedules: schedules, Dependencies: deps,
-		WorkingDays: set.WorkingDays, Holidays: set.Holidays, CriticalSlackDays: set.CriticalSlackDays, Scheduling: set.Scheduling}
 	p := Build(in, now)
 	r := newRecalc(p, cal, set.Scheduling, how)
 	// A move can push what the moved task drives, so go round until a pass
@@ -73,8 +67,42 @@ func (s *DefaultService) place(projectID, actor string, how placing, now time.Ti
 	for pass := 0; pass <= len(p.Tasks) && r.pass(); pass++ {
 	}
 	r.late(in, now)
+	return s.write(r, actor)
+}
+
+// inputs loads what placing a plan's tasks reads: the board, the schedule,
+// the relationships, the assignments and the settings, with the calendar
+// those give.
+func (s *DefaultService) inputs(projectID string) (Inputs, Calendar, Settings, error) {
+	in := Inputs{ProjectID: projectID}
+	cal, set, err := s.calendar(projectID)
+	if err != nil {
+		return in, cal, set, err
+	}
+	if in.Items, err = s.board.ListByProject(projectID); err != nil {
+		return in, cal, set, err
+	}
+	if in.Schedules, err = s.repo.ListSchedules(projectID); err != nil {
+		return in, cal, set, err
+	}
+	if in.Dependencies, err = s.repo.ListDependencies(projectID); err != nil {
+		return in, cal, set, err
+	}
+	if in.Assignments, err = s.repo.ListAssignments(projectID); err != nil {
+		return in, cal, set, err
+	}
+	if in.Resources, err = s.repo.ListResources(projectID); err != nil {
+		return in, cal, set, err
+	}
+	in.WorkingDays, in.Holidays, in.CriticalSlackDays, in.Scheduling = set.WorkingDays, set.Holidays, set.CriticalSlackDays, set.Scheduling
+	return in, cal, set, nil
+}
+
+// write stores the dates of every task a placing moved, and answers how
+// many that was.
+func (s *DefaultService) write(r *recalc, actor string) (int, error) {
 	moved := 0
-	for _, t := range p.Tasks {
+	for _, t := range r.plan.Tasks {
 		was, is := r.was[t.ID], r.at[t.ID]
 		if is == nil || (was != nil && *was == *is) {
 			continue

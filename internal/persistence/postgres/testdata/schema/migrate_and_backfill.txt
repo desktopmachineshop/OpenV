@@ -774,6 +774,17 @@ table password_resets rows 0
   index idx_password_resets_token CREATE UNIQUE INDEX idx_password_resets_token ON public.password_resets USING btree (token_hash)
   index idx_password_resets_user CREATE INDEX idx_password_resets_user ON public.password_resets USING btree (user_id)
   index password_resets_pkey CREATE UNIQUE INDEX password_resets_pkey ON public.password_resets USING btree (id)
+table plan_assignments rows 0
+  column work_item_id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column assignee_type character varying(8) NOT NULL
+  column assignee_id uuid NOT NULL
+  column units integer NOT NULL DEFAULT 100
+  constraint plan_assignments_pkey PRIMARY KEY (work_item_id, assignee_type, assignee_id)
+  constraint plan_assignments_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  constraint plan_assignments_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES work_items(id) ON DELETE CASCADE
+  index idx_plan_assignments_project CREATE INDEX idx_plan_assignments_project ON public.plan_assignments USING btree (project_id)
+  index plan_assignments_pkey CREATE UNIQUE INDEX plan_assignments_pkey ON public.plan_assignments USING btree (work_item_id, assignee_type, assignee_id)
 table plan_dependencies rows 0
   column work_item_id uuid NOT NULL
   column depends_on_id uuid NOT NULL
@@ -811,6 +822,15 @@ table plan_milestones rows 0
   index idx_plan_milestones_project CREATE INDEX idx_plan_milestones_project ON public.plan_milestones USING btree (project_id)
   index idx_plan_milestones_release CREATE UNIQUE INDEX idx_plan_milestones_release ON public.plan_milestones USING btree (release_id) WHERE (release_id IS NOT NULL)
   index plan_milestones_pkey CREATE UNIQUE INDEX plan_milestones_pkey ON public.plan_milestones USING btree (id)
+table plan_resources rows 0
+  column project_id uuid NOT NULL
+  column assignee_type character varying(8) NOT NULL
+  column assignee_id uuid NOT NULL
+  column daily_rate numeric(12,2) NOT NULL DEFAULT 0
+  column capacity integer NOT NULL DEFAULT 100
+  constraint plan_resources_pkey PRIMARY KEY (project_id, assignee_type, assignee_id)
+  constraint plan_resources_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  index plan_resources_pkey CREATE UNIQUE INDEX plan_resources_pkey ON public.plan_resources USING btree (project_id, assignee_type, assignee_id)
 table plan_settings rows 0
   column project_id uuid NOT NULL
   column working_days smallint NOT NULL DEFAULT 31
@@ -821,6 +841,8 @@ table plan_settings rows 0
   column project_finish date
   column schedule_from character varying(8) NOT NULL DEFAULT 'start'::character varying
   column multiple_critical_paths boolean NOT NULL DEFAULT false
+  column currency character varying(3) NOT NULL DEFAULT ''::character varying
+  column budget numeric(14,2)
   constraint plan_settings_pkey PRIMARY KEY (project_id)
   constraint plan_settings_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index plan_settings_pkey CREATE UNIQUE INDEX plan_settings_pkey ON public.plan_settings USING btree (project_id)
@@ -849,6 +871,8 @@ table plan_tasks rows 0
   column mode character varying(8) NOT NULL DEFAULT ''::character varying
   column constraint_type character varying(8) NOT NULL DEFAULT 'asap'::character varying
   column constraint_date date
+  column fixed_cost numeric(14,2) NOT NULL DEFAULT 0
+  column effort_driven boolean NOT NULL DEFAULT false
   constraint plan_tasks_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES work_items(id) ON DELETE SET NULL
   constraint plan_tasks_pkey PRIMARY KEY (work_item_id)
   constraint plan_tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
@@ -1053,7 +1077,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 82
+table schema_migrations rows 83
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1421,3 +1445,4 @@ ledger 0079 plan_task_milestone
 ledger 0080 plan_dependency_lag
 ledger 0081 plan_scheduling_basics
 ledger 0082 plan_scheduling_engine
+ledger 0083 plan_resources

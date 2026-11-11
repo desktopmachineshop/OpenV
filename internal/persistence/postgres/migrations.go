@@ -137,4 +137,5 @@ var migrations = []Migration{
 	{Version: 80, Name: "plan_dependency_lag", Run: m0080PlanDependencyLag},
 	{Version: 81, Name: "plan_scheduling_basics", Run: m0081PlanSchedulingBasics},
 	{Version: 82, Name: "plan_scheduling_engine", Run: m0082PlanSchedulingEngine},
+	{Version: 83, Name: "plan_resources", Run: m0083PlanResources},
 }

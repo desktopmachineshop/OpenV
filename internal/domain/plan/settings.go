@@ -59,6 +59,10 @@ type Settings struct {
 	// CriticalSlackDays: a task with that much float or less is critical.
 	CriticalSlackDays int `json:"critical_slack_days"`
 	Scheduling
+	// Currency names the money costs are in, as up to three letters; Budget
+	// is what the plan may cost, nil when it has none.
+	Currency string   `json:"currency"`
+	Budget   *float64 `json:"budget"`
 }
 
 // SettingsRequest changes the settings it names. An empty ProjectStart or
@@ -72,6 +76,9 @@ type SettingsRequest struct {
 	ProjectFinish         *string    `json:"project_finish"`
 	ScheduleFrom          *string    `json:"schedule_from"`
 	MultipleCriticalPaths *bool      `json:"multiple_critical_paths"`
+	Currency              *string    `json:"currency"`
+	// Budget of 0 clears it.
+	Budget *float64 `json:"budget"`
 }
 
 // MaxCriticalSlackDays bounds the critical threshold.
@@ -173,6 +180,23 @@ func applySettings(set *Settings, req SettingsRequest) error {
 	if req.MultipleCriticalPaths != nil {
 		set.MultipleCriticalPaths = *req.MultipleCriticalPaths
 	}
+	if req.Currency != nil {
+		c := strings.ToUpper(strings.TrimSpace(*req.Currency))
+		if len(c) > 3 {
+			return ErrInvalidCost
+		}
+		set.Currency = c
+	}
+	if req.Budget != nil {
+		switch {
+		case *req.Budget < 0 || *req.Budget > 1e12:
+			return ErrInvalidCost
+		case *req.Budget == 0:
+			set.Budget = nil
+		default:
+			set.Budget = req.Budget
+		}
+	}
 	return nil
 }
 
@@ -227,7 +251,16 @@ func (s *DefaultService) taskSettings(projectID string, current *TaskSchedule, r
 		}
 	}
 	out := &TaskSchedule{WorkItemID: current.WorkItemID, ProjectID: projectID, Elapsed: current.Elapsed, Deadline: current.Deadline,
-		Mode: mode, ConstraintType: constraint, ConstraintDate: constraintDate}
+		Mode: mode, ConstraintType: constraint, ConstraintDate: constraintDate, FixedCost: current.FixedCost, EffortDriven: current.EffortDriven}
+	if req.FixedCost != nil {
+		if *req.FixedCost < 0 || *req.FixedCost > 1e12 {
+			return nil, ErrInvalidCost
+		}
+		out.FixedCost = *req.FixedCost
+	}
+	if req.EffortDriven != nil {
+		out.EffortDriven = *req.EffortDriven
+	}
 	if req.Elapsed != nil {
 		out.Elapsed = *req.Elapsed
 	}

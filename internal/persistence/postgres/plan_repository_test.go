@@ -66,6 +66,41 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 	if set, _ := repo.Settings(project); len(set.Holidays) != 0 || set.ProjectStart != nil || set.Mode != plan.ModeManual || len(set.WorkingDays) != 5 {
 		t.Fatalf("settings replaced: %+v", set)
 	}
+	ann := "11111111-1111-4111-8111-111111111111"
+	if err := repo.SetAssignments(project, a, []plan.Assignment{{Type: "user", ID: ann, Units: 50}, {Type: "agent", ID: ann, Units: 100}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.SetAssignments(project, a, []plan.Assignment{{Type: "user", ID: ann, Units: 75}}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := repo.ListAssignments(project); err != nil || len(got) != 1 || got[0] != (plan.Assignment{WorkItemID: a, Type: "user", ID: ann, Units: 75}) {
+		t.Fatalf("assignments are replaced: %+v %v", got, err)
+	}
+	if err := repo.SaveResource(project, plan.Resource{Type: "user", ID: ann, DailyRate: 400, Capacity: 80}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.SaveResource(project, plan.Resource{Type: "user", ID: ann, DailyRate: 425.5, Capacity: 100}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := repo.ListResources(project); err != nil || len(got) != 1 || got[0].DailyRate != 425.5 || got[0].Capacity != 100 {
+		t.Fatalf("resources: %+v %v", got, err)
+	}
+	if err := repo.SaveResource(project, plan.Resource{Type: "user", ID: "nobody", DailyRate: 1, Capacity: 100}); err != plan.ErrResource {
+		t.Fatalf("an id that is not one: %v", err)
+	}
+	budget := 25000.0
+	if err := repo.SaveSettings(project, plan.Settings{WorkingDays: []int{1, 2, 3, 4, 5}, Currency: "GBP", Budget: &budget, Scheduling: plan.Scheduling{Mode: plan.ModeManual, ScheduleFrom: plan.FromStart}}); err != nil {
+		t.Fatal(err)
+	}
+	if set, _ := repo.Settings(project); set.Currency != "GBP" || set.Budget == nil || *set.Budget != 25000 {
+		t.Fatalf("currency and budget: %+v", set)
+	}
+	if err := repo.SaveSchedule(&plan.TaskSchedule{WorkItemID: a, ProjectID: project, FixedCost: 250, EffortDriven: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := repo.ListSchedules(project); len(got) != 1 || got[0].FixedCost != 250 || !got[0].EffortDriven {
+		t.Fatalf("fixed cost and effort driven: %+v", got)
+	}
 	constraint := "2027-03-15"
 	if err := repo.SaveSchedule(&plan.TaskSchedule{WorkItemID: a, ProjectID: project, Mode: plan.ModeAuto, ConstraintType: plan.ConstraintSNET, ConstraintDate: &constraint}); err != nil {
 		t.Fatal(err)

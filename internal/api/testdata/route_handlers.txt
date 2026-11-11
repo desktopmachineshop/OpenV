@@ -374,6 +374,8 @@ DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId} -> DeletePlanMileston
 PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId} -> SetReleaseMilestoneCriteria
 PUT /api/v1/projects/{id}/plan/settings -> SetPlanSettings
 POST /api/v1/projects/{id}/plan/recalculate -> RecalculatePlan
+POST /api/v1/projects/{id}/plan/level -> LevelPlan
+PUT /api/v1/projects/{id}/plan/resources/{assigneeId} -> SetPlanResource
 PUT /api/v1/work-items/{id}/schedule -> ScheduleWorkItem
 PUT /api/v1/work-items/{id}/relationships/{otherId} -> RelateWorkItems
 DELETE /api/v1/work-items/{id}/relationships/{otherId} -> UnrelateWorkItems

@@ -24,7 +24,8 @@ func NewPlanRepository(db *sql.DB) *PlanRepository {
 func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, error) {
 	rows, err := r.db.Query(`
 		SELECT work_item_id, project_id, to_char(start_date, 'YYYY-MM-DD'), parent_id, duration_days, effort_days, milestone_key,
-			elapsed, to_char(deadline, 'YYYY-MM-DD'), mode, constraint_type, to_char(constraint_date, 'YYYY-MM-DD')
+			elapsed, to_char(deadline, 'YYYY-MM-DD'), mode, constraint_type, to_char(constraint_date, 'YYYY-MM-DD'),
+			fixed_cost, effort_driven
 		FROM plan_tasks WHERE project_id = $1 ORDER BY work_item_id`, projectID)
 	if err != nil {
 		return nil, err
@@ -36,7 +37,7 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 		var start, parent, milestone, deadline, constraint sql.NullString
 		var duration sql.NullInt64
 		var effort sql.NullFloat64
-		if err := rows.Scan(&s.WorkItemID, &s.ProjectID, &start, &parent, &duration, &effort, &milestone, &s.Elapsed, &deadline, &s.Mode, &s.ConstraintType, &constraint); err != nil {
+		if err := rows.Scan(&s.WorkItemID, &s.ProjectID, &start, &parent, &duration, &effort, &milestone, &s.Elapsed, &deadline, &s.Mode, &s.ConstraintType, &constraint, &s.FixedCost, &s.EffortDriven); err != nil {
 			return nil, err
 		}
 		if duration.Valid {
@@ -70,17 +71,18 @@ func (r *PlanRepository) ListSchedules(projectID string) ([]*plan.TaskSchedule, 
 func (r *PlanRepository) SaveSchedule(s *plan.TaskSchedule) error {
 	_, err := r.db.Exec(`
 		INSERT INTO plan_tasks (work_item_id, project_id, start_date, parent_id, duration_days, effort_days, milestone_key,
-			elapsed, deadline, mode, constraint_type, constraint_date, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+			elapsed, deadline, mode, constraint_type, constraint_date, fixed_cost, effort_driven, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW())
 		ON CONFLICT (work_item_id) DO UPDATE
 		SET start_date = EXCLUDED.start_date, parent_id = EXCLUDED.parent_id,
 			duration_days = EXCLUDED.duration_days, effort_days = EXCLUDED.effort_days,
 			milestone_key = EXCLUDED.milestone_key, elapsed = EXCLUDED.elapsed, deadline = EXCLUDED.deadline,
 			mode = EXCLUDED.mode, constraint_type = EXCLUDED.constraint_type, constraint_date = EXCLUDED.constraint_date,
+			fixed_cost = EXCLUDED.fixed_cost, effort_driven = EXCLUDED.effort_driven,
 			updated_at = NOW()`,
 		s.WorkItemID, s.ProjectID, nullableString(s.StartDate), nullableString(s.ParentID), optInt(s.DurationDays), optFloat(s.EffortDays),
 		nullableString(s.MilestoneKey), s.Elapsed, nullableString(s.Deadline), s.Mode, constraintType(s.ConstraintType),
-		nullableString(s.ConstraintDate))
+		nullableString(s.ConstraintDate), s.FixedCost, s.EffortDriven)
 	return err
 }
 
@@ -91,11 +93,12 @@ func (r *PlanRepository) Settings(projectID string) (plan.Settings, error) {
 	out := plan.Settings{Holidays: []plan.Holiday{}, Scheduling: plan.Scheduling{Mode: plan.ModeManual, ScheduleFrom: plan.FromStart}}
 	var bits int
 	var start, finish sql.NullString
+	var budget sql.NullFloat64
 	err := r.db.QueryRow(`
 		SELECT working_days, critical_slack_days, scheduling_mode, to_char(project_start, 'YYYY-MM-DD'),
-			to_char(project_finish, 'YYYY-MM-DD'), schedule_from, multiple_critical_paths
+			to_char(project_finish, 'YYYY-MM-DD'), schedule_from, multiple_critical_paths, currency, budget
 		FROM plan_settings WHERE project_id = $1`, projectID).
-		Scan(&bits, &out.CriticalSlackDays, &out.Mode, &start, &finish, &out.ScheduleFrom, &out.MultipleCriticalPaths)
+		Scan(&bits, &out.CriticalSlackDays, &out.Mode, &start, &finish, &out.ScheduleFrom, &out.MultipleCriticalPaths, &out.Currency, &budget)
 	switch {
 	case malformedID(err):
 		return out, nil
@@ -113,6 +116,9 @@ func (r *PlanRepository) Settings(projectID string) (plan.Settings, error) {
 		}
 		if finish.Valid {
 			out.ProjectFinish = &finish.String
+		}
+		if budget.Valid {
+			out.Budget = &budget.Float64
 		}
 	}
 	rows, err := r.db.Query(`SELECT to_char(day, 'YYYY-MM-DD'), name FROM plan_holidays WHERE project_id = $1 ORDER BY day`, projectID)
@@ -142,15 +148,16 @@ func (r *PlanRepository) SaveSettings(projectID string, s plan.Settings) error {
 	return withTx(context.Background(), r.db, nil, func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`
 			INSERT INTO plan_settings (project_id, working_days, critical_slack_days, scheduling_mode, project_start,
-				project_finish, schedule_from, multiple_critical_paths, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+				project_finish, schedule_from, multiple_critical_paths, currency, budget, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
 			ON CONFLICT (project_id) DO UPDATE SET working_days = EXCLUDED.working_days,
 				critical_slack_days = EXCLUDED.critical_slack_days, scheduling_mode = EXCLUDED.scheduling_mode,
 				project_start = EXCLUDED.project_start, project_finish = EXCLUDED.project_finish,
 				schedule_from = EXCLUDED.schedule_from, multiple_critical_paths = EXCLUDED.multiple_critical_paths,
+				currency = EXCLUDED.currency, budget = EXCLUDED.budget,
 				updated_at = NOW()`,
 			projectID, bits, s.CriticalSlackDays, s.Mode, nullableString(s.ProjectStart), nullableString(s.ProjectFinish),
-			s.ScheduleFrom, s.MultipleCriticalPaths); err != nil {
+			s.ScheduleFrom, s.MultipleCriticalPaths, s.Currency, optFloat(s.Budget)); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(`DELETE FROM plan_holidays WHERE project_id = $1`, projectID); err != nil {
@@ -164,6 +171,76 @@ func (r *PlanRepository) SaveSettings(projectID string, s plan.Settings) error {
 		}
 		return nil
 	})
+}
+
+// ListAssignments lists who each of the project's tasks is assigned to.
+func (r *PlanRepository) ListAssignments(projectID string) ([]plan.Assignment, error) {
+	rows, err := r.db.Query(`
+		SELECT work_item_id, assignee_type, assignee_id, units FROM plan_assignments
+		WHERE project_id = $1 ORDER BY work_item_id, assignee_type, assignee_id`, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	out := []plan.Assignment{}
+	for rows.Next() {
+		var a plan.Assignment
+		if err := rows.Scan(&a.WorkItemID, &a.Type, &a.ID, &a.Units); err != nil {
+			return nil, err
+		}
+		out = append(out, a)
+	}
+	return out, rows.Err()
+}
+
+// SetAssignments replaces who a task is assigned to.
+func (r *PlanRepository) SetAssignments(projectID, workItemID string, assignments []plan.Assignment) error {
+	return withTx(context.Background(), r.db, nil, func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`DELETE FROM plan_assignments WHERE work_item_id = $1`, workItemID); err != nil {
+			return err
+		}
+		for _, a := range assignments {
+			if _, err := tx.Exec(`
+				INSERT INTO plan_assignments (work_item_id, project_id, assignee_type, assignee_id, units)
+				VALUES ($1, $2, $3, $4, $5) ON CONFLICT DO NOTHING`, workItemID, projectID, a.Type, a.ID, a.Units); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// ListResources lists the daily rate and capacity the project keeps for
+// each person or agent that has one.
+func (r *PlanRepository) ListResources(projectID string) ([]plan.Resource, error) {
+	rows, err := r.db.Query(`
+		SELECT assignee_type, assignee_id, daily_rate, capacity FROM plan_resources
+		WHERE project_id = $1 ORDER BY assignee_type, assignee_id`, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	out := []plan.Resource{}
+	for rows.Next() {
+		var res plan.Resource
+		if err := rows.Scan(&res.Type, &res.ID, &res.DailyRate, &res.Capacity); err != nil {
+			return nil, err
+		}
+		out = append(out, res)
+	}
+	return out, rows.Err()
+}
+
+// SaveResource stores a person's or an agent's daily rate and capacity.
+func (r *PlanRepository) SaveResource(projectID string, res plan.Resource) error {
+	_, err := r.db.Exec(`
+		INSERT INTO plan_resources (project_id, assignee_type, assignee_id, daily_rate, capacity) VALUES ($1, $2, $3, $4, $5)
+		ON CONFLICT (project_id, assignee_type, assignee_id) DO UPDATE
+		SET daily_rate = EXCLUDED.daily_rate, capacity = EXCLUDED.capacity`, projectID, res.Type, res.ID, res.DailyRate, res.Capacity)
+	if malformedID(err) {
+		return plan.ErrResource
+	}
+	return err
 }
 
 // ListDependencies lists the project's dependencies.

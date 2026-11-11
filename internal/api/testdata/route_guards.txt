@@ -290,6 +290,7 @@ POST /api/v1/projects/{id}/draft-test-cases: project:editor
 POST /api/v1/projects/{id}/evidence-bundles: project:editor
 POST /api/v1/projects/{id}/interviews: no-proposal-run, project:editor, project-visible
 POST /api/v1/projects/{id}/members: project:owner
+POST /api/v1/projects/{id}/plan/level: project:editor
 POST /api/v1/projects/{id}/plan/milestones: project:editor
 POST /api/v1/projects/{id}/plan/recalculate: project:editor
 POST /api/v1/projects/{id}/reindex-embeddings: project:owner
@@ -366,6 +367,7 @@ PUT /api/v1/projects/{id}/members/{userId}: project:owner
 PUT /api/v1/projects/{id}/parties: project:editor
 PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}: project:editor
 PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}: project:editor
+PUT /api/v1/projects/{id}/plan/resources/{assigneeId}: project:editor
 PUT /api/v1/projects/{id}/plan/settings: project:editor
 PUT /api/v1/projects/{id}/priority-detection: project:editor
 PUT /api/v1/projects/{id}/profile: project:editor

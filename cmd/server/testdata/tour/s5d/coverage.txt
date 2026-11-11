@@ -95,4 +95,4 @@ PUT /api/v1/provider-settings: 200, 400, 401, 403; providers_repos_pool
 PUT /api/v1/repo-connections/{id}: 200, 400, 403, 404; providers_repos_pool
 PUT /api/v1/repo-connections/{id}/my-path: 200, 400, 401, 404; providers_repos_pool
 
-s5d: 83 of 379 routes reached (21.9%), 79 with a 2xx or 3xx answer (20.8%)
+s5d: 83 of 381 routes reached (21.8%), 79 with a 2xx or 3xx answer (20.7%)
