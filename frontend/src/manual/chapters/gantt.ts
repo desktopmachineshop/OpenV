@@ -36,7 +36,7 @@ On the timeline, each task is a bar from its start to its due date:
   relationship: see [Relationships between tasks](#relationships-between-tasks).
   A dashed red arrow is a relationship the dates break; the outline marks
   that task with a warning sign.
-- With **Critical path** on, a thin line after a bar, ended by a tick, is
+- With **Critical path** on, a thin dashed line after a bar, ended by a tick, is
   the task's float: how far its end can slip before it pushes the next
   task.
 - A task with no dates yet has an empty row that you click, or drag across,
@@ -192,7 +192,7 @@ outline and an amber dot in the outline, and the arrows between them are
 amber and heavier.
 
 Float is drawn on the chart as well. After the bar of a task that drives
-another, a thin line runs to the last day its end can slip to before it
+another, a thin dashed line runs to the last day its end can slip to before it
 pushes that task, and ends in a tick, so the room between one task and the
 next is the length of the line. The line is amber on the critical path and
 grey elsewhere; a task with no room has none. A task's panel says **Critical** with any float it

@@ -170,7 +170,7 @@ export const TaskBar: React.FC<{
   selected: boolean;
   /** Drawn as on the critical path: an amber ring. */
   critical?: boolean;
-  /** Draws the task's float after its bar: a line to the last day it can slip to, ended by a tick. */
+  /** Draws the task's float after its bar: a dashed line to the last day it can slip to, ended by a tick. */
   showFloat?: boolean;
   onSelect: () => void;
   onReschedule?: (start: string, end: string) => void;
@@ -295,7 +295,8 @@ export const TaskBar: React.FC<{
             height: 10,
             boxSizing: 'border-box',
             borderRight: `2px solid ${critical ? 'var(--warning)' : 'var(--neutral)'}`,
-            background: `linear-gradient(${critical ? 'var(--warning)' : 'var(--neutral)'}, ${critical ? 'var(--warning)' : 'var(--neutral)'}) left center / 100% 2px no-repeat`,
+            // A dashed line: the float is room the task has, not time it takes.
+            background: `repeating-linear-gradient(90deg, ${critical ? 'var(--warning)' : 'var(--neutral)'} 0 5px, transparent 5px 9px) left center / 100% 2px no-repeat`,
           }}
         />
       )}

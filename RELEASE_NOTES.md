@@ -30,7 +30,7 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 - **Relationships from either task.** A relationship is listed on both of its tasks, named from the side of the one you have open: **Finish to start** on the task that comes first is **Start to finish** on the one that follows. Add, change or remove it from either.
 - **Draw a relationship on the chart.** Point at a bar and drag the **+** at its start or end to another bar. The ends you join decide whether it is finish to start, start to start or finish to finish.
 - **Click or drag to schedule.** On the row of a task with no dates, click a date to schedule it for that day, week, month or quarter, by the scale you are at, or drag across the row for the range you want, drawn as you drag.
-- **The whole critical path, with its float.** The critical path is now the chain of tasks that decides when the plan ends, shown even where the dates leave room between two of them. After a task's bar, a thin line ended by a tick shows how far it can slip before it pushes the next task.
+- **The whole critical path, with its float.** The critical path is now the chain of tasks that decides when the plan ends, shown even where the dates leave room between two of them. After a task's bar, a thin dashed line ended by a tick shows how far it can slip before it pushes the next task.
 - **Add a task in the chart.** Type a title in the last row of the Gantt's outline and press Enter.
 - **The scroll bar belongs to the timeline.** It sits under the timeline and starts where the task column ends.
 - **The Gantt fills the window.** On a computer, the chart and the task or milestone panel beside it reach the bottom of the window, however few tasks the plan has; each scrolls on its own when it is longer.
