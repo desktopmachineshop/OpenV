@@ -369,6 +369,46 @@ Tick **A critical path for each chain of tasks** in the calendar to give
 every independent chain its own path, to its own last task, where the
 default is one path to the end of the plan.
 
+## Resources, cost and levelling
+
+A task's panel has a **Resources** section: the people and agents who do
+the task. **Assign someone** adds one, and the percentage beside each name
+is the share of their working time the task takes: 100% is full time, 50%
+half. With nobody assigned there, the card's assignee on the board does the
+task at 100%.
+
+Tick **Effort decides the duration** and the task's length follows from its
+effort and its people: six days of effort for two people at full time takes
+three days, and for one person at 50% twelve. Add or remove someone and the
+due date moves.
+
+**Resources**, above the chart, lists everyone with work on the plan:
+
+| Column | Meaning |
+| --- | --- |
+| Day rate | What a day of their time costs. Set it here |
+| Capacity % | The share of a working day they can give this project: 100 unless you change it |
+| Work (days) | Their share of each task's effort, or of its duration when it has no effort |
+| Cost | That work at their day rate |
+| Peak | The most asked of them on any day |
+
+Someone asked for more than their capacity on a day is **over-allocated**.
+The dialog shows when and by how much, the button turns red with the count,
+and each task that loads them during those days says **Over-allocated** in
+its panel.
+
+**Level the plan** clears it. Where someone is over-allocated, the task
+with the most float is delayed until after the first of the others ends,
+and the tasks it drives follow. Levelling only ever delays; it does not
+move a task earlier or one that is done, and it cannot help someone who is
+over-allocated by a single task.
+
+A task's **cost** is its people's work at their day rates plus its **Fixed
+cost**, for materials or a supplier. A task with sub-tasks costs what they
+cost. Set the plan's **Currency** and **Budget** in the Resources dialog:
+the figures above the chart then show the plan's cost against its budget,
+in red when it is over.
+
 ## Progress from to-dos and sub-tasks
 
 A task's progress is worked out, so it never goes stale:
@@ -477,7 +517,8 @@ the Excel timeline mark critical tasks in amber.
 - **JSON**: the whole plan as the app reads it.
 
 Agents read the plan with the \`get_plan\` tool, place a task, with its
-relationships, with \`schedule_work_item\`, which also assigns it to a milestone, recalculate the plan with
+relationships, with \`schedule_work_item\`, which also assigns it to a milestone and to people, set day rates with
+\`set_plan_resource\`, level the plan with \`level_plan\`, recalculate it with
 \`recalculate_plan\`, and set the working days with
 \`set_plan_working_days\`.
 

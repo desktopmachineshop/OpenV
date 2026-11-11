@@ -9,6 +9,7 @@ import type { PlanScheduleInput, PlanTask, ProjectPlan } from '../../api/client'
 import { Chip, Meter, PanelHeader, Picker, buttonStyle, eyebrowStyle, mutedStyle, panelStyle, type PickerOption } from '../ui';
 import { shortDate, spanLabel } from './ganttScale';
 import { TaskRelationships, type TaskRelationshipsProps } from './TaskRelationships';
+import { TaskResources } from './TaskResources';
 import { TaskScheduling } from './TaskScheduling';
 import { BAR_COLORS, TASK_TONE, WEEKDAYS, barTone, columnLabel, descendants, workEnd, workSpan, workStart } from './planModel';
 
@@ -423,6 +424,8 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
       </div>
 
       {task.subtasks_total === 0 && <TaskScheduling plan={plan} task={task} editable={editable} busy={busy} onSchedule={onSchedule} />}
+
+      {task.subtasks_total === 0 && <TaskResources plan={plan} task={task} editable={editable} busy={busy} onSchedule={onSchedule} />}
 
       <div style={sectionStyle} data-help-key="gantt.task-milestone">
         <label htmlFor="gantt-task-milestone" style={fieldStyle}>

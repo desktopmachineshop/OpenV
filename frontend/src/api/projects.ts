@@ -223,8 +223,13 @@ export const planAPI = {
   /** The days of the week the plan works: ISO weekday numbers, Monday is 1. */
   setWorkingDays: (projectId: string, workingDays: number[]) =>
     client.put<PlanSettings>(`/api/v1/projects/${projectId}/plan/settings`, { working_days: workingDays }),
+  /** Delays tasks until nobody is asked for more than their capacity; answers how many moved. */
+  level: (projectId: string) => client.post<{ moved: number }>(`/api/v1/projects/${projectId}/plan/level`),
+  /** What a day of a person's or an agent's time costs, and the share of a day they can give. */
+  setResource: (projectId: string, type: 'user' | 'agent', id: string, change: { daily_rate: number; capacity: number }) =>
+    client.put(`/api/v1/projects/${projectId}/plan/resources/${id}`, { type, ...change }),
   /** The plan's holidays and critical threshold, whichever the change names. */
-  setSettings: (projectId: string, change: Partial<Omit<PlanSettings, 'project_start' | 'project_finish'>> & { project_start?: string; project_finish?: string }) =>
+  setSettings: (projectId: string, change: Partial<Omit<PlanSettings, 'project_start' | 'project_finish' | 'budget'>> & { project_start?: string; project_finish?: string; budget?: number }) =>
     client.put<PlanSettings>(`/api/v1/projects/${projectId}/plan/settings`, change),
   /** A to-do raised on a task, which counts toward its progress. */
   addTodo: (workItemId: string, text: string, dueDate?: string) =>

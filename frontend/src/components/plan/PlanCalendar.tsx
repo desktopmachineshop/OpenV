@@ -6,7 +6,7 @@ import React, { useState } from 'react';
 import type { PlanHoliday, PlanSettings, ProjectPlan } from '../../api/client';
 
 /** A change to the plan's settings: the fields it names; an empty date clears it. */
-export type PlanSettingsChange = Partial<Omit<PlanSettings, 'project_start' | 'project_finish'>> & { project_start?: string; project_finish?: string };
+export type PlanSettingsChange = Partial<Omit<PlanSettings, 'project_start' | 'project_finish' | 'budget'>> & { project_start?: string; project_finish?: string; budget?: number };
 import { Modal, buttonStyle, eyebrowStyle, mutedStyle } from '../ui';
 import { shortDate } from './ganttScale';
 

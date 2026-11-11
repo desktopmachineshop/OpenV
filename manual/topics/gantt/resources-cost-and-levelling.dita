@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="resources-cost-and-levelling">
+  <title>Resources, cost and levelling</title>
+  <shortdesc>A task's panel has a <b>Resources</b> section: the people and agents who do the task. <b>Assign someone</b> adds one, and the percentage beside each name is the share of their working time the task takes: 100% is full time, 50% half. With nobody assigned there, the card's assignee on the board does the task at 100%.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt.resources"/>
+  </prolog>
+  <conbody>
+    <p>Tick <b>Effort decides the duration</b> and the task's length follows from its effort and its people: six days of effort for two people at full time takes three days, and for one person at 50% twelve. Add or remove someone and the due date moves.</p>
+    <p><b>Resources</b>, above the chart, lists everyone with work on the plan:</p>
+    <simpletable>
+      <sthead><stentry>Column</stentry><stentry>Meaning</stentry></sthead>
+      <strow><stentry>Day rate</stentry><stentry>What a day of their time costs. Set it here</stentry></strow>
+      <strow><stentry>Capacity %</stentry><stentry>The share of a working day they can give this project: 100 unless you change it</stentry></strow>
+      <strow><stentry>Work (days)</stentry><stentry>Their share of each task's effort, or of its duration when it has no effort</stentry></strow>
+      <strow><stentry>Cost</stentry><stentry>That work at their day rate</stentry></strow>
+      <strow><stentry>Peak</stentry><stentry>The most asked of them on any day</stentry></strow>
+    </simpletable>
+    <p>Someone asked for more than their capacity on a day is <b>over-allocated</b>. The dialog shows when and by how much, the button turns red with the count, and each task that loads them during those days says <b>Over-allocated</b> in its panel.</p>
+    <p><b>Level the plan</b> clears it. Where someone is over-allocated, the task with the most float is delayed until after the first of the others ends, and the tasks it drives follow. Levelling only ever delays; it does not move a task earlier or one that is done, and it cannot help someone who is over-allocated by a single task.</p>
+    <p>A task's <b>cost</b> is its people's work at their day rates plus its <b>Fixed cost</b>, for materials or a supplier. A task with sub-tasks costs what they cost. Set the plan's <b>Currency</b> and <b>Budget</b> in the Resources dialog: the figures above the chart then show the plan's cost against its budget, in red when it is over.</p>
+  </conbody>
+</concept>

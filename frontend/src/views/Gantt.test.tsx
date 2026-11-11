@@ -45,6 +45,11 @@ const task = (id: string, title: string, extra: Partial<PlanTask> = {}): PlanTas
   late_start: null,
   late_finish: null,
   free_float_days: null,
+  assignments: [],
+  fixed_cost: 0,
+  cost: 0,
+  effort_driven: false,
+  overallocated: false,
   progress: 0,
   done: false,
   late: false,
@@ -107,6 +112,10 @@ const plan: ProjectPlan = {
   project_finish: null,
   schedule_from: 'start',
   multiple_critical_paths: false,
+  currency: '',
+  budget: null,
+  resources: [],
+  people: [],
   today: '2027-03-10',
   start: '2027-03-01',
   end: '2027-04-01',
@@ -167,7 +176,7 @@ const plan: ProjectPlan = {
     { key: 'needs_addressed', label: 'User needs addressed', description: 'User needs that at least one requirement derives from.' },
     { key: 'requirements_verified', label: 'Requirements verified', description: 'Requirements whose verification passes.' },
   ],
-  summary: { tasks: 4, done: 1, late: 0, unscheduled: 1, progress: 38, critical: 1, effort_days: 6.5 },
+  summary: { tasks: 4, done: 1, late: 0, unscheduled: 1, progress: 38, critical: 1, effort_days: 6.5, cost: 0, overallocated: 0 },
 };
 
 vi.mock('../components/kanban/WorkItemDrawer', () => ({
@@ -184,6 +193,8 @@ vi.mock('../api/client', async (orig) =>
       relate: () => ok(plan.tasks[2]),
       unrelate: () => ok(undefined),
       recalculate: () => ok({ moved: 2 }),
+      level: () => ok({ moved: 3 }),
+      setResource: () => ok({}),
       setSettings: () => ok({ working_days: [1, 2, 3, 4, 5], holidays: [], critical_slack_days: 0 }),
       setWorkingDays: () => ok({ working_days: [1, 2, 3, 4, 5, 6] }),
       setReleaseCriteria: () => ok({}),
@@ -536,6 +547,45 @@ describe('Plan page', () => {
     await click(elapsed);
     await click(button('Save schedule'));
     expect(vi.mocked(planAPI.schedule)).toHaveBeenLastCalledWith('wiring', expect.objectContaining({ deadline: '2027-03-31', elapsed: true }));
+  });
+
+  it('assigns people to a task, costs it, and levels the plan from the resources dialog', async () => {
+    const ann = { type: 'user' as const, id: 'ann', name: 'Ann' };
+    const loaded: ProjectPlan = {
+      ...plan,
+      currency: 'GBP',
+      budget: 5000,
+      people: [ann, { type: 'agent', id: 'bot', name: 'Builder' }],
+      resources: [{ ...ann, daily_rate: 400, capacity: 100, tasks: 2, work_days: 12, cost: 4800, peak: 150, overallocations: [{ start: '2027-03-08', end: '2027-03-09', units: 150 }] }],
+      summary: { ...plan.summary, cost: 5050, overallocated: 1 },
+      tasks: plan.tasks.map((t) => (t.id === 'wiring' ? { ...t, assignments: [{ type: 'user', id: 'ann', units: 100 }], cost: 2600, fixed_cost: 250, overallocated: true } : t)),
+    };
+    vi.mocked(planAPI.get).mockImplementation(() => ok(loaded) as ReturnType<typeof planAPI.get>);
+    await mount();
+    expect(container.querySelector('[data-help-key="gantt.summary"]')?.textContent).toContain('GBP 5,050of GBP 5,0001over-allocated');
+    await click(container.querySelector('[data-task-bar="wiring"]'));
+    const section = container.querySelector('aside [data-help-key="gantt.resources"]')!;
+    expect(section.textContent).toContain('Ann');
+    expect(section.textContent).toContain('Over-allocated');
+    expect(section.textContent).toContain('Cost GBP 2,600');
+    await change(section.querySelector('#gantt-assign'), 'agent:bot');
+    expect(vi.mocked(planAPI.schedule)).toHaveBeenLastCalledWith('wiring', {
+      assignments: [
+        { type: 'user', id: 'ann', units: 100 },
+        { type: 'agent', id: 'bot', units: 100 },
+      ],
+    });
+    await click(section.querySelector('input[type="checkbox"]'));
+    expect(vi.mocked(planAPI.schedule)).toHaveBeenLastCalledWith('wiring', { effort_driven: true });
+
+    await click(Array.from(container.querySelectorAll('button')).find((b) => b.textContent?.startsWith('Resources')));
+    const dialog = document.querySelector('[role="dialog"] [data-help-key="gantt.resources"]')!;
+    expect(dialog.querySelector('[data-resource="ann"]')?.textContent).toContain('150% on 8 Mar – 9 Mar');
+    expect(dialog.textContent).toContain('GBP 50 over');
+    await click(dialog.querySelector('[data-level]'));
+    expect(vi.mocked(planAPI.level)).toHaveBeenCalledWith('p1');
+    expect(container.querySelector('[role="status"]')?.textContent).toContain('3 tasks delayed.');
+    vi.mocked(planAPI.get).mockImplementation(() => ok(plan) as ReturnType<typeof planAPI.get>);
   });
 
   it('gives a task with sub-tasks no dates of its own, and no bar to drag', async () => {

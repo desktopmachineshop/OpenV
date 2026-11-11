@@ -111,6 +111,7 @@
   "/manual/gantt#the-critical-path": "topics/gantt/the-critical-path",
   "/manual/gantt#relationships-between-tasks": "topics/gantt/relationships-between-tasks",
   "/manual/gantt#automatic-scheduling-and-constraints": "topics/gantt/automatic-scheduling-and-constraints",
+  "/manual/gantt#resources-cost-and-levelling": "topics/gantt/resources-cost-and-levelling",
   "/manual/gantt#progress-from-to-dos-and-sub-tasks": "topics/gantt/progress-from-to-dos-and-sub-tasks",
   "/manual/gantt#milestones-and-their-criteria": "topics/gantt/milestones-and-their-criteria",
   "/manual/gantt#assigning-tasks-to-a-milestone": "topics/gantt/assigning-tasks-to-a-milestone",

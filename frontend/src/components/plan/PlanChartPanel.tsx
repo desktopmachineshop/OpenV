@@ -2,10 +2,11 @@
 // working days, the critical path switch, Today and the zoom; the chart; the
 // milestones that have no date yet; and a line on how to use it.
 import React, { useState } from 'react';
-import type { PlanMilestone, ProjectPlan } from '../../api/client';
+import type { PlanMilestone, PlanResourceLoad, ProjectPlan } from '../../api/client';
 import { Modal, PanelHeader, SegmentedControl, buttonStyle, mutedStyle, panelStyle } from '../ui';
 import { GanttChart, type GanttChartProps } from './GanttChart';
 import { PlanCalendar, type PlanSettingsChange } from './PlanCalendar';
+import { PlanResources } from './PlanResources';
 import { WorkingDays } from './WorkingDays';
 import { ZOOMS, Zoom } from './ganttScale';
 
@@ -16,15 +17,20 @@ export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'sho
   onWorkingDays: (days: number[]) => void;
   /** Changes the plan's holidays or critical threshold. */
   onSettings: (change: PlanSettingsChange) => void;
+  /** Sets a person's or an agent's day rate and capacity. */
+  onResource: (res: PlanResourceLoad, change: { daily_rate: number; capacity: number }) => void;
+  /** Delays tasks until nobody is over-allocated. */
+  onLevel: () => void;
   /** Moves the placed tasks to the dates their relationships and constraints ask for; onlyLater never moves one earlier. */
   onRecalculate: (onlyLater: boolean) => void;
   onSelectMilestone: (m: PlanMilestone) => void;
 }
 
-export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onWorkingDays, onSettings, onRecalculate, onSelectMilestone, busy, touch, ...chart }) => {
+export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onWorkingDays, onSettings, onResource, onLevel, onRecalculate, onSelectMilestone, busy, touch, ...chart }) => {
   const [showCritical, setShowCritical] = useState(true);
   const [onlyCritical, setOnlyCritical] = useState(false);
   const [calendar, setCalendar] = useState(false);
+  const [resources, setResources] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
   const [onlyLater, setOnlyLater] = useState(false);
   const [todaySignal, setTodaySignal] = useState(0);
@@ -41,6 +47,18 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
                 <button type="button" onClick={() => setCalendar(true)} data-help-key="gantt.holidays" title="Holidays, how the plan is scheduled, and when a task counts as critical" style={buttonStyle('secondary', { compact: true })}>
                   Calendar{plan.holidays.length ? ` · ${plan.holidays.length}` : ''}
                   {plan.scheduling_mode === 'auto' ? ' · auto' : ''}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setResources(true)}
+                  data-help-key="gantt.resources"
+                  title="Who does the work, what it costs, and who is asked for more than they have"
+                  style={{
+                    ...buttonStyle('secondary', { compact: true }),
+                    ...(plan.summary.overallocated ? { background: 'var(--tint-red)', borderColor: 'var(--danger)', color: 'var(--danger-strong)' } : {}),
+                  }}
+                >
+                  Resources{plan.summary.overallocated ? ` · ${plan.summary.overallocated} over` : ''}
                 </button>
                 <button
                   type="button"
@@ -117,6 +135,7 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
               </div>
             </Modal>
           )}
+          {resources && <PlanResources plan={plan} busy={busy} onResource={onResource} onSettings={onSettings} onLevel={onLevel} onClose={() => setResources(false)} />}
           {calendar && <PlanCalendar plan={plan} busy={busy} onChange={onSettings} onClose={() => setCalendar(false)} />}
           {undated.length > 0 && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', borderTop: '1px solid var(--border-soft)' }}>

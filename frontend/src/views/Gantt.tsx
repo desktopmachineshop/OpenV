@@ -38,7 +38,7 @@ import { AddMilestoneForm, AddTaskForm, ExportControl, NewTask } from '../compon
 import { PlanPhone } from '../components/plan/PlanPhone';
 import { PlanChartPanel } from '../components/plan/PlanChartPanel';
 import { TaskPanel } from '../components/plan/TaskPanel';
-import type { RelationshipView } from '../components/plan/planModel';
+import { money, type RelationshipView } from '../components/plan/planModel';
 import { ErrorBanner, FeatureGate, Sheet, buttonStyle, mutedStyle, pageType, useConfirm } from '../components/ui';
 import { GANTT_PLAN_FEATURE } from '../features';
 import { useViewport } from '../hooks/useViewport';
@@ -332,6 +332,8 @@ const PlanPage: React.FC = () => {
           <Figure value={s.critical} label="on the critical path" color={s.critical ? 'var(--warning-text)' : undefined} />
           {s.unscheduled > 0 && <Figure value={s.unscheduled} label="not scheduled" />}
           {s.effort_days > 0 && <Figure value={s.effort_days} label={s.effort_days === 1 ? 'day of effort' : 'days of effort'} />}
+          {s.cost > 0 && <Figure value={money(s.cost, plan.currency)} label={plan.budget ? `of ${money(plan.budget, plan.currency)}` : 'cost'} color={plan.budget && s.cost > plan.budget ? 'var(--danger-strong)' : undefined} />}
+          {s.overallocated > 0 && <Figure value={s.overallocated} label="over-allocated" color="var(--danger-strong)" />}
           <Figure value={`${plan.milestones.filter((m) => m.met).length}/${plan.milestones.length}`} label="milestones met" />
         </div>
         {controls}
@@ -361,6 +363,13 @@ const PlanPage: React.FC = () => {
           onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
           onLink={coarsePointer ? undefined : relate}
           onRecalculate={recalculate}
+          onResource={(res, change) => run(() => planAPI.setResource(projectId, res.type, res.id, change), 'Failed to save the resource')}
+          onLevel={() =>
+            run(async () => {
+              const n = (await planAPI.level(projectId)).data.moved;
+              setNote(n === 0 ? 'Nothing moved: no delay would clear the over-allocation.' : `${n} ${n === 1 ? 'task' : 'tasks'} delayed.`);
+            }, 'Failed to level the plan')
+          }
           onSettings={(change) => run(() => planAPI.setSettings(projectId, change), 'Failed to save the plan calendar')}
           onAddTask={(title) => addTask({ title, start: '', end: '' }, undefined, true)}
           busy={busy}
