@@ -272,6 +272,27 @@ func (r *PlanRepository) SaveProjectWorkingDays(projectID string, days []int) er
 	return err
 }
 
+// OrgProjects lists the ids of a workspace's projects.
+func (r *PlanRepository) OrgProjects(orgID string) ([]string, error) {
+	rows, err := r.db.Query(`SELECT id FROM projects WHERE org_id = $1 ORDER BY id`, orgID)
+	if malformedID(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
 // ListTimeOff lists the time off of the workspace the project is in.
 func (r *PlanRepository) ListTimeOff(projectID string) ([]plan.TimeOff, error) {
 	return r.timeOff(`

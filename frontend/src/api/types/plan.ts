@@ -204,7 +204,7 @@ export interface PlanResourceLoad {
   /** The most asked of them on any day, a percentage. */
   peak: number;
   /** The runs of working days on which more than their capacity is asked. */
-  overallocations: { start: string; end: string; units: number; away: boolean }[];
+  overallocations: { start: string; end: string; units: number }[];
   /** The days they are away, from the workspace's calendar. */
   time_off: PlanTimeOff[];
 }

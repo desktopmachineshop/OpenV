@@ -572,7 +572,7 @@ describe('Plan page', () => {
       currency: 'GBP',
       budget: 5000,
       people: [ann, { type: 'agent', id: 'bot', name: 'Builder' }],
-      resources: [{ ...ann, daily_rate: 400, capacity: 100, tasks: 2, work_days: 12, cost: 4800, peak: 150, overallocations: [{ start: '2027-03-08', end: '2027-03-09', units: 150, away: false }], time_off: [] }],
+      resources: [{ ...ann, daily_rate: 400, capacity: 100, tasks: 2, work_days: 12, cost: 4800, peak: 150, overallocations: [{ start: '2027-03-08', end: '2027-03-09', units: 150 }], time_off: [] }],
       summary: { ...plan.summary, cost: 5050, overallocated: 1 },
       tasks: plan.tasks.map((t) => (t.id === 'wiring' ? { ...t, assignments: [{ type: 'user', id: 'ann', units: 100 }], cost: 2600, fixed_cost: 250, overallocated: true } : t)),
     };

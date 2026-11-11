@@ -57,8 +57,6 @@ type Overallocation struct {
 	Start string `json:"start"`
 	End   string `json:"end"`
 	Units int    `json:"units"`
-	// Away: they are off on a day of the run.
-	Away bool `json:"away"`
 }
 
 // ResourceLoad is a resource with the plan's work on them.
@@ -137,12 +135,7 @@ func round2(v float64) float64 { return math.Round(v*100) / 100 }
 // resources gives each task its assignments and its cost, and the plan its
 // resources with their work, cost and load.
 func (b *builder) resources(p *Plan) {
-	own := map[string][]Assignment{}
-	for _, a := range b.in.Assignments {
-		own[a.WorkItemID] = append(own[a.WorkItemID], Assignment{Type: a.Type, ID: a.ID, Units: a.Units})
-	}
 	loads := map[string]*ResourceLoad{}
-	off := away(b.in.TimeOff)
 	days := map[string]map[string]int{}
 	get := func(kind, id string) *ResourceLoad {
 		key := kind + ":" + id
@@ -157,11 +150,7 @@ func (b *builder) resources(p *Plan) {
 		l.DailyRate, l.Capacity = res.DailyRate, res.Capacity
 	}
 	for _, t := range p.Tasks {
-		t.Assignments = own[t.ID]
-		// With nobody else on it, the board's assignee does the task.
-		if len(t.Assignments) == 0 && t.AssigneeID != nil && *t.AssigneeID != "" {
-			t.Assignments = []Assignment{{Type: t.AssigneeType, ID: *t.AssigneeID, Units: 100}}
-		}
+		t.Assignments = b.who(t)
 		if t.Assignments == nil {
 			t.Assignments = []Assignment{}
 		}
@@ -187,7 +176,7 @@ func (b *builder) resources(p *Plan) {
 	over := map[string]map[string]bool{}
 	for key, l := range loads {
 		l.WorkDays, l.Cost = round2(l.WorkDays), round2(l.Cost)
-		l.Overallocations, over[key] = b.overallocations(days[key], l.Capacity, off[key])
+		l.Overallocations, over[key] = b.overallocations(days[key], l.Capacity)
 		for _, t := range b.in.TimeOff {
 			if t.Type+":"+t.AssigneeID == key {
 				l.TimeOff = append(l.TimeOff, t)
@@ -231,10 +220,7 @@ func (b *builder) work(t *Task, get func(kind, id string) *ResourceLoad, days ma
 	if units == 0 {
 		return
 	}
-	cal := b.cal
-	if t.Elapsed {
-		cal = elapsedCalendar
-	}
+	cal := taskCalendar(b.cal, t.Elapsed, t.Assignments, b.off)
 	duration := 0
 	if t.SpanStart != nil {
 		duration = cal.Span(*t.SpanStart, *t.SpanEnd)
@@ -258,22 +244,21 @@ func (b *builder) work(t *Task, get func(kind, id string) *ResourceLoad, days ma
 		}
 		key := a.Type + ":" + a.ID
 		for d := parseDay(*t.SpanStart); !d.After(parseDay(*t.SpanEnd)); d = d.AddDate(0, 0, 1) {
-			if cal.works(d) {
-				days[key][d.Format(DateLayout)] += a.Units
+			// A day they are away asks nothing of them.
+			if day := d.Format(DateLayout); cal.works(d) && !b.off[key][day] {
+				days[key][day] += a.Units
 			}
 		}
 	}
 }
 
 // overallocations turns a resource's load by day into the runs of days on
-// which more than their capacity is asked, or anything at all on a day
-// they are away, and the set of those days.
-func (b *builder) overallocations(load map[string]int, capacity int, away map[string]bool) ([]Overallocation, map[string]bool) {
+// which more than their capacity is asked, and the set of those days.
+func (b *builder) overallocations(load map[string]int, capacity int) ([]Overallocation, map[string]bool) {
 	over := map[string]bool{}
 	list := []string{}
 	for day, n := range load {
-		// A day they are away is a day they can give nothing.
-		if n > capacity || (n > 0 && away[day]) {
+		if n > capacity {
 			over[day] = true
 			list = append(list, day)
 		}
@@ -288,10 +273,9 @@ func (b *builder) overallocations(load map[string]int, capacity int, away map[st
 			if load[day] > out[n-1].Units {
 				out[n-1].Units = load[day]
 			}
-			out[n-1].Away = out[n-1].Away || away[day]
 			continue
 		}
-		out = append(out, Overallocation{Start: day, End: day, Units: load[day], Away: away[day]})
+		out = append(out, Overallocation{Start: day, End: day, Units: load[day]})
 	}
 	return out, over
 }
@@ -412,12 +396,13 @@ func (s *DefaultService) assign(item *workitems.WorkItem, next *TaskSchedule, re
 	days := drivenDuration(*effort, assignments)
 	duration = &days
 	if start != nil {
-		cal, _, err := s.calendar(item.ProjectID)
+		base, _, err := s.calendar(item.ProjectID)
 		if err != nil {
 			return nil, nil, err
 		}
-		if next.Elapsed {
-			cal = elapsedCalendar
+		_, cal, err := s.taskCalendars(item, base, next.Elapsed, ScheduleRequest{})
+		if err != nil {
+			return nil, nil, err
 		}
 		end := cal.End(*start, days)
 		due = &end

@@ -66,6 +66,22 @@ func (c Calendar) WithHolidays(holidays []Holiday) Calendar {
 	return c
 }
 
+// Without is the calendar with those days (YYYY-MM-DD) off as well.
+func (c Calendar) Without(days map[string]bool) Calendar {
+	if len(days) == 0 {
+		return c
+	}
+	off := make(map[string]bool, len(c.off)+len(days))
+	for d := range c.off {
+		off[d] = true
+	}
+	for d := range days {
+		off[d] = true
+	}
+	c.off = off
+	return c
+}
+
 // elapsedCalendar works every day: a task whose duration is elapsed time
 // counts weekends and holidays too.
 var elapsedCalendar = Calendar{work: [7]bool{true, true, true, true, true, true, true}}

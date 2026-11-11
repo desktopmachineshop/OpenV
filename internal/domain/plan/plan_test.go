@@ -302,6 +302,7 @@ func (r *fakeRepo) SaveWorkspaceWorkingDays(_ string, days []int) error {
 	return nil
 }
 func (r *fakeRepo) SaveProjectWorkingDays(_ string, days []int) error { r.shared = days; return nil }
+func (r *fakeRepo) OrgProjects(string) ([]string, error)              { return []string{"p"}, nil }
 func (r *fakeRepo) ListTimeOff(string) ([]TimeOff, error)             { return r.timeOff, nil }
 func (r *fakeRepo) AddTimeOff(_ string, t *TimeOff) error {
 	r.timeOff = append(r.timeOff, *t)
@@ -1819,12 +1820,30 @@ func TestWorkspaceCalendarAndTimeOff(t *testing.T) {
 	if err != nil || off.ID == "" || off.Type != "user" || off.Name != "Skiing" {
 		t.Fatalf("time off: %+v %v", off, err)
 	}
+	// A had five days of work, Monday to Friday: with two of them away it
+	// ends the following Tuesday, and she is asked for nothing while away.
 	p, _ := svc.Plan("p", Evidence{}, now)
-	if len(p.Resources) != 1 || len(p.Resources[0].TimeOff) != 1 || len(p.Resources[0].Overallocations) != 1 {
+	a := task(p, "a")
+	if *a.SpanStart != "2027-03-15" || *a.SpanEnd != "2027-03-23" || *a.DurationDays != 5 || a.Overallocated {
+		t.Fatalf("stretched over her time off: %s..%s, %d days", *a.SpanStart, *a.SpanEnd, *a.DurationDays)
+	}
+	if len(p.Resources) != 1 || len(p.Resources[0].TimeOff) != 1 || len(p.Resources[0].Overallocations) != 0 || p.Resources[0].WorkDays != 2.5 {
 		t.Fatalf("her load: %+v", p.Resources)
 	}
-	if o := p.Resources[0].Overallocations[0]; o.Start != "2027-03-17" || o.End != "2027-03-18" || !o.Away || o.Units != 50 || !task(p, "a").Overallocated {
-		t.Fatalf("asked for while away: %+v", o)
+	// Bo joins her: the task is worked on while either is there, so it is
+	// back to the five days it spans.
+	both := []Assignment{{Type: "user", ID: "ann", Units: 50}, {Type: "user", ID: "bo", Units: 50}}
+	if err := svc.Schedule("a", ScheduleRequest{Assignments: &both}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if p, _ = svc.Plan("p", Evidence{}, now); *task(p, "a").SpanEnd != "2027-03-19" {
+		t.Fatalf("with Bo on it: ends %s", *task(p, "a").SpanEnd)
+	}
+	if err := svc.Schedule("a", ScheduleRequest{Assignments: &ann}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if p, _ = svc.Plan("p", Evidence{}, now); *task(p, "a").SpanEnd != "2027-03-23" {
+		t.Fatalf("hers alone again: ends %s", *task(p, "a").SpanEnd)
 	}
 	if err := svc.DeleteTimeOff("org", off.ID); err != nil {
 		t.Fatal(err)
@@ -1832,7 +1851,7 @@ func TestWorkspaceCalendarAndTimeOff(t *testing.T) {
 	if err := svc.DeleteTimeOff("org", off.ID); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("removed twice: %v", err)
 	}
-	if p, _ := svc.Plan("p", Evidence{}, now); len(p.Resources[0].Overallocations) != 0 {
-		t.Fatalf("back at work: %+v", p.Resources[0].Overallocations)
+	if p, _ = svc.Plan("p", Evidence{}, now); *task(p, "a").SpanEnd != "2027-03-19" {
+		t.Fatalf("back at work: ends %s", *task(p, "a").SpanEnd)
 	}
 }

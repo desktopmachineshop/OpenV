@@ -188,8 +188,8 @@ func (r *recalc) span(id string) *placed {
 // own is the calendar a task's duration counts: every day for a task whose
 // duration is elapsed time, the plan's otherwise.
 func (r *recalc) own(t *Task) Calendar {
-	if t.Elapsed && len(r.children[t.ID]) == 0 {
-		return elapsedCalendar
+	if len(r.children[t.ID]) == 0 {
+		return taskCalendar(r.cal, t.Elapsed, t.Assignments, r.plan.off)
 	}
 	return r.cal
 }
