@@ -280,6 +280,7 @@ func planTour(tr *tour) {
 	tr.step("the plan as JSON", o, export, at("id", "{{p}}"), query("format=json"))
 	tr.step("the plan as Excel", o, export, at("id", "{{p}}"), query("format=excel"))
 	tr.step("the plan as PDF, the default", o, export, at("id", "{{p}}"))
+	tr.step("the plan as Microsoft Project XML", o, export, at("id", "{{p}}"), query("format=msproject"))
 	tr.step("ReqIF is not a plan format: 400", o, export, at("id", "{{p}}"), query("format=reqif"))
 
 	del := "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}"
@@ -288,4 +289,24 @@ func planTour(tr *tour) {
 	tr.step("Kick-off after the delete: 404", o, update, at("id", "{{p}}", "milestoneId", "{{m2}}"), jsonBody(`{"name":"x"}`))
 	tr.step("MVP's stored milestone deleted: its criteria are the defaults again", o, del, at("id", "{{p}}", "milestoneId", "{{mvp_m}}"))
 	tr.step("the plan after the deletes", o, plan, at("id", "{{p}}"))
+
+	ext := "PUT /api/v1/work-items/{id}/external-links/{otherId}"
+	tr.step("Order waits on Q's task, of another project", o, ext, at("id", "{{order}}", "otherId", "{{q_task}}"), jsonBody(`{"type":"FS","lag_days":2}`))
+	tr.step("two tasks of one project: 400", o, ext, at("id", "{{order}}", "otherId", "{{frame}}"), jsonBody(`{}`))
+	tr.step("the viewer may not link them: 403", viewer, ext, at("id", "{{order}}", "otherId", "{{q_task}}"), jsonBody(`{}`))
+	tr.step("the master plan: P and Q, and the link from Q to P", o, "GET /api/v1/plan/master")
+	unext := "DELETE /api/v1/work-items/{id}/external-links/{otherId}"
+	tr.step("the link removed", o, unext, at("id", "{{order}}", "otherId", "{{q_task}}"))
+	tr.step("removed again: 404", o, unext, at("id", "{{order}}", "otherId", "{{q_task}}"))
+
+	imp := "POST /api/v1/projects/{id}/plan/import"
+	msp := `<Project xmlns="http://schemas.microsoft.com/project"><Tasks>` +
+		`<Task><UID>1</UID><Name>Commission</Name><OutlineLevel>1</OutlineLevel><Start>2099-07-01T08:00:00</Start><Finish>2099-07-03T17:00:00</Finish></Task>` +
+		`<Task><UID>2</UID><Name>Hand over</Name><OutlineLevel>1</OutlineLevel><Start>2099-07-06T08:00:00</Start><Finish>2099-07-07T17:00:00</Finish>` +
+		`<PredecessorLink><PredecessorUID>1</PredecessorUID><Type>1</Type><LinkLag>0</LinkLag><LagFormat>7</LagFormat></PredecessorLink></Task>` +
+		`<Task><UID>3</UID><Name>Accepted</Name><OutlineLevel>1</OutlineLevel><Milestone>1</Milestone><Finish>2099-07-08T17:00:00</Finish></Task>` +
+		`</Tasks></Project>`
+	tr.step("a Microsoft Project file imported: two tasks, a milestone and a relationship", o, imp, at("id", "{{p}}"), rawBody("application/xml", []byte(msp)))
+	tr.step("a file that is not one: 400", o, imp, at("id", "{{p}}"), rawBody("application/xml", []byte("plan")))
+	tr.step("the viewer may not import: 403", viewer, imp, at("id", "{{p}}"), rawBody("application/xml", []byte(msp)))
 }

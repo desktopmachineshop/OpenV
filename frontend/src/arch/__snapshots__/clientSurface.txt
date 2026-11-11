@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 272; members of exported objects: 341
+exports: 275; members of exported objects: 345
 
 interface AdminUsage
 interface AdminUser
@@ -78,6 +78,8 @@ interface LimitUsage
 interface Link
 interface LinkTypeRule
 interface LinkedArtifact
+interface MasterPlan
+interface MasterProject
 interface MatrixRow
 interface NoteMention
 interface NoteTodo
@@ -107,6 +109,7 @@ interface PlanCriterion
 interface PlanCriterionResult
 interface PlanEarnedValue
 type      PlanExportFormat
+interface PlanExternalLink
 interface PlanHoliday
 type      PlanLagUnit
 interface PlanMetric
@@ -459,10 +462,13 @@ const     planAPI
             .deleteBaseline
             .export
             .get
+            .importMSProject
             .level
             .listTodos
+            .master
             .recalculate
             .relate
+            .relateExternal
             .removeMilestone
             .rescheduleRemaining
             .saveBaseline
@@ -472,6 +478,7 @@ const     planAPI
             .setSettings
             .setWorkingDays
             .unrelate
+            .unrelateExternal
             .updateMilestone
 const     productProfileAPI
             .get

@@ -111,6 +111,90 @@ func (r *PlanRepository) SaveSchedule(s *plan.TaskSchedule) error {
 	return err
 }
 
+// ListExternalLinks lists the project's links to tasks of other projects:
+// those that drive its tasks, then those its tasks drive, each naming the
+// other task, its project and its dates: its own, or those its sub-tasks
+// span.
+func (r *PlanRepository) ListExternalLinks(projectID string) ([]plan.ExternalLink, error) {
+	rows, err := r.db.Query(`
+		SELECT mine.id, other.id, other.project_id, p.name, other.title,
+			to_char(span.first, 'YYYY-MM-DD'), to_char(span.last, 'YYYY-MM-DD'),
+			other.board_column = 'done', l.kind, l.lag_days, l.lag_unit, mine.id = l.work_item_id
+		FROM plan_external_links l
+		JOIN work_items mine ON mine.id IN (l.work_item_id, l.depends_on_id) AND mine.project_id = $1
+		JOIN work_items other ON other.id IN (l.work_item_id, l.depends_on_id) AND other.id <> mine.id
+		JOIN projects p ON p.id = other.project_id
+		LEFT JOIN LATERAL (
+			WITH RECURSIVE sub(id) AS (
+				SELECT other.id
+				UNION ALL
+				SELECT t.work_item_id FROM plan_tasks t JOIN sub ON t.parent_id = sub.id
+			)
+			SELECT MIN(COALESCE(t.start_date, w.due_date::date)) AS first, MAX(w.due_date::date) AS last
+			FROM sub JOIN work_items w ON w.id = sub.id LEFT JOIN plan_tasks t ON t.work_item_id = w.id
+		) span ON true
+		WHERE other.project_id <> $1
+		ORDER BY mine.id, other.id`, projectID)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = rows.Close() }()
+	out := []plan.ExternalLink{}
+	for rows.Next() {
+		var l plan.ExternalLink
+		var start, end sql.NullString
+		var driven bool
+		if err := rows.Scan(&l.LocalID, &l.TaskID, &l.ProjectID, &l.ProjectName, &l.Title, &start, &end, &l.Done, &l.Type, &l.LagDays, &l.LagUnit, &driven); err != nil {
+			return nil, err
+		}
+		if start.Valid {
+			l.Start = &start.String
+		}
+		if end.Valid {
+			l.End = &end.String
+		}
+		l.Direction = plan.ExternalDrives
+		if driven {
+			l.Direction = plan.ExternalDrivenBy
+		}
+		out = append(out, l)
+	}
+	return out, rows.Err()
+}
+
+// SaveExternalLink makes taskID driven by dependsOnID, a task of another
+// project, replacing whatever link the pair had either way round.
+func (r *PlanRepository) SaveExternalLink(taskID, dependsOnID, kind string, lagDays int, lagUnit string) error {
+	return withTx(context.Background(), r.db, nil, func(tx *sql.Tx) error {
+		if _, err := tx.Exec(`DELETE FROM plan_external_links WHERE work_item_id = $2 AND depends_on_id = $1`, taskID, dependsOnID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(`
+			INSERT INTO plan_external_links (work_item_id, depends_on_id, kind, lag_days, lag_unit) VALUES ($1, $2, $3, $4, $5)
+			ON CONFLICT (work_item_id, depends_on_id) DO UPDATE SET kind = EXCLUDED.kind, lag_days = EXCLUDED.lag_days, lag_unit = EXCLUDED.lag_unit`,
+			taskID, dependsOnID, kind, lagDays, lagUnit)
+		return err
+	})
+}
+
+// DeleteExternalLink removes the link between two tasks of different
+// projects, whichever way round it runs.
+func (r *PlanRepository) DeleteExternalLink(taskID, otherID string) error {
+	res, err := r.db.Exec(`
+		DELETE FROM plan_external_links
+		WHERE (work_item_id = $1 AND depends_on_id = $2) OR (work_item_id = $2 AND depends_on_id = $1)`, taskID, otherID)
+	if malformedID(err) {
+		return plan.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return plan.ErrNotFound
+	}
+	return nil
+}
+
 // SetOrder numbers tasks among their siblings; 0 clears a task's place. A
 // task with no row of the plan yet gets one.
 func (r *PlanRepository) SetOrder(projectID string, order map[string]int) error {

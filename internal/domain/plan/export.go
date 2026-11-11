@@ -23,7 +23,7 @@ const (
 )
 
 // Formats lists the export formats in the order a chooser shows them.
-var Formats = []string{FormatPDF, FormatExcel, FormatCSV, FormatJSON}
+var Formats = []string{FormatPDF, FormatExcel, FormatCSV, FormatMSProject, FormatJSON}
 
 // Document is a plan ready to export: the plan, the project's name and the
 // display name of each assignee by id.
@@ -62,6 +62,9 @@ func Render(doc Document, format string) (*Rendered, error) {
 	case FormatExcel:
 		ext, mime = "xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 		body, err = renderExcel(doc)
+	case FormatMSProject:
+		ext, mime = "xml", "application/xml"
+		body, err = renderMSProject(doc)
 	case FormatPDF:
 		ext, mime = "pdf", "application/pdf"
 		body, err = renderPDF(doc)

@@ -15,6 +15,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **More views of the plan.** The Gantt page can show the plan as a network diagram, a month calendar, each person's work by week, or a one-band timeline.
+- **All projects on one chart.** **All projects** shows the plan of every project in the workspace that you can read, each on its own line with its milestones.
+- **Links between projects.** A task can wait on a task of another project in the same workspace. It follows that task when the plan is recalculated, and both plans name the link.
+- **Microsoft Project files.** Export a plan as Microsoft Project XML, and **Import** one to add its tasks, outline, dates, milestones and relationships to a project.
 - **Columns you can edit.** **Columns**, under the Gantt's header, adds start, finish, days, effort, % done, float, cost and who beside the task names. Click a cell to change it in place.
 - **Find, filter, sort and group.** Find tasks by name, list only the late, critical or unscheduled ones, sort by date, float or progress, and group by person, milestone or board column.
 - **Move, indent and outdent tasks.** Move the selected task up or down among its siblings, make it a sub-task of the task above or move it out a level, or drag it by its outline number onto another task. Tasks keep the order you give them.

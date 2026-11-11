@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 344
-  axios instance calls: 334 (DELETE 40, GET 133, HEAD 1, POST 109, PUT 51)
+call sites: 348
+  axios instance calls: 338 (DELETE 41, GET 134, HEAD 1, POST 110, PUT 52)
   helper calls (a function that passes its argument to the instance): 1
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 6 (3 of them axios calls)
-distinct METHOD PATH lines below: 342; server routes reached: 342
+distinct METHOD PATH lines below: 346; server routes reached: 346
 
 GET     /api/v1/admin/metrics/usage                                       adminAPI.usage
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
@@ -207,6 +207,7 @@ GET     /api/v1/orgs/{id}/worker-keys                                     worker
 POST    /api/v1/orgs/{id}/worker-keys                                     workerKeysAPI.create
 DELETE  /api/v1/orgs/{id}/worker-keys/{keyId}                             workerKeysAPI.revoke
 GET     /api/v1/orgs/{id}/worker-status                                   workerStatusAPI.get
+GET     /api/v1/plan/master                                               planAPI.master
 GET     /api/v1/projects                                                  projectAPI.list
 POST    /api/v1/projects                                                  projectAPI.create
 POST    /api/v1/projects/import                                           projectAPI.import
@@ -242,6 +243,7 @@ GET     /api/v1/projects/{id}/plan                                        planAP
 POST    /api/v1/projects/{id}/plan/baselines                              planAPI.saveBaseline
 DELETE  /api/v1/projects/{id}/plan/baselines/{baselineId}                 planAPI.deleteBaseline
 GET     /api/v1/projects/{id}/plan/export                                 planAPI.export
+POST    /api/v1/projects/{id}/plan/import                                 planAPI.importMSProject
 POST    /api/v1/projects/{id}/plan/level                                  planAPI.level
 POST    /api/v1/projects/{id}/plan/milestones                             planAPI.createMilestone
 DELETE  /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAPI.removeMilestone
@@ -344,6 +346,8 @@ DELETE  /api/v1/work-items/{id}                                           workIt
 GET     /api/v1/work-items/{id}                                           workItemsAPI.get
 PUT     /api/v1/work-items/{id}                                           workItemsAPI.update
 POST    /api/v1/work-items/{id}/comments                                  workItemsAPI.comment
+DELETE  /api/v1/work-items/{id}/external-links/{otherId}                  planAPI.unrelateExternal
+PUT     /api/v1/work-items/{id}/external-links/{otherId}                  planAPI.relateExternal
 POST    /api/v1/work-items/{id}/move                                      workItemsAPI.move
 DELETE  /api/v1/work-items/{id}/relationships/{otherId}                   planAPI.unrelate
 PUT     /api/v1/work-items/{id}/relationships/{otherId}                   planAPI.relate

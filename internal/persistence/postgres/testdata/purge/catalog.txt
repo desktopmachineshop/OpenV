@@ -58,6 +58,7 @@ password_resets scope - not reached
 plan_assignments scope project_id cascade from projects,work_items
 plan_baselines scope project_id cascade from projects
 plan_dependencies scope project_id cascade from projects,work_items
+plan_external_links scope - cascade from work_items
 plan_holidays scope project_id cascade from projects
 plan_milestones scope project_id cascade from projects
 plan_resources scope project_id cascade from projects

@@ -44,6 +44,7 @@ DELETE /api/v1/test-results/{id}/citations/{bundleId}: project:editor
 DELETE /api/v1/test-runs/{id}: project:editor
 DELETE /api/v1/todos/{id}: project:editor
 DELETE /api/v1/work-items/{id}: project:editor
+DELETE /api/v1/work-items/{id}/external-links/{otherId}: project:editor
 DELETE /api/v1/work-items/{id}/relationships/{otherId}: project:editor
 DELETE /mcp: -
 GET /.well-known/oauth-authorization-server: -
@@ -132,6 +133,7 @@ GET /api/v1/orgs/{id}/teams: org:member
 GET /api/v1/orgs/{id}/usage: org:member
 GET /api/v1/orgs/{id}/worker-keys: org:admin
 GET /api/v1/orgs/{id}/worker-status: org:member
+GET /api/v1/plan/master: project:viewer
 GET /api/v1/projects: -
 GET /api/v1/projects/{id}: project:viewer
 GET /api/v1/projects/{id}/ai-map: project:viewer
@@ -292,6 +294,7 @@ POST /api/v1/projects/{id}/evidence-bundles: project:editor
 POST /api/v1/projects/{id}/interviews: no-proposal-run, project:editor, project-visible
 POST /api/v1/projects/{id}/members: project:owner
 POST /api/v1/projects/{id}/plan/baselines: project:editor
+POST /api/v1/projects/{id}/plan/import: project:editor
 POST /api/v1/projects/{id}/plan/level: project:editor
 POST /api/v1/projects/{id}/plan/milestones: project:editor
 POST /api/v1/projects/{id}/plan/recalculate: project:editor
@@ -386,5 +389,6 @@ PUT /api/v1/shared-products/{id}/vote: session
 PUT /api/v1/test-runs/{id}: project:editor
 PUT /api/v1/todos/{id}: project:editor
 PUT /api/v1/work-items/{id}: project:editor
+PUT /api/v1/work-items/{id}/external-links/{otherId}: project:editor, project:viewer
 PUT /api/v1/work-items/{id}/relationships/{otherId}: project:editor
 PUT /api/v1/work-items/{id}/schedule: project:editor

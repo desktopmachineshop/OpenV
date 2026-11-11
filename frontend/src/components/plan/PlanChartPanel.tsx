@@ -7,12 +7,26 @@ import { Modal, PanelHeader, SegmentedControl, buttonStyle, mutedStyle, panelSty
 import { GanttChart, type GanttChartProps } from './GanttChart';
 import { PlanCalendar, type PlanSettingsChange } from './PlanCalendar';
 import type { PlanHistory } from './planHistory';
+import { PlanMaster, PlanTimeline } from './PlanLines';
+import { PlanMonth } from './PlanMonth';
+import { PlanNetwork } from './PlanNetwork';
 import { PlanResources } from './PlanResources';
+import { PlanUsage } from './PlanUsage';
 import { PlanViewBar } from './PlanViewBar';
 import { DEFAULT_VIEW, columnsWidth } from './planView';
 import { PlanTracking, type TrackingAction } from './PlanTracking';
 import { WorkingDays } from './WorkingDays';
 import { ZOOMS, Zoom } from './ganttScale';
+
+type PlanMode = 'gantt' | 'network' | 'calendar' | 'usage' | 'timeline' | 'master';
+const MODES: { value: PlanMode; label: string }[] = [
+  { value: 'gantt', label: 'Gantt' },
+  { value: 'network', label: 'Network' },
+  { value: 'calendar', label: 'Calendar' },
+  { value: 'usage', label: 'Resource usage' },
+  { value: 'timeline', label: 'Timeline' },
+  { value: 'master', label: 'All projects' },
+];
 
 export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'showCritical' | 'todaySignal' | 'onSelectMilestone' | 'showBaseline' | 'view'> {
   plan: ProjectPlan;
@@ -42,6 +56,7 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
   const [tracking, setTracking] = useState(false);
   const [showBaseline, setShowBaseline] = useState(true);
   const [view, setView] = useState(DEFAULT_VIEW);
+  const [mode, setMode] = useState<PlanMode>('gantt');
   const [recalculating, setRecalculating] = useState(false);
   const [onlyLater, setOnlyLater] = useState(false);
   const [todaySignal, setTodaySignal] = useState(0);
@@ -116,8 +131,18 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
               </span>
             }
           />
-          {!touch && <PlanViewBar plan={plan} view={view} onView={setView} selectedTaskId={chart.selectedTaskId} busy={busy} onEdit={chart.onEdit} history={chart.onEdit && history} />}
-          <GanttChart {...chart} view={view} outlineWidth={outlineWidth + columnsWidth(view)} plan={plan} zoom={zoom} busy={busy} touch={touch} onSelectMilestone={onSelectMilestone} showBaseline={showBaseline && Boolean(plan.baseline_id)} showCritical={showCritical} onlyCritical={showCritical && onlyCritical} todaySignal={todaySignal} />
+          {!touch && (
+            <div data-help-key="gantt.views" style={{ padding: '6px 12px', borderBottom: '1px solid var(--border-soft)' }}>
+              <SegmentedControl aria-label="View" options={MODES} value={mode} onChange={setMode} style={{ fontSize: 12 }} />
+            </div>
+          )}
+          {mode === 'gantt' && !touch && <PlanViewBar plan={plan} view={view} onView={setView} selectedTaskId={chart.selectedTaskId} busy={busy} onEdit={chart.onEdit} history={chart.onEdit && history} />}
+          {mode === 'gantt' && <GanttChart {...chart} view={view} outlineWidth={outlineWidth + columnsWidth(view)} plan={plan} zoom={zoom} busy={busy} touch={touch} onSelectMilestone={onSelectMilestone} showBaseline={showBaseline && Boolean(plan.baseline_id)} showCritical={showCritical} onlyCritical={showCritical && onlyCritical} todaySignal={todaySignal} />}
+          {mode === 'network' && <PlanNetwork plan={plan} selectedTaskId={chart.selectedTaskId} onSelectTask={chart.onSelectTask} />}
+          {mode === 'calendar' && <PlanMonth plan={plan} selectedTaskId={chart.selectedTaskId} onSelectTask={chart.onSelectTask} />}
+          {mode === 'usage' && <PlanUsage plan={plan} />}
+          {mode === 'timeline' && <PlanTimeline plan={plan} onSelectTask={chart.onSelectTask} />}
+          {mode === 'master' && <PlanMaster currentProjectId={plan.project_id} />}
           {recalculating && (
             <Modal title="Recalculate the plan" width={440} onClose={() => setRecalculating(false)}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13 }}>

@@ -809,6 +809,17 @@ table plan_dependencies rows 0
   index idx_plan_dependencies_depends_on CREATE INDEX idx_plan_dependencies_depends_on ON public.plan_dependencies USING btree (depends_on_id)
   index idx_plan_dependencies_project CREATE INDEX idx_plan_dependencies_project ON public.plan_dependencies USING btree (project_id)
   index plan_dependencies_pkey CREATE UNIQUE INDEX plan_dependencies_pkey ON public.plan_dependencies USING btree (work_item_id, depends_on_id)
+table plan_external_links rows 0
+  column work_item_id uuid NOT NULL
+  column depends_on_id uuid NOT NULL
+  column kind character varying(2) NOT NULL DEFAULT 'FS'::character varying
+  column lag_days integer NOT NULL DEFAULT 0
+  column lag_unit character varying(2) NOT NULL DEFAULT 'd'::character varying
+  constraint plan_external_links_depends_on_id_fkey FOREIGN KEY (depends_on_id) REFERENCES work_items(id) ON DELETE CASCADE
+  constraint plan_external_links_pkey PRIMARY KEY (work_item_id, depends_on_id)
+  constraint plan_external_links_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES work_items(id) ON DELETE CASCADE
+  index idx_plan_external_links_depends_on CREATE INDEX idx_plan_external_links_depends_on ON public.plan_external_links USING btree (depends_on_id)
+  index plan_external_links_pkey CREATE UNIQUE INDEX plan_external_links_pkey ON public.plan_external_links USING btree (work_item_id, depends_on_id)
 table plan_holidays rows 0
   column project_id uuid NOT NULL
   column day date NOT NULL
@@ -1094,7 +1105,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 85
+table schema_migrations rows 86
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1465,3 +1476,4 @@ ledger 0082 plan_scheduling_engine
 ledger 0083 plan_resources
 ledger 0084 plan_tracking
 ledger 0085 plan_task_order
+ledger 0086 plan_external_links

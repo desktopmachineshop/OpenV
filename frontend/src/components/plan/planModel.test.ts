@@ -69,6 +69,7 @@ const task = (id: string, extra: Partial<PlanTask> = {}): PlanTask => ({
   relationships: [],
   drives: [],
   conflicts: [],
+  external_links: [],
   ...extra,
 });
 

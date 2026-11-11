@@ -38,6 +38,7 @@ DELETE /api/v1/test-results/{id}/citations/{bundleId}
 DELETE /api/v1/test-runs/{id}
 DELETE /api/v1/todos/{id}
 DELETE /api/v1/work-items/{id}
+DELETE /api/v1/work-items/{id}/external-links/{otherId}
 DELETE /api/v1/work-items/{id}/relationships/{otherId}
 DELETE /mcp
 GET /.well-known/oauth-authorization-server
@@ -126,6 +127,7 @@ GET /api/v1/orgs/{id}/teams
 GET /api/v1/orgs/{id}/usage
 GET /api/v1/orgs/{id}/worker-keys
 GET /api/v1/orgs/{id}/worker-status
+GET /api/v1/plan/master
 GET /api/v1/projects
 GET /api/v1/projects/{id}
 GET /api/v1/projects/{id}/ai-map
@@ -286,6 +288,7 @@ POST /api/v1/projects/{id}/evidence-bundles
 POST /api/v1/projects/{id}/interviews
 POST /api/v1/projects/{id}/members
 POST /api/v1/projects/{id}/plan/baselines
+POST /api/v1/projects/{id}/plan/import
 POST /api/v1/projects/{id}/plan/level
 POST /api/v1/projects/{id}/plan/milestones
 POST /api/v1/projects/{id}/plan/recalculate
@@ -380,5 +383,6 @@ PUT /api/v1/shared-products/{id}/vote
 PUT /api/v1/test-runs/{id}
 PUT /api/v1/todos/{id}
 PUT /api/v1/work-items/{id}
+PUT /api/v1/work-items/{id}/external-links/{otherId}
 PUT /api/v1/work-items/{id}/relationships/{otherId}
 PUT /api/v1/work-items/{id}/schedule

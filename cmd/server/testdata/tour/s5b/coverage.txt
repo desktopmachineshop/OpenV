@@ -22,6 +22,7 @@ DELETE /api/v1/test-results/{id}/citations/{bundleId}: 204, 403, 404; evidence
 DELETE /api/v1/test-runs/{id}: 204, 403, 409; test_runs_results
 DELETE /api/v1/todos/{id}: 204, 403; todos
 DELETE /api/v1/work-items/{id}: 204, 403, 404; work_items
+DELETE /api/v1/work-items/{id}/external-links/{otherId}: 204, 404; plan
 DELETE /api/v1/work-items/{id}/relationships/{otherId}: 204; plan
 GET /api/v1/agent-runs/{id}: 200; guided_sessions, interviews
 GET /api/v1/artifacts: 200; guided_sessions
@@ -40,6 +41,7 @@ GET /api/v1/interview-sessions/{id}/transcript: 200, 404; interviews
 GET /api/v1/interviews/{id}/invites: 200, 404; interviews
 GET /api/v1/interviews/{id}/sessions: 200, 404; interviews
 GET /api/v1/orgs/{id}/quality-rules: 200, 404; quality_profile_parties
+GET /api/v1/plan/master: 200; plan
 GET /api/v1/projects/{id}/ai-map: 200; quality_profile_parties
 GET /api/v1/projects/{id}/download/docx: 200; vv_coverage_report
 GET /api/v1/projects/{id}/download/pdf: 200; vv_coverage_report
@@ -91,6 +93,7 @@ POST /api/v1/interviews/{id}/invites: 201, 400, 403, 404; interviews
 POST /api/v1/projects/{id}/evidence-bundles: 201, 400, 403, 404; evidence
 POST /api/v1/projects/{id}/interviews: 201, 400, 403; interviews
 POST /api/v1/projects/{id}/plan/baselines: 201, 403; plan
+POST /api/v1/projects/{id}/plan/import: 201, 400, 403; plan
 POST /api/v1/projects/{id}/plan/level: 200, 403; plan
 POST /api/v1/projects/{id}/plan/milestones: 201, 400, 403; plan
 POST /api/v1/projects/{id}/plan/recalculate: 200, 403; plan
@@ -130,7 +133,8 @@ PUT /api/v1/shared-products/{id}/vote: 200, 403, 404; shared_products
 PUT /api/v1/test-runs/{id}: 200, 400, 403, 404, 409; test_runs_results
 PUT /api/v1/todos/{id}: 200; todos
 PUT /api/v1/work-items/{id}: 200, 400, 403, 404; work_items
+PUT /api/v1/work-items/{id}/external-links/{otherId}: 200, 400, 403; plan
 PUT /api/v1/work-items/{id}/relationships/{otherId}: 200, 400, 403; plan
 PUT /api/v1/work-items/{id}/schedule: 200, 400, 403; plan
 
-s5b: 121 of 384 routes reached (31.5%), 121 with a 2xx or 3xx answer (31.5%)
+s5b: 125 of 388 routes reached (32.2%), 125 with a 2xx or 3xx answer (32.2%)

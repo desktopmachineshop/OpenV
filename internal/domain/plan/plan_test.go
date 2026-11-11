@@ -232,6 +232,7 @@ type fakeRepo struct {
 	assignments map[string][]Assignment
 	resources   []Resource
 	baselines   []*Baseline
+	external    []ExternalLink
 	todoTasks   map[string]string
 	milestones  map[string]*Milestone
 }
@@ -290,6 +291,21 @@ func (r *fakeRepo) SetOrder(_ string, order map[string]int) error {
 		}
 	}
 	return nil
+}
+func (r *fakeRepo) ListExternalLinks(string) ([]ExternalLink, error) { return r.external, nil }
+func (r *fakeRepo) SaveExternalLink(taskID, on, kind string, lag int, unit string) error {
+	r.external = append(r.external, ExternalLink{LocalID: taskID, TaskID: on, ProjectID: "other", ProjectName: "Other", Title: "Elsewhere",
+		Start: sp("2027-03-22"), End: sp("2027-03-24"), Type: kind, LagDays: lag, LagUnit: unit, Direction: ExternalDrivenBy})
+	return nil
+}
+func (r *fakeRepo) DeleteExternalLink(taskID, other string) error {
+	for i, l := range r.external {
+		if l.LocalID == taskID && l.TaskID == other {
+			r.external = append(r.external[:i], r.external[i+1:]...)
+			return nil
+		}
+	}
+	return ErrNotFound
 }
 func (r *fakeRepo) ListBaselines(string) ([]*Baseline, error) { return r.baselines, nil }
 func (r *fakeRepo) CreateBaseline(b *Baseline) error {
@@ -365,6 +381,13 @@ func (b *fakeBoard) Update(id string, req workitems.UpdateWorkItemRequest, _ str
 	b.updates++
 	it := b.items[id]
 	it.Title, it.DueDate = req.Title, req.DueDate
+	return it, nil
+}
+
+func (b *fakeBoard) Create(req workitems.CreateWorkItemRequest, _ *string, _ string) (*workitems.WorkItem, error) {
+	it := &workitems.WorkItem{ID: fmt.Sprintf("new%d", len(b.items)), ProjectID: req.ProjectID, Title: req.Title, Column: req.Column,
+		AssigneeType: workitems.AssigneeUser, CreatedAt: now.Add(time.Duration(len(b.items)) * time.Second)}
+	b.items[it.ID] = it
 	return it, nil
 }
 
@@ -1637,5 +1660,100 @@ func TestPDFLinksCrossPages(t *testing.T) {
 	}
 	if path := os.Getenv("PLAN_PDF_OUT"); path != "" {
 		_ = os.WriteFile(path, out, 0o644)
+	}
+}
+
+func TestMicrosoftProjectXMLRoundTrip(t *testing.T) {
+	svc, repo, _, _ := newService()
+	repo.days = []int{1, 2, 3, 4, 5}
+	if err := svc.Schedule("a", ScheduleRequest{StartDate: sp("2027-03-01"), DueDate: sp("2027-03-05")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Schedule("b", ScheduleRequest{StartDate: sp("2027-03-08"), DueDate: sp("2027-03-10"), ParentID: sp("c"),
+		Relationships: &[]Relationship{{TaskID: "a", Type: RelStartToStart, LagDays: 5}}}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.CreateMilestone("p", MilestoneRequest{Name: sp("Gate"), TargetDate: sp("2027-03-12")}); err != nil {
+		t.Fatal(err)
+	}
+	p, err := svc.Plan("p", Evidence{}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := Render(Document{ProjectName: "Rig", ExportedAt: now, Plan: p}, FormatMSProject)
+	if err != nil || out.Filename[len(out.Filename)-4:] != ".xml" {
+		t.Fatalf("export: %v %+v", err, out)
+	}
+	xmlText := string(out.Data)
+	for _, want := range []string{`<Project xmlns="http://schemas.microsoft.com/project">`, "<Name>A</Name>", "<Start>2027-03-01T08:00:00</Start>", "<Duration>PT40H0M0S</Duration>",
+		"<OutlineNumber>2.1</OutlineNumber>", "<Type>3</Type>", "<LinkLag>24000</LinkLag>", "<Milestone>1</Milestone>", "<Summary>1</Summary>"} {
+		if !strings.Contains(xmlText, want) {
+			t.Fatalf("the export lacks %s:\n%s", want, xmlText)
+		}
+	}
+	// Read back into an empty project: the same outline, dates and link.
+	svc2, repo2, board2, _ := newService()
+	repo2.days = []int{1, 2, 3, 4, 5}
+	board2.items = map[string]*workitems.WorkItem{}
+	res, err := svc2.ImportMSProject("p", out.Data, nil, "tester")
+	if err != nil || res != (ImportResult{Tasks: 3, Milestones: 1, Relationships: 1}) {
+		t.Fatalf("import: %+v %v", res, err)
+	}
+	got, _ := svc2.Plan("p", Evidence{}, now)
+	line := ""
+	for _, task := range got.Tasks {
+		line += task.WBS + " " + task.Title + " "
+		if task.SpanStart != nil {
+			line += *task.SpanStart + ".." + *task.SpanEnd + " "
+		}
+		for _, r := range task.Relationships {
+			line += fmt.Sprintf("%s+%d%s ", r.Type, r.LagDays, r.LagUnit)
+		}
+	}
+	if line != "1 A 2027-03-01..2027-03-05 2 C 2027-03-08..2027-03-10 2.1 B 2027-03-08..2027-03-10 SS+5d " || len(got.Milestones) != 1 || got.Milestones[0].Name != "Gate" {
+		t.Fatalf("read back: %q %+v", line, got.Milestones)
+	}
+	if _, err := svc2.ImportMSProject("p", []byte("<Project></Project>"), nil, "tester"); !errors.Is(err, ErrImport) {
+		t.Fatalf("a file with no tasks: %v", err)
+	}
+	if _, err := svc2.ImportMSProject("p", []byte("not xml"), nil, "tester"); !errors.Is(err, ErrImport) {
+		t.Fatalf("not XML: %v", err)
+	}
+}
+
+func TestATaskOfAnotherProjectDrivesOne(t *testing.T) {
+	svc, repo, _, _ := newService()
+	repo.days = []int{1, 2, 3, 4, 5}
+	if err := svc.Schedule("a", ScheduleRequest{StartDate: sp("2027-03-08"), DueDate: sp("2027-03-10")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.RelateExternal("a", "b", "", 0, "", "tester"); !errors.Is(err, ErrSameProject) {
+		t.Fatalf("two tasks of one project: %v", err)
+	}
+	if err := svc.RelateExternal("a", "nope", "", 0, "", "tester"); !errors.Is(err, ErrTaskNotFound) {
+		t.Fatalf("a task that is not: %v", err)
+	}
+	// X, of another project, runs 22 to 24 March: A, which starts on the
+	// 8th, breaks a finish to start from it until the plan is recalculated.
+	if err := svc.RelateExternal("a", "x", "fs", 1, "", "tester"); err != nil {
+		t.Fatal(err)
+	}
+	p, _ := svc.Plan("p", Evidence{}, now)
+	a := task(p, "a")
+	if len(a.ExternalLinks) != 1 || !a.ExternalLinks[0].Conflict || a.ExternalLinks[0].ProjectName != "Other" || a.ExternalLinks[0].Type != RelFinishToStart || len(a.Relationships) != 0 {
+		t.Fatalf("the link on A: %+v", a.ExternalLinks)
+	}
+	if moved, err := svc.Recalculate("p", "tester", false, now); err != nil || moved != 1 || *repo.schedules["a"].StartDate != "2027-03-26" {
+		t.Fatalf("recalculated %d: %v, a starts %s", moved, err, *repo.schedules["a"].StartDate)
+	}
+	p, _ = svc.Plan("p", Evidence{}, now)
+	if task(p, "a").ExternalLinks[0].Conflict {
+		t.Fatal("kept once A follows it")
+	}
+	if err := svc.UnrelateExternal("a", "x"); err != nil || len(repo.external) != 0 {
+		t.Fatalf("removed: %v", err)
+	}
+	if err := svc.UnrelateExternal("a", "x"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("removed twice: %v", err)
 	}
 }

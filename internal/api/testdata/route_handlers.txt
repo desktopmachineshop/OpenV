@@ -375,6 +375,10 @@ PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId} -> SetReleaseMiles
 PUT /api/v1/projects/{id}/plan/settings -> SetPlanSettings
 POST /api/v1/projects/{id}/plan/recalculate -> RecalculatePlan
 POST /api/v1/projects/{id}/plan/level -> LevelPlan
+POST /api/v1/projects/{id}/plan/import -> ImportPlan
+GET /api/v1/plan/master -> GetMasterPlan
+PUT /api/v1/work-items/{id}/external-links/{otherId} -> RelateExternalWorkItems
+DELETE /api/v1/work-items/{id}/external-links/{otherId} -> UnrelateExternalWorkItems
 POST /api/v1/projects/{id}/plan/baselines -> SavePlanBaseline
 DELETE /api/v1/projects/{id}/plan/baselines/{baselineId} -> DeletePlanBaseline
 POST /api/v1/projects/{id}/plan/reschedule-remaining -> RescheduleRemainingPlan

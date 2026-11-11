@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="other-views-of-the-plan">
+  <title>Other views of the plan</title>
+  <shortdesc>The row of views under the chart's header shows the same plan in other ways.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt.views"/>
+  </prolog>
+  <conbody>
+    <ul>
+      <li><b>Network</b> draws a box for each task and an arrow for each relationship, each task one column to the right of the tasks that drive it. Critical tasks have an amber border.</li>
+      <li><b>Calendar</b> shows a month: each day lists the tasks that run on it and the milestones due, with the days the plan does not work shaded.</li>
+      <li><b>Resource usage</b> lists each person and agent with work on the plan and the days of their time each week asks for. A week that asks for more than they can give is red.</li>
+      <li><b>Timeline</b> fits the top-level tasks and the milestones on one band across the page.</li>
+    </ul>
+    <p>Select a task in any of them to open its panel.</p>
+  </conbody>
+</concept>

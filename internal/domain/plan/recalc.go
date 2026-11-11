@@ -94,6 +94,9 @@ func (s *DefaultService) inputs(projectID string) (Inputs, Calendar, Settings, e
 	if in.Resources, err = s.repo.ListResources(projectID); err != nil {
 		return in, cal, set, err
 	}
+	if in.External, err = s.repo.ListExternalLinks(projectID); err != nil {
+		return in, cal, set, err
+	}
 	in.WorkingDays, in.Holidays, in.CriticalSlackDays, in.Scheduling = set.WorkingDays, set.Holidays, set.CriticalSlackDays, set.Scheduling
 	in.Currency, in.Budget, in.Tracking = set.Currency, set.Budget, set.Tracking
 	return in, cal, set, nil
@@ -211,6 +214,11 @@ func (r *recalc) moves(t *Task) bool {
 	if len(r.drivers[t.ID]) > 0 {
 		return true
 	}
+	for _, l := range t.ExternalLinks {
+		if l.Direction == ExternalDrivenBy && l.Start != nil && l.End != nil {
+			return true
+		}
+	}
 	switch t.ConstraintType {
 	case ConstraintSNET, ConstraintFNET, ConstraintMSO, ConstraintMFO:
 		return t.ConstraintDate != nil
@@ -248,6 +256,18 @@ func (r *recalc) wanted(t *Task, duration int, sits *string) string {
 		}
 		asked := askedDate(r.cal, d.Type, d.LagDays, d.LagUnit, on.start, on.end, r.cal.Span(on.start, on.end))
 		if endDriven(d.Type) {
+			asked = own.Start(asked, duration)
+		}
+		driven = true
+		bound(asked)
+	}
+	// A task of another project drives it from where that task sits.
+	for _, l := range t.ExternalLinks {
+		if l.Direction != ExternalDrivenBy || l.Start == nil || l.End == nil {
+			continue
+		}
+		asked := askedDate(r.cal, l.Type, l.LagDays, l.LagUnit, *l.Start, *l.End, r.cal.Span(*l.Start, *l.End))
+		if endDriven(l.Type) {
 			asked = own.Start(asked, duration)
 		}
 		driven = true

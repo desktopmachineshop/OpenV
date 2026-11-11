@@ -122,11 +122,29 @@ const FORMATS: { value: PlanExportFormat; label: string }[] = [
   { value: 'pdf', label: 'PDF (the chart)' },
   { value: 'excel', label: 'Excel' },
   { value: 'csv', label: 'CSV' },
+  { value: 'msproject', label: 'Microsoft Project (XML)' },
   { value: 'json', label: 'JSON' },
 ];
 
 /** Export as a select that acts: choosing a format saves the file. */
-export const ExportControl: React.FC<{ busy: boolean; onExport: (f: PlanExportFormat) => void }> = ({ busy, onExport }) => (
+export const ExportControl: React.FC<{ busy: boolean; onExport: (f: PlanExportFormat) => void; onImport?: (file: File) => void }> = ({ busy, onExport, onImport }) => (
+  <>
+    {onImport && (
+      <label data-help-key="gantt.export" title="Add the tasks of a Microsoft Project XML file to this plan" style={{ ...buttonStyle('secondary'), cursor: 'pointer' }}>
+        Import…
+        <input
+          type="file"
+          accept=".xml,application/xml,text/xml"
+          data-import-plan
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) onImport(file);
+          }}
+          style={{ display: 'none' }}
+        />
+      </label>
+    )}
   <select
     value=""
     disabled={busy}
@@ -142,4 +160,5 @@ export const ExportControl: React.FC<{ busy: boolean; onExport: (f: PlanExportFo
       </option>
     ))}
   </select>
+  </>
 );
