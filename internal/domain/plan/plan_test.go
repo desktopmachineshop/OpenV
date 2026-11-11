@@ -224,6 +224,8 @@ type fakeRepo struct {
 	schedules  map[string]*TaskSchedule
 	deps       map[string][]Dependency
 	days       []int
+	holidays   []Holiday
+	slack      int
 	todoTasks  map[string]string
 	milestones map[string]*Milestone
 }
@@ -239,9 +241,16 @@ func (r *fakeRepo) ListSchedules(string) ([]*TaskSchedule, error) {
 	}
 	return out, nil
 }
-func (r *fakeRepo) WorkingDays(string) ([]int, error)      { return r.days, nil }
-func (r *fakeRepo) SetWorkingDays(_ string, d []int) error { r.days = d; return nil }
-func (r *fakeRepo) SaveSchedule(s *TaskSchedule) error     { r.schedules[s.WorkItemID] = s; return nil }
+func (r *fakeRepo) WorkingDays(string) ([]int, error)       { return r.days, nil }
+func (r *fakeRepo) SetWorkingDays(_ string, d []int) error  { r.days = d; return nil }
+func (r *fakeRepo) Holidays(string) ([]Holiday, error)      { return r.holidays, nil }
+func (r *fakeRepo) SetHolidays(_ string, h []Holiday) error { r.holidays = h; return nil }
+func (r *fakeRepo) CriticalSlackDays(string) (int, error)   { return r.slack, nil }
+func (r *fakeRepo) SetCriticalSlackDays(_ string, n int) error {
+	r.slack = n
+	return nil
+}
+func (r *fakeRepo) SaveSchedule(s *TaskSchedule) error { r.schedules[s.WorkItemID] = s; return nil }
 func (r *fakeRepo) ListDependencies(string) ([]Dependency, error) {
 	out := []Dependency{}
 	for _, on := range r.deps {
@@ -353,7 +362,7 @@ func TestScheduleChecksDatesParentsAndDependencies(t *testing.T) {
 	if board.updates != 1 || board.items["b"].DueDate.Format(DateLayout) != "2027-03-08" || board.items["b"].Title != "B" {
 		t.Fatalf("the due date is the work item's: %+v", board.items["b"])
 	}
-	if got := repo.deps["b"]; len(got) != 1 || got[0] != (Dependency{WorkItemID: "b", DependsOnID: "c", Type: RelFinishToStart}) {
+	if got := repo.deps["b"]; len(got) != 1 || got[0] != (Dependency{WorkItemID: "b", DependsOnID: "c", Type: RelFinishToStart, LagUnit: LagWorkingDays}) {
 		t.Fatalf("dependencies are deduplicated: %v", got)
 	}
 	ok("c", ScheduleRequest{ParentID: sp("b")})
@@ -500,7 +509,7 @@ func TestRelationshipsHaveATypeAndATaskMayHaveSeveral(t *testing.T) {
 	if err := svc.Schedule("c", rels(Relationship{TaskID: "a", Type: "ss"}, Relationship{TaskID: "b", Type: ""}, Relationship{TaskID: "a", Type: "FF"}), "tester"); err != nil {
 		t.Fatal(err)
 	}
-	want := []Dependency{{WorkItemID: "c", DependsOnID: "a", Type: RelStartToStart}, {WorkItemID: "c", DependsOnID: "b", Type: RelFinishToStart}}
+	want := []Dependency{{WorkItemID: "c", DependsOnID: "a", Type: RelStartToStart, LagUnit: LagWorkingDays}, {WorkItemID: "c", DependsOnID: "b", Type: RelFinishToStart, LagUnit: LagWorkingDays}}
 	if got := repo.deps["c"]; len(got) != 2 || got[0] != want[0] || got[1] != want[1] {
 		t.Fatalf("relationships %+v, want %+v (a pair has one relationship, the first named)", got, want)
 	}
@@ -526,11 +535,16 @@ func TestEachRelationshipTypeIsBrokenByItsOwnDates(t *testing.T) {
 		Schedules: []*TaskSchedule{{WorkItemID: "on", StartDate: sp("2027-03-05")}, {WorkItemID: "t", StartDate: sp("2027-03-04")}},
 	}
 	// Driven runs 4 to 8 March, the driver 5 to 10 March: it starts before
-	// the driver starts, ends before it ends, and starts before it ends.
-	for _, kind := range RelationshipTypes {
+	// the driver starts, ends before it ends, and starts before it ends. It
+	// does end after the driver starts, so start to finish holds.
+	in.Dependencies = []Dependency{{WorkItemID: "t", DependsOnID: "on", Type: RelStartToFinish}}
+	if got := task(Build(in, now), "t"); got.Relationships[0].Conflict {
+		t.Fatalf("SF holds while the driven task ends on or after the driver's start: %+v", got.Relationships)
+	}
+	for _, kind := range []string{RelFinishToStart, RelStartToStart, RelFinishToFinish} {
 		in.Dependencies = []Dependency{{WorkItemID: "t", DependsOnID: "on", Type: kind}}
 		got := task(Build(in, now), "t")
-		if len(got.Relationships) != 1 || got.Relationships[0] != (TaskRelationship{TaskID: "on", Type: kind, Conflict: true}) || len(got.Conflicts) != 1 {
+		if len(got.Relationships) != 1 || got.Relationships[0] != (TaskRelationship{TaskID: "on", Type: kind, LagUnit: LagWorkingDays, Conflict: true}) || len(got.Conflicts) != 1 {
 			t.Fatalf("%s: %+v", kind, got.Relationships)
 		}
 	}
@@ -704,8 +718,12 @@ func TestCriticalPathIsTheChainThatDecidesThePlansEnd(t *testing.T) {
 	if build.FloatUntil == nil || *build.FloatUntil != "2027-03-12" || design.FloatUntil != nil {
 		t.Errorf("build can slip to the day before test starts, design has no room: %v %v", build.FloatUntil, design.FloatUntil)
 	}
-	if task(p, "docs").Critical || task(p, "paint").Critical || task(p, "docs").FloatUntil != nil {
+	if task(p, "docs").Critical || task(p, "paint").Critical {
 		t.Errorf("tasks off the path stay off it")
+	}
+	// Nothing waits for docs: its float runs to the plan's last day.
+	if u := task(p, "docs").FloatUntil; u == nil || *u != "2027-03-20" {
+		t.Errorf("docs can slip to the end of the plan: %v", u)
 	}
 }
 
@@ -817,7 +835,7 @@ func TestATaskWithSubTasksTakesItsDatesFromThem(t *testing.T) {
 		t.Fatalf("summary counts the tasks themselves, once: %+v", p.Summary)
 	}
 	// Each relationship is seen from both ends.
-	if d := task(p, "y").Drives; len(d) != 1 || d[0] != (TaskRelationship{TaskID: "after", Type: RelFinishToStart}) {
+	if d := task(p, "y").Drives; len(d) != 1 || d[0] != (TaskRelationship{TaskID: "after", Type: RelFinishToStart, LagUnit: LagWorkingDays}) {
 		t.Fatalf("y drives after: %+v", d)
 	}
 	if d := task(p, "after").Drives; len(d) != 0 {
@@ -836,29 +854,29 @@ func TestARelationshipIsMadeFromEitherEnd(t *testing.T) {
 		return false
 	}
 	// From a: a drives b, finish to start. It is stored on b, the driven task.
-	if err := svc.Relate("a", "b", "fs", true, 0); err != nil || !has("b", "a", RelFinishToStart) {
+	if err := svc.Relate("a", "b", "fs", true, 0, ""); err != nil || !has("b", "a", RelFinishToStart) {
 		t.Fatalf("a drives b: %v %+v", err, repo.deps)
 	}
 	// From b the same relationship is changed to start to start.
-	if err := svc.Relate("b", "a", RelStartToStart, false, 0); err != nil || !has("b", "a", RelStartToStart) || len(repo.deps["b"]) != 1 {
+	if err := svc.Relate("b", "a", RelStartToStart, false, 0, ""); err != nil || !has("b", "a", RelStartToStart) || len(repo.deps["b"]) != 1 {
 		t.Fatalf("retyped from the other end: %v %+v", err, repo.deps)
 	}
 	// Turned round from a: now b drives a, and the old one is gone.
-	if err := svc.Relate("a", "b", RelFinishToFinish, false, 0); err != nil || !has("a", "b", RelFinishToFinish) || len(repo.deps["b"]) != 0 {
+	if err := svc.Relate("a", "b", RelFinishToFinish, false, 0, ""); err != nil || !has("a", "b", RelFinishToFinish) || len(repo.deps["b"]) != 0 {
 		t.Fatalf("turned round: %v %+v", err, repo.deps)
 	}
 	// c drives b, so b -> a and c -> b: a driving c would close a loop.
-	if err := svc.Relate("c", "b", "", true, 0); err != nil || !has("b", "c", RelFinishToStart) {
+	if err := svc.Relate("c", "b", "", true, 0, ""); err != nil || !has("b", "c", RelFinishToStart) {
 		t.Fatal(err)
 	}
-	if err := svc.Relate("a", "c", RelFinishToStart, true, 0); !errors.Is(err, ErrDependencyCycle) {
+	if err := svc.Relate("a", "c", RelFinishToStart, true, 0, ""); !errors.Is(err, ErrDependencyCycle) {
 		t.Fatalf("a loop: %v", err)
 	}
 	for want, call := range map[error]func() error{
-		ErrDependsOnSelf:    func() error { return svc.Relate("a", "a", "FS", true, 0) },
-		ErrOtherProject:     func() error { return svc.Relate("a", "x", "FS", true, 0) },
-		ErrTaskNotFound:     func() error { return svc.Relate("nope", "a", "FS", true, 0) },
-		ErrRelationshipType: func() error { return svc.Relate("a", "c", "SF", true, 0) },
+		ErrDependsOnSelf:    func() error { return svc.Relate("a", "a", "FS", true, 0, "") },
+		ErrOtherProject:     func() error { return svc.Relate("a", "x", "FS", true, 0, "") },
+		ErrTaskNotFound:     func() error { return svc.Relate("nope", "a", "FS", true, 0, "") },
+		ErrRelationshipType: func() error { return svc.Relate("a", "c", "XX", true, 0, "") },
 	} {
 		if err := call(); !errors.Is(err, want) {
 			t.Fatalf("want %v, got %v", want, err)
@@ -1021,5 +1039,102 @@ func TestRecalculateMovesDrivenTasksToWhatTheirRelationshipsAsk(t *testing.T) {
 	}
 	if again, err := svc.Recalculate("p", "tester", now); err != nil || again != 0 {
 		t.Fatalf("a plan that agrees with its relationships does not move: %d %v", again, err)
+	}
+}
+
+func TestHolidaysElapsedTimeDeadlinesAndTheCriticalThreshold(t *testing.T) {
+	week := []int{1, 2, 3, 4, 5}
+	in := Inputs{
+		WorkingDays: week,
+		// Wednesday 3 March 2027 is a holiday.
+		Holidays: []Holiday{{Date: "2027-03-03", Name: "Founders' day"}},
+		Items: []*workitems.WorkItem{
+			item("a", "A", workitems.ColumnTodo, day("2027-03-05"), 0),
+			item("cure", "Cure", workitems.ColumnTodo, day("2027-03-14"), 1),
+			item("b", "B", workitems.ColumnTodo, day("2027-03-19"), 2),
+		},
+		Schedules: []*TaskSchedule{
+			{WorkItemID: "a", StartDate: sp("2027-03-01"), Deadline: sp("2027-03-04")},
+			{WorkItemID: "cure", StartDate: sp("2027-03-06"), Elapsed: true},
+			{WorkItemID: "b", StartDate: sp("2027-03-16"), Deadline: sp("2027-03-31")},
+		},
+		Dependencies: []Dependency{{WorkItemID: "b", DependsOnID: "cure", Type: RelFinishToStart}},
+	}
+	p := Build(in, now)
+	// Monday to Friday less the holiday: four working days.
+	if d := task(p, "a").DurationDays; *d != 4 {
+		t.Fatalf("a holiday is not a working day: %d", *d)
+	}
+	// Saturday 6 to Sunday 14 March, counted as it elapses: nine days.
+	if c := task(p, "cure"); *c.DurationDays != 9 || !c.Elapsed {
+		t.Fatalf("an elapsed duration counts every day: %+v", *c.DurationDays)
+	}
+	if a, b := task(p, "a"), task(p, "b"); !a.DeadlineMissed || b.DeadlineMissed || *a.Deadline != "2027-03-04" {
+		t.Fatalf("a ends after its deadline, b before: %v %v", a.DeadlineMissed, b.DeadlineMissed)
+	}
+	// Cure ends Sunday 14; B could start Monday 15 and starts Tuesday 16: a
+	// day of float. It is on the path all the same, being what B waits for.
+	if c := task(p, "cure"); *c.FloatDays != 1 || !c.Critical {
+		t.Fatalf("cure has a day of float: %d %v", *c.FloatDays, c.Critical)
+	}
+	// Nothing waits for A, which ends ten working days before the plan
+	// does: critical only once the threshold reaches its float.
+	if a := task(p, "a"); *a.FloatDays != 10 || a.Critical {
+		t.Fatalf("a: %d %v", *a.FloatDays, a.Critical)
+	}
+	in.CriticalSlackDays = 10
+	if a := task(Build(in, now), "a"); !a.Critical {
+		t.Fatalf("a threshold of ten days makes it critical")
+	}
+	if len(p.Holidays) != 1 || p.Holidays[0].Name != "Founders' day" {
+		t.Fatalf("the plan reports its holidays: %+v", p.Holidays)
+	}
+}
+
+func TestOffsetUnitsAndStartToFinish(t *testing.T) {
+	cal := NewCalendar([]int{1, 2, 3, 4, 5})
+	// The driver runs Monday 1 to Friday 12 March 2027: ten working days.
+	ask := func(kind string, lag int, unit string) string {
+		return askedDate(cal, kind, lag, unit, "2027-03-01", "2027-03-12", 10)
+	}
+	for _, c := range []struct {
+		kind string
+		lag  int
+		unit string
+		want string
+	}{
+		{RelFinishToStart, 0, LagWorkingDays, "2027-03-15"},
+		{RelFinishToStart, 2, LagWorkingDays, "2027-03-17"},
+		// Two calendar days after Monday 15 is Wednesday 17; five is Saturday, so Monday 22.
+		{RelFinishToStart, 5, LagElapsedDays, "2027-03-22"},
+		// Half the driver's ten days after it starts.
+		{RelStartToStart, 50, LagPercent, "2027-03-08"},
+		{RelStartToStart, -1, LagWorkingDays, "2027-02-26"},
+		{RelFinishToFinish, 0, LagWorkingDays, "2027-03-12"},
+		// Start to finish: the driven task ends no earlier than the driver starts.
+		{RelStartToFinish, 0, LagWorkingDays, "2027-03-01"},
+		{RelStartToFinish, 3, LagWorkingDays, "2027-03-04"},
+	} {
+		if got := ask(c.kind, c.lag, c.unit); got != c.want {
+			t.Errorf("%s %+d%s: %s, want %s", c.kind, c.lag, c.unit, got, c.want)
+		}
+	}
+	svc, _, _, _ := newService()
+	if err := svc.Relate("a", "b", RelStartToFinish, true, 5, "weeks"); !errors.Is(err, ErrInvalidLag) {
+		t.Fatalf("an unknown unit: %v", err)
+	}
+	if err := svc.Relate("a", "b", RelStartToFinish, true, 25, LagPercent); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.SetSettings("p", SettingsRequest{Holidays: &[]Holiday{{Date: "03/03/2027"}}}); !errors.Is(err, ErrHoliday) {
+		t.Fatalf("a holiday not written as a date: %v", err)
+	}
+	slack := 400
+	if _, err := svc.SetSettings("p", SettingsRequest{CriticalSlackDays: &slack}); !errors.Is(err, ErrCriticalSlack) {
+		t.Fatalf("a threshold over a year: %v", err)
+	}
+	set, err := svc.SetSettings("p", SettingsRequest{Holidays: &[]Holiday{{Date: "2027-12-27", Name: "Shutdown"}, {Date: "2027-01-01"}}})
+	if err != nil || len(set.Holidays) != 2 || set.Holidays[0].Date != "2027-01-01" || len(set.WorkingDays) == 0 {
+		t.Fatalf("holidays come back in date order with the rest: %+v %v", set, err)
 	}
 }

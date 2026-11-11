@@ -38,6 +38,34 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 	}
 	a, b, c := card("A"), card("B"), card("C")
 
+	if h, err := repo.Holidays(project); err != nil || len(h) != 0 {
+		t.Fatalf("no holidays yet: %v %v", h, err)
+	}
+	if err := repo.SetHolidays(project, []plan.Holiday{{Date: "2027-12-27", Name: "Shutdown"}, {Date: "2027-01-01"}}); err != nil {
+		t.Fatal(err)
+	}
+	if h, _ := repo.Holidays(project); len(h) != 2 || h[0].Date != "2027-01-01" || h[1].Name != "Shutdown" {
+		t.Fatalf("holidays in date order: %+v", h)
+	}
+	if err := repo.SetCriticalSlackDays(project, 3); err != nil {
+		t.Fatal(err)
+	}
+	if n, err := repo.CriticalSlackDays(project); err != nil || n != 3 {
+		t.Fatalf("critical threshold: %d %v", n, err)
+	}
+	if err := repo.SetHolidays(project, nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`DELETE FROM plan_settings WHERE project_id = $1`, project); err != nil {
+		t.Fatal(err)
+	}
+	deadline := "2027-06-30"
+	if err := repo.SaveSchedule(&plan.TaskSchedule{WorkItemID: a, ProjectID: project, Elapsed: true, Deadline: &deadline}); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := repo.ListSchedules(project); len(got) != 1 || !got[0].Elapsed || got[0].Deadline == nil || *got[0].Deadline != deadline {
+		t.Fatalf("elapsed and deadline: %+v", got)
+	}
 	key := "release:11111111-1111-1111-1111-111111111111"
 	if err := repo.SaveSchedule(&plan.TaskSchedule{WorkItemID: a, ProjectID: project, MilestoneKey: &key}); err != nil {
 		t.Fatal(err)
@@ -78,7 +106,7 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 		t.Fatalf("a second save replaces the first: %+v", list[0])
 	}
 
-	if err := repo.SetDependencies(project, c, []plan.Dependency{{DependsOnID: a, Type: plan.RelStartToStart, LagDays: 5}, {DependsOnID: b}}); err != nil {
+	if err := repo.SetDependencies(project, c, []plan.Dependency{{DependsOnID: a, Type: plan.RelStartToFinish, LagDays: 5, LagUnit: plan.LagElapsedDays}, {DependsOnID: b}}); err != nil {
 		t.Fatal(err)
 	}
 	if deps, _ := repo.ListDependencies(project); len(deps) != 2 || deps[0].LagDays+deps[1].LagDays != 5 {
@@ -88,7 +116,7 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 		t.Fatal(err)
 	}
 	deps, err := repo.ListDependencies(project)
-	if err != nil || len(deps) != 1 || deps[0] != (plan.Dependency{WorkItemID: c, DependsOnID: b, Type: plan.RelFinishToFinish}) {
+	if err != nil || len(deps) != 1 || deps[0] != (plan.Dependency{WorkItemID: c, DependsOnID: b, Type: plan.RelFinishToFinish, LagUnit: plan.LagWorkingDays}) {
 		t.Fatalf("dependencies: %+v %v", deps, err)
 	}
 

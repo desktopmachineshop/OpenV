@@ -6,6 +6,62 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 )
 
+// calendar is the project's calendar: its working days less its holidays.
+func (s *DefaultService) calendar(projectID string) (Calendar, error) {
+	days, err := s.repo.WorkingDays(projectID)
+	if err != nil {
+		return Calendar{}, err
+	}
+	holidays, err := s.repo.Holidays(projectID)
+	if err != nil {
+		return Calendar{}, err
+	}
+	return NewCalendar(days).WithHolidays(holidays), nil
+}
+
+// SetSettings changes the plan's working days, holidays and critical
+// threshold, whichever the request names, and answers them all.
+func (s *DefaultService) SetSettings(projectID string, req SettingsRequest) (Settings, error) {
+	var out Settings
+	var err error
+	if req.WorkingDays != nil {
+		if _, err = s.SetWorkingDays(projectID, *req.WorkingDays); err != nil {
+			return out, err
+		}
+	}
+	if req.Holidays != nil {
+		clean, err := CleanHolidays(*req.Holidays)
+		if err != nil {
+			return out, err
+		}
+		if err := s.repo.SetHolidays(projectID, clean); err != nil {
+			return out, err
+		}
+	}
+	if req.CriticalSlackDays != nil {
+		if *req.CriticalSlackDays < 0 || *req.CriticalSlackDays > MaxCriticalSlackDays {
+			return out, ErrCriticalSlack
+		}
+		if err := s.repo.SetCriticalSlackDays(projectID, *req.CriticalSlackDays); err != nil {
+			return out, err
+		}
+	}
+	if out.WorkingDays, err = s.repo.WorkingDays(projectID); err != nil {
+		return out, err
+	}
+	if out.WorkingDays == nil {
+		out.WorkingDays = DefaultWorkingDays
+	}
+	if out.Holidays, err = s.repo.Holidays(projectID); err != nil {
+		return out, err
+	}
+	if out.Holidays == nil {
+		out.Holidays = []Holiday{}
+	}
+	out.CriticalSlackDays, err = s.repo.CriticalSlackDays(projectID)
+	return out, err
+}
+
 // SetWorkingDays sets which days of the week the plan works.
 func (s *DefaultService) SetWorkingDays(projectID string, days []int) ([]int, error) {
 	clean, err := CleanWorkingDays(days)
@@ -44,7 +100,7 @@ func without(deps []Dependency, taskID, other string) []Dependency {
 
 // Relate makes a relationship between two tasks from either end, with an
 // offset of lagDays working days. The pair has one relationship, so whatever it had, either way round, is replaced.
-func (s *DefaultService) Relate(taskID, otherID, kind string, drives bool, lagDays int) error {
+func (s *DefaultService) Relate(taskID, otherID, kind string, drives bool, lagDays int, lagUnit string) error {
 	a, b, err := s.pair(taskID, otherID)
 	if err != nil {
 		return err
@@ -72,9 +128,9 @@ func (s *DefaultService) Relate(taskID, otherID, kind string, drives bool, lagDa
 			rest = append(rest, d)
 		}
 	}
-	want := []Relationship{{TaskID: driver, Type: kind, LagDays: lagDays}}
+	want := []Relationship{{TaskID: driver, Type: kind, LagDays: lagDays, LagUnit: lagUnit}}
 	for _, d := range without(rest, driven, driver) {
-		want = append(want, Relationship{TaskID: d.DependsOnID, Type: d.Type, LagDays: d.LagDays})
+		want = append(want, Relationship{TaskID: d.DependsOnID, Type: d.Type, LagDays: d.LagDays, LagUnit: d.LagUnit})
 	}
 	next, err := checkDependencies(driven, want, rest, map[string]bool{a.ID: true, b.ID: true, driver: true}, true)
 	if err != nil {

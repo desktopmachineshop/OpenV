@@ -16,7 +16,8 @@ type pdfBar struct {
 // relationship whose two tasks are both on it, as the chart in the app
 // does: finish to start from the driving task's end to the driven task's
 // start, start to start between the two starts, finish to finish between
-// the two ends. A broken one is red and dashed; one between two critical
+// the two ends, start to finish from the driver's start to the driven
+// task's end. A broken one is red and dashed; one between two critical
 // tasks is amber. It then forgets the page's bars.
 func (c *pdfChart) links() {
 	pdf := c.pdf
@@ -71,6 +72,18 @@ func linkPoints(kind string, on, t pdfBar) ([]gofpdf.PointType, float64) {
 		}
 		gutter -= 1.5
 		return []gofpdf.PointType{pt(on.left, on.y), pt(gutter, on.y), pt(gutter, t.y), pt(t.left, t.y)}, 1
+	case RelStartToFinish:
+		// Out of the driver's start, round to the driven task's end.
+		gutter := on.left
+		if t.right+3 < gutter {
+			return []gofpdf.PointType{pt(on.left, on.y), pt(t.right+1.5, on.y), pt(t.right+1.5, t.y), pt(t.right, t.y)}, -1
+		}
+		gutter -= 1.5
+		mid := on.y + pdfRowH/2
+		if t.y < on.y {
+			mid = on.y - pdfRowH/2
+		}
+		return []gofpdf.PointType{pt(on.left, on.y), pt(gutter, on.y), pt(gutter, mid), pt(t.right+1.5, mid), pt(t.right+1.5, t.y), pt(t.right, t.y)}, -1
 	case RelFinishToFinish:
 		gutter := on.right
 		if t.right > gutter {

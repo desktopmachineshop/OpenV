@@ -159,10 +159,15 @@ func taskRows(doc Document, indent bool) [][]string {
 		for _, r := range t.Relationships {
 			rel := wbs[r.TaskID] + r.Type
 			// An offset follows the type: 1.1SS+5, 2FS-2.
-			if r.LagDays > 0 {
-				rel += "+" + strconv.Itoa(r.LagDays)
-			} else if r.LagDays < 0 {
+			if r.LagDays != 0 {
+				if r.LagDays > 0 {
+					rel += "+"
+				}
 				rel += strconv.Itoa(r.LagDays)
+				// Working days carry no unit: 2SS+5, 2SS+5ed, 2SS+50%.
+				if r.LagUnit != "" && r.LagUnit != LagWorkingDays {
+					rel += r.LagUnit
+				}
 			}
 			deps = append(deps, rel)
 		}

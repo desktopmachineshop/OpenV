@@ -29,9 +29,11 @@ type TaskTodo struct {
 type TaskRelationship struct {
 	TaskID string `json:"task_id"`
 	Type   string `json:"type"`
-	// LagDays is the relationship's offset in working days: the driven task
-	// keeps that many after what the type asks for, or before when negative.
-	LagDays int `json:"lag_days"`
+	// LagDays is the relationship's offset: the driven task keeps that much
+	// after what the type asks for, or before when negative, in LagUnit
+	// ("d" working days, "ed" elapsed days, "%" of the driver's duration).
+	LagDays int    `json:"lag_days"`
+	LagUnit string `json:"lag_unit"`
 	// Conflict: the dates break the relationship. Finish to start: this
 	// task starts on or before the day the other ends. Start to start: it
 	// starts before the other starts. Finish to finish: it ends before the
@@ -70,6 +72,12 @@ type Task struct {
 	// the task is not done, so any slip moves the plan's end.
 	FloatDays *int `json:"float_days"`
 	Critical  bool `json:"critical"`
+	// Elapsed: the duration counts calendar days, not working days.
+	Elapsed bool `json:"elapsed"`
+	// Deadline is the day the task should be finished by; DeadlineMissed
+	// says it is not done and ends, or has run, past it.
+	Deadline       *string `json:"deadline"`
+	DeadlineMissed bool    `json:"deadline_missed"`
 	// FloatUntil is the last day the task's end can slip to before it
 	// pushes a task it drives; nil when it drives none or has no room.
 	FloatUntil *string `json:"float_until"`
@@ -166,6 +174,10 @@ type Plan struct {
 	// WorkingDays are the days of the week the plan works, as ISO weekday
 	// numbers (Monday is 1, Sunday 7): the days durations and float count.
 	WorkingDays []int `json:"working_days"`
+	// Holidays are the days the plan does not work whatever the weekday.
+	Holidays []Holiday `json:"holidays"`
+	// CriticalSlackDays: a task with that much float or less is critical.
+	CriticalSlackDays int `json:"critical_slack_days"`
 	// Today is the day the plan was computed for (UTC), which decides late.
 	Today string `json:"today"`
 	// Start and End span every dated task and milestone.
@@ -193,9 +205,13 @@ type Inputs struct {
 	// WorkingDays are the plan's working days as ISO weekday numbers; nil
 	// for the default, Monday to Friday.
 	WorkingDays []int
-	Milestones  []*Milestone
-	Releases    []*targetreleases.Release
-	Evidence    Evidence
+	// Holidays are days off whatever the weekday; CriticalSlackDays is the
+	// float at or below which a task is critical.
+	Holidays          []Holiday
+	CriticalSlackDays int
+	Milestones        []*Milestone
+	Releases          []*targetreleases.Release
+	Evidence          Evidence
 }
 
 // Plan loads the project's board, to-dos, schedule and milestones and
@@ -221,6 +237,12 @@ func (s *DefaultService) Plan(projectID string, ev Evidence, now time.Time) (*Pl
 		return nil, err
 	}
 	if in.WorkingDays, err = s.repo.WorkingDays(projectID); err != nil {
+		return nil, err
+	}
+	if in.Holidays, err = s.repo.Holidays(projectID); err != nil {
+		return nil, err
+	}
+	if in.CriticalSlackDays, err = s.repo.CriticalSlackDays(projectID); err != nil {
 		return nil, err
 	}
 	if in.Milestones, err = s.repo.ListMilestones(projectID); err != nil {
@@ -264,8 +286,11 @@ func Build(in Inputs, now time.Time) *Plan {
 	today := now.UTC().Format(DateLayout)
 	p := &Plan{ProjectID: in.ProjectID, Today: today, Tasks: []*Task{}, Milestones: []MilestoneProgress{},
 		Dependencies: []Dependency{}, Catalogue: Metrics}
-	b := &builder{in: in, today: today, cal: NewCalendar(in.WorkingDays), byID: map[string]*Task{}, created: map[string]time.Time{}, children: map[string][]*Task{}}
-	p.WorkingDays = DefaultWorkingDays
+	b := &builder{in: in, today: today, cal: NewCalendar(in.WorkingDays).WithHolidays(in.Holidays), byID: map[string]*Task{}, created: map[string]time.Time{}, children: map[string][]*Task{}}
+	p.WorkingDays, p.Holidays, p.CriticalSlackDays = DefaultWorkingDays, []Holiday{}, in.CriticalSlackDays
+	if in.Holidays != nil {
+		p.Holidays = in.Holidays
+	}
 	if clean, err := CleanWorkingDays(in.WorkingDays); err == nil {
 		p.WorkingDays = clean
 	}
@@ -350,6 +375,7 @@ func (b *builder) tasks() {
 		}
 		t.Start = sc.StartDate
 		t.DurationDays, t.EffortDays = sc.DurationDays, sc.EffortDays
+		t.Elapsed, t.Deadline = sc.Elapsed, sc.Deadline
 		if sc.ParentID != nil && b.byID[*sc.ParentID] != nil && *sc.ParentID != t.ID {
 			t.ParentID = sc.ParentID
 		}
@@ -422,9 +448,14 @@ func (b *builder) settle(t *Task) {
 		end = start
 	}
 	t.SpanStart, t.SpanEnd = start, end
-	if d := spanDays(b.cal, start, end); d != nil {
+	cal := b.cal
+	if t.Elapsed && len(b.children[t.ID]) == 0 {
+		cal = elapsedCalendar
+	}
+	if d := spanDays(cal, start, end); d != nil {
 		t.DurationDays = d
 	}
+	t.DeadlineMissed = t.Deadline != nil && !t.Done && ((end != nil && *end > *t.Deadline) || b.today > *t.Deadline)
 	switch {
 	case t.Done:
 		t.fraction = 1
@@ -472,10 +503,11 @@ func (b *builder) dependencies(p *Plan) {
 		if !ValidRelationshipType(d.Type) {
 			d.Type = RelFinishToStart
 		}
+		d.LagUnit = lagUnit(d.LagUnit)
 		conflict := b.broken(d, t, on)
 		t.DependsOn = append(t.DependsOn, on.ID)
-		t.Relationships = append(t.Relationships, TaskRelationship{TaskID: on.ID, Type: d.Type, LagDays: d.LagDays, Conflict: conflict})
-		on.Drives = append(on.Drives, TaskRelationship{TaskID: t.ID, Type: d.Type, LagDays: d.LagDays, Conflict: conflict})
+		t.Relationships = append(t.Relationships, TaskRelationship{TaskID: on.ID, Type: d.Type, LagDays: d.LagDays, LagUnit: d.LagUnit, Conflict: conflict})
+		on.Drives = append(on.Drives, TaskRelationship{TaskID: t.ID, Type: d.Type, LagDays: d.LagDays, LagUnit: d.LagUnit, Conflict: conflict})
 		p.Dependencies = append(p.Dependencies, d)
 		if conflict {
 			t.Conflicts = append(t.Conflicts, on.ID)
@@ -505,32 +537,14 @@ func (b *builder) dependencies(p *Plan) {
 	}
 }
 
-// broken reports whether t's dates break the relationship d to on: with an
-// offset, whether t keeps fewer working days than it asks for.
+// broken reports whether t's dates break the relationship d to on: t
+// starts, or ends, before the day the relationship asks for. Unscheduled
+// ends break nothing, and neither does a driving task that is done.
 func (b *builder) broken(d Dependency, t, on *Task) bool {
-	if d.LagDays == 0 {
-		return relationshipBroken(d.Type, t, on)
-	}
 	if on.Done || t.SpanStart == nil || on.SpanStart == nil {
 		return false
 	}
-	return b.gap(on, drive{t, d.Type, d.LagDays}) < 0
-}
-
-// relationshipBroken reports whether t's dates break its relationship of
-// the given type to on. Unscheduled ends break nothing, and neither does a
-// task that is done.
-func relationshipBroken(kind string, t, on *Task) bool {
-	if on.Done || t.SpanStart == nil || on.SpanStart == nil {
-		return false
-	}
-	switch kind {
-	case RelStartToStart:
-		return *t.SpanStart < *on.SpanStart
-	case RelFinishToFinish:
-		return *t.SpanEnd < *on.SpanEnd
-	}
-	return *t.SpanStart <= *on.SpanEnd
+	return b.gap(on, drive{t, d.Type, d.LagDays, d.LagUnit}) < 0
 }
 
 // summary counts the tasks and spans their dates.

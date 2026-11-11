@@ -153,9 +153,10 @@ func toolGoldenArgs() map[string]map[string]interface{} {
 		"tick_todo":               {"id": goldenTodoID, "done": true},
 		"get_plan":                {"project_id": goldenProjectID},
 		"recalculate_plan":        {"project_id": goldenProjectID},
+		"set_plan_calendar":       {"project_id": goldenProjectID, "holidays": []interface{}{"2027-12-27:Shutdown", "2027-01-01"}, "critical_slack_days": "2"},
 		"set_plan_working_days":   {"project_id": goldenProjectID, "working_days": []interface{}{"1", "2", "3", "4", "6"}},
-		"schedule_work_item": {"id": goldenWorkItemID, "start_date": "2027-01-11", "due_date": "2027-01-31", "duration_days": "21", "effort_days": "7.5", "parent_id": goldenDelegateRunID, "milestone": "release:" + goldenDelegateRunID,
-			"relationships": []interface{}{goldenDelegateRunID + ":SS:5", goldenAgentID},
+		"schedule_work_item": {"id": goldenWorkItemID, "start_date": "2027-01-11", "due_date": "2027-01-31", "duration_days": "21", "effort_days": "7.5", "parent_id": goldenDelegateRunID, "milestone": "release:" + goldenDelegateRunID, "deadline": "2027-02-15", "elapsed": "true",
+			"relationships": []interface{}{goldenDelegateRunID + ":SS:5ed", goldenAgentID + ":SF:50%"},
 			"depends_on":    []interface{}{goldenDelegateRunID}},
 	}
 }

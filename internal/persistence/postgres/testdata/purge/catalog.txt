@@ -56,6 +56,7 @@ org_teams scope org_id cascade from organizations
 organizations scope - deleted
 password_resets scope - not reached
 plan_dependencies scope project_id cascade from projects,work_items
+plan_holidays scope project_id cascade from projects
 plan_milestones scope project_id cascade from projects
 plan_settings scope project_id cascade from projects
 plan_task_todos scope project_id cascade from projects,todos,work_items
