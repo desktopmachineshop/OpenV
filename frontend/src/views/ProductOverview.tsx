@@ -203,7 +203,7 @@ export const ProductOverview: React.FC = () => {
   return (
     <div style={{ padding: 16, maxWidth: 1100, margin: '0 auto' }}>
       <div className="ov-page-head">
-        <h2>Product Overview</h2>
+        <h2 className="ov-page-title">Product Overview</h2>
       </div>
       <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '4px 0 16px' }}>
         The single source of truth for what this product is and how success is measured.

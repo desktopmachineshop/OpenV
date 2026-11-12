@@ -274,7 +274,7 @@ export const KanbanBoard: React.FC = () => {
         {`@keyframes ovPulse { 0% { opacity: 1; } 50% { opacity: 0.25; } 100% { opacity: 1; } }`}
       </style>
       <div className="ov-page-head" style={{ marginBottom: 10 }}>
-        <h2>Board</h2>
+        <h2 className="ov-page-title">Board</h2>
         <span className="ov-page-sub">
           {phone
             ? 'Tip: a card’s ⋯ menu moves it between columns.'

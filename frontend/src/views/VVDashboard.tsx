@@ -188,7 +188,7 @@ export const VVDashboard: React.FC = () => {
   return (
     <div style={{ padding: isPhone ? 12 : 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: 20 }}>V&amp;V coverage</h2>
+        <h2 className="ov-page-title" style={{ color: 'var(--text)', margin: 0, fontSize: 20 }}>V&amp;V coverage</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }} data-help-key="vv.baselines">
           <label htmlFor="vv-baseline" style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
             Baseline

@@ -9,6 +9,8 @@ import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
 import { ProjectSwitcher } from './ProjectLayoutSwitcher';
+import { GroupTabs } from './ProjectLayoutGroupTabs';
+import { activeGroup } from './ProjectLayoutNav';
 
 // The compact project layout on a wide screen (the compact-layout feature
 // key): a 64 px icon rail on the left and one top bar, where the sidebar
@@ -177,6 +179,8 @@ interface RailShellProps {
   project: Project | null;
   projectId: string;
   sections: NavSection[];
+  /** The refreshed shell (ui-refresh): the current group's pages in a row under the top bar. */
+  refresh?: boolean;
   helpOpen: boolean;
   onHelpToggle: () => void;
   /** The help panel, which the caller mounts once for every layout. */
@@ -187,6 +191,7 @@ export const RailShell: React.FC<RailShellProps> = ({
   project,
   projectId,
   sections,
+  refresh = false,
   helpOpen,
   onHelpToggle,
   help,
@@ -195,16 +200,19 @@ export const RailShell: React.FC<RailShellProps> = ({
   const activePath = activeNavPath(location.pathname, projectId);
   const pageLabel =
     sections.flatMap((s) => s.items).find((item) => item.to === activePath)?.label ?? '';
+  // The row names the page, so the top bar's crumb does not repeat it.
+  const group = refresh ? activeGroup(sections, activePath) : undefined;
   return (
-    <div className="app-shell ov-layout">
+    <div className={`app-shell ov-layout${refresh ? ' ov-refresh' : ''}`}>
       <Rail sections={sections} activePath={activePath} />
       <div className="ov-layout-column">
         <TopBar
           project={project}
-          pageLabel={activePath === '' ? '' : pageLabel}
+          pageLabel={activePath === '' || group ? '' : pageLabel}
           helpOpen={helpOpen}
           onHelpToggle={onHelpToggle}
         />
+        {group && <GroupTabs section={group} />}
         <main className="ov-layout-main">
           <Outlet />
         </main>

@@ -60,6 +60,7 @@ export const FEATURE_KEYS = [
   'admin-usage',
   'artifact-reinstate',
   'gantt-plan',
+  'ui-refresh',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

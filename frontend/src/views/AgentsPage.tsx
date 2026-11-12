@@ -111,7 +111,7 @@ export const AgentsList: React.FC = () => {
   return (
     <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: 20, fontWeight: 700 }}>Agents</h2>
+        <h2 className="ov-page-title" style={{ color: 'var(--text)', margin: 0, fontSize: 20, fontWeight: 700 }}>Agents</h2>
         <div style={{ flex: 1 }} />
         <button
           className="button-secondary"

@@ -174,7 +174,7 @@ export const AutomationsPage: React.FC = () => {
   return (
     <div style={{ padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <h2 style={{ color: 'var(--text)', margin: 0, flex: 1, fontSize: 20, fontWeight: 700 }}>Automations</h2>
+        <h2 className="ov-page-title" style={{ color: 'var(--text)', margin: 0, flex: 1, fontSize: 20, fontWeight: 700 }}>Automations</h2>
         <button className="button" data-help-key="automations.create" onClick={() => setForm(emptyForm())}>
           New automation
         </button>

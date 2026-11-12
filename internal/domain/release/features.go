@@ -80,6 +80,7 @@ var Registry = []Feature{
 	{Key: FeatureAdminUsage, ShippedIn: "0.31.0", Summary: "Platform admins see how much each workspace and person uses OpenV, and whether that use is speeding up or slowing down, with workspaces grouped by plan and people filtered by plan or workspace"},
 	{Key: FeatureArtifactReinstate, ShippedIn: "0.31.0", Summary: "Removing an artifact archives it, as it always kept its history: open it from Activity and Reinstate brings it back as it was"},
 	{Key: FeatureGanttPlan, ShippedIn: "0.32.0", Summary: "A Gantt plan under Plan: the board's tasks on a timeline with sub-tasks, dependencies and progress from their to-dos, milestones with completion criteria read from the project's artifacts, each release as a milestone, and the plan exported as PDF, Excel, CSV or JSON"},
+	{Key: FeatureUIRefresh, ShippedIn: "0.33.0", Summary: "One navigation on every screen: Home, Plan, Define, Verify and Agents in the same order down the rail on a computer and along the bottom bar on a phone, the pages of the group you are in listed in a row under the top bar, and each page named once"},
 }
 
 // Feature keys the code gates on.
@@ -323,6 +324,12 @@ const (
 	// the page and every write; reading a plan is not gated, and neither is
 	// the board, whose tasks the plan draws.
 	FeatureGanttPlan = "gantt-plan"
+	// FeatureUIRefresh is the refreshed project shell: the menu's groups in
+	// the order Plan, Define, Verify, Agents with Overview and Summary under
+	// Plan, a row of the current group's pages under the top bar, the phone's
+	// bottom bar as Home and those groups, and a page's name shown once.
+	// Frontend only, and only on top of the compact layout.
+	FeatureUIRefresh = "ui-refresh"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

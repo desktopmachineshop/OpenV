@@ -283,7 +283,7 @@ const BoardTodoList: React.FC = () => {
         }}
       >
         <div>
-          <h2 style={{ margin: 0, color: 'var(--text)', fontSize: 20, fontWeight: 700 }}>To-dos</h2>
+          <h2 className="ov-page-title" style={{ margin: 0, color: 'var(--text)', fontSize: 20, fontWeight: 700 }}>To-dos</h2>
           <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
             {openCount} open across the project. The same work as the{' '}
             <Link to={`/projects/${projectId}/board`}>board</Link>, arranged by who owes it.

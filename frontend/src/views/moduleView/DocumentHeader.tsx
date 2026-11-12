@@ -38,7 +38,7 @@ export const DocumentHeader: React.FC<DocumentHeaderProps> = ({
       borderBottom: stacked ? 'none' : '1px solid var(--border)',
     }}
   >
-    <h2 style={{ color: 'var(--text)', margin: 0, fontSize: stacked ? 20 : 18 }}>Requirements</h2>
+    <h2 className="ov-page-title" style={{ color: 'var(--text)', margin: 0, fontSize: stacked ? 20 : 18 }}>Requirements</h2>
     <Chip tone={isBaselineView ? 'warning' : 'neutral'} title={isBaselineView ? 'A baseline: read-only' : 'The live project'}>
       {isBaselineView ? 'Baseline' : 'Working copy'}
     </Chip>

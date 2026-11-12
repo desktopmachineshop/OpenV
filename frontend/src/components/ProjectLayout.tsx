@@ -33,7 +33,9 @@ import { useFeature } from '../hooks/useFeature';
 import { useHelpShortcut } from '../hooks/useHelpShortcut';
 import { useProjectShell, visibleSections } from './ProjectLayoutState';
 import { RailShell } from './ProjectLayoutRail';
-import { COMPACT_LAYOUT_FEATURE } from '../features';
+import { COMPACT_LAYOUT_FEATURE, UI_REFRESH_FEATURE } from '../features';
+import { PhoneShell } from './ProjectLayoutPhone';
+import { refreshSections, rememberGroupPage } from './ProjectLayoutNav';
 import { PhoneTabBar } from './ProjectLayoutTabs';
 import { PhoneHeader, phonePageLabel } from './ProjectLayoutPhoneHeader';
 import { PhoneMoreMenu } from './ProjectLayoutMore';
@@ -49,8 +51,12 @@ export const ProjectLayout: React.FC = () => {
   // here.
   const features = useAppStore((s) => s.features);
   const { project, hasGuidedSession } = useProjectShell(projectId);
-  const sections = visibleSections(navSections, hasGuidedSession, features?.features);
   const compactLayout = useFeature(COMPACT_LAYOUT_FEATURE);
+  // The refreshed shell regroups the menu and names a page once; it is drawn
+  // on top of the compact layout, so it waits for that gate too.
+  const refresh = useFeature(UI_REFRESH_FEATURE) && compactLayout;
+  const visible = visibleSections(navSections, hasGuidedSession, features?.features);
+  const sections = refresh ? refreshSections(visible) : visible;
   // How much room the project menu takes: pinned, auto-hiding on hover, or
   // hidden. Remembered per person so the choice survives a reload.
   const [navMode, setNavMode] = useState<PanelMode>(() => loadPanelMode('project-nav'));
@@ -89,6 +95,12 @@ export const ProjectLayout: React.FC = () => {
   }, [location.pathname]);
 
   const activePath = activeNavPath(location.pathname, projectId || '');
+  // A group's tab on a phone returns to the page last read in that group.
+  useEffect(() => {
+    if (refresh) rememberGroupPage(sections, activePath);
+    // sections is rebuilt on every render; the page in view is what changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refresh, activePath]);
   // A touch screen cannot hover, so auto-hide behaves as hidden there: the
   // edge strip (wider, to be tappable) reveals the menu on tap instead.
   const open = compact
@@ -99,12 +111,25 @@ export const ProjectLayout: React.FC = () => {
   useHelpShortcut(compactLayout, () => setHelpOpen((o) => !o));
   const help = <HelpSidebar open={helpOpen} onOpenChange={setHelpOpen} />;
 
+  if (refresh && compact) {
+    return (
+      <PhoneShell
+        project={project}
+        projectId={projectId || ''}
+        sections={sections}
+        onHelpOpen={() => setHelpOpen(true)}
+        help={help}
+      />
+    );
+  }
+
   if (compactLayout && !compact) {
     return (
       <RailShell
         project={project}
         projectId={projectId || ''}
         sections={sections}
+        refresh={refresh}
         helpOpen={helpOpen}
         onHelpToggle={() => setHelpOpen((o) => !o)}
         help={help}

@@ -90,7 +90,7 @@ const DesignContent: React.FC = () => {
   if (!current || !trace) {
     return (
       <div style={{ padding: 16 }} data-help-pane="design">
-        <h1 style={{ margin: '0 0 8px', fontSize: 20 }}>Design</h1>
+        <h1 className="ov-page-title" style={{ margin: '0 0 8px', fontSize: 20 }}>Design</h1>
         <p style={mutedStyle}>
           This project has no design items yet. Add a <b>Design Item</b> on the{' '}
           <Link to={`/projects/${projectId}/requirements`}>Requirements</Link> page, and link it to the requirements it

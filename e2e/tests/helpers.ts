@@ -102,7 +102,10 @@ export async function openMenuGroup(page: Page, group: string): Promise<void> {
 /** Navigate to a project module through the menu, opening its group first. */
 export async function openModule(page: Page, group: string, label: string): Promise<void> {
   await openMenuGroup(page, group);
-  await page.getByRole('link', { name: label, exact: true }).click();
+  // The group's flyout lists the page; so does the row of the group's pages
+  // under the top bar when the page in view is in that group. Either leads
+  // there, so the first is taken.
+  await page.getByRole('link', { name: label, exact: true }).first().click();
 }
 
 /** Open the Requirements module from the project shell. */

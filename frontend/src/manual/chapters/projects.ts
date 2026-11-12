@@ -173,7 +173,7 @@ the live project.
 ## Inside a project
 
 Opening a project shows the project menu with its pages, grouped under
-**Define**, **Verify**, **Plan** and **Agents** on the rail down the left (see
+**Plan**, **Define**, **Verify** and **Agents** on the rail down the left (see
 *Getting started* → *Finding your way around*):
 
 | Entry | What it is |
@@ -202,7 +202,7 @@ Requirements chapter). It is off until an editor turns it on.
 
 **Projects** at the top of the rail takes you back to all projects. The
 account menu at the right end of the top bar (on a phone, your name at the
-foot of the project menu) opens **Settings** (personal runner and agent
+foot of **More**) opens **Settings** (personal runner and agent
 sign-ins) and **Sign out**.
 
 ## Project access (members)

@@ -9,6 +9,25 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **One navigation on every screen.** A project's menu now runs in the order
+  the work does: **Plan**, **Define**, **Verify**, **Agents**. On a computer
+  that is the rail from top to bottom; on a phone it is the bar along the
+  bottom, which reads **Home**, **Plan**, **Define**, **Verify**, **More**
+  from left to right. **Overview** and **Summary** have moved from Define to
+  the head of Plan. A row under the top bar lists the pages of the group you
+  are in, so the page next door is one click away instead of a trip through
+  the menu, and a page's name appears there once instead of again as a
+  heading on the page. On a phone a group's tab returns to the page you last
+  read in it, the **☰** button is gone, and **More** shows every page as a
+  tile under its group.
+
+### Maintenance updates
+
+- The notification bell is drawn in the same line style as the other icons
+  instead of as an emoji, so it looks the same on every device.
+
 ### Bug fixes
 
 - **An artifact's ⋯ menu.** The ⋯ button at the end of a requirements row

@@ -205,7 +205,7 @@ export const InterviewsPage: React.FC = () => {
 
   return (
     <div style={{ padding: 16, maxWidth: 1100, margin: '0 auto' }}>
-      <h2 style={{ color: 'var(--text)', marginBottom: 4, fontSize: 20, fontWeight: 700 }}>Interviews</h2>
+      <h2 className="ov-page-title" style={{ color: 'var(--text)', marginBottom: 4, fontSize: 20, fontWeight: 700 }}>Interviews</h2>
       <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
         Create user interviews, share invite links, and review what an AI interviewer learned.
       </p>

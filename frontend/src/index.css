@@ -1718,3 +1718,151 @@ input[type='checkbox'].ov-switch:focus-visible {
     opacity: 1;
   }
 }
+
+/* ---- The refreshed shell (the ui-refresh feature key): the row of the
+   current group's pages, the page's name shown once, and the phone's More
+   page as tiles. */
+.ov-grouptabs {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  gap: 22px;
+  min-height: 38px;
+  padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ov-grouptabs::-webkit-scrollbar {
+  display: none;
+}
+.ov-grouptabs-group {
+  align-self: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ov-grouptabs-link {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 0 2px;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ov-grouptabs-link:hover {
+  color: var(--text);
+}
+.ov-grouptabs-link.active {
+  border-bottom-color: var(--accent);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+.ov-grouptabs-link:focus-visible,
+.ov-more-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* The row names the page, so a page's own heading of the same name is kept
+   for assistive technology and taken out of the layout. */
+.ov-refresh .ov-page-title {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  white-space: nowrap;
+}
+.ov-phone-shell {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ov-phone-shell .ov-grouptabs {
+  min-height: 44px;
+}
+/* On a phone the bar underneath already names the group. */
+.ov-phone-shell .ov-grouptabs-group {
+  display: none;
+}
+.ov-phone-shell .ov-grouptabs {
+  gap: 10px;
+  padding: 0 10px;
+}
+.ov-phone-shell .ov-grouptabs-link {
+  min-width: 32px;
+  justify-content: center;
+  padding: 0 6px;
+  font-size: 14px;
+}
+.ov-phone-header-refresh {
+  padding-left: 16px;
+}
+.ov-phone-header-refresh .ov-phone-title-page {
+  font-size: 16px;
+}
+.ov-phone-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg-app);
+}
+.ov-more-refresh {
+  flex: 1;
+  height: auto;
+}
+.ov-more-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.ov-more-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 60px;
+  padding: 6px 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.ov-more-tile svg {
+  color: var(--accent-strong);
+}
+.ov-more-tile.active {
+  border-color: var(--tint-blue-border);
+  background: var(--tint-blue);
+  color: var(--accent-text);
+  font-weight: 700;
+}
+/* Four tiles a row fit "Requirements" down to about 360 px; below that, three. */
+@media (max-width: 359px) {
+  .ov-more-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+/* A row that held a title and its actions keeps the actions at its end once
+   the title is out of the layout. */
+.ov-refresh .ov-page-title + :is(button, a, div):last-child {
+  margin-left: auto;
+}
+/* Room under the last row of More for what floats over the page's corner
+   (the assistant's button), so the account menu is never under it. */
+.ov-more-refresh .ov-more-body {
+  padding-bottom: 88px;
+}

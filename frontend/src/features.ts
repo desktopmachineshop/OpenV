@@ -97,3 +97,11 @@ export const ADMIN_USAGE_FEATURE: FeatureKey = 'admin-usage';
  * their criteria, and the plan's export.
  */
 export const GANTT_PLAN_FEATURE: FeatureKey = 'gantt-plan';
+
+/**
+ * The refreshed project shell, on top of the compact layout: the menu's
+ * groups in the order Plan, Define, Verify, Agents (Overview and Summary
+ * under Plan), a row of the current group's pages under the top bar, the
+ * phone's bottom bar as Home and those groups, and a page's name shown once.
+ */
+export const UI_REFRESH_FEATURE: FeatureKey = 'ui-refresh';

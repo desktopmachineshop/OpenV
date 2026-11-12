@@ -256,7 +256,7 @@ const routes = [
   // The workspace's feature gates, ahead of the org catch-all below, which
   // would otherwise answer {} and crash every useFeature on the page. All
   // on, so gated cards and controls render with their buttons.
-  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true, 'redesign-pages': true, 'review-queue-decisions': true, 'project-review-round': true, 'editor-pickers': true, 'gantt-plan': true, 'floating-assistant': true } }],
+  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true, 'redesign-pages': true, 'review-queue-decisions': true, 'project-review-round': true, 'editor-pickers': true, 'gantt-plan': true, 'floating-assistant': true, 'ui-refresh': true } }],
   [/\/api\/v1\/orgs\/org1$/, org],
   [/\/api\/v1\/orgs\//, {}],
   [/\/api\/v1\/meta\/artifact-types/, [{ type: 'requirement', label: 'Requirement' }, { type: 'heading', label: 'Heading' }, { type: 'user-need', label: 'User Need' }, { type: 'test-case', label: 'Test Case' }]],
@@ -320,6 +320,8 @@ const routes = [
   [/\/api\/v1\/test-runs\/tr1/, testRun],
   [/\/api\/v1\/projects\/p1\/test-runs/, [openTestRun, testRun]],
   [/\/api\/v1\/projects\/p1\/work-items/, workItems],
+  // A card's own to-do list, ahead of the card itself, whose pattern it also matches.
+  [/\/api\/v1\/work-items\/w1\/todos/, []],
   [/\/api\/v1\/work-items\/w1/, { item: workItems[0], activity: [{ id: 'act1', work_item_id: 'w1', kind: 'comment', actor: 'Sam Example', content: 'Started drafting.', payload: {}, created_at: now }] }],
   [/\/api\/v1\/projects\/p1\/members/, [{ user_id: 'u1', email: user.email, name: user.name, role: 'owner' }]],
   [/\/api\/v1\/projects\/p1\/team-access/, []],
@@ -474,6 +476,12 @@ const press = async (locator) => {
   if (locator.page().context()._options.hasTouch) return locator.tap();
   return locator.click();
 };
+// The project menu on a phone: the More tab of the bottom bar in the
+// refreshed shell, the header's menu button before it.
+const openMenu = async (p) => {
+  const more = p.getByRole('button', { name: 'More', exact: true });
+  await press((await more.count()) ? more : p.getByRole('button', { name: 'Project menu' }));
+};
 const SCREENS = [
   { tag: 'login', path: '/login' },
   { tag: 'register', path: '/login?mode=register' },
@@ -485,11 +493,11 @@ const SCREENS = [
   { tag: 'projects-random-top', path: '/projects', open: async (p) => { await press(p.getByRole('button', { name: '+ New Project' }).first()); await p.waitForTimeout(200); await p.selectOption('#mode', 'random'); await p.waitForTimeout(400); await press(p.getByRole('button', { name: 'Top 5 all time' })); await p.waitForTimeout(400); } },
   { tag: 'user-menu', path: '/projects', open: async (p) => { await press(p.locator('[title="Sam Example"]').first()); } },
   { tag: 'user-settings', path: '/projects', open: async (p) => { await press(p.locator('[title="Sam Example"]').first()); await p.waitForTimeout(300); await press(p.getByRole('button', { name: 'Settings', exact: true }).first()); } },
-  { tag: 'drawer-user-settings', phone: true, path: '/projects/p1', open: async (p) => { await press(p.getByRole('button', { name: 'Project menu' })); await p.waitForTimeout(300); await press(p.getByText('Sam Example').last()); } },
+  { tag: 'drawer-user-settings', phone: true, path: '/projects/p1', open: async (p) => { await openMenu(p); await p.waitForTimeout(300); await press(p.getByText('Sam Example').last()); } },
   { tag: 'overview', path: '/projects/p1' },
-  { tag: 'drawer', phone: true, path: '/projects/p1', open: async (p) => press(p.getByRole('button', { name: 'Project menu' })) },
+  { tag: 'drawer', phone: true, path: '/projects/p1', open: async (p) => openMenu(p) },
   { tag: 'notifications', path: '/projects/p1', open: async (p) => press(p.getByRole('button', { name: /notifications/i }).first()) },
-  { tag: 'help', path: '/projects/p1', open: async (p) => press(p.getByRole('button', { name: 'Help' }).first()) },
+  { tag: 'help', path: '/projects/p1', open: async (p) => { const help = p.getByRole('button', { name: 'Help' }); if (!(await help.count())) { await openMenu(p); await p.waitForTimeout(300); } await press(help.first()); } },
   { tag: 'requirements', path: '/projects/p1/requirements' },
   { tag: 'requirements-doc', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await press(ex.first()); await press(p.getByText('Positioning accuracy').first()); await p.waitForTimeout(600); } },
   { tag: 'requirements-new', path: '/projects/p1/requirements', open: async (p) => press(p.getByRole('button', { name: '+ New Artifact' })) },
