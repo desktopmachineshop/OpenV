@@ -45,6 +45,7 @@ const GROUP_ICONS: Record<NavGroup, string> = {
 export const SHELL_ICONS = {
   projects: 'M3 3h6v6H3zM11 3h6v6h-6zM3 11h6v6H3zM11 11h6v6h-6z',
   more: 'M4 6h12M4 10h12M4 14h12',
+  bell: 'M5 14.5V9a5 5 0 0110 0v5.5l1.5 1.5h-13zM8.5 18h3',
   help: 'M3 10a7 7 0 1014 0 7 7 0 10-14 0M7.8 7.8a2.3 2.3 0 114 1.6c-.8.7-1.8 1.1-1.8 2.3M10 14.2v.1',
 };
 

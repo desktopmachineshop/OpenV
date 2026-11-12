@@ -125,7 +125,7 @@ export const EvidenceView: React.FC = () => {
           marginBottom: 4,
         }}
       >
-        <h2 style={{ margin: 0 }}>Evidence</h2>
+        <h2 className="ov-page-title" style={{ margin: 0 }}>Evidence</h2>
         <button className="button" onClick={() => setCreating(true)}>
           Record a capture
         </button>

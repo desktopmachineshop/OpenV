@@ -1,7 +1,7 @@
 # Browser storage keys: every getItem/setItem/removeItem on localStorage or sessionStorage (invariant I22).
 # Regenerate: npx vitest run src/arch -u. Never rename a key: it holds members' preferences and workspace choice.
 
-keys: 14
+keys: 15
 
 artifactFilterPresets
   localStorage    getItem
@@ -18,6 +18,9 @@ openv-detailColumnWidth
 openv-invented-products
   localStorage    getItem
   localStorage    removeItem
+  localStorage    setItem
+openv-nav-last-page
+  localStorage    getItem
   localStorage    setItem
 openv-nav-sections
   localStorage    getItem

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { NavIcon, SHELL_ICONS } from './ProjectLayoutIcons';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { PANEL_NOTIFICATIONS, PANEL_PARAM } from '../appShortcuts';
 import { AppNotification, NotificationView, notificationsAPI } from '../api/client';
@@ -285,8 +286,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
           color: dark ? 'var(--sidebar-text-dim)' : 'var(--text)',
         }}
       >
-        {/* Bell glyph */}
-        <span aria-hidden="true">🔔</span>
+        <span aria-hidden="true" style={{ display: 'inline-flex' }}><NavIcon d={SHELL_ICONS.bell} size={20} /></span>
         {unread > 0 && (
           <span
             style={{

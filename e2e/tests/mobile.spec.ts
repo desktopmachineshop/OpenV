@@ -53,25 +53,46 @@ test('registers on a phone-sized screen without sideways scrolling', async () =>
 
 test('creates a project and lands in the mobile shell', async () => {
   projectId = await createProject(page, projectName);
-  // The compact shell: a top bar with the menu button, no permanent sidebar.
-  const menuButton = page.getByRole('button', { name: 'Project menu' });
-  await expect(menuButton).toBeVisible();
+  // The phone shell: a bar along the bottom reading Home, Plan, Define,
+  // Verify, More, and no permanent sidebar. A project opens on its Overview,
+  // which is in Plan, so the row under the header lists Plan's pages.
+  const bar = page.getByRole('navigation', { name: 'Project tabs' });
+  await expect(bar).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'More', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Plan pages' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Requirements', exact: true })).toBeHidden();
   await expectNoHorizontalScroll(page);
 });
 
-test('navigates through the drawer, which closes on arrival', async () => {
-  await page.getByRole('button', { name: 'Project menu' }).click();
-  const drawer = page.getByRole('complementary', { name: 'Project navigation' });
-  await expect(drawer).toBeVisible();
-  const define = drawer.getByRole('button', { name: 'Define', exact: true });
-  if ((await define.getAttribute('aria-expanded')) !== 'true') {
-    await define.click();
-  }
-  await drawer.getByRole('link', { name: 'Requirements', exact: true }).click();
+test('navigates by the bar and the row of the group, and by More, which closes on arrival', async () => {
+  // A group's tab opens the group; the row under the header lists its pages.
+  const bar = page.getByRole('navigation', { name: 'Project tabs' });
+  await bar.getByRole('link', { name: 'Define', exact: true }).click();
+  await page
+    .getByRole('navigation', { name: 'Define pages' })
+    .getByRole('link', { name: 'Requirements', exact: true })
+    .click();
+  // The address and the exact heading: "Guided requirements definition", the
+  // page being left, also has "Requirements" in its heading, and More closes
+  // on arrival, so it must not be opened before the page has arrived.
+  await expect(page).toHaveURL(/\/requirements$/);
+  await expect(page.getByRole('heading', { name: 'Requirements', exact: true })).toBeVisible();
+  await expectNoHorizontalScroll(page);
 
-  await expect(page.getByRole('heading', { name: 'Requirements' })).toBeVisible();
-  await expect(drawer).toBeHidden();
+  // More is the whole menu, every page a tile, and it closes on arrival.
+  await bar.getByRole('button', { name: 'More', exact: true }).click();
+  const menu = page.getByRole('complementary', { name: 'Project navigation' });
+  await expect(menu).toBeVisible();
+  await expectNoHorizontalScroll(page);
+  await menu.getByRole('link', { name: 'Board', exact: true }).click();
+  await expect(menu).toBeHidden();
+  await expect(page).toHaveURL(/\/board$/);
+  await expect(page.getByRole('navigation', { name: 'Plan pages' })).toBeVisible();
+
+  // The Define tab returns to the page last read there.
+  await bar.getByRole('link', { name: 'Define', exact: true }).click();
+  await expect(page).toHaveURL(/\/requirements$/);
+  await expect(page.getByRole('heading', { name: 'Requirements', exact: true })).toBeVisible();
   await expectNoHorizontalScroll(page);
 });
 
@@ -174,10 +195,10 @@ test('the project list and settings pages fit the phone', async () => {
 
 test('the personal settings sheet shows every theme option', async () => {
   // The example from the maintainer's phone: the System / Light / Dark
-  // control was clipped after "System". The settings open from the drawer
-  // footer and fill the screen; every option must be inside the viewport.
+  // control was clipped after "System". The settings open from the foot of
+  // More and fill the screen; every option must be inside the viewport.
   await page.goto(`/projects/${projectId}`);
-  await page.getByRole('button', { name: 'Project menu' }).click();
+  await page.getByRole('navigation', { name: 'Project tabs' }).getByRole('button', { name: 'More', exact: true }).click();
   const drawer = page.getByRole('complementary', { name: 'Project navigation' });
   await drawer.getByRole('button', { name: /^Account menu/ }).click();
   await drawer.getByRole('button', { name: 'Settings', exact: true }).click();
@@ -252,7 +273,7 @@ test('runner control and the relayed sign-in work at phone size', async () => {
   // runner" on an unleased pool is the same full-width control as "Extend
   // the lease" and "End now" once a lease is held.
   await page.goto(`/projects/${projectId}`);
-  await page.getByRole('button', { name: 'Project menu' }).click();
+  await page.getByRole('navigation', { name: 'Project tabs' }).getByRole('button', { name: 'More', exact: true }).click();
   const drawer = page.getByRole('complementary', { name: 'Project navigation' });
   await drawer.getByRole('button', { name: /^Account menu/ }).click();
   await drawer.getByRole('button', { name: 'Settings', exact: true }).click();

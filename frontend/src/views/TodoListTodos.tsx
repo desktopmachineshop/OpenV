@@ -106,7 +106,7 @@ export const ProjectTodos: React.FC<{ projectId: string }> = ({ projectId }) => 
     <div style={{ padding: isPhone ? '0 12px 24px' : '0 24px 24px', maxWidth: 900 }} data-help-key="todos">
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
         <div>
-          <h2 style={{ margin: 0, color: 'var(--text)', fontSize: 20, fontWeight: 700 }}>To-dos</h2>
+          <h2 className="ov-page-title" style={{ margin: 0, color: 'var(--text)', fontSize: 20, fontWeight: 700 }}>To-dos</h2>
           <div style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>
             {openCount} open. Small jobs to tick off; bigger work goes on the{' '}
             <Link to={`/projects/${projectId}/board`}>board</Link>. Yours across every project:{' '}

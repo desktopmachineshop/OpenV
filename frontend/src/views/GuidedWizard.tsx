@@ -598,7 +598,7 @@ export const GuidedWizard: React.FC = () => {
   return (
     <div style={{ padding: compact ? 12 : 24, maxWidth: 1560, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, gap: 10, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: compact ? 20 : undefined }}>Guided requirements definition</h2>
+        <h2 className="ov-page-title" style={{ color: 'var(--text)', margin: 0, fontSize: compact ? 20 : undefined }}>Guided requirements definition</h2>
         <button
           onClick={handleAbandon}
           data-help-key="guided.session"

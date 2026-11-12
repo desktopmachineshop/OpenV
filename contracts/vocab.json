@@ -222,7 +222,8 @@
     "flat-agent-team",
     "admin-usage",
     "artifact-reinstate",
-    "gantt-plan"
+    "gantt-plan",
+    "ui-refresh"
   ],
   "event_types": [
     "artifact.created",
