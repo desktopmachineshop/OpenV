@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { useUiRefresh } from '../../hooks/useUiRefresh';
 import { Artifact, artifactAPI, BulkProposalOutcome, Link as TraceLink, linkAPI, Proposal, proposalsAPI } from '../../api/client';
 import { ConfirmDialog, buttonStyle } from '../ui';
 import { ProposalCard } from './ProposalCard';
@@ -21,6 +22,8 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
   onlyRuns,
 }) => {
   const onlyKey = onlyRuns ? [...onlyRuns].sort().join(',') : null;
+  const refresh = useUiRefresh();
+  const [selecting, setSelecting] = useState(false);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState<Record<string, boolean>>({});
@@ -156,13 +159,30 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
     return null;
   }
 
+  // The refreshed panel (ui-refresh) keeps the bulk bar out of the way until
+  // several proposals are to be decided together.
+  const bulkBar = !refresh || selecting;
+
   return (
     <div style={{ marginBottom: 16 }} data-help-pane="agent-runs.approvals" data-help-key="agent-runs.approvals">
       {error && <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 8 }}>{error}</div>}
       {bulkSummary && (
         <div style={{ color: 'var(--text)', fontSize: 13, marginBottom: 8 }}>{bulkSummary}</div>
       )}
-      {proposals.length > 0 && (
+      {refresh && proposals.length > 1 && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 6 }}>
+          <button
+            type="button"
+            aria-pressed={selecting}
+            onClick={() => setSelecting((on) => !on)}
+            className="compact-action"
+            style={{ border: 'none', background: 'none', padding: 0, color: 'var(--accent-text)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+          >
+            {selecting ? 'Done selecting' : 'Select several'}
+          </button>
+        </div>
+      )}
+      {bulkBar && proposals.length > 0 && (
         <div
           style={{
             display: 'flex',
@@ -245,6 +265,7 @@ export const ProposalReviewPanel: React.FC<ProposalReviewPanelProps> = ({
           onApprove={() => act(p, 'approve')}
           onReject={() => act(p, 'reject')}
           onOpenRun={onOpenRun}
+          selecting={selecting}
         />
       ))}
     </div>

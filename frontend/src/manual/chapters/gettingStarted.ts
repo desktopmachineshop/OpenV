@@ -254,7 +254,10 @@ sideways when it is wider than the screen). **More** is the whole menu as a
 page of its own: the workspace switcher, the project switcher and the
 search, then every page as a tile under its group, **Help** for the page you
 were on, the **Manual**, **All projects**, and under **You** your account
-menu.
+menu. The same bar stays under a workspace page: **Home** is the workspace's
+Home, a group's tab opens the project you last opened at the page you last
+read in that group (it is greyed until you have opened a project), and
+**More** lists the workspace's own pages.
 
 ## Keyboard shortcuts
 

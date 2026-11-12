@@ -47,6 +47,18 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   instead of a separate band, and the old Summary address opens the
   Overview.
 
+- **Approvals and runs you can decide on from a phone.** A proposal's
+  **Approve** is one press and **Reject** asks why first, so the note field
+  is there when it is wanted instead of on every card; **Select several**
+  brings out the ticks and the bulk bar when you want to decide many at once.
+  The runs' Status filter is a row of chips, and on a phone each run is a
+  two-line row (the agent and its status, then when, how long and the cost)
+  instead of a squeezed table.
+- **The bottom bar stays on a workspace page.** On a phone, Home, Plan,
+  Define, Verify and More are under the workspace's Home, runs and settings
+  too: a group opens the project you last opened, and More lists the
+  workspace's own pages.
+
 ### Maintenance updates
 
 - On Home, a suspect link's two buttons now say what they do, **Still valid**

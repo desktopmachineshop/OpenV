@@ -1,9 +1,14 @@
 import React, { useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
-import { NavIcon, pageIconPath } from './ProjectLayoutIcons';
+import { NavIcon, SHELL_ICONS, groupIconPath, pageIconPath } from './ProjectLayoutIcons';
+import { REFRESH_GROUPS, loadLastPages } from './ProjectLayoutNav';
+import { TAB_BAR_HEIGHT } from './ProjectLayoutTabs';
+import { ActionMenu } from './ui';
+import { lastProject } from '../appShortcuts';
+import { useUiRefresh } from '../hooks/useUiRefresh';
 import { TopBar } from './ProjectLayoutRail';
 import { WORKSPACE_RUNS_FEATURE } from './agents/workspaceRuns';
 import { TODOS_FEATURE } from '../features';
@@ -34,16 +39,82 @@ const WORKSPACE_ICONS = {
   admin: 'M10 2l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V5z',
 };
 
-const WorkspaceRail: React.FC = () => {
+/** The workspace's own pages, as the rail lists them and the phone's More offers them. */
+const useWorkspacePages = (): { to: string; label: string; icon: string }[] => {
   const runs = useFeature(WORKSPACE_RUNS_FEATURE);
   const todos = useFeature(TODOS_FEATURE);
   const isAdmin = useAppStore((s) => Boolean(s.currentUser?.is_admin));
-  const items: { to: string; label: string; icon: string }[] = [
+  return [
     ...(todos ? [{ to: MY_TODOS_PATH, label: 'My to-dos', icon: WORKSPACE_ICONS.todos }] : []),
     ...(runs ? [{ to: '/org/runs', label: 'Runs', icon: WORKSPACE_ICONS.runs }] : []),
     { to: '/whats-new', label: 'News', icon: WORKSPACE_ICONS.news },
     ...(isAdmin ? [{ to: '/admin', label: 'Admin', icon: WORKSPACE_ICONS.admin }] : []),
   ];
+};
+
+/** Where a group's tab leads from a workspace page: a group's first page, unless one was read there last. */
+const GROUP_START: Record<string, string> = { Plan: '', Define: 'requirements', Verify: 'vv' };
+
+/**
+ * The bar along the bottom of a workspace page on a phone, in the refreshed
+ * interface (ui-refresh): the same Home, Plan, Define, Verify, More as inside
+ * a project, so the bar does not change shape when a project is left. Home is
+ * this page. A group's tab opens the project last opened, at the page last
+ * read in that group; with no project opened yet there is nowhere for it to
+ * lead, and it says so. More holds the workspace's own pages.
+ */
+const WorkspacePhoneBar: React.FC = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const pages = useWorkspacePages();
+  const project = lastProject();
+  const last = loadLastPages();
+  useEffect(() => {
+    document.body.classList.add('ov-has-tabbar');
+    document.documentElement.style.setProperty('--ov-tabbar-height', `${TAB_BAR_HEIGHT}px`);
+    return () => {
+      document.body.classList.remove('ov-has-tabbar');
+      document.documentElement.style.removeProperty('--ov-tabbar-height');
+    };
+  }, []);
+  const home = location.pathname === '/projects';
+  return (
+    <nav className="ov-tabbar ov-tabbar-fixed safe-area-bottom" aria-label="Workspace tabs" data-help-key="start.navigation">
+      <Link to="/projects" className={`ov-tabbar-item${home ? ' active' : ''}`} aria-current={home ? 'page' : undefined}>
+        <NavIcon d={pageIconPath('')} size={20} />
+        <span>Home</span>
+      </Link>
+      {REFRESH_GROUPS.slice(0, 3).map((group) =>
+        project ? (
+          <Link key={group} to={`/projects/${project}/${last[group] ?? GROUP_START[group]}`.replace(/\/$/, '')} className="ov-tabbar-item" title={`${group}, in the project you last opened`}>
+            <NavIcon d={groupIconPath(group)} size={20} />
+            <span>{group}</span>
+          </Link>
+        ) : (
+          <span key={group} className="ov-tabbar-item is-disabled" aria-disabled="true" title="Open a project first">
+            <NavIcon d={groupIconPath(group)} size={20} />
+            <span>{group}</span>
+          </span>
+        )
+      )}
+      <ActionMenu
+        label="More"
+        triggerClassName={`ov-tabbar-item${home ? '' : ' active'}`}
+        items={[...pages, { to: '/org/settings', label: 'Workspace settings', icon: '' }].map((page) => ({
+          key: page.to,
+          label: page.label,
+          onSelect: () => navigate(page.to),
+        }))}
+      >
+        <NavIcon d={SHELL_ICONS.more} size={20} />
+        <span>More</span>
+      </ActionMenu>
+    </nav>
+  );
+};
+
+const WorkspaceRail: React.FC = () => {
+  const items = useWorkspacePages();
   return (
     <aside className="ov-rail ov-rail-fixed" aria-label="Workspace navigation">
       <NavLink to="/projects" end className="ov-rail-item" title="Home: what needs you, the workspace's activity and its projects">
@@ -111,6 +182,7 @@ interface WorkspaceFrameProps {
 export const WorkspaceFrame: React.FC<WorkspaceFrameProps> = ({ pageLabel, helpOpen, onHelpToggle }) => {
   const { isCompact } = useViewport();
   const location = useLocation();
+  const refresh = useUiRefresh();
   useEffect(() => {
     if (isCompact) return undefined;
     document.body.classList.add('ov-has-rail');
@@ -118,7 +190,14 @@ export const WorkspaceFrame: React.FC<WorkspaceFrameProps> = ({ pageLabel, helpO
   }, [isCompact]);
   const label = location.pathname === '/projects' ? '' : pageLabel;
   // A phone names the page in the page's own heading below the bar.
-  if (isCompact) return <PhoneWorkspaceHeader helpOpen={helpOpen} onHelpToggle={onHelpToggle} />;
+  if (isCompact) {
+    return (
+      <>
+        <PhoneWorkspaceHeader helpOpen={helpOpen} onHelpToggle={onHelpToggle} />
+        {refresh && <WorkspacePhoneBar />}
+      </>
+    );
+  }
   return (
     <>
       <WorkspaceRail />

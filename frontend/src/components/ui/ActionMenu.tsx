@@ -21,6 +21,8 @@ interface ActionMenuProps {
   children?: React.ReactNode;
   /** Style of the trigger button, so it matches the buttons beside it. */
   triggerStyle?: React.CSSProperties;
+  /** Class of the trigger button, where a stylesheet draws it (a tab of the bottom bar). */
+  triggerClassName?: string;
 }
 
 /**
@@ -29,7 +31,7 @@ interface ActionMenuProps {
  * of the screen on a phone, where the thumb is. Escape, a click outside and
  * choosing an entry close it.
  */
-export const ActionMenu: React.FC<ActionMenuProps> = ({ label, items, children, triggerStyle }) => {
+export const ActionMenu: React.FC<ActionMenuProps> = ({ label, items, children, triggerStyle, triggerClassName }) => {
   const { isPhone } = useViewport();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLSpanElement | null>(null);
@@ -61,6 +63,7 @@ export const ActionMenu: React.FC<ActionMenuProps> = ({ label, items, children, 
         title={label}
         onClick={() => setOpen((shown) => !shown)}
         style={triggerStyle}
+        className={triggerClassName}
       >
         {children ?? '⋯'}
       </button>

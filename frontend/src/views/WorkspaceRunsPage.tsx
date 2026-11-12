@@ -5,6 +5,7 @@ import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
+import { useUiRefresh } from '../hooks/useUiRefresh';
 import { Navbar } from '../components/Navbar';
 import { ErrorBanner } from '../components/ui';
 import {
@@ -81,6 +82,7 @@ const WorkspaceRuns: React.FC = () => {
   const selectedRunId = searchParams.get('run');
   const followRun = useCloseRunOnSwitch(activeOrgId);
   const { isPhone, isCompact } = useViewport();
+  const refresh = useUiRefresh();
 
   useEffect(() => {
     if (!activeOrgId) return;
@@ -148,7 +150,7 @@ const WorkspaceRuns: React.FC = () => {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8, flexWrap: 'wrap' }}>
         <h2 style={{ color: 'var(--text)', margin: 0 }}>Workspace runs</h2>
         <div style={{ flex: 1 }} />
-        <RunStatusFilter value={statusFilter} onChange={setStatusFilter} />
+        <RunStatusFilter value={statusFilter} onChange={setStatusFilter} chips={refresh} />
       </div>
       <p style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 0 }}>
         The runs that belong to no project: a whole-workspace automation&apos;s, the products an agent invents
@@ -167,6 +169,7 @@ const WorkspaceRuns: React.FC = () => {
             selectedRunId={selectedRunId}
             onSelect={selectRun}
             isPhone={isPhone}
+            rows={refresh && isPhone}
             emptyText="No runs without a project yet."
           />
         </div>
