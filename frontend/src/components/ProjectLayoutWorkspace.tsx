@@ -162,12 +162,17 @@ const PhoneWorkspaceHeader: React.FC<{ helpOpen: boolean; onHelpToggle: () => vo
       title="Help for this page"
       className="ov-phone-icon"
     >
-      ?
+      {/* The same size and weight as the bell beside it. */}
+      <NavIcon d={SHELL_ICONS.help} size={20} />
     </button>
     <NotificationBell variant="dark" />
     {/* The avatar alone, its menu opening downward: the dark variant is the
-        sidebar footer's full-width row with the name. */}
-    <UserMenu variant="light" />
+        sidebar footer's full-width row with the name. It fills its button
+        where the two icons sit inside theirs, so it stands off a little to
+        keep the three evenly spaced. */}
+    <span className="ov-phone-account">
+      <UserMenu variant="light" />
+    </span>
   </header>
 );
 

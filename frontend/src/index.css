@@ -909,13 +909,24 @@ button.ov-topbar-project[aria-expanded='true'] {
   padding-left: 12px;
   min-height: 64px;
 }
+.ov-phone-account {
+  display: inline-flex;
+  margin-left: 6px;
+}
+/* The help button of a workspace page's phone header: the size of the bell
+   beside it, so the header's three controls are evenly spaced. */
 .ov-phone-icon {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   background: none;
   border: none;
-  color: var(--sidebar-text);
+  /* The bell's colour, so the two icons read as a pair. */
+  color: var(--sidebar-text-dim);
   font-size: 20px;
   font-weight: 700;
   cursor: pointer;

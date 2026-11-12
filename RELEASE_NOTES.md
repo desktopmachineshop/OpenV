@@ -9,6 +9,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **Even spacing in the phone's workspace header.** Help, the bell and
+  your account sat at uneven distances and slightly different heights on
+  a workspace page. Help is now an icon the size of the bell, and the
+  three are evenly spaced and level.
+
 ## 0.34.0 — 2026-11-12
 
 Stable channel release since 2026-11-12.
