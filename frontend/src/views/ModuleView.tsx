@@ -930,6 +930,8 @@ export const ModuleView: React.FC = () => {
     // around the whole app — every panel that needs to scroll scrolls itself.
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* The floating help panel is mounted once in ProjectLayout now. */}
+      {/* The refreshed page has no header row; its name stays, for assistive technology. */}
+      {refresh && <h2 className="sr-only">Requirements</h2>}
       {headerToolbar || (refresh && stacked) ? (headerToolbar && listToolbar) : (
         <DocumentHeader
           stacked={stacked}
