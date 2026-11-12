@@ -223,7 +223,7 @@ export const BaselineCompare: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 960 }}>
+    <div className="ov-gutter" style={{ padding: 24, maxWidth: 960 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 6, flexWrap: 'wrap' }}>
         <h2 style={{ color: 'var(--text)', margin: 0 }}>Compare Baseline</h2>
         <div style={{ flex: 1 }} />

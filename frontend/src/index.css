@@ -261,6 +261,39 @@ input:focus, textarea:focus, select:focus {
   }
 }
 
+/* One gutter for every page of the refreshed interface (ui-refresh): 16px
+   on a computer, 12px on a narrow screen, whatever padding the page was
+   written with. A page's root carries ov-gutter. */
+.ov-refresh .ov-gutter {
+  padding: 16px !important;
+}
+@media (max-width: 900px) {
+  .ov-refresh .ov-gutter {
+    padding: 12px !important;
+  }
+  .ov-refresh .ov-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .ov-refresh .ov-settings.is-phone .ov-settings-main {
+    padding: 12px 12px 16px;
+  }
+}
+
+/* A small control drawn for a mouse (a zoom button, a chip's cross) that a
+   finger must also hit: at least 24px each way, and 36px on a touch screen. */
+.ov-tap {
+  min-width: 24px;
+  min-height: 24px;
+}
+@media (hover: none) and (pointer: coarse) {
+  .ov-tap {
+    /* Over an inline minimum drawn for a mouse. */
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
+}
+
 /* A sheet of actions on a phone: every control full width and tall enough
    to tap, in the order the toolbar showed them. */
 .action-sheet {
@@ -1223,6 +1256,8 @@ body.ov-has-rail {
   white-space: nowrap;
 }
 .ov-board-title {
+  display: inline-block;
+  padding: 4px 0;
   font-size: 13px;
   font-weight: 500;
   color: var(--text);

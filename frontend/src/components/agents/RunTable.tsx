@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AgentRun } from '../../api/client';
-import { Sheet, chipStyle } from '../ui';
+import { AgentGlyph, Sheet, chipStyle } from '../ui';
 import { RunDetailPanel, runStatusTone, ErrorClassChip } from './RunDetailPanel';
 
 // The parts of a Runs page: the status filter, the list of runs and the run
@@ -273,7 +273,7 @@ export const RunTable: React.FC<RunTableProps> = ({ runs, selectedRunId, onSelec
               }}
             >
               <td style={cell}>
-                🤖 {run.agent_name || run.agent_id}
+                <AgentGlyph /> {run.agent_name || run.agent_id}
               </td>
               <td style={cell}>
                 <span

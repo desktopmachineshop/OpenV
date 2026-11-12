@@ -80,6 +80,9 @@ first:
 - **Pending invitations** are listed above the Add member form while any are
   outstanding, with who they were sent to and when they expire. *Revoke*
   stops a link working immediately.
+- On a phone the members and the pending invitations are rows, not a
+  table: the person's name and address, then their role and **Remove**
+  (or **Leave**, on your own row) beneath.
 
 On a server where the operator has closed public registration, an invitation
 is the only way in besides single sign-on — the sign-in page then says so

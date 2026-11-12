@@ -16,7 +16,7 @@ const caret: React.CSSProperties = {
   background: 'none',
   color: 'var(--text-muted)',
   cursor: 'pointer',
-  fontSize: 10,
+  fontSize: 12,
   flexShrink: 0,
 };
 
@@ -95,6 +95,8 @@ export const OutlineCell: React.FC<{
         style={{
           ...ellipsis,
           flex: 1,
+          alignSelf: 'stretch',
+          minHeight: 24,
           padding: 0,
           border: 'none',
           background: 'none',

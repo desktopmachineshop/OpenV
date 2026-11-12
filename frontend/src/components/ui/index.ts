@@ -11,6 +11,7 @@ export { ErrorBanner } from './ErrorBanner';
 export { Modal } from './Modal';
 export { Sheet } from './Sheet';
 export { ActionMenu } from './ActionMenu';
+export { AgentGlyph } from './AgentGlyph';
 export type { ActionMenuItem } from './ActionMenu';
 export { SegmentedControl } from './SegmentedControl';
 export type { SegmentedOption } from './SegmentedControl';

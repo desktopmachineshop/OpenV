@@ -114,7 +114,7 @@ export const EvidenceView: React.FC = () => {
   if (!projectId) return null;
 
   return (
-    <div style={{ padding: isCompact ? 12 : 24 }} data-help-key="evidence">
+    <div className="ov-gutter" style={{ padding: isCompact ? 12 : 24 }} data-help-key="evidence">
       <div
         style={{
           display: 'flex',

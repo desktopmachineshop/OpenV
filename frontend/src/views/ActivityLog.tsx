@@ -162,6 +162,7 @@ export const ActivityLog: React.FC = () => {
   return (
     <div
       data-help-key="activity"
+      className="ov-gutter" 
       style={{ padding: 16, height: '100%', display: 'flex', flexDirection: 'column' }}
     >
       <div className="ov-page-head" style={{ marginBottom: 12 }}>

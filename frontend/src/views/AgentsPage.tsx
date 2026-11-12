@@ -7,7 +7,7 @@ import { useFeature } from '../hooks/useFeature';
 import { AGENT_HIERARCHY_FEATURE } from '../features';
 import { AgentEditor } from '../components/agents/AgentEditor';
 import { LaunchRunModal } from '../components/agents/LaunchRunModal';
-import { ErrorBanner, useConfirm, Sheet, chipStyle, buttonStyle } from '../components/ui';
+import { AgentGlyph, ErrorBanner, useConfirm, Sheet, chipStyle, buttonStyle } from '../components/ui';
 import { AgentsHierarchyPage } from './AgentsHierarchyPage';
 
 const providerBadgeColor = (provider: string): string => {
@@ -109,7 +109,7 @@ export const AgentsList: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="ov-gutter" style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <h2 className="ov-page-title" style={{ color: 'var(--text)', margin: 0, fontSize: 20, fontWeight: 700 }}>Agents</h2>
         <div style={{ flex: 1 }} />
@@ -164,7 +164,7 @@ export const AgentsList: React.FC = () => {
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                 <strong style={{ flex: 1, fontSize: 14, color: 'var(--text)' }}>
-                  🤖 {agent.name}
+                  <AgentGlyph /> {agent.name}
                 </strong>
                 {agent.archived && (
                   <span title="Archived: out of the team and cannot run; its runs are kept" style={chipStyle('neutral')}>

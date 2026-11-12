@@ -282,6 +282,7 @@ const ContextLine: React.FC<{ label: string; onRemove: () => void }> = ({ label,
         onClick={onRemove}
         aria-label={`Stop sending ${label} as context`}
         title="Don’t send this as context"
+        className="ov-tap"
         style={{ ...iconButton, width: 28, height: 28, fontSize: 12 }}
       >
         ✕

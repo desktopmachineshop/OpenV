@@ -169,7 +169,7 @@ export const ImpactView: React.FC = () => {
   );
 
   return (
-    <div style={{ padding: isPhone ? 12 : 24, display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
+    <div className="ov-gutter" style={{ padding: isPhone ? 12 : 24, display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }} data-help-key="impact">
         <h2 className="ov-page-title" style={{ color: 'var(--text)', margin: 0 }}>Impact Analysis</h2>
         {!picker && (

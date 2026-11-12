@@ -417,9 +417,10 @@ const AUDIT = (opts) => {
     // ag-grid viewport): those are reachable by a swipe.
     if (r.right > vw + 1 && r.left < vw && !inScroller(el)) out.overflow.push({ el: desc(el), right: Math.round(r.right), left: Math.round(r.left) });
     // A clipped container is a defect unless it is a scroller, a deliberate
-    // one-line ellipsis, a text field with a long value, or ag-grid's
-    // virtualised viewports.
-    if (/(hidden|clip)/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 2 && cs.textOverflow !== 'ellipsis' && !el.matches('input') && !el.closest('pre, code, .table-scroll, .tab-strip, textarea, svg, canvas, .ag-root-wrapper')) {
+    // one-line ellipsis, a text field with a long value, ag-grid's
+    // virtualised viewports, or a surface that is panned by dragging (a
+    // diagram marks itself data-pan-surface).
+    if (/(hidden|clip)/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 2 && cs.textOverflow !== 'ellipsis' && !el.matches('input') && !el.closest('pre, code, .table-scroll, .tab-strip, textarea, svg, canvas, .ag-root-wrapper, [data-pan-surface]')) {
       out.clipped.push({ el: desc(el), scrollWidth: el.scrollWidth, clientWidth: el.clientWidth, ellipsis: cs.textOverflow === 'ellipsis' });
     }
     // Tap targets: 32 px is the floor for a control; a checkbox or radio
@@ -464,6 +465,24 @@ const AUDIT = (opts) => {
     const top = Math.max(0, Math.round(content.getBoundingClientRect().top));
     const bottom = bar && vis(bar) ? Math.round(bar.getBoundingClientRect().height) : 0;
     out.chrome = { top, bottom, share: Math.round(((top + bottom) / window.innerHeight) * 100) };
+  }
+  // Gutter: how far the page's own content sits from the left and top edges
+  // of the shell's <main>, so pages can be held to one margin.
+  const mainEl = Array.from(document.querySelectorAll('main')).find(vis);
+  if (mainEl) {
+    const mr = mainEl.getBoundingClientRect();
+    let left = Infinity, top = Infinity, right = -Infinity;
+    for (const el of mainEl.querySelectorAll('*')) {
+      if (!vis(el)) continue;
+      const hasText = Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!hasText && !el.matches('input, select, textarea, button, img, svg')) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.bottom < mr.top || r.top > window.innerHeight || r.right <= mr.left || r.left >= mr.right) continue;
+      left = Math.min(left, r.left - mr.left);
+      top = Math.min(top, r.top - mr.top);
+      if (r.right <= mr.right + 1) right = Math.max(right, r.right);
+    }
+    if (left !== Infinity) out.gutter = { left: Math.round(left), top: Math.round(top), right: Math.round(mr.right - right) };
   }
   const dedupe = (arr, key) => { const seen = new Set(); return arr.filter((x) => { const k = key(x); if (seen.has(k)) return false; seen.add(k); return true; }); };
   out.overflow = dedupe(out.overflow, (x) => x.el).slice(0, 12);

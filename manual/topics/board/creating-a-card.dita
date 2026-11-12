@@ -9,7 +9,7 @@
   <conbody>
     <ul>
       <li><b>Title</b> (required) and an optional description.</li>
-      <li><b>Assignee</b> — Unassigned, <i>Me</i>, or any <b>🤖 agent</b>.</li>
+      <li><b>Assignee</b> — Unassigned, <i>Me</i>, or any <b>agent</b>.</li>
       <li><b>Artifact IDs</b> — optional comma-separated artifact IDs to attach the relevant requirements to the card.</li>
     </ul>
   </conbody>
