@@ -1,3 +1,4 @@
+import { useUiRefresh } from '../hooks/useUiRefresh';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -15,7 +16,7 @@ import {
 import { useAppStore } from '../state/store';
 import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
 import { BOARD_COLUMNS } from '../components/kanban/columns';
-import { ArtifactPicker, ErrorBanner, Modal, SegmentedControl, chipStyle } from '../components/ui';
+import { AgentGlyph, ArtifactPicker, ErrorBanner, Modal, SegmentedControl, chipStyle } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 
 const COLUMNS = BOARD_COLUMNS;
@@ -59,6 +60,7 @@ export const KanbanBoard: React.FC = () => {
   // 260px columns do not fit, and drag-and-drop between them never starts
   // from a finger, so a card's actions menu offers Move to… instead.
   const viewport = useViewport();
+  const refresh = useUiRefresh();
   const phone = viewport.isPhone;
   const [phoneColumn, setPhoneColumn] = useState<string>(COLUMNS[0].key);
   const [actionsFor, setActionsFor] = useState<WorkItem | null>(null);
@@ -240,7 +242,7 @@ export const KanbanBoard: React.FC = () => {
           title={`Agent: ${agent?.name || item.assignee_id}`}
           style={{ ...chipStyle('agent'), fontWeight: 600 }}
         >
-          <span role="img" aria-label="agent">🤖</span>
+          <span role="img" aria-label="agent"><AgentGlyph /></span>
           {agent?.name || 'agent'}
         </span>
       );
@@ -269,7 +271,7 @@ export const KanbanBoard: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: phone ? 12 : 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="ov-gutter" style={{ padding: phone ? 12 : 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <style>
         {`@keyframes ovPulse { 0% { opacity: 1; } 50% { opacity: 0.25; } 100% { opacity: 1; } }`}
       </style>
@@ -491,7 +493,7 @@ export const KanbanBoard: React.FC = () => {
                     <optgroup label="Agents">
                       {agents.map((a) => (
                         <option key={a.id} value={`agent:${a.id}`}>
-                          🤖 {a.name}
+                          {refresh ? '' : '🤖 '}{a.name}
                         </option>
                       ))}
                     </optgroup>

@@ -325,6 +325,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       ref={scroller}
       role="table"
       aria-label="Plan timeline"
+      data-pan-surface=""
       data-help-key="gantt.chart"
       tabIndex={0}
       onPointerDown={startPan}

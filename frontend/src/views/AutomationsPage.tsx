@@ -1,3 +1,4 @@
+import { useUiRefresh } from '../hooks/useUiRefresh';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -33,6 +34,7 @@ export const AutomationsPage: React.FC = () => {
   // A phone lists name, kind, the switch and the actions; the target, the
   // schedule and the run times are in the editor a tap away.
   const { isPhone } = useViewport();
+  const refresh = useUiRefresh();
   const columns = isPhone
     ? ['Name', 'Kind', 'Enabled', '']
     : ['Name', 'Kind', 'Target', 'Schedule / Event', 'Enabled', 'Last run', 'Next run', ''];
@@ -153,7 +155,7 @@ export const AutomationsPage: React.FC = () => {
   };
 
   const targetLabel = (a: Automation): string => {
-    if (a.agent_id) return `🤖 ${agentName(a.agent_id)}`;
+    if (a.agent_id) return `${refresh ? '' : '🤖 '}${agentName(a.agent_id)}`;
     // An automation of a crew whose crew had no entry agent was switched off
     // when crews went: it waits for an agent.
     return 'No agent: choose one';
@@ -172,7 +174,7 @@ export const AutomationsPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 16 }}>
+    <div className="ov-gutter" style={{ padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <h2 className="ov-page-title" style={{ color: 'var(--text)', margin: 0, flex: 1, fontSize: 20, fontWeight: 700 }}>Automations</h2>
         <button className="button" data-help-key="automations.create" onClick={() => setForm(emptyForm())}>

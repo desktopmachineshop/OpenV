@@ -334,7 +334,7 @@ export const Releases: React.FC = () => {
   }
 
   return (
-    <div style={{ ...pageType(false), padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="ov-gutter" style={{ ...pageType(false), padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
       {head}
       <ErrorBanner message={error} onDismiss={() => setError('')} />
       {form}

@@ -68,6 +68,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   menu of named actions, and a workspace with no activity yet no longer
   shows an empty Activity panel.
 
+- **Forms, members and small controls that fit a phone.** A form that
+  opens as a dialog (recording evidence, launching a run, the download
+  wizard) fills the screen on a phone, with its title and a close button
+  that stay at the top. Workspace members and pending invitations are rows
+  there instead of a table that scrolls sideways. An agent's name carries
+  the Agents icon in place of the robot emoji. The small controls a finger
+  kept missing are larger: the diagram's fold and zoom buttons, the cross
+  on a search chip, the linked-artifact chips on a card. Every page now
+  keeps one margin: 16px on a computer and 12px on a phone.
+
 ### Maintenance updates
 
 - On Home, a suspect link's two buttons now say what they do, **Still valid**

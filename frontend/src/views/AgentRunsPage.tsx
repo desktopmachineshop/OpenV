@@ -144,7 +144,7 @@ export const AgentRunsPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="ov-gutter" style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div
         data-help-key="agent-runs.list"
         style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}

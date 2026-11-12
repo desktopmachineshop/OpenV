@@ -270,7 +270,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     summary:
       'A kanban view of work items — and cards assigned to an AI agent launch a run when you drag them to To Do.',
     tips: [
-      'Assign a card to an agent (🤖) and drag it to To Do to kick off an agent run.',
+      'Assign a card to an agent and drag it to To Do to kick off an agent run.',
       "A pulsing blue dot means a live run — the card is locked until the run finishes (cancel it from the Runs page if needed).",
       'Attach requirements by listing artifact IDs in the card composer; they show as links in the card drawer.',
       "The agent's progress and comments land on the card's activity feed.",

@@ -32,6 +32,7 @@
         <li>An invitation never changes a role somebody already has. If you invite an existing admin as a member, they stay an admin — use the members table to change a role.</li>
         <li>Re-inviting an address is how you resend: the previous link stops working, expired or not, and only the newest one lets them in.</li>
         <li><b>Pending invitations</b> are listed above the Add member form while any are outstanding, with who they were sent to and when they expire. <i>Revoke</i> stops a link working immediately.</li>
+        <li>On a phone the members and the pending invitations are rows, not a table: the person's name and address, then their role and <b>Remove</b> (or <b>Leave</b>, on your own row) beneath.</li>
       </ul>
       <p>On a server where the operator has closed public registration, an invitation is the only way in besides single sign-on — the sign-in page then says so instead of offering <i>Create a new account</i>.</p>
     </section>

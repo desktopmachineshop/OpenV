@@ -133,22 +133,23 @@ export function TreeDiagram<T>(p: TreeDiagramProps<T>): React.ReactElement {
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '0 0 8px' }}>
         {p.controls}
         <span style={{ flex: 1 }} />
-        <button type="button" style={zoomButton} onClick={() => pz.zoom(1 / 1.25)} aria-label="Zoom out" title="Zoom out">
+        <button type="button" className="ov-tap" style={zoomButton} onClick={() => pz.zoom(1 / 1.25)} aria-label="Zoom out" title="Zoom out">
           −
         </button>
         <span aria-live="polite" style={{ fontSize: 12, color: 'var(--text-muted)', minWidth: 40, textAlign: 'center' }}>
           {Math.round(view.k * 100)}%
         </span>
-        <button type="button" style={zoomButton} onClick={() => pz.zoom(1.25)} aria-label="Zoom in" title="Zoom in">
+        <button type="button" className="ov-tap" style={zoomButton} onClick={() => pz.zoom(1.25)} aria-label="Zoom in" title="Zoom in">
           +
         </button>
-        <button type="button" style={zoomButton} onClick={pz.fit} title="Fit the whole diagram on screen">
+        <button type="button" className="ov-tap" style={zoomButton} onClick={pz.fit} title="Fit the whole diagram on screen">
           Fit
         </button>
       </div>
       <div
         ref={pz.viewport}
         {...pz.handlers}
+        data-pan-surface=""
         style={{
           position: 'relative',
           flex: 1,
@@ -250,21 +251,33 @@ export function TreeDiagram<T>(p: TreeDiagramProps<T>): React.ReactElement {
                   title={n.folded ? `Unfold (${n.hiddenCount} below)` : 'Fold'}
                   style={{
                     position: 'absolute',
-                    left: n.side === 'left' ? n.x - 20 : n.x + m.boxWidth + 2,
-                    top: n.y + m.boxHeight / 2 - 9,
-                    width: 18,
-                    height: 18,
-                    padding: 0,
-                    border: '1px solid var(--neutral-mid)',
-                    borderRadius: 999,
-                    background: 'var(--surface)',
-                    color: 'var(--text-secondary)',
-                    fontSize: 12,
-                    lineHeight: '16px',
+                    // A 24px target around the 18px knob that is drawn.
+                    left: n.side === 'left' ? n.x - 23 : n.x + m.boxWidth - 1,
+                    top: n.y + m.boxHeight / 2 - 12,
+                    width: 24,
+                    height: 24,
+                    padding: 3,
+                    border: 'none',
+                    background: 'none',
                     cursor: 'pointer',
                   }}
                 >
-                  {n.folded ? '+' : '−'}
+                  <span
+                    style={{
+                      display: 'block',
+                      width: 18,
+                      height: 18,
+                      boxSizing: 'border-box',
+                      border: '1px solid var(--neutral-mid)',
+                      borderRadius: 999,
+                      background: 'var(--surface)',
+                      color: 'var(--text-secondary)',
+                      fontSize: 12,
+                      lineHeight: '16px',
+                    }}
+                  >
+                    {n.folded ? '+' : '−'}
+                  </span>
                 </button>
               ))}
             {drawn

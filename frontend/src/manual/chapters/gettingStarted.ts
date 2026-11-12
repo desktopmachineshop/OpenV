@@ -259,6 +259,12 @@ Home, a group's tab opens the project you last opened at the page you last
 read in that group (it is greyed until you have opened a project), and
 **More** lists the workspace's own pages.
 
+A form that opens as a dialog on a computer (recording evidence, launching
+a run, the download wizard) takes the whole screen on a phone: its title
+stays at the top beside **✕**, which closes it, and its fields scroll
+underneath. A short question, such as a confirmation, stays a small card.
+Every page keeps the same margin from the edge of the screen.
+
 ## Keyboard shortcuts
 
 | Key | What it does |

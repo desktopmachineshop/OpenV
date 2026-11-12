@@ -25,7 +25,7 @@ count and has a **+ Add card** composer at the bottom.
 The composer takes:
 
 - **Title** (required) and an optional description.
-- **Assignee** — Unassigned, *Me*, or any **🤖 agent**.
+- **Assignee** — Unassigned, *Me*, or any **agent**.
 - **Artifact IDs** — optional comma-separated artifact IDs to attach the
   relevant requirements to the card.
 

@@ -144,6 +144,7 @@ export const ChipSearch: React.FC<ChipSearchProps> = (p) => {
             p.onChange(removeChipAt(p.value, i));
             inputRef.current?.focus();
           }}
+          className="ov-tap"
           style={{ border: 'none', background: 'transparent', color: 'inherit', padding: '0 2px', fontSize: 14, lineHeight: 1, cursor: 'pointer' }}
         >
           ×

@@ -208,7 +208,7 @@ export const ProductOverview: React.FC = () => {
     : 'Start guided definition';
 
   return (
-    <div className={refresh ? 'ov-overview' : undefined} style={{ padding: 16, maxWidth: refresh ? 1400 : 1100, margin: '0 auto' }}>
+    <div className={refresh ? 'ov-overview ov-gutter' : undefined} style={{ padding: 16, maxWidth: refresh ? 1400 : 1100, margin: '0 auto' }}>
       <div className={refresh ? 'ov-overview-product' : undefined}>
       <div className="ov-page-head">
         <h2 className="ov-page-title">Product Overview</h2>

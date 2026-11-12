@@ -249,6 +249,7 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
                 <Link
                   key={id}
                   to={`/projects/${projectId}/requirements?artifact=${id}`}
+                  className="ov-tap"
                   style={{
                     ...chipStyle('neutral', 'md'),
                     margin: '2px 6px 2px 0',
