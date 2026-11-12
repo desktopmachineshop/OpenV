@@ -152,7 +152,9 @@ SECTION_KEYS = {
     ('interviews', 'creating-an-interview'): ['interviews.create'],
     ('interviews', 'sharing-invite-links'): ['interviews.invite'],
     ('interviews', 'reviewing-sessions'): ['interviews.sessions'],
-    ('product-overview', 'quick-links'): ['overview.links'],
+    # overview.links was the Quick links section, which the merged Overview
+    # replaced; the key stays, on the section that took its place.
+    ('product-overview', 'where-the-project-stands'): ['overview.links'],
     ('product-overview', 'product-definition'): ['overview.product'],
     ('product-overview', 'success-metrics'): ['overview.metrics'],
     ('product-overview', 'constraints'): ['overview.constraints'],

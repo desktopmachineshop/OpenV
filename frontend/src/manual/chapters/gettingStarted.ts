@@ -223,12 +223,12 @@ admin); only the rail's buttons change.
     workspace.
   - **Switch project**: click the project's name (it reads **All projects**
     on a workspace page) for the workspace's projects. Choose one to open
-    it at its Summary; **All projects** opens the Projects page and **+ New
+    it at its Overview; **All projects** opens the Projects page and **+ New
     project** starts a project from wherever you are.
 - **The rail inside a project** has a button for each part of the project,
   in the order the work runs — **Plan**, **Define**, **Verify** and
   **Agents** — and links to **Activity** and **Settings**. Click a group to
-  open its pages beside the rail (Plan holds Overview, Summary, Board, Gantt
+  open its pages beside the rail (Plan holds Overview, Board, Gantt
   and Releases, for example), then click the page. The group holding the
   page you are on is marked. The list closes when you arrive, or with
   **Esc** or a click anywhere else.

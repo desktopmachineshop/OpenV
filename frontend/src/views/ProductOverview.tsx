@@ -16,6 +16,7 @@ import { useAppStore } from '../state/store';
 import { isUntouchedByWizard } from '../components/wizard/assistantSession';
 import { ErrorBanner, chipStyle, toneForColor } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
+import { useUiRefresh } from '../hooks/useUiRefresh';
 
 interface MetricRow {
   name: string;
@@ -28,6 +29,10 @@ interface ConstraintRow {
   title: string;
   description: string;
 }
+
+// Loaded on its own: it shares the project Home's code, which stays out of
+// the first load.
+const ProjectStatus = React.lazy(() => import('./ProjectHomeStatus'));
 
 const sectionTitle: React.CSSProperties = {
   fontSize: 16,
@@ -47,6 +52,8 @@ export const ProductOverview: React.FC = () => {
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
   const { isPhone } = useViewport();
+  // The refreshed interface draws the project's status beside its definition.
+  const refresh = useUiRefresh();
 
   const [profile, setProfile] = useState<ProductProfile | null>(null);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
@@ -201,18 +208,22 @@ export const ProductOverview: React.FC = () => {
     : 'Start guided definition';
 
   return (
-    <div style={{ padding: 16, maxWidth: 1100, margin: '0 auto' }}>
+    <div className={refresh ? 'ov-overview' : undefined} style={{ padding: 16, maxWidth: refresh ? 1400 : 1100, margin: '0 auto' }}>
+      <div className={refresh ? 'ov-overview-product' : undefined}>
       <div className="ov-page-head">
         <h2 className="ov-page-title">Product Overview</h2>
       </div>
-      <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '4px 0 16px' }}>
-        The single source of truth for what this product is and how success is measured.
-      </p>
+      {!refresh && (
+        <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '4px 0 16px' }}>
+          The single source of truth for what this product is and how success is measured.
+        </p>
+      )}
 
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
 
-      {/* Quick links */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }} data-help-key="overview.links">
+      {/* Quick links: the row of pages and the rail lead to V&V and the board
+          in the refreshed interface, so only the guided definition stays. */}
+      <div style={{ display: refresh ? 'none' : 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }} data-help-key="overview.links">
         <Link to="guided" className="button" style={{ textDecoration: 'none' }}>
           {guidedCtaLabel}
         </Link>
@@ -226,8 +237,13 @@ export const ProductOverview: React.FC = () => {
 
       {/* Product definition */}
       <div className="card" data-help-key="overview.product">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ ...sectionTitle, marginBottom: 0 }}>Product definition</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          <div style={{ ...sectionTitle, marginBottom: 0, flex: '1 1 160px' }}>Product definition</div>
+          {refresh && !editingDef && (
+            <Link to="guided" className="button-secondary" style={{ padding: '6px 14px', textDecoration: 'none' }}>
+              {guidedCtaLabel}
+            </Link>
+          )}
           {!editingDef && (
             <button className="button-secondary" style={{ padding: '6px 14px' }} onClick={() => setEditingDef(true)}>
               Edit
@@ -473,6 +489,14 @@ export const ProductOverview: React.FC = () => {
           </Link>
         </div>
       </div>
+      </div>
+      {refresh && projectId && (
+        <aside className="ov-overview-status" aria-label="Where the project stands">
+          <React.Suspense fallback={null}>
+            <ProjectStatus projectId={projectId} />
+          </React.Suspense>
+        </aside>
+      )}
     </div>
   );
 };

@@ -38,8 +38,19 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   design items. A design item's panel there shows what the page showed:
   what it satisfies and **Verified through**, the tests that reach it.
 
+- **One Overview for what the product is and where the project stands.**
+  A project's Summary and Overview are one page now, the first under Plan
+  and the page a project opens on. The product's definition, metrics,
+  constraints, personas and needs are on the left; on the right are the
+  project's figures, **Needs you** and the recent activity (on a phone,
+  those come first). The changes agents have proposed are lines of Needs you
+  instead of a separate band, and the old Summary address opens the
+  Overview.
+
 ### Maintenance updates
 
+- On Home, a suspect link's two buttons now say what they do, **Still valid**
+  and **Remove**, instead of ✓ and ✗.
 - The notification bell is drawn in the same line style as the other icons
   instead of as an emoji, so it looks the same on every device.
 

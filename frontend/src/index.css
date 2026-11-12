@@ -1953,3 +1953,27 @@ input[type='checkbox'].ov-switch:focus-visible {
 .ov-pushed .ov-phone-shell > .ov-tabbar {
   display: none;
 }
+
+/* The Overview of the refreshed interface: what the product is on the left,
+   where the project stands on the right; stacked on a narrow screen, with
+   what needs you first. */
+.ov-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  gap: 16px;
+  align-items: start;
+}
+.ov-overview-status {
+  position: sticky;
+  top: 16px;
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .ov-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ov-overview-status {
+    position: static;
+    order: -1;
+  }
+}

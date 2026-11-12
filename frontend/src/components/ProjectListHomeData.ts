@@ -17,7 +17,7 @@ export {
   type ActivityTone,
 } from './activityEvents';
 
-export type TodoKind = 'approve' | 'suspect' | 'test run' | 'failing' | 'comment' | 'to-do';
+export type TodoKind = 'approve' | 'suspect' | 'test run' | 'failing' | 'comment' | 'to-do' | 'proposal';
 
 export interface TodoItem {
   key: string;

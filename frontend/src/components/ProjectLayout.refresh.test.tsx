@@ -113,10 +113,11 @@ describe('the refreshed shell on a wide screen', () => {
     expect(document.querySelector('.ov-topbar-page')).toBeNull();
   });
 
-  it('puts Overview and Summary at the head of Plan', async () => {
+  it('puts Overview at the head of Plan, and lists no Summary: the Overview holds it', async () => {
     await mount('/projects/p1');
     expect(groupRow()?.getAttribute('aria-label')).toBe('Plan pages');
-    expect(rowLinks().slice(0, 3)).toEqual(['Overview*', 'Summary', 'Board']);
+    expect(rowLinks().slice(0, 2)).toEqual(['Overview*', 'Board']);
+    expect(rowLinks()).not.toContain('Summary');
   });
 
   it('draws no row for a page outside every group, and keeps its crumb', async () => {

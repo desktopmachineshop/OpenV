@@ -2,8 +2,8 @@ import type { NavSection } from '../pages';
 import { activeGroup, groupLanding, loadLastPages, refreshSections, rememberGroupPage } from './ProjectLayoutNav';
 
 // The refreshed menu (ui-refresh): the groups in the order Plan, Define,
-// Verify, Agents, with Overview and Summary at the head of Plan, and a
-// group's tab returning to the page last read there.
+// Verify, Agents, with Overview at the head of Plan and neither Summary nor
+// Design listed, and a group's tab returning to the page last read there.
 
 const sidebar: NavSection[] = [
   {
@@ -26,9 +26,9 @@ const shape = (sections: NavSection[]) => sections.map((s) => `${s.label ?? '-'}
 afterEach(() => localStorage.clear());
 
 describe('refreshSections', () => {
-  it('orders the groups Plan, Define, Verify, Agents and heads Plan with Overview and Summary', () => {
+  it('orders the groups Plan, Define, Verify, Agents, heads Plan with Overview and drops Summary', () => {
     expect(shape(refreshSections(sidebar))).toEqual([
-      'Plan: Overview, Summary, Board, Gantt',
+      'Plan: Overview, Board, Gantt',
       'Define: Guided Definition, Requirements',
       'Verify: V&V, Review Queue',
       'Agents: Agents',
@@ -45,10 +45,8 @@ describe('refreshSections', () => {
     expect(refreshSections(sidebar)[0].items[0]).toEqual({ to: '', label: 'Overview', end: true });
   });
 
-  it('drops a group left with no page, and does without Summary where its gate is closed', () => {
-    const gated = sidebar
-      .filter((s) => s.label !== 'Agents')
-      .map((s) => ({ ...s, items: s.items.filter((i) => i.to !== 'home') }));
+  it('drops a group left with no page', () => {
+    const gated = sidebar.filter((s) => s.label !== 'Agents');
     expect(shape(refreshSections(gated))).toEqual([
       'Plan: Overview, Board, Gantt',
       'Define: Guided Definition, Requirements',
