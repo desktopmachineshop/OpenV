@@ -130,7 +130,9 @@ const FORMATS: { value: PlanExportFormat; label: string }[] = [
 export const ExportControl: React.FC<{ busy: boolean; onExport: (f: PlanExportFormat) => void; onImport?: (file: File) => void }> = ({ busy, onExport, onImport }) => (
   <>
     {onImport && (
-      <label data-help-key="gantt.export" title="Add the tasks of a Microsoft Project XML file to this plan" style={{ ...buttonStyle('secondary'), cursor: 'pointer' }}>
+      // A label, to open the file picker: without the global label's bottom
+      // margin, which would lift it above the buttons beside it.
+      <label data-help-key="gantt.export" title="Add the tasks of a Microsoft Project XML file to this plan" style={{ ...buttonStyle('secondary'), cursor: 'pointer', marginBottom: 0 }}>
         Import…
         <input
           type="file"

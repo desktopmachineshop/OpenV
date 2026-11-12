@@ -10,7 +10,7 @@ import { ellipsis, eyebrowStyle, mutedStyle } from '../ui';
 import { shortDate, spanLabel, toDay } from './ganttScale';
 import { relationshipLabel } from './planModel';
 
-interface Bar {
+export interface Bar {
   id: string;
   title: string;
   start: string | null;
@@ -29,7 +29,7 @@ const useSpan = (start: string | null, end: string | null) => {
 };
 
 /** Bars packed onto as few lanes as will hold them without overlapping. */
-const lanes = (bars: Bar[]): Bar[][] => {
+const pack = (bars: Bar[]): Bar[][] => {
   const out: Bar[][] = [];
   for (const b of bars.filter((x) => x.start && x.end).sort((x, y) => x.start!.localeCompare(y.start!))) {
     const lane = out.find((l) => l[l.length - 1].end! < b.start!);
@@ -39,13 +39,21 @@ const lanes = (bars: Bar[]): Bar[][] => {
   return out;
 };
 
+/**
+ * The lanes of a band: the critical path first, on the top row (more rows
+ * only where critical bars overlap), then everything else beneath it.
+ */
+export const lanes = (bars: Bar[]): Bar[][] => [...pack(bars.filter((b) => b.critical)), ...pack(bars.filter((b) => !b.critical))];
+
 const Band: React.FC<{
   bars: Bar[];
   milestones: { key: string; name: string; date: string | null; met: boolean; late: boolean }[];
   span: ReturnType<typeof useSpan>;
   today: string;
+  /** Mark the critical bars (the Critical path button); they sit on the top row either way. */
+  showCritical: boolean;
   onBar?: (id: string) => void;
-}> = ({ bars, milestones, span, today, onBar }) => {
+}> = ({ bars, milestones, span, today, showCritical, onBar }) => {
   const rows = lanes(bars);
   const todayAt = span.left(today);
   return (
@@ -63,10 +71,11 @@ const Band: React.FC<{
           <button
             key={b.id}
             type="button"
+            data-critical={(showCritical && b.critical) || undefined}
             disabled={!onBar}
             onClick={() => onBar?.(b.id)}
-            title={`${b.title}: ${spanLabel(b.start, b.end, today)}, ${b.progress}%`}
-            style={{ ...ellipsis, position: 'absolute', left: `${span.left(b.start!)}%`, width: `${Math.max(span.width(b.start!, b.end!), 0.6)}%`, top: 24 + i * 24, height: 20, boxSizing: 'border-box', padding: '0 6px', fontSize: 12, lineHeight: '18px', textAlign: 'left', cursor: onBar ? 'pointer' : 'default', borderRadius: 4, border: `1px solid ${b.critical ? 'var(--warning)' : b.late ? 'var(--danger)' : 'var(--border)'}`, color: 'var(--text)', background: `linear-gradient(90deg, ${b.done ? 'var(--success)' : 'var(--accent)'} ${b.progress}%, var(--surface-alt) ${b.progress}%)` }}
+            title={`${b.title}: ${spanLabel(b.start, b.end, today)}, ${b.progress}%${showCritical && b.critical ? ', on the critical path' : ''}`}
+            style={{ ...ellipsis, position: 'absolute', left: `${span.left(b.start!)}%`, width: `${Math.max(span.width(b.start!, b.end!), 0.6)}%`, top: 24 + i * 24, height: 20, boxSizing: 'border-box', padding: '0 6px', fontSize: 12, lineHeight: '18px', textAlign: 'left', cursor: onBar ? 'pointer' : 'default', borderRadius: 4, border: showCritical && b.critical ? '2px solid var(--warning)' : `1px solid ${b.late ? 'var(--danger)' : 'var(--border)'}`, color: 'var(--text)', background: `linear-gradient(90deg, ${b.done ? 'var(--success)' : 'var(--accent)'} ${b.progress}%, var(--surface-alt) ${b.progress}%)` }}
           >
             <span style={{ background: 'color-mix(in srgb, var(--surface) 70%, transparent)', borderRadius: 2, padding: '0 2px' }}>{b.title}</span>
           </button>
@@ -77,7 +86,7 @@ const Band: React.FC<{
 };
 
 /** The project's top-level tasks and milestones on one band. */
-export const PlanTimeline: React.FC<{ plan: ProjectPlan; onSelectTask: (t: PlanTask) => void }> = ({ plan, onSelectTask }) => {
+export const PlanTimeline: React.FC<{ plan: ProjectPlan; onSelectTask: (t: PlanTask) => void; showCritical?: boolean }> = ({ plan, onSelectTask, showCritical = true }) => {
   const span = useSpan(plan.start, plan.end);
   const top = plan.tasks.filter((t) => t.depth === 0);
   const bars = top.map((t) => ({ id: t.id, title: t.title, start: t.span_start, end: t.span_end, progress: t.progress, done: t.done, late: t.late, critical: t.critical || t.critical_subtasks }));
@@ -88,13 +97,13 @@ export const PlanTimeline: React.FC<{ plan: ProjectPlan; onSelectTask: (t: PlanT
         <span>{shortDate(plan.start, plan.today)}</span>
         <span>{shortDate(plan.end, plan.today)}</span>
       </div>
-      <Band bars={bars} milestones={plan.milestones} span={span} today={plan.today} onBar={(id) => onSelectTask(top.find((t) => t.id === id)!)} />
+      <Band bars={bars} milestones={plan.milestones} span={span} today={plan.today} showCritical={showCritical} onBar={(id) => onSelectTask(top.find((t) => t.id === id)!)} />
     </div>
   );
 };
 
 /** Every project of the workspace the reader can see, each on a line, with the links between their tasks. */
-export const PlanMaster: React.FC<{ currentProjectId: string }> = ({ currentProjectId }) => {
+export const PlanMaster: React.FC<{ currentProjectId: string; showCritical?: boolean }> = ({ currentProjectId, showCritical = true }) => {
   const [master, setMaster] = useState<MasterPlan | null>(null);
   const [error, setError] = useState('');
   useEffect(() => {
@@ -127,7 +136,7 @@ export const PlanMaster: React.FC<{ currentProjectId: string }> = ({ currentProj
             <div style={mutedStyle}>{p.start ? spanLabel(p.start, p.end, master.today) : 'Not scheduled'}</div>
           </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <Band bars={p.tasks} milestones={p.milestones} span={span} today={master.today} />
+            <Band bars={p.tasks} milestones={p.milestones} span={span} today={master.today} showCritical={showCritical} />
           </div>
         </section>
       ))}

@@ -176,11 +176,11 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
           )}
           {mode === 'gantt' && !touch && <PlanViewBar plan={plan} view={view} onView={setView} selectedTaskId={chart.selectedTaskId} busy={busy} onEdit={chart.onEdit} history={chart.onEdit && history} />}
           {mode === 'gantt' && <GanttChart {...chart} view={view} outlineWidth={outlineWidth + columnsWidth(view)} plan={plan} zoom={zoom} busy={busy} touch={touch} onSelectMilestone={onSelectMilestone} showBaseline={showBaseline && Boolean(plan.baseline_id)} showCritical={showCritical} onlyCritical={showCritical && onlyCritical} todaySignal={todaySignal} />}
-          {mode === 'network' && <PlanNetwork plan={plan} selectedTaskId={chart.selectedTaskId} onSelectTask={chart.onSelectTask} />}
-          {mode === 'calendar' && <PlanMonth plan={plan} selectedTaskId={chart.selectedTaskId} onSelectTask={chart.onSelectTask} />}
-          {mode === 'usage' && <PlanUsage plan={plan} />}
-          {mode === 'timeline' && <PlanTimeline plan={plan} onSelectTask={chart.onSelectTask} />}
-          {mode === 'master' && <PlanMaster currentProjectId={plan.project_id} />}
+          {mode === 'network' && <PlanNetwork plan={plan} selectedTaskId={chart.selectedTaskId} onSelectTask={chart.onSelectTask} showCritical={showCritical} />}
+          {mode === 'calendar' && <PlanMonth plan={plan} selectedTaskId={chart.selectedTaskId} onSelectTask={chart.onSelectTask} zoom={zoom} showCritical={showCritical} todaySignal={todaySignal} />}
+          {mode === 'usage' && <PlanUsage plan={plan} showCritical={showCritical} />}
+          {mode === 'timeline' && <PlanTimeline plan={plan} onSelectTask={chart.onSelectTask} showCritical={showCritical} />}
+          {mode === 'master' && <PlanMaster currentProjectId={plan.project_id} showCritical={showCritical} />}
           {recalculating && (
             <Modal title="Recalculate the plan" width={440} onClose={() => setRecalculating(false)}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12, fontSize: 13 }}>
