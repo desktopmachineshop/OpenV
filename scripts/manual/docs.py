@@ -175,7 +175,7 @@ SECTION_KEYS = {
     ('gantt', 'listing-ordering-and-editing-tasks'): ['gantt.view'],
     ('gantt', 'working-days'): ['gantt.working-days', 'gantt.holidays'],
     ('gantt', 'automatic-scheduling-and-constraints'): ['gantt.scheduling'],
-    ('gantt', 'resources-cost-and-levelling'): ['gantt.resources'],
+    ('gantt', 'resources-cost-and-levelling'): ['gantt.resources', 'gantt.planned', 'gantt.defaults'],
     ('gantt', 'tracking-progress-against-a-baseline'): ['gantt.tracking'],
     ('gantt', 'progress-from-to-dos-and-sub-tasks'): ['gantt.todos'],
     ('gantt', 'milestones-and-their-criteria'): ['gantt.milestone', 'gantt.add-milestone'],

@@ -19,6 +19,10 @@ import { PlanMaster, PlanTimeline } from './PlanLines';
 import { PlanMonth } from './PlanMonth';
 import { PlanNetwork } from './PlanNetwork';
 import { PlanResources } from './PlanResources';
+import { PlanDefaults } from './PlanDefaults';
+import type { PlannedAction } from './PlanPlanned';
+import { useFeature } from '../../hooks/useFeature';
+import { PLAN_SIZING_FEATURE } from '../../features';
 import { PlanUsage } from './PlanUsage';
 import { PlanViewBar } from './PlanViewBar';
 import { DEFAULT_VIEW, columnsWidth } from './planView';
@@ -43,6 +47,7 @@ export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'sho
   onSettings: (change: PlanSettingsChange) => void;
   /** Sets a person's or an agent's day rate and capacity. */
   onResource: (res: PlanResourceLoad, change: { daily_rate: number; capacity: number }) => void;
+  onPlanned?: (action: PlannedAction) => void;
   /** Delays tasks until nobody is over-allocated. */
   onLevel: () => void;
   /** Saves or deletes a baseline, or moves the work that has not started to the status date. */
@@ -54,10 +59,12 @@ export interface PlanChartPanelProps extends Omit<GanttChartProps, 'zoom' | 'sho
   history?: PlanHistory;
 }
 
-export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onSettings, onResource, onLevel, onTracking, onRecalculate, onSelectMilestone, history, busy, touch, outlineWidth, ...chart }) => {
+export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZoom, onSettings, onResource, onPlanned, onLevel, onTracking, onRecalculate, onSelectMilestone, history, busy, touch, outlineWidth, ...chart }) => {
   const [showCritical, setShowCritical] = useState(true);
   const [onlyCritical, setOnlyCritical] = useState(false);
   const [calendar, setCalendar] = useState(false);
+  const [defaults, setDefaults] = useState(false);
+  const sizing = useFeature(PLAN_SIZING_FEATURE);
   const [resources, setResources] = useState(false);
   const [tracking, setTracking] = useState(false);
   const [showBaseline, setShowBaseline] = useState(true);
@@ -103,6 +110,11 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
                 >
                   Resources{plan.summary.overallocated ? ` · ${plan.summary.overallocated} over` : ''}
                 </button>
+                {sizing && (
+                  <button type="button" onClick={() => setDefaults(true)} data-help-key="gantt.defaults" title="How new tasks are scheduled, and whether their effort decides their duration" style={buttonStyle('secondary', { compact: true })}>
+                    Defaults
+                  </button>
+                )}
                 <button type="button" onClick={() => setTracking(true)} data-help-key="gantt.tracking" title="Baselines, the status date, earned value and work that is behind" style={buttonStyle('secondary', { compact: true })}>
                   Tracking{plan.baselines.length ? ` · ${plan.baselines.length}` : ''}
                 </button>
@@ -158,6 +170,7 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
                       { key: 'calendar', label: `Calendar${plan.holidays.length ? ` · ${plan.holidays.length}` : ''}${plan.scheduling_mode === 'auto' ? ' · auto' : ''}`, onSelect: () => setCalendar(true) },
                       { key: 'resources', label: `Resources${over ? ` · ${over} over` : ''}`, onSelect: () => setResources(true) },
                       { key: 'tracking', label: `Tracking${plan.baselines.length ? ` · ${plan.baselines.length}` : ''}`, onSelect: () => setTracking(true) },
+                      ...(sizing ? [{ key: 'defaults', label: 'Defaults', onSelect: () => setDefaults(true) }] : []),
                       { key: 'recalculate', label: 'Recalculate…', disabled: busy, onSelect: () => setRecalculating(true) },
                       ...(showCritical
                         ? [{ key: 'only-critical', label: onlyCritical ? 'List every task' : 'List only the critical tasks', onSelect: () => setOnlyCritical((on) => !on) }]
@@ -215,7 +228,8 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
             </Modal>
           )}
           {tracking && <PlanTracking plan={plan} busy={busy} showBaseline={showBaseline} onShowBaseline={setShowBaseline} onSettings={onSettings} onAction={onTracking} onClose={() => setTracking(false)} />}
-          {resources && <PlanResources plan={plan} busy={busy} onResource={onResource} onSettings={onSettings} onLevel={onLevel} onClose={() => setResources(false)} />}
+          {resources && <PlanResources plan={plan} busy={busy} onResource={onResource} onPlanned={onPlanned} onSettings={onSettings} onLevel={onLevel} onClose={() => setResources(false)} />}
+          {defaults && <PlanDefaults plan={plan} busy={busy} onChange={onSettings} onClose={() => setDefaults(false)} />}
           {calendar && <PlanCalendar plan={plan} busy={busy} onChange={onSettings} onClose={() => setCalendar(false)} />}
           {undated.length > 0 && (
             <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', padding: '8px 12px', borderTop: '1px solid var(--border-soft)' }}>

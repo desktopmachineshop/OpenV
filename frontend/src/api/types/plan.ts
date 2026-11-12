@@ -177,24 +177,29 @@ export type PlanRelationshipType = 'FS' | 'SS' | 'FF' | 'SF';
 export type PlanLagUnit = 'd' | 'ed' | '%';
 
 /** A person or an agent on a task, for a percentage of their working time. */
+/** Who does work on a plan: a user, an agent, or a planned resource, a placeholder for someone to be chosen later. */
+export type PlanResourceType = 'user' | 'agent' | 'planned';
+
 export interface PlanAssignment {
-  type: 'user' | 'agent';
+  type: PlanResourceType;
   id: string;
   units: number;
 }
 
 /** Someone a task can be assigned to. */
 export interface PlanPerson {
-  type: 'user' | 'agent';
+  type: PlanResourceType;
   id: string;
   name: string;
 }
 
 /** A resource with the plan's work on them. */
 export interface PlanResourceLoad {
-  type: 'user' | 'agent';
+  type: PlanResourceType;
   id: string;
   name: string;
+  /** The name of a planned resource; absent for a user or an agent. */
+  planned_name?: string;
   /** What a day of their time costs, and the percentage of a day they can give. */
   daily_rate: number;
   capacity: number;
@@ -250,6 +255,8 @@ export interface PlanSettings {
   project_finish: string | null;
   /** From its start, tasks go as soon as possible; from its finish, as late. */
   schedule_from: 'start' | 'finish';
+  /** A task with no schedule of its own yet lets its effort and the people on it decide its duration. */
+  effort_driven_default: boolean;
   /** Each chain of tasks has a critical path of its own. */
   multiple_critical_paths: boolean;
   /** The money costs are in, up to three letters; and what the plan may cost (0 clears it). */
@@ -330,6 +337,8 @@ export interface ProjectPlan {
   project_finish: string | null;
   schedule_from: 'start' | 'finish';
   multiple_critical_paths: boolean;
+  /** A task with no schedule of its own yet lets its effort decide its duration. */
+  effort_driven_default: boolean;
   currency: string;
   budget: number | null;
   status_date: string | null;

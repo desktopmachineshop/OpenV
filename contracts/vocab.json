@@ -223,7 +223,8 @@
     "admin-usage",
     "artifact-reinstate",
     "gantt-plan",
-    "ui-refresh"
+    "ui-refresh",
+    "plan-sizing"
   ],
   "event_types": [
     "artifact.created",

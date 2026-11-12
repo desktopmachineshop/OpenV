@@ -62,8 +62,8 @@ func (h *Handler) GetPlan(w http.ResponseWriter, r *http.Request) {
 	respondJSON(w, http.StatusOK, p)
 }
 
-// namePlanPeople fills in who the plan's tasks can be assigned to, users
-// then agents, each list by name, and names each of the plan's resources.
+// namePlanPeople fills in who the plan's tasks can be assigned to, users,
+// planned resources, then agents, each list by name, and names each of the plan's resources.
 func (h *Handler) namePlanPeople(projectID string, p *plan.Plan) {
 	names := map[string]string{}
 	add := func(kind, id, name string) {
@@ -81,6 +81,13 @@ func (h *Handler) namePlanPeople(projectID string, p *plan.Plan) {
 			}
 		}
 	}
+	// The planned resources follow the users: placeholders for people.
+	members := len(p.People)
+	for _, res := range p.Resources {
+		if res.Type == plan.TypePlanned {
+			add(plan.TypePlanned, res.ID, res.PlannedName)
+		}
+	}
 	users := len(p.People)
 	if h.AgentService != nil {
 		if list, err := h.AgentService.List(h.orgIDForProject(projectID)); err == nil {
@@ -91,7 +98,7 @@ func (h *Handler) namePlanPeople(projectID string, p *plan.Plan) {
 			}
 		}
 	}
-	for _, part := range [][]plan.Person{p.People[:users], p.People[users:]} {
+	for _, part := range [][]plan.Person{p.People[:members], p.People[members:users], p.People[users:]} {
 		sort.SliceStable(part, func(i, j int) bool { return strings.ToLower(part[i].Name) < strings.ToLower(part[j].Name) })
 	}
 	for i := range p.Resources {
@@ -511,12 +518,33 @@ func (h *Handler) SetPlanResource(w http.ResponseWriter, r *http.Request) {
 		Type      string  `json:"type"`
 		DailyRate float64 `json:"daily_rate"`
 		Capacity  int     `json:"capacity"`
+		// A planned resource (type "planned") is stored with its name. Remove
+		// drops it; StaffWith gives its tasks to a user or an agent and
+		// drops it.
+		PlannedName string           `json:"planned_name"`
+		Remove      bool             `json:"remove"`
+		StaffWith   *plan.Assignment `json:"staff_with"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	res, err := h.PlanService.SetResource(projectID, plan.Resource{Type: req.Type, ID: mux.Vars(r)["assigneeId"],
-		DailyRate: req.DailyRate, Capacity: req.Capacity})
+	id := mux.Vars(r)["assigneeId"]
+	if req.Type == plan.TypePlanned && (req.Remove || req.StaffWith != nil) {
+		var err error
+		if req.StaffWith != nil {
+			err = h.PlanService.StaffPlanned(projectID, id, *req.StaffWith)
+		} else {
+			err = h.PlanService.RemovePlanned(projectID, id)
+		}
+		if err != nil {
+			writePlanError(w, r, err)
+			return
+		}
+		respondJSON(w, http.StatusOK, plan.Resource{Type: plan.TypePlanned, ID: id})
+		return
+	}
+	res, err := h.PlanService.SetResource(projectID, plan.Resource{Type: req.Type, ID: id,
+		DailyRate: req.DailyRate, Capacity: req.Capacity, PlannedName: req.PlannedName})
 	if err != nil {
 		writePlanError(w, r, err)
 		return

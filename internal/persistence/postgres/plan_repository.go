@@ -352,9 +352,10 @@ func (r *PlanRepository) Settings(projectID string) (plan.Settings, error) {
 	err := r.db.QueryRow(`
 		SELECT working_days, critical_slack_days, scheduling_mode, to_char(project_start, 'YYYY-MM-DD'),
 			to_char(project_finish, 'YYYY-MM-DD'), schedule_from, multiple_critical_paths, currency, budget,
-			to_char(status_date, 'YYYY-MM-DD'), active_baseline_id
+			to_char(status_date, 'YYYY-MM-DD'), active_baseline_id, effort_driven_default
 		FROM plan_settings WHERE project_id = $1`, projectID).
-		Scan(&bits, &out.CriticalSlackDays, &out.Mode, &start, &finish, &out.ScheduleFrom, &out.MultipleCriticalPaths, &out.Currency, &budget, &status, &baseline)
+		Scan(&bits, &out.CriticalSlackDays, &out.Mode, &start, &finish, &out.ScheduleFrom, &out.MultipleCriticalPaths, &out.Currency, &budget, &status, &baseline,
+			&out.EffortDrivenDefault)
 	switch {
 	case malformedID(err):
 		return out, nil
@@ -409,18 +410,19 @@ func (r *PlanRepository) SaveSettings(projectID string, s plan.Settings) error {
 	return withTx(context.Background(), r.db, nil, func(tx *sql.Tx) error {
 		if _, err := tx.Exec(`
 			INSERT INTO plan_settings (project_id, working_days, critical_slack_days, scheduling_mode, project_start,
-				project_finish, schedule_from, multiple_critical_paths, currency, budget, status_date, active_baseline_id, updated_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, NOW())
+				project_finish, schedule_from, multiple_critical_paths, currency, budget, status_date, active_baseline_id,
+				effort_driven_default, updated_at)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())
 			ON CONFLICT (project_id) DO UPDATE SET working_days = EXCLUDED.working_days,
 				critical_slack_days = EXCLUDED.critical_slack_days, scheduling_mode = EXCLUDED.scheduling_mode,
 				project_start = EXCLUDED.project_start, project_finish = EXCLUDED.project_finish,
 				schedule_from = EXCLUDED.schedule_from, multiple_critical_paths = EXCLUDED.multiple_critical_paths,
 				currency = EXCLUDED.currency, budget = EXCLUDED.budget,
 				status_date = EXCLUDED.status_date, active_baseline_id = EXCLUDED.active_baseline_id,
-				updated_at = NOW()`,
+				effort_driven_default = EXCLUDED.effort_driven_default, updated_at = NOW()`,
 			projectID, bits, s.CriticalSlackDays, s.Mode, nullableString(s.ProjectStart), nullableString(s.ProjectFinish),
 			s.ScheduleFrom, s.MultipleCriticalPaths, s.Currency, optFloat(s.Budget),
-			nullableString(s.StatusDate), nullableString(s.ActiveBaselineID)); err != nil {
+			nullableString(s.StatusDate), nullableString(s.ActiveBaselineID), s.EffortDrivenDefault); err != nil {
 			if malformedID(err) {
 				return plan.ErrNotFound
 			}
@@ -474,39 +476,6 @@ func (r *PlanRepository) SetAssignments(projectID, workItemID string, assignment
 		}
 		return nil
 	})
-}
-
-// ListResources lists the daily rate and capacity the project keeps for
-// each person or agent that has one.
-func (r *PlanRepository) ListResources(projectID string) ([]plan.Resource, error) {
-	rows, err := r.db.Query(`
-		SELECT assignee_type, assignee_id, daily_rate, capacity FROM plan_resources
-		WHERE project_id = $1 ORDER BY assignee_type, assignee_id`, projectID)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = rows.Close() }()
-	out := []plan.Resource{}
-	for rows.Next() {
-		var res plan.Resource
-		if err := rows.Scan(&res.Type, &res.ID, &res.DailyRate, &res.Capacity); err != nil {
-			return nil, err
-		}
-		out = append(out, res)
-	}
-	return out, rows.Err()
-}
-
-// SaveResource stores a person's or an agent's daily rate and capacity.
-func (r *PlanRepository) SaveResource(projectID string, res plan.Resource) error {
-	_, err := r.db.Exec(`
-		INSERT INTO plan_resources (project_id, assignee_type, assignee_id, daily_rate, capacity) VALUES ($1, $2, $3, $4, $5)
-		ON CONFLICT (project_id, assignee_type, assignee_id) DO UPDATE
-		SET daily_rate = EXCLUDED.daily_rate, capacity = EXCLUDED.capacity`, projectID, res.Type, res.ID, res.DailyRate, res.Capacity)
-	if malformedID(err) {
-		return plan.ErrResource
-	}
-	return err
 }
 
 // ListBaselines lists the project's baselines with their tasks, oldest

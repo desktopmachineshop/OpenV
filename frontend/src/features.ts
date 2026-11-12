@@ -99,6 +99,14 @@ export const ADMIN_USAGE_FEATURE: FeatureKey = 'admin-usage';
 export const GANTT_PLAN_FEATURE: FeatureKey = 'gantt-plan';
 
 /**
+ * Sizing a plan before it is staffed: planned resources, placeholders for
+ * people to be chosen later, in the plan's Resources dialog; and the plan's
+ * Defaults dialog, with the scheduling mode and whether a new task's effort
+ * decides its duration.
+ */
+export const PLAN_SIZING_FEATURE: FeatureKey = 'plan-sizing';
+
+/**
  * The refreshed project shell, on top of the compact layout: the menu's
  * groups in the order Plan, Define, Verify, Agents (Overview and Summary
  * under Plan), a row of the current group's pages under the top bar, the

@@ -81,6 +81,7 @@ var Registry = []Feature{
 	{Key: FeatureArtifactReinstate, ShippedIn: "0.31.0", Summary: "Removing an artifact archives it, as it always kept its history: open it from Activity and Reinstate brings it back as it was"},
 	{Key: FeatureGanttPlan, ShippedIn: "0.32.0", Summary: "A Gantt plan under Plan: the board's tasks on a timeline with sub-tasks, dependencies and progress from their to-dos, milestones with completion criteria read from the project's artifacts, each release as a milestone, and the plan exported as PDF, Excel, CSV or JSON"},
 	{Key: FeatureUIRefresh, ShippedIn: "0.33.0", Summary: "One navigation on every screen: Home, Plan, Define, Verify and Agents in the same order down the rail on a computer and along the bottom bar on a phone, the pages of the group you are in listed in a row under the top bar, and each page named once"},
+	{Key: FeaturePlanSizing, ShippedIn: "0.34.0", Summary: "Size a plan before it is staffed: planned resources stand in for people to be chosen later, with a rate and a capacity, and are handed to a person or an agent when one is chosen; and a plan's defaults say how new tasks are scheduled and whether their effort decides their duration"},
 }
 
 // Feature keys the code gates on.
@@ -330,6 +331,12 @@ const (
 	// bottom bar as Home and those groups, and a page's name shown once.
 	// Frontend only, and only on top of the compact layout.
 	FeatureUIRefresh = "ui-refresh"
+	// FeaturePlanSizing is the plan's planned resources (placeholders for
+	// people to be chosen later, in the Resources dialog and a task's
+	// resources) and its Defaults dialog (the scheduling mode, and whether a
+	// new task's effort decides its duration). The plan's API accepts both
+	// either way; the key gates the interface.
+	FeaturePlanSizing = "plan-sizing"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

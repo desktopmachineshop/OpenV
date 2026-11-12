@@ -420,6 +420,13 @@ cost. Set the plan's **Currency** and **Budget** in the Resources dialog:
 the figures above the chart then show the plan's cost against its budget,
 in red when it is over.
 
+### Planned resources
+
+A **planned resource** is a placeholder for someone you will choose later: a welder, a second developer. Under **Planned resources** in the Resources dialog, give it a name, a day rate and a capacity and choose **Add planned resource**. Assign tasks to it as you would to a person: it is in every task's **Assign someone** list, marked *Planned*, and the plan's cost, load, levelling and effort-driven durations count it like anyone else. So a plan can be sized and costed before anyone is named. When you know who it is, choose them under **Staff with…**: its tasks go to that person or agent at the same share (added to theirs on a task they are already on), and the placeholder goes. **Remove** drops it and takes it off its tasks.
+
+### Plan defaults
+
+**Defaults**, in **Plan tools**, sets what a task does until it says otherwise. **Scheduling mode** is manual or automatic (see [Automatic scheduling and constraints](#automatic-scheduling-and-constraints)); a task's own panel can override it. **Effort decides the duration of new tasks** makes a task that has not been scheduled yet effort-driven from the start, so its effort and the resources on it set its length; a task already scheduled keeps what it was given.
 
 ## Tracking progress against a baseline
 

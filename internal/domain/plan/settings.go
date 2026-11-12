@@ -49,6 +49,9 @@ type Scheduling struct {
 	// MultipleCriticalPaths: each chain of tasks has a critical path of its
 	// own, to its own last task, rather than one path to the plan's end.
 	MultipleCriticalPaths bool `json:"multiple_critical_paths"`
+	// EffortDrivenDefault: a task with no schedule of its own yet lets its
+	// effort and the people on it decide its duration.
+	EffortDrivenDefault bool `json:"effort_driven_default"`
 }
 
 // Settings are a plan's calendar, its critical threshold and its
@@ -77,6 +80,7 @@ type SettingsRequest struct {
 	ProjectFinish         *string    `json:"project_finish"`
 	ScheduleFrom          *string    `json:"schedule_from"`
 	MultipleCriticalPaths *bool      `json:"multiple_critical_paths"`
+	EffortDrivenDefault   *bool      `json:"effort_driven_default"`
 	Currency              *string    `json:"currency"`
 	// Budget of 0 clears it.
 	Budget *float64 `json:"budget"`
@@ -189,6 +193,9 @@ func applySettings(set *Settings, req SettingsRequest) error {
 	}
 	if req.MultipleCriticalPaths != nil {
 		set.MultipleCriticalPaths = *req.MultipleCriticalPaths
+	}
+	if req.EffortDrivenDefault != nil {
+		set.EffortDrivenDefault = *req.EffortDrivenDefault
 	}
 	if req.Currency != nil {
 		c := strings.ToUpper(strings.TrimSpace(*req.Currency))
@@ -325,4 +332,14 @@ func (s *DefaultService) taskSettings(projectID string, current *TaskSchedule, r
 		}
 	}
 	return out, nil
+}
+
+// unscheduled is the schedule of a task that has none stored: empty, but
+// for the plan's default of whether its effort decides its duration.
+func (s *DefaultService) unscheduled(workItemID, projectID string) *TaskSchedule {
+	out := &TaskSchedule{WorkItemID: workItemID, ProjectID: projectID}
+	if set, err := s.settings(projectID); err == nil {
+		out.EffortDriven = set.EffortDrivenDefault
+	}
+	return out
 }

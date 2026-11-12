@@ -122,6 +122,7 @@ const plan: ProjectPlan = {
   project_finish: null,
   schedule_from: 'start',
   multiple_critical_paths: false,
+  effort_driven_default: false,
   currency: '',
   budget: null,
   status_date: null,
