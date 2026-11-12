@@ -14,7 +14,12 @@
 //   - on desktop profiles only: text blocks running wider than a readable
 //     measure, form fields stretched across the screen, and raster images
 //     drawn larger than their pixels (blur on HiDPI),
-//   - page errors.
+//   - page errors,
+//   - how much of the window is chrome: the height above the element a page
+//     marks data-page-content (where its own content starts) plus the tab
+//     bar below, in pixels and as a share of the window. Printed beside the
+//     screen's flags for the pages that carry the marker; a number to keep
+//     down, not a failure.
 // It is the regression tool for the class of defect fixed in the phone
 // polish pass (docs/plans/mobile-support.md §8): run it after any layout
 // change and compare the summary with the previous run.
@@ -251,7 +256,7 @@ const routes = [
   // The workspace's feature gates, ahead of the org catch-all below, which
   // would otherwise answer {} and crash every useFeature on the page. All
   // on, so gated cards and controls render with their buttons.
-  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true, 'redesign-pages': true, 'review-queue-decisions': true, 'project-review-round': true, 'editor-pickers': true, 'gantt-plan': true } }],
+  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true, 'redesign-pages': true, 'review-queue-decisions': true, 'project-review-round': true, 'editor-pickers': true, 'gantt-plan': true, 'floating-assistant': true } }],
   [/\/api\/v1\/orgs\/org1$/, org],
   [/\/api\/v1\/orgs\//, {}],
   [/\/api\/v1\/meta\/artifact-types/, [{ type: 'requirement', label: 'Requirement' }, { type: 'heading', label: 'Heading' }, { type: 'user-need', label: 'User Need' }, { type: 'test-case', label: 'Test Case' }]],
@@ -315,7 +320,7 @@ const routes = [
   [/\/api\/v1\/test-runs\/tr1/, testRun],
   [/\/api\/v1\/projects\/p1\/test-runs/, [openTestRun, testRun]],
   [/\/api\/v1\/projects\/p1\/work-items/, workItems],
-  [/\/api\/v1\/work-items\/w1/, { ...workItems[0], activity: [{ id: 'act1', work_item_id: 'w1', kind: 'comment', actor: 'Sam Example', content: 'Started drafting.', payload: {}, created_at: now }] }],
+  [/\/api\/v1\/work-items\/w1/, { item: workItems[0], activity: [{ id: 'act1', work_item_id: 'w1', kind: 'comment', actor: 'Sam Example', content: 'Started drafting.', payload: {}, created_at: now }] }],
   [/\/api\/v1\/projects\/p1\/members/, [{ user_id: 'u1', email: user.email, name: user.name, role: 'owner' }]],
   [/\/api\/v1\/projects\/p1\/team-access/, []],
   [/\/api\/v1\/projects\/p1\/repo-connections/, [{ id: 'rc1', project_id: 'p1', name: 'openv', remote_url: 'https://github.com/desktopmachineshop/OpenV.git', default_branch: 'master', credential_strategy: 'host', created_at: now, updated_at: now }]],
@@ -444,6 +449,15 @@ const AUDIT = (opts) => {
     const fs = parseFloat(cs.fontSize);
     if (fs < 12 && el.childNodes.length && Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())) out.tiny.push({ el: desc(el), fontSize: fs });
   }
+  // Chrome: what stands between the top of the window and the page's own
+  // content, plus the tab bar under it.
+  const content = Array.from(document.querySelectorAll('[data-page-content]')).find(vis);
+  if (content) {
+    const bar = document.querySelector('.ov-tabbar');
+    const top = Math.max(0, Math.round(content.getBoundingClientRect().top));
+    const bottom = bar && vis(bar) ? Math.round(bar.getBoundingClientRect().height) : 0;
+    out.chrome = { top, bottom, share: Math.round(((top + bottom) / window.innerHeight) * 100) };
+  }
   const dedupe = (arr, key) => { const seen = new Set(); return arr.filter((x) => { const k = key(x); if (seen.has(k)) return false; seen.add(k); return true; }); };
   out.overflow = dedupe(out.overflow, (x) => x.el).slice(0, 12);
   out.clipped = dedupe(out.clipped, (x) => x.el).slice(0, 12);
@@ -470,7 +484,7 @@ const SCREENS = [
   // segmented filter and a five-row list, all inside the create form.
   { tag: 'projects-random-top', path: '/projects', open: async (p) => { await press(p.getByRole('button', { name: '+ New Project' }).first()); await p.waitForTimeout(200); await p.selectOption('#mode', 'random'); await p.waitForTimeout(400); await press(p.getByRole('button', { name: 'Top 5 all time' })); await p.waitForTimeout(400); } },
   { tag: 'user-menu', path: '/projects', open: async (p) => { await press(p.locator('[title="Sam Example"]').first()); } },
-  { tag: 'user-settings', path: '/projects', open: async (p) => { await press(p.locator('[title="Sam Example"]').first()); await p.waitForTimeout(300); await press(p.getByText('Settings', { exact: true }).first()); } },
+  { tag: 'user-settings', path: '/projects', open: async (p) => { await press(p.locator('[title="Sam Example"]').first()); await p.waitForTimeout(300); await press(p.getByRole('button', { name: 'Settings', exact: true }).first()); } },
   { tag: 'drawer-user-settings', phone: true, path: '/projects/p1', open: async (p) => { await press(p.getByRole('button', { name: 'Project menu' })); await p.waitForTimeout(300); await press(p.getByText('Sam Example').last()); } },
   { tag: 'overview', path: '/projects/p1' },
   { tag: 'drawer', phone: true, path: '/projects/p1', open: async (p) => press(p.getByRole('button', { name: 'Project menu' })) },
@@ -504,7 +518,7 @@ const SCREENS = [
   { tag: 'evidence-new', path: '/projects/p1/evidence', open: async (p) => press(p.getByRole('button', { name: 'Record a capture' }).first()) },
   { tag: 'test-run-evidence', path: '/projects/p1/vv/runs/tr2', open: async (p) => { const b = p.getByRole('button', { name: /EVD-1|\+ evidence/ }).first(); if (await b.count()) await press(b); await p.waitForTimeout(400); } },
   { tag: 'matrix', path: '/projects/p1/matrix' },
-  { tag: 'matrix-row', path: '/projects/p1/matrix', open: async (p) => { await press(p.getByRole('button', { name: /Repeatability under thermal drift/ })); } },
+  { tag: 'matrix-row', phone: true, path: '/projects/p1/matrix', open: async (p) => { await press(p.getByRole('button', { name: /Repeatability under thermal drift/ })); } },
   { tag: 'impact', path: '/projects/p1/impact?artifact=req-2' },
   { tag: 'review', path: '/projects/p1/review' },
   { tag: 'board', path: '/projects/p1/board' },
@@ -522,7 +536,7 @@ const SCREENS = [
   { tag: 'activity', path: '/projects/p1/activity' },
   { tag: 'settings', path: '/projects/p1/settings' },
   { tag: 'settings-agents', path: '/projects/p1/settings?tab=agents' },
-  { tag: 'settings-access', path: '/projects/p1/settings?tab=access' },
+  { tag: 'settings-access', path: '/projects/p1/settings?tab=members' },
   // The assistant beside the project, showing the three project-mode cards
   // (edit, move, new artifact) with their buttons: the floating panel (a
   // bottom sheet on a phone) where the floating-assistant gate is on, else
@@ -556,7 +570,7 @@ const SCREENS = [
     open: async (p) => {
       await press(p.locator('[title="Sam Example"]').first());
       await p.waitForTimeout(300);
-      await press(p.getByText('Settings', { exact: true }).first());
+      await press(p.getByRole('button', { name: 'Settings', exact: true }).first());
       await p.waitForTimeout(600);
       // The panel is a fixed full-screen sheet, so the card has to be
       // scrolled to before the screenshot shows it.
@@ -571,7 +585,7 @@ const SCREENS = [
     open: async (p) => {
       await press(p.locator('[title="Sam Example"]').first());
       await p.waitForTimeout(300);
-      await press(p.getByText('Settings', { exact: true }).first());
+      await press(p.getByRole('button', { name: 'Settings', exact: true }).first());
       await p.waitForTimeout(600);
       const connect = p.getByRole('button', { name: 'Connect', exact: true }).first();
       await connect.scrollIntoViewIfNeeded();
@@ -684,7 +698,8 @@ const desktopDevice = (p) => ({
       if (r.blurry && r.blurry.length) flags.push(`blurry:${r.blurry.length}`);
       if (r.errors && r.errors.length) { flags.push(`errors:${r.errors.length}`); failed = true; }
       if (r.openErr) flags.push('open-failed');
-      console.log(`${eng} ${r.tag.padEnd(22)} ${flags.join(' ') || 'ok'}`);
+      const chrome = r.chrome ? `  chrome ${r.chrome.top}+${r.chrome.bottom}px (${r.chrome.share}%)` : '';
+      console.log(`${eng} ${r.tag.padEnd(22)} ${flags.join(' ') || 'ok'}${chrome}`);
     }
   }
   console.log(`report: ${OUT}/audit.json`);

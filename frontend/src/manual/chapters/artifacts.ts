@@ -138,8 +138,8 @@ is the blue button beside it.
 
 ## Creating and organizing artifacts
 
-- Click **+ New Artifact**, choose a type, enter a title and a body
-  (the body is markdown — headings, lists, tables, and images all render).
+- Click **+ New Artifact** (its form opens in the panel on the right; above the list on a phone), choose a type,
+  enter a title and a body (the body is markdown — headings, lists, tables, and images all render).
 - Artifacts form a **hierarchy**: right-click an artifact in the table or
   the tree, or click its **⋯** button, for **create before / create after /
   create child**. New siblings inherit the
