@@ -9,6 +9,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **The Gantt's Import button lines up.** **Import…** sat a few pixels
+  higher than **Add task**, **Add milestone** and **Export…** beside it;
+  the four are level now.
+
 ## 0.33.0 — 2026-11-12
 
 Stable channel release since 2026-11-12.
