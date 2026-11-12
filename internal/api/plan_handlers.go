@@ -275,13 +275,26 @@ func (h *Handler) SetReleaseMilestoneCriteria(w http.ResponseWriter, r *http.Req
 		respondInternal(w, r, "failed to load the release", err)
 		return
 	}
+	// WaitsFor, sent without criteria, sets only the tasks the release's
+	// milestone waits for.
 	var req struct {
-		Criteria []plan.Criterion `json:"criteria"`
+		Criteria *[]plan.Criterion `json:"criteria"`
+		WaitsFor *[]string         `json:"waits_for"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
 	}
-	m, err := h.PlanService.SetReleaseCriteria(projectID, rel.ID, req.Criteria)
+	var m *plan.Milestone
+	if req.Criteria != nil || req.WaitsFor == nil {
+		var criteria []plan.Criterion
+		if req.Criteria != nil {
+			criteria = *req.Criteria
+		}
+		m, err = h.PlanService.SetReleaseCriteria(projectID, rel.ID, criteria)
+	}
+	if err == nil && req.WaitsFor != nil {
+		m, err = h.PlanService.SetReleaseWaitsFor(projectID, rel.ID, *req.WaitsFor)
+	}
 	if err != nil {
 		writePlanError(w, r, err)
 		return

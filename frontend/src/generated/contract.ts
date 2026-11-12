@@ -62,6 +62,7 @@ export const FEATURE_KEYS = [
   'gantt-plan',
   'ui-refresh',
   'plan-sizing',
+  'milestone-links',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

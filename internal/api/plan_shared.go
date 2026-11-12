@@ -30,7 +30,7 @@ func writePlanError(w http.ResponseWriter, r *http.Request, err error) {
 		errors.Is(err, plan.ErrDependsOnSelf), errors.Is(err, plan.ErrDependencyCycle), errors.Is(err, plan.ErrParentRelationship), errors.Is(err, plan.ErrRelationshipType), errors.Is(err, plan.ErrInvalidDuration), errors.Is(err, plan.ErrInvalidEffort),
 		errors.Is(err, plan.ErrWorkingDays), errors.Is(err, plan.ErrParentDates), errors.Is(err, plan.ErrMilestone), errors.Is(err, plan.ErrInvalidLag), errors.Is(err, plan.ErrHoliday), errors.Is(err, plan.ErrCriticalSlack), errors.Is(err, plan.ErrSchedulingMode), errors.Is(err, plan.ErrAssignment), errors.Is(err, plan.ErrTooManyBaselines), errors.Is(err, plan.ErrPercent), errors.Is(err, plan.ErrPosition), errors.Is(err, plan.ErrImport), errors.Is(err, plan.ErrSameProject), errors.Is(err, plan.ErrTimeOff), errors.Is(err, plan.ErrResource), errors.Is(err, plan.ErrInvalidCost), errors.Is(err, plan.ErrConstraint), errors.Is(err, plan.ErrUnknownMetric),
 		errors.Is(err, plan.ErrInvalidTarget), errors.Is(err, plan.ErrTooManyCriteria), errors.Is(err, plan.ErrDuplicateMetric),
-		errors.Is(err, plan.ErrReleaseMilestone), errors.Is(err, plan.ErrUnsupportedFormat),
+		errors.Is(err, plan.ErrReleaseMilestone), errors.Is(err, plan.ErrMilestoneLink), errors.Is(err, plan.ErrUnsupportedFormat),
 		errors.Is(err, todos.ErrTextRequired), errors.Is(err, todos.ErrTextTooLong), errors.Is(err, todos.ErrParagraphs):
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 	default:

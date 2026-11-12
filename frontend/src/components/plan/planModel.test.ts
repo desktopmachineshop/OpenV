@@ -76,6 +76,10 @@ const task = (id: string, extra: Partial<PlanTask> = {}): PlanTask => ({
 const milestone = (key: string, date: string | null): PlanMilestone => ({
   key,
   kind: 'custom',
+  date_mode: 'fixed',
+  fixed_date: null,
+  waits_for: [],
+  conflict: false,
   id: key,
   tasks: [],
   release_id: null,

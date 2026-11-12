@@ -72,6 +72,7 @@ var (
 	ErrInvalidTarget      = errors.New("a criterion's target is a percentage from 1 to 100")
 	ErrTooManyCriteria    = errors.New("a milestone carries at most 12 criteria")
 	ErrDuplicateMetric    = errors.New("a milestone names each metric once")
+	ErrMilestoneLink      = errors.New("a milestone waits for at most 50 tasks of its own project that have no sub-tasks, and its date is fixed or by the plan")
 	ErrReleaseMilestone   = errors.New("a release milestone's name and date are its release's: edit the release")
 	ErrUnsupportedFormat  = errors.New("unsupported plan export format")
 )
@@ -175,30 +176,6 @@ type Relationship struct {
 type Criterion struct {
 	Metric string `json:"metric"`
 	Target int    `json:"target"`
-}
-
-// Milestone is a stored milestone: a custom one, or the criteria of a
-// release's (ReleaseID set; Name and TargetDate are then the release's and
-// are not stored here).
-type Milestone struct {
-	ID          string      `json:"id"`
-	ProjectID   string      `json:"project_id"`
-	ReleaseID   *string     `json:"release_id"`
-	Name        string      `json:"name"`
-	Description string      `json:"description"`
-	TargetDate  *string     `json:"target_date"`
-	Criteria    []Criterion `json:"criteria"`
-	CreatedAt   time.Time   `json:"created_at"`
-	UpdatedAt   time.Time   `json:"updated_at"`
-}
-
-// MilestoneRequest creates or changes a custom milestone. On an update a
-// nil field is left as it is; an empty TargetDate clears the date.
-type MilestoneRequest struct {
-	Name        *string      `json:"name"`
-	Description *string      `json:"description"`
-	TargetDate  *string      `json:"target_date"`
-	Criteria    *[]Criterion `json:"criteria"`
 }
 
 // ScheduleRequest changes a task's place on the plan. A nil field is left
@@ -397,6 +374,9 @@ type Service interface {
 	// SetReleaseCriteria sets the completion criteria of a release's
 	// milestone.
 	SetReleaseCriteria(projectID, releaseID string, criteria []Criterion) (*Milestone, error)
+	// SetReleaseWaitsFor sets the tasks a release's milestone waits for,
+	// storing the milestone, with the default criteria, the first time.
+	SetReleaseWaitsFor(projectID, releaseID string, taskIDs []string) (*Milestone, error)
 }
 
 // DefaultService implements Service.

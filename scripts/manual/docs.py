@@ -178,7 +178,7 @@ SECTION_KEYS = {
     ('gantt', 'resources-cost-and-levelling'): ['gantt.resources', 'gantt.planned', 'gantt.defaults'],
     ('gantt', 'tracking-progress-against-a-baseline'): ['gantt.tracking'],
     ('gantt', 'progress-from-to-dos-and-sub-tasks'): ['gantt.todos'],
-    ('gantt', 'milestones-and-their-criteria'): ['gantt.milestone', 'gantt.add-milestone'],
+    ('gantt', 'milestones-and-their-criteria'): ['gantt.milestone', 'gantt.add-milestone', 'gantt.milestone-links'],
     ('gantt', 'assigning-tasks-to-a-milestone'): ['gantt.milestone-tasks', 'gantt.task-milestone'],
     ('gantt', 'exporting-the-plan'): ['gantt.export'],
     ('gantt', 'other-views-of-the-plan'): ['gantt.views'],

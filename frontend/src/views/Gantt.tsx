@@ -45,6 +45,7 @@ import { TaskPanel } from '../components/plan/TaskPanel';
 import { money, type RelationshipView } from '../components/plan/planModel';
 import { ErrorBanner, FeatureGate, Sheet, buttonStyle, mutedStyle, pageType, useConfirm } from '../components/ui';
 import { GANTT_PLAN_FEATURE } from '../features';
+import { useMilestoneLinks } from '../components/plan/useMilestoneLinks';
 import { useViewport } from '../hooks/useViewport';
 
 type Selection = { kind: 'task'; id: string } | { kind: 'milestone'; key: string } | null;
@@ -217,6 +218,7 @@ const PlanPage: React.FC = () => {
     if (ok) setAdding(null);
   };
 
+  const milestoneLinks = useMilestoneLinks(projectId, plan, run);
   const saveMilestone = (m: PlanMilestone, change: PlanMilestoneInput) =>
     run(
       () =>
@@ -326,6 +328,7 @@ const PlanPage: React.FC = () => {
       onSave={saveMilestone}
       onDelete={deleteMilestone}
       onAssign={(taskId, key) => run(() => planAPI.schedule(taskId, { milestone: key }), 'Failed to assign the task')}
+      onLink={milestoneLinks.onLink}
       onSelectTask={openTask}
       onClose={close}
     />
@@ -403,6 +406,7 @@ const PlanPage: React.FC = () => {
           history={history}
           onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
           onLink={coarsePointer ? undefined : relate}
+          onLinkMilestone={coarsePointer ? undefined : milestoneLinks.onDrop}
           onRecalculate={recalculate}
           onResource={(res, change) => run(() => planAPI.setResource(projectId, res.type, res.id, res.type === 'planned' ? { ...change, planned_name: res.planned_name } : change), 'Failed to save the resource')}
           onPlanned={(action) => run(() => plannedResource(projectId, action), 'Failed to change the planned resource')}
@@ -410,8 +414,7 @@ const PlanPage: React.FC = () => {
           onTracking={(action) => run(async () => setNote(await trackPlan(projectId, action)), 'Failed to update the tracking')}
           onSettings={(change) => run(() => planAPI.setSettings(projectId, change), 'Failed to save the plan settings')}
           onAddTask={(title) => addTask({ title, start: '', end: '' }, undefined, true)}
-          busy={busy}
-          touch={coarsePointer}
+          busy={busy} touch={coarsePointer}
         />
         {panel && !isCompact && !fullTaskId && (
           <div data-plan-side style={{ width: 340, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>{panel}</div>

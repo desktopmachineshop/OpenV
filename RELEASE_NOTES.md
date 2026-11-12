@@ -21,6 +21,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   plan's scheduling mode and whether a new task's effort decides its
   duration, so you no longer set that task by task.
 
+- **Milestones can wait for tasks, and take their date from them.** In a
+  milestone's panel, **Waits for** lists the tasks that must finish before
+  it; add one there, or drag a link from a task's bar onto the milestone's
+  diamond, and the chart draws a line to it. **Its date is** chooses
+  between **Fixed**, the date you give it, and **By the plan**, the day
+  the last of those tasks finishes, so the milestone moves when the work
+  does. A fixed milestone flags any task that finishes after it.
+
 ### Maintenance updates
 
 - **Projects on Home show their hierarchy.** A project with a parent is

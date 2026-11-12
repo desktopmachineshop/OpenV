@@ -107,6 +107,13 @@ export const GANTT_PLAN_FEATURE: FeatureKey = 'gantt-plan';
 export const PLAN_SIZING_FEATURE: FeatureKey = 'plan-sizing';
 
 /**
+ * Milestones that wait for tasks: the Waits for section of a milestone's
+ * panel, its date fixed or by the plan, and links dragged from a task's bar
+ * onto a milestone's diamond.
+ */
+export const MILESTONE_LINKS_FEATURE: FeatureKey = 'milestone-links';
+
+/**
  * The refreshed project shell, on top of the compact layout: the menu's
  * groups in the order Plan, Define, Verify, Agents (Overview and Summary
  * under Plan), a row of the current group's pages under the top bar, the

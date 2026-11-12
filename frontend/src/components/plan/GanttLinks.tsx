@@ -2,7 +2,7 @@
 // tasks, drawn over the rows, and the drag that makes a new one from the
 // "+" at an end of a bar to an end of another bar.
 import React, { useEffect, useRef, useState } from 'react';
-import type { PlanTask } from '../../api/client';
+import type { PlanMilestone, PlanTask } from '../../api/client';
 import type { Scale } from './ganttScale';
 import { BarEnd, RelationshipView, linkBetween, relationshipLabel, shownAs } from './planModel';
 
@@ -79,7 +79,9 @@ export const DependencyLines: React.FC<{
   folded: ReadonlySet<string>;
   scale: Scale;
   showCritical?: boolean;
-}> = ({ tasks, rows, folded, scale, showCritical }) => {
+  /** The milestones, to draw a line from each task one waits for to its date. */
+  milestones?: PlanMilestone[];
+}> = ({ tasks, rows, folded, scale, showCritical, milestones = [] }) => {
   const row = new Map(rows.map((t, i) => [t.id, i]));
   const byId = new Map(tasks.map((t) => [t.id, t]));
   const shown = shownAs(tasks, folded);
@@ -108,6 +110,22 @@ export const DependencyLines: React.FC<{
       }
       // The critical path runs along the arrows that join two critical tasks.
       paths.push({ key: `${rel.task_id}>${t.id}`, d, conflict: rel.conflict, critical: Boolean(showCritical && t.critical && on.critical) });
+    }
+  }
+  // A task a milestone waits for: a line along its row from its finish to
+  // the milestone's guide, red and dashed where it finishes after it.
+  for (const m of milestones) {
+    if (!m.date) continue;
+    const xm = scale.x(m.date) + scale.dayWidth / 2;
+    for (const id of m.waits_for || []) {
+      const t = byId.get(id);
+      const r = row.get(shown.get(id) ?? '');
+      if (!t || !t.span_end || r === undefined) continue;
+      const y = r * ROW_HEIGHT + ROW_HEIGHT / 2;
+      const x1 = shown.get(id) === id ? outOf(t, scale, Boolean(showCritical)) : scale.x(t.span_end) + scale.dayWidth;
+      const late = t.span_end > m.date;
+      if (Math.abs(xm - x1) < 4) continue;
+      paths.push({ key: `${id}>milestone:${m.key}`, d: `M${x1} ${y} H${xm + (xm > x1 ? -1 : 1)}`, conflict: late, critical: false });
     }
   }
   if (paths.length === 0) return null;
@@ -147,18 +165,20 @@ export interface LinkDrag {
   y0: number;
   x: number;
   y: number;
-  /** The bar end under the pointer, when it is another task's. */
-  over: { id: string; end: BarEnd } | null;
+  /** The bar end under the pointer, when it is another task's; or a milestone's diamond. */
+  over: { id: string; end: BarEnd; milestone?: boolean } | null;
 }
 
 export type OnLink = (fromId: string, toId: string, view: RelationshipView) => void;
+/** Makes a milestone wait for a task: a link dropped on its diamond. */
+export type OnLinkMilestone = (taskId: string, milestoneKey: string) => void;
 
 /**
  * The drag that makes a relationship on the chart: begin it from a bar's
  * "+", and releasing over another bar relates the two, by the ends joined.
  * Escape, or a release anywhere else, abandons it.
  */
-export const useLinkDrag = (body: React.RefObject<HTMLElement | null>, onLink?: OnLink) => {
+export const useLinkDrag = (body: React.RefObject<HTMLElement | null>, onLink?: OnLink, onLinkMilestone?: OnLinkMilestone) => {
   const [link, setLink] = useState<LinkDrag | null>(null);
   const live = useRef<LinkDrag | null>(null);
   const active = link !== null;
@@ -191,6 +211,9 @@ export const useLinkDrag = (body: React.RefObject<HTMLElement | null>, onLink?: 
         const box = bar.getBoundingClientRect();
         over = { id, end: e.clientX < box.left + box.width / 2 ? 'start' : 'end' };
       }
+      // A milestone's diamond takes a link too: the milestone waits for the task.
+      const diamond = onLinkMilestone ? (document.elementFromPoint?.(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('[data-milestone]') : null;
+      if (diamond?.dataset.milestone) over = { id: diamond.dataset.milestone, end: 'start', milestone: true };
       live.current = { ...d, ...at(e.clientX, e.clientY), over };
       setLink(live.current);
     };
@@ -202,7 +225,8 @@ export const useLinkDrag = (body: React.RefObject<HTMLElement | null>, onLink?: 
       move(e);
       const d = live.current;
       stop();
-      if (d?.over && onLink) onLink(d.fromId, d.over.id, linkBetween(d.fromEnd, d.over.end));
+      if (d?.over?.milestone) onLinkMilestone?.(d.fromId, d.over.id);
+      else if (d?.over && onLink) onLink(d.fromId, d.over.id, linkBetween(d.fromEnd, d.over.end));
     };
     const key = (e: KeyboardEvent) => e.key === 'Escape' && stop();
     window.addEventListener('pointermove', move);
@@ -223,18 +247,19 @@ export const useLinkDrag = (body: React.RefObject<HTMLElement | null>, onLink?: 
 
 /** The link being dragged: a line from the bar's end to the pointer, and what releasing here would make. */
 export const LinkBand: React.FC<{ link: LinkDrag }> = ({ link }) => {
-  const view = link.over ? linkBetween(link.fromEnd, link.over.end) : null;
+  const view = link.over && !link.over.milestone ? linkBetween(link.fromEnd, link.over.end) : null;
+  const onto = view || link.over?.milestone;
   return (
     <>
       <svg aria-hidden style={{ position: 'absolute', left: 0, top: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none', zIndex: 5 }}>
-        <line x1={link.x0} y1={link.y0} x2={link.x} y2={link.y} stroke="var(--accent)" strokeWidth={1.75} strokeDasharray={view ? undefined : '5 4'} />
-        <circle cx={link.x} cy={link.y} r={4} fill={view ? 'var(--accent)' : 'var(--surface)'} stroke="var(--accent)" strokeWidth={1.5} />
+        <line x1={link.x0} y1={link.y0} x2={link.x} y2={link.y} stroke="var(--accent)" strokeWidth={1.75} strokeDasharray={onto ? undefined : '5 4'} />
+        <circle cx={link.x} cy={link.y} r={4} fill={onto ? 'var(--accent)' : 'var(--surface)'} stroke="var(--accent)" strokeWidth={1.5} />
       </svg>
       <span
         role="status"
         style={{ position: 'absolute', left: link.x + 12, top: link.y - 28, zIndex: 5, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--surface)', color: view ? 'var(--text)' : 'var(--text-muted)', fontSize: 12, whiteSpace: 'nowrap', pointerEvents: 'none' }}
       >
-        {view ? relationshipLabel(view.type) : 'Drop on the start or the end of another bar'}
+        {link.over?.milestone ? 'The milestone waits for this task' : view ? relationshipLabel(view.type) : 'Drop on the start or the end of another bar'}
       </span>
     </>
   );
