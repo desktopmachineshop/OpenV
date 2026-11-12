@@ -18,6 +18,11 @@ package plan
 // each task's end can slip before it pushes the next. A task on the path
 // that is done, or has sub-tasks, is not marked. A broken relationship
 // leaves no float.
+//
+// A task with sub-tasks has no work of its own to slip: its float is that
+// of the sub-task with the least, since that is the first thing a delay to
+// it would push. Relationships and limits of its own, which older plans
+// may carry, can only make that less.
 func (b *builder) criticalPath(p *Plan) {
 	var last *string
 	for _, t := range p.Tasks {
@@ -63,6 +68,9 @@ func (b *builder) criticalPath(p *Plan) {
 				f = g
 			}
 		}
+		if least, ok := b.leastOfSubtasks(t, slack); ok && (least < f || (len(drives[t.ID]) == 0 && b.latest(t) == nil)) {
+			f = least
+		}
 		// A task that is done has nothing left to slip, or to make up.
 		if t.Done {
 			f = 0
@@ -92,6 +100,21 @@ func (b *builder) criticalPath(p *Plan) {
 			b.byID[*t.ParentID].CriticalSubtasks = true
 		}
 	}
+}
+
+// leastOfSubtasks is the least float among a task's scheduled sub-tasks,
+// and whether it has any.
+func (b *builder) leastOfSubtasks(t *Task, slack func(*Task) int) (int, bool) {
+	least, any := 0, false
+	for _, c := range b.children[t.ID] {
+		if c.SpanStart == nil {
+			continue
+		}
+		if f := slack(c); !any || f < least {
+			least, any = f, true
+		}
+	}
+	return least, any
 }
 
 // latest is how many working days a task can slip before it breaks its own

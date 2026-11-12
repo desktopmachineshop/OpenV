@@ -47,6 +47,9 @@ func (s *DefaultService) Relate(taskID, otherID, kind string, drives bool, lagDa
 	if !ValidRelationshipType(kind) {
 		return ErrRelationshipType
 	}
+	if err := s.notParents(a.ProjectID, a.ID, b.ID); err != nil {
+		return err
+	}
 	driver, driven := b.ID, a.ID
 	if drives {
 		driver, driven = a.ID, b.ID
@@ -79,6 +82,45 @@ func (s *DefaultService) Relate(taskID, otherID, kind string, drives bool, lagDa
 		return err
 	}
 	return s.autoSchedule(a.ProjectID, "")
+}
+
+// notParents refuses a relationship to or from a task with sub-tasks. Such
+// a task has no work of its own: its dates are its sub-tasks', so it is one
+// of them that another task waits for, and linking the parent only hides
+// which.
+func (s *DefaultService) notParents(projectID string, ids ...string) error {
+	schedules, err := s.repo.ListSchedules(projectID)
+	if err != nil {
+		return err
+	}
+	for _, sc := range schedules {
+		for _, id := range ids {
+			if sc.ParentID != nil && *sc.ParentID == id {
+				return ErrParentRelationship
+			}
+		}
+	}
+	return nil
+}
+
+// noNewParentLinks refuses the relationships of a task that are not among
+// those it had and that have a task with sub-tasks at either end. A
+// relationship an older plan already carries is left alone.
+func noNewParentLinks(want, existing []Dependency, parents map[string]string) error {
+	isParent := map[string]bool{}
+	for _, p := range parents {
+		isParent[p] = true
+	}
+	had := map[string]bool{}
+	for _, d := range existing {
+		had[d.WorkItemID+">"+d.DependsOnID] = true
+	}
+	for _, d := range want {
+		if !had[d.WorkItemID+">"+d.DependsOnID] && (isParent[d.WorkItemID] || isParent[d.DependsOnID]) {
+			return ErrParentRelationship
+		}
+	}
+	return nil
 }
 
 // Unrelate removes the relationship between two tasks, whichever way round.

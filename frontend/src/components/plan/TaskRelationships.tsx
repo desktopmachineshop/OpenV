@@ -120,8 +120,9 @@ export const TaskRelationships: React.FC<TaskRelationshipsProps> = ({ plan, task
   ];
   const candidates = useMemo<PickerOption[]>(() => {
     const has = new Set([task.id, ...task.relationships.map((r) => r.task_id), ...task.drives.map((r) => r.task_id)]);
+    // A task with sub-tasks is not linked: its sub-tasks are.
     return plan.tasks
-      .filter((t) => !has.has(t.id))
+      .filter((t) => !has.has(t.id) && t.subtasks_total === 0)
       .map((t) => ({ value: t.id, label: `${t.wbs} ${t.title}`, meta: t.span_start ? spanLabel(t.span_start, t.span_end, plan.today) : 'Not scheduled', depth: t.depth }));
   }, [plan.tasks, plan.today, task.id, task.relationships, task.drives]);
 
@@ -174,7 +175,12 @@ export const TaskRelationships: React.FC<TaskRelationshipsProps> = ({ plan, task
           </div>
         );
       })}
-      {editable && candidates.length > 0 && (
+      {editable && task.subtasks_total > 0 && (
+        <span data-no-parent-links style={mutedStyle}>
+          A task with sub-tasks is not linked to other tasks: its dates and its float are its sub-tasks'. Link the sub-task that another task waits for, or that waits for one.
+        </span>
+      )}
+      {editable && task.subtasks_total === 0 && candidates.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, paddingTop: 4 }}>
           <label htmlFor="gantt-relationship-add" style={fieldStyle}>
             Add a relationship from this task

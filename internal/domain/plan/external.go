@@ -79,6 +79,12 @@ func (s *DefaultService) RelateExternal(taskID, otherID, kind string, lagDays in
 	if a.ProjectID == b.ProjectID {
 		return ErrSameProject
 	}
+	if err := s.notParents(a.ProjectID, a.ID); err != nil {
+		return err
+	}
+	if err := s.notParents(b.ProjectID, b.ID); err != nil {
+		return err
+	}
 	kind = strings.ToUpper(strings.TrimSpace(kind))
 	if kind == "" {
 		kind = RelFinishToStart

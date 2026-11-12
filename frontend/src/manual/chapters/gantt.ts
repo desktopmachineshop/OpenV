@@ -125,7 +125,7 @@ starts when its first sub-task starts and finishes when its last one
 finishes; its duration is the working days between the two, and its effort
 is its sub-tasks' effort added up. Its panel shows these, with no fields to
 set, and its bar does not drag: schedule the sub-tasks to move it. Dates a
-task had before it was given sub-tasks are no longer used.
+task had before it was given sub-tasks are no longer used. Its float is the least of its sub-tasks': it has no room when one of them has none. It cannot be linked to another task, since it is one of its sub-tasks that the other task waits for: link that sub-task. A relationship it was given before stays until you remove it.
 
 Fold a task with the arrow in the outline and its bar stands for everything
 under it:

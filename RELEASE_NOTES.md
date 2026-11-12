@@ -32,6 +32,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A parent task's float follows its sub-tasks.** A task with sub-tasks
+  that nothing was linked to showed float all the way to the plan's last
+  day, even when the sub-tasks under it were critical. Its float is now
+  the least of its sub-tasks', so a parent over critical work shows none.
+- **A task with sub-tasks can no longer be linked.** It is one of its
+  sub-tasks that another task waits for, so the Gantt no longer offers a
+  parent in a task's relationships or as the end of a dragged link, and
+  its own panel says to link the sub-task. Relationships a parent already
+  has stay until you remove them.
 - **The Gantt's Import button lines up.** **Import…** sat a few pixels
   higher than **Add task**, **Add milestone** and **Export…** beside it;
   the four are level now.
