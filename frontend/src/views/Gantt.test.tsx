@@ -92,11 +92,19 @@ const definition: PlanMilestone = {
   late: true,
   // Build is assigned to it, which brings its two sub-tasks.
   tasks: ['frame', 'wiring'],
+  date_mode: 'fixed',
+  fixed_date: null,
+  waits_for: [],
+  conflict: false,
 };
 
 const mvp: PlanMilestone = {
   key: 'release:r1',
   kind: 'release',
+  date_mode: 'fixed',
+  fixed_date: null,
+  waits_for: [],
+  conflict: false,
   id: '',
   release_id: 'r1',
   tasks: [],

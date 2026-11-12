@@ -82,6 +82,7 @@ var Registry = []Feature{
 	{Key: FeatureGanttPlan, ShippedIn: "0.32.0", Summary: "A Gantt plan under Plan: the board's tasks on a timeline with sub-tasks, dependencies and progress from their to-dos, milestones with completion criteria read from the project's artifacts, each release as a milestone, and the plan exported as PDF, Excel, CSV or JSON"},
 	{Key: FeatureUIRefresh, ShippedIn: "0.33.0", Summary: "One navigation on every screen: Home, Plan, Define, Verify and Agents in the same order down the rail on a computer and along the bottom bar on a phone, the pages of the group you are in listed in a row under the top bar, and each page named once"},
 	{Key: FeaturePlanSizing, ShippedIn: "0.34.0", Summary: "Size a plan before it is staffed: planned resources stand in for people to be chosen later, with a rate and a capacity, and are handed to a person or an agent when one is chosen; and a plan's defaults say how new tasks are scheduled and whether their effort decides their duration"},
+	{Key: FeatureMilestoneLinks, ShippedIn: "0.34.0", Summary: "Milestones that wait for tasks: link tasks to a milestone from its panel or by dragging a link onto its diamond, and date it by the plan, on the day the last of them finishes, or keep its date fixed"},
 }
 
 // Feature keys the code gates on.
@@ -337,6 +338,11 @@ const (
 	// new task's effort decides its duration). The plan's API accepts both
 	// either way; the key gates the interface.
 	FeaturePlanSizing = "plan-sizing"
+	// FeatureMilestoneLinks is the tasks a milestone waits for and its date
+	// by the plan: the Waits for section of a milestone's panel, links
+	// dropped on its diamond, and the lines drawn to it. The plan's API
+	// accepts both either way; the key gates the interface.
+	FeatureMilestoneLinks = "milestone-links"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

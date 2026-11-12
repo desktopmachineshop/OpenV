@@ -837,6 +837,8 @@ table plan_milestones rows 0
   column criteria jsonb NOT NULL DEFAULT '[]'::jsonb
   column created_at timestamp without time zone NOT NULL DEFAULT now()
   column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column date_mode character varying(8) NOT NULL DEFAULT 'fixed'::character varying
+  column waits_for jsonb NOT NULL DEFAULT '[]'::jsonb
   constraint plan_milestones_pkey PRIMARY KEY (id)
   constraint plan_milestones_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   constraint plan_milestones_release_id_fkey FOREIGN KEY (release_id) REFERENCES target_releases(id) ON DELETE CASCADE
@@ -1127,7 +1129,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 88
+table schema_migrations rows 89
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1501,3 +1503,4 @@ ledger 0085 plan_task_order
 ledger 0086 plan_external_links
 ledger 0087 plan_workspace_calendar
 ledger 0088 plan_sizing
+ledger 0089 plan_milestone_links

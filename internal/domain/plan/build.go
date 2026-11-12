@@ -174,36 +174,6 @@ type CriterionResult struct {
 	Percent int    `json:"percent"`
 }
 
-// MilestoneProgress is a milestone on the plan with its criteria measured.
-type MilestoneProgress struct {
-	// Key names the milestone on the plan: its id, or "release:<id>" for a
-	// release's.
-	Key  string `json:"key"`
-	Kind string `json:"kind"`
-	// ID is the stored milestone's id: empty for a release milestone whose
-	// criteria are still the defaults.
-	ID          string  `json:"id"`
-	ReleaseID   *string `json:"release_id"`
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Date        *string `json:"date"`
-	// ReleaseStatus is the release's status, for a release milestone.
-	ReleaseStatus string `json:"release_status,omitempty"`
-	// DefaultCriteria says the criteria are the defaults, not ones set.
-	DefaultCriteria bool              `json:"default_criteria"`
-	Criteria        []CriterionResult `json:"criteria"`
-	// Progress is the mean of each criterion's way to its target, as a whole
-	// percentage; 0 with no criteria. Met: every criterion reached its
-	// target (and there is at least one), or the release is released.
-	Progress int  `json:"progress"`
-	Met      bool `json:"met"`
-	Late     bool `json:"late"`
-	// Tasks are the ids of the tasks that count toward the milestone, in
-	// outline order: those assigned to it, or under a task that is, that
-	// have no sub-tasks.
-	Tasks []string `json:"tasks"`
-}
-
 // Summary counts the plan's tasks.
 type Summary struct {
 	Tasks       int `json:"tasks"`

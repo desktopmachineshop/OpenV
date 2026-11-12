@@ -2121,3 +2121,81 @@ func TestATaskWithSubtasksCannotBeLinked(t *testing.T) {
 		t.Fatalf("a relationship it already had: %v", err)
 	}
 }
+
+// A milestone can wait for tasks. Dated by the plan, it falls on the day
+// the last of them finishes and moves when they do; with a fixed date it
+// stays put, and says so when one of them finishes after it.
+func TestAMilestoneWaitsForTasksAndCanTakeItsDateFromThem(t *testing.T) {
+	svc, _, _, _ := newService()
+	for id, days := range map[string][2]string{"a": {"2027-03-01", "2027-03-05"}, "b": {"2027-03-08", "2027-03-12"}} {
+		if err := svc.Schedule(id, ScheduleRequest{StartDate: sp(days[0]), DueDate: sp(days[1])}, "tester"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	find := func(key string) MilestoneProgress {
+		t.Helper()
+		p, err := svc.Plan("p", Evidence{}, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, m := range p.Milestones {
+			if m.Key == key {
+				return m
+			}
+		}
+		t.Fatalf("no milestone %s", key)
+		return MilestoneProgress{}
+	}
+	m, err := svc.CreateMilestone("p", MilestoneRequest{Name: sp("Frame done"), TargetDate: sp("2027-03-10"), WaitsFor: &[]string{"a", "b", "a", " "}})
+	if err != nil || m.DateMode != DateFixed || len(m.WaitsFor) != 2 {
+		t.Fatalf("created: %+v %v", m, err)
+	}
+	// Fixed on the 10th, but B finishes on the 12th.
+	if got := find(m.ID); *got.Date != "2027-03-10" || !got.Conflict || got.DateMode != DateFixed || len(got.WaitsFor) != 2 {
+		t.Fatalf("fixed: %+v", got)
+	}
+	plan := DateByPlan
+	if _, err := svc.UpdateMilestone(m.ID, MilestoneRequest{DateMode: &plan}); err != nil {
+		t.Fatal(err)
+	}
+	// By the plan: the day B finishes, with the date typed kept beside it.
+	if got := find(m.ID); *got.Date != "2027-03-12" || got.Conflict || got.DateMode != DateByPlan || *got.FixedDate != "2027-03-10" {
+		t.Fatalf("by the plan: %+v", got)
+	}
+	// B moves a week later and the milestone follows.
+	if err := svc.Schedule("b", ScheduleRequest{StartDate: sp("2027-03-15"), DueDate: sp("2027-03-19")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if got := find(m.ID); *got.Date != "2027-03-19" {
+		t.Fatalf("it follows the task: %s", *got.Date)
+	}
+	// With nothing to wait for, it falls back to the date typed.
+	if _, err := svc.UpdateMilestone(m.ID, MilestoneRequest{WaitsFor: &[]string{}}); err != nil {
+		t.Fatal(err)
+	}
+	if got := find(m.ID); *got.Date != "2027-03-10" || len(got.WaitsFor) != 0 {
+		t.Fatalf("nothing to wait for: %+v", got)
+	}
+	// A task of another project, a task with sub-tasks and an unknown mode are refused.
+	if err := svc.Schedule("b", ScheduleRequest{ParentID: sp("a")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	bad := "sometimes"
+	for name, req := range map[string]MilestoneRequest{
+		"another project's task": {WaitsFor: &[]string{"x"}},
+		"a task with sub-tasks":  {WaitsFor: &[]string{"a"}},
+		"an unknown mode":        {DateMode: &bad},
+	} {
+		if _, err := svc.UpdateMilestone(m.ID, req); !errors.Is(err, ErrMilestoneLink) {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	// A release's milestone can wait for tasks; its date stays the release's.
+	rel, err := svc.SetReleaseWaitsFor("p", "r1", []string{"b"})
+	if err != nil || rel.ReleaseID == nil || len(rel.WaitsFor) != 1 || len(rel.Criteria) == 0 {
+		t.Fatalf("a release's milestone: %+v %v", rel, err)
+	}
+	if _, err := svc.UpdateMilestone(rel.ID, MilestoneRequest{DateMode: &plan}); !errors.Is(err, ErrReleaseMilestone) {
+		t.Fatalf("a release's date is its release's: %v", err)
+	}
+}

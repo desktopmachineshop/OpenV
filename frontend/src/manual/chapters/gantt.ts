@@ -466,6 +466,8 @@ one finished sub-task and one at 50% is 75%.
 A milestone marks a point the project must reach. Each has **criteria**: a
 measure of the project's artifacts and the percentage it must reach.
 
+A milestone can also **wait for** tasks. In its panel, **Waits for** lists them: choose one under **Wait for a task…**, or drag a link from the + at the end of a task's bar onto the milestone's diamond. The chart draws a line from each to the milestone's date. **Its date is** says how the date is set. **Fixed** keeps the date you give it, and a task that finishes after it turns its line red and dashed and is flagged in the panel. **By the plan** puts the milestone on the day the last task it waits for finishes, and it moves when they do; until one is scheduled it keeps its own date. A release's milestone can wait for tasks too, but its date is always its release's. A task with sub-tasks cannot be waited for: choose the sub-task.
+
 | Criterion | What it counts |
 | --- | --- |
 | User needs addressed | User needs that at least one requirement derives from |

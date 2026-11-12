@@ -599,14 +599,18 @@ func (r *PlanRepository) AttachTodo(projectID, todoID, workItemID string) error 
 	return err
 }
 
-const planMilestoneColumns = `id, project_id, release_id, name, description, to_char(target_date, 'YYYY-MM-DD'), criteria, created_at, updated_at`
+const planMilestoneColumns = `id, project_id, release_id, name, description, to_char(target_date, 'YYYY-MM-DD'), criteria, created_at, updated_at, date_mode, waits_for`
 
 func scanPlanMilestone(s rowScanner) (*plan.Milestone, error) {
 	m := &plan.Milestone{}
 	var release, date sql.NullString
-	var criteria []byte
-	if err := s.Scan(&m.ID, &m.ProjectID, &release, &m.Name, &m.Description, &date, &criteria, &m.CreatedAt, &m.UpdatedAt); err != nil {
+	var criteria, waits []byte
+	if err := s.Scan(&m.ID, &m.ProjectID, &release, &m.Name, &m.Description, &date, &criteria, &m.CreatedAt, &m.UpdatedAt, &m.DateMode, &waits); err != nil {
 		return nil, err
+	}
+	// A list of a shape this build does not read counts as none.
+	if err := json.Unmarshal(waits, &m.WaitsFor); err != nil || m.WaitsFor == nil {
+		m.WaitsFor = []string{}
 	}
 	if release.Valid {
 		m.ReleaseID = &release.String
@@ -650,6 +654,23 @@ func (r *PlanRepository) GetMilestone(id string) (*plan.Milestone, error) {
 	return m, err
 }
 
+func waitsForJSON(m *plan.Milestone) []byte {
+	w := m.WaitsFor
+	if w == nil {
+		w = []string{}
+	}
+	out, _ := json.Marshal(w)
+	return out
+}
+
+// dateMode is a milestone's date mode as stored: fixed unless it says plan.
+func dateMode(m *plan.Milestone) string {
+	if m.DateMode == plan.DateByPlan {
+		return plan.DateByPlan
+	}
+	return plan.DateFixed
+}
+
 func criteriaJSON(m *plan.Milestone) ([]byte, error) {
 	c := m.Criteria
 	if c == nil {
@@ -665,10 +686,10 @@ func (r *PlanRepository) CreateMilestone(m *plan.Milestone) error {
 		return err
 	}
 	_, err = r.db.Exec(`
-		INSERT INTO plan_milestones (id, project_id, release_id, name, description, target_date, criteria, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+		INSERT INTO plan_milestones (id, project_id, release_id, name, description, target_date, criteria, created_at, updated_at, date_mode, waits_for)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
 		m.ID, m.ProjectID, nullableString(m.ReleaseID), m.Name, m.Description, nullableString(m.TargetDate),
-		criteria, m.CreatedAt.UTC(), m.UpdatedAt.UTC())
+		criteria, m.CreatedAt.UTC(), m.UpdatedAt.UTC(), dateMode(m), waitsForJSON(m))
 	return err
 }
 
@@ -679,9 +700,10 @@ func (r *PlanRepository) UpdateMilestone(m *plan.Milestone) error {
 		return err
 	}
 	res, err := r.db.Exec(`
-		UPDATE plan_milestones SET name = $2, description = $3, target_date = $4, criteria = $5, updated_at = $6
+		UPDATE plan_milestones SET name = $2, description = $3, target_date = $4, criteria = $5, updated_at = $6,
+			date_mode = $7, waits_for = $8
 		WHERE id = $1`,
-		m.ID, m.Name, m.Description, nullableString(m.TargetDate), criteria, m.UpdatedAt.UTC())
+		m.ID, m.Name, m.Description, nullableString(m.TargetDate), criteria, m.UpdatedAt.UTC(), dateMode(m), waitsForJSON(m))
 	if err != nil {
 		return err
 	}

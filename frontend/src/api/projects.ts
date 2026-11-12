@@ -275,6 +275,9 @@ export const planAPI = {
   /** The completion criteria of a release's milestone. */
   setReleaseCriteria: (projectId: string, releaseId: string, criteria: PlanMilestoneInput['criteria']) =>
     client.put<StoredPlanMilestone>(`/api/v1/projects/${projectId}/plan/release-milestones/${releaseId}`, { criteria }),
+  /** The tasks a release's milestone waits for. */
+  setReleaseWaitsFor: (projectId: string, releaseId: string, waitsFor: string[]) =>
+    client.put<StoredPlanMilestone>(`/api/v1/projects/${projectId}/plan/release-milestones/${releaseId}`, { waits_for: waitsFor }),
   /** Saves the plan as a file in the chosen format. */
   export: async (projectId: string, format: PlanExportFormat) => {
     const response = await client.get(`/api/v1/projects/${projectId}/plan/export`, {

@@ -6,7 +6,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { PlanMilestone, PlanScheduleInput, PlanTask, ProjectPlan } from '../../api/client';
 import { ellipsis, eyebrowStyle, mutedStyle } from '../ui';
-import { DependencyLines, LinkBand, OnLink, ROW_HEIGHT, useLinkDrag } from './GanttLinks';
+import { DependencyLines, LinkBand, OnLink, OnLinkMilestone, ROW_HEIGHT, useLinkDrag } from './GanttLinks';
 import { AddTaskRow, OpenIcon, OutlineCell, TaskBar, BaselineBar } from './GanttRows';
 import { GridCells, GridHead, GroupRow } from './GanttGrid';
 import { DEFAULT_VIEW, PlanView, arrange, isOutline, shownColumns } from './planView';
@@ -96,7 +96,7 @@ const MilestoneLane: React.FC<{
               type="button"
               onClick={() => onSelect(m)}
               aria-current={selectedKey === m.key ? 'true' : undefined}
-              aria-label={`${m.kind === 'release' ? 'Release milestone' : 'Milestone'} ${m.name}, ${shortDate(m.date, today)}, ${m.progress}%${m.met ? ', met' : m.late ? ', late' : ''}`}
+              aria-label={`${m.kind === 'release' ? 'Release milestone' : 'Milestone'} ${m.name}, ${shortDate(m.date, today)}${m.date_mode === 'plan' ? ' by the plan' : ''}, ${m.progress}%${m.met ? ', met' : m.late ? ', late' : ''}${m.conflict ? ', a task it waits for finishes after it' : ''}`}
               data-milestone={m.key}
               style={{
                 position: 'absolute',
@@ -182,6 +182,8 @@ export interface GanttChartProps {
   onReschedule?: (t: PlanTask, start: string, end: string) => void;
   /** Set where links can be drawn: a drag from the "+" at an end of a bar to another bar relates the two. */
   onLink?: OnLink;
+  /** Makes a milestone wait for a task, when a link is dropped on its diamond. */
+  onLinkMilestone?: OnLinkMilestone;
   /** Set where tasks can be added: the chart ends in a row that takes a title. */
   onAddTask?: (title: string) => void;
   busy?: boolean;
@@ -216,6 +218,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   onSelectMilestone,
   onReschedule,
   onLink,
+  onLinkMilestone,
   onAddTask,
   busy,
   touch,
@@ -236,7 +239,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   // offset it was last given by the other, so following never echoes back:
   // an echo would stop a smooth scroll (Today) after its first step.
   const given = useRef({ bar: -9, chart: -9 });
-  const { link, begin: beginLink } = useLinkDrag(body, onLink);
+  const { link, begin: beginLink } = useLinkDrag(body, onLink, onLinkMilestone);
 
   useLayoutEffect(() => {
     const el = scroller.current;
@@ -441,7 +444,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             );
           })}
           <div style={{ position: 'absolute', left: outlineWidth, top: 0, width: scale.width, height: bodyHeight, pointerEvents: 'none', zIndex: 1 }}>
-            <DependencyLines tasks={plan.tasks} rows={rows} folded={folded} scale={scale} showCritical={showCritical} />
+            <DependencyLines tasks={plan.tasks} rows={rows} folded={folded} scale={scale} showCritical={showCritical} milestones={plan.milestones} />
           </div>
           {link && <LinkBand link={link} />}
           {rows.length === 0 && (

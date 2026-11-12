@@ -310,6 +310,14 @@ export interface PlanMilestone {
   late: boolean;
   /** The ids of the tasks that count toward the milestone, in outline order. */
   tasks: string[];
+  /** How its date is set: the date it is given, or the day the last task it waits for finishes. */
+  date_mode: 'fixed' | 'plan';
+  /** The date it was given, which a milestone dated by the plan keeps for when nothing it waits for is scheduled. */
+  fixed_date: string | null;
+  /** The ids of the tasks it waits for. */
+  waits_for: string[];
+  /** Its date is fixed and a task it waits for finishes after it. */
+  conflict: boolean;
 }
 
 export interface PlanMetric {
@@ -407,6 +415,9 @@ export interface PlanMilestoneInput {
   description?: string;
   target_date?: string;
   criteria?: PlanCriterion[];
+  date_mode?: 'fixed' | 'plan';
+  /** Replaces the tasks the milestone waits for. */
+  waits_for?: string[];
 }
 
 /** A stored milestone, as its writes answer it. */

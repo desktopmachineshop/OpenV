@@ -1317,9 +1317,9 @@ A project's plan is the Gantt over its board (`internal/domain/plan`). Its tasks
 | POST | `/api/v1/work-items/{id}/todos` | Raise a to-do on a task `{text, due_date?}` → `201`, where `due_date` (`YYYY-MM-DD`) is its deadline, the one date a to-do has: a project to-do, listed with the others, that counts toward the task's progress | editor |
 | GET | `/api/v1/work-items/{id}/todos` | The to-dos on a task, open ones first: what the board's card lists | viewer |
 | POST | `/api/v1/projects/{id}/plan/milestones` | Add a custom milestone `{name, description?, target_date?, criteria?}` → `201` | editor |
-| PUT | `/api/v1/projects/{id}/plan/milestones/{milestoneId}` | Change a milestone: each field sent replaces what is there, an empty `target_date` clears it. A release milestone takes `criteria` only (`400` for its name, description or date: edit the release) | editor |
+| PUT | `/api/v1/projects/{id}/plan/milestones/{milestoneId}` | Change a milestone: each field sent replaces what is there, an empty `target_date` clears it. A release milestone takes `criteria` only (`400` for its name, description or date: edit the release) | editor `date_mode` is `fixed` (the default: the `target_date` given) or `plan` (the day the last task it waits for finishes; a release's milestone cannot take it); `waits_for` replaces the ids of the tasks it waits for, at most 50 tasks of the project with no sub-tasks. On the plan each milestone carries `date_mode`, `fixed_date`, `waits_for` and `conflict` (its date is fixed and a task it waits for finishes after it). |
 | DELETE | `/api/v1/projects/{id}/plan/milestones/{milestoneId}` | Delete → `204`. Deleting a release milestone's stored criteria puts the defaults back; the release stays | editor |
-| PUT | `/api/v1/projects/{id}/plan/release-milestones/{releaseId}` | Set a release milestone's criteria `{criteria}`, storing the milestone the first time | editor |
+| PUT | `/api/v1/projects/{id}/plan/release-milestones/{releaseId}` | Set a release milestone's criteria `{criteria}`, storing the milestone the first time | editor `{waits_for: [taskId…]}` sent without `criteria` sets only the tasks the release's milestone waits for, storing it with the default criteria the first time. |
 
 ### Guided sessions (requirements wizard + V&V Assistant chat)
 

@@ -6,6 +6,7 @@ import (
 	"github.com/google/uuid"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/openv/requirements-platform/internal/domain/targetreleases"
 )
@@ -13,14 +14,154 @@ import (
 // GetMilestone returns one stored milestone.
 func (s *DefaultService) GetMilestone(id string) (*Milestone, error) { return s.repo.GetMilestone(id) }
 
+// Milestone is a stored milestone: a custom one, or the criteria of a
+// release's (ReleaseID set; Name and TargetDate are then the release's and
+// are not stored here).
+type Milestone struct {
+	ID          string      `json:"id"`
+	ProjectID   string      `json:"project_id"`
+	ReleaseID   *string     `json:"release_id"`
+	Name        string      `json:"name"`
+	Description string      `json:"description"`
+	TargetDate  *string     `json:"target_date"`
+	Criteria    []Criterion `json:"criteria"`
+	CreatedAt   time.Time   `json:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at"`
+	// DateMode is how the milestone's date is set: DateFixed, the target
+	// date typed, or DateByPlan, the day the last task it waits for
+	// finishes. WaitsFor are the ids of those tasks.
+	DateMode string   `json:"date_mode"`
+	WaitsFor []string `json:"waits_for"`
+}
+
+// MilestoneRequest creates or changes a custom milestone. On an update a
+// nil field is left as it is; an empty TargetDate clears the date.
+type MilestoneRequest struct {
+	Name        *string      `json:"name"`
+	Description *string      `json:"description"`
+	TargetDate  *string      `json:"target_date"`
+	Criteria    *[]Criterion `json:"criteria"`
+	// DateMode is "fixed" or "plan"; WaitsFor replaces the tasks the
+	// milestone waits for.
+	DateMode *string   `json:"date_mode"`
+	WaitsFor *[]string `json:"waits_for"`
+}
+
+// MilestoneProgress is a milestone on the plan with its criteria measured.
+type MilestoneProgress struct {
+	// Key names the milestone on the plan: its id, or "release:<id>" for a
+	// release's.
+	Key  string `json:"key"`
+	Kind string `json:"kind"`
+	// ID is the stored milestone's id: empty for a release milestone whose
+	// criteria are still the defaults.
+	ID          string  `json:"id"`
+	ReleaseID   *string `json:"release_id"`
+	Name        string  `json:"name"`
+	Description string  `json:"description"`
+	Date        *string `json:"date"`
+	// ReleaseStatus is the release's status, for a release milestone.
+	ReleaseStatus string `json:"release_status,omitempty"`
+	// DefaultCriteria says the criteria are the defaults, not ones set.
+	DefaultCriteria bool              `json:"default_criteria"`
+	Criteria        []CriterionResult `json:"criteria"`
+	// Progress is the mean of each criterion's way to its target, as a whole
+	// percentage; 0 with no criteria. Met: every criterion reached its
+	// target (and there is at least one), or the release is released.
+	Progress int  `json:"progress"`
+	Met      bool `json:"met"`
+	Late     bool `json:"late"`
+	// DateMode is how the date is set: "fixed", the date typed (FixedDate,
+	// which a milestone dated by the plan keeps for when it has nothing
+	// scheduled to wait for), or "plan", the day the last task it waits
+	// for finishes. WaitsFor are those tasks' ids. Conflict: its date is
+	// fixed and one of them finishes after it.
+	DateMode  string   `json:"date_mode"`
+	FixedDate *string  `json:"fixed_date"`
+	WaitsFor  []string `json:"waits_for"`
+	Conflict  bool     `json:"conflict"`
+	// Tasks are the ids of the tasks that count toward the milestone, in
+	// outline order: those assigned to it, or under a task that is, that
+	// have no sub-tasks.
+	Tasks []string `json:"tasks"`
+}
+
+// How a milestone's date is set, and the most tasks one waits for.
+const (
+	DateFixed        = "fixed"
+	DateByPlan       = "plan"
+	MaxMilestoneWait = 50
+)
+
+// waitsFor checks the tasks a milestone is to wait for: each a task of the
+// project, with no sub-tasks (it is a sub-task that is waited for), once.
+func (s *DefaultService) waitsFor(projectID string, ids []string) ([]string, error) {
+	items, err := s.board.ListByProject(projectID)
+	if err != nil {
+		return nil, err
+	}
+	onBoard := map[string]bool{}
+	for _, it := range items {
+		onBoard[it.ID] = true
+	}
+	schedules, err := s.repo.ListSchedules(projectID)
+	if err != nil {
+		return nil, err
+	}
+	parent := map[string]bool{}
+	for _, sc := range schedules {
+		if sc.ParentID != nil {
+			parent[*sc.ParentID] = true
+		}
+	}
+	out, seen := []string{}, map[string]bool{}
+	for _, id := range ids {
+		id = strings.TrimSpace(id)
+		if id == "" || seen[id] {
+			continue
+		}
+		if !onBoard[id] || parent[id] {
+			return nil, ErrMilestoneLink
+		}
+		seen[id] = true
+		out = append(out, id)
+	}
+	if len(out) > MaxMilestoneWait {
+		return nil, ErrMilestoneLink
+	}
+	return out, nil
+}
+
+// linkMilestone applies the date mode and the tasks waited for of a request.
+func (s *DefaultService) linkMilestone(m *Milestone, req MilestoneRequest) error {
+	if req.DateMode != nil {
+		mode := strings.ToLower(strings.TrimSpace(*req.DateMode))
+		if mode != DateFixed && mode != DateByPlan {
+			return ErrMilestoneLink
+		}
+		m.DateMode = mode
+	}
+	if req.WaitsFor != nil {
+		ids, err := s.waitsFor(m.ProjectID, *req.WaitsFor)
+		if err != nil {
+			return err
+		}
+		m.WaitsFor = ids
+	}
+	return nil
+}
+
 // CreateMilestone adds a custom milestone.
 func (s *DefaultService) CreateMilestone(projectID string, req MilestoneRequest) (*Milestone, error) {
 	now := s.now()
-	m := &Milestone{ID: uuid.New().String(), ProjectID: projectID, Criteria: []Criterion{}, CreatedAt: now, UpdatedAt: now}
+	m := &Milestone{ID: uuid.New().String(), ProjectID: projectID, Criteria: []Criterion{}, CreatedAt: now, UpdatedAt: now, DateMode: DateFixed, WaitsFor: []string{}}
 	if req.Name == nil || strings.TrimSpace(*req.Name) == "" {
 		return nil, ErrNameRequired
 	}
 	if err := applyMilestone(m, req); err != nil {
+		return nil, err
+	}
+	if err := s.linkMilestone(m, req); err != nil {
 		return nil, err
 	}
 	if err := s.repo.CreateMilestone(m); err != nil {
@@ -64,10 +205,13 @@ func (s *DefaultService) UpdateMilestone(id string, req MilestoneRequest) (*Mile
 	if err != nil {
 		return nil, err
 	}
-	if m.ReleaseID != nil && (req.Name != nil || req.TargetDate != nil || req.Description != nil) {
+	if m.ReleaseID != nil && (req.Name != nil || req.TargetDate != nil || req.Description != nil || req.DateMode != nil) {
 		return nil, ErrReleaseMilestone
 	}
 	if err := applyMilestone(m, req); err != nil {
+		return nil, err
+	}
+	if err := s.linkMilestone(m, req); err != nil {
 		return nil, err
 	}
 	m.UpdatedAt = s.now()
@@ -104,6 +248,63 @@ func (s *DefaultService) SetReleaseCriteria(projectID, releaseID string, criteri
 	return m, s.repo.CreateMilestone(m)
 }
 
+// SetReleaseWaitsFor sets the tasks a release's milestone waits for,
+// storing the milestone, with the default criteria, the first time.
+func (s *DefaultService) SetReleaseWaitsFor(projectID, releaseID string, taskIDs []string) (*Milestone, error) {
+	ids, err := s.waitsFor(projectID, taskIDs)
+	if err != nil {
+		return nil, err
+	}
+	stored, err := s.repo.ListMilestones(projectID)
+	if err != nil {
+		return nil, err
+	}
+	now := s.now()
+	for _, m := range stored {
+		if m.ReleaseID != nil && *m.ReleaseID == releaseID {
+			m.WaitsFor, m.UpdatedAt = ids, now
+			return m, s.repo.UpdateMilestone(m)
+		}
+	}
+	m := &Milestone{ID: uuid.New().String(), ProjectID: projectID, ReleaseID: &releaseID, Criteria: DefaultReleaseCriteria(), DateMode: DateFixed, WaitsFor: ids, CreatedAt: now, UpdatedAt: now}
+	return m, s.repo.CreateMilestone(m)
+}
+
+// awaited is what the tasks a milestone waits for say about its date: the
+// ids of those the plan still has, and the day the last of them finishes
+// (nil when none is scheduled).
+func awaited(ids []string, byID map[string]*Task) ([]string, *string) {
+	kept := []string{}
+	var last *string
+	for _, id := range ids {
+		if t := byID[id]; t != nil {
+			kept = append(kept, id)
+			last = maxDate(last, t.SpanEnd)
+		}
+	}
+	return kept, last
+}
+
+// dated gives a milestone the tasks it waits for and its date: by the plan,
+// the day the last of them finishes (its own date until one is scheduled);
+// fixed, its own, in conflict when one of them finishes after it.
+func (mp *MilestoneProgress) dated(stored *Milestone, byID map[string]*Task) {
+	mp.DateMode, mp.WaitsFor, mp.FixedDate = DateFixed, []string{}, mp.Date
+	if stored == nil {
+		return
+	}
+	var last *string
+	mp.WaitsFor, last = awaited(stored.WaitsFor, byID)
+	if stored.DateMode == DateByPlan && stored.ReleaseID == nil {
+		mp.DateMode = DateByPlan
+		if last != nil {
+			mp.Date = last
+		}
+		return
+	}
+	mp.Conflict = last != nil && mp.Date != nil && *last > *mp.Date
+}
+
 // milestones measures every milestone: each release of the project, then
 // the custom ones, in date order with the undated last.
 func milestones(in Inputs, tasks []*Task, counted map[string][]*Task, today string) []MilestoneProgress {
@@ -120,6 +321,10 @@ func milestones(in Inputs, tasks []*Task, counted map[string][]*Task, today stri
 		}
 	}
 	position := map[string]int{}
+	byID := map[string]*Task{}
+	for _, t := range tasks {
+		byID[t.ID] = t
+	}
 
 	measure := func(mp *MilestoneProgress, criteria []Criterion, values map[string]MetricValue) {
 		measureMilestone(mp, criteria, values, tasks, counted[mp.Key])
@@ -134,6 +339,7 @@ func milestones(in Inputs, tasks []*Task, counted map[string][]*Task, today stri
 		if m := stored[id]; m != nil {
 			mp.ID, mp.DefaultCriteria, criteria = m.ID, false, m.Criteria
 		}
+		mp.dated(stored[id], byID)
 		scope := map[string]bool{}
 		idx := order[id]
 		for artifactID, r := range ranges {
@@ -153,6 +359,7 @@ func milestones(in Inputs, tasks []*Task, counted map[string][]*Task, today stri
 			continue
 		}
 		mp := MilestoneProgress{Key: m.ID, Kind: KindCustom, ID: m.ID, Name: m.Name, Description: m.Description, Date: m.TargetDate}
+		mp.dated(m, byID)
 		measure(&mp, m.Criteria, whole)
 		out = append(out, mp)
 	}

@@ -10,6 +10,9 @@ import type { PlanCriterion, PlanMilestone, PlanMilestoneInput, ProjectPlan } fr
 import { Chip, PanelHeader, buttonStyle, eyebrowStyle, mutedStyle, panelStyle } from '../ui';
 import { shortDate } from './ganttScale';
 import { MilestoneTasks, type MilestoneTasksProps } from './MilestoneTasks';
+import { MilestoneLinks, type MilestoneLinksProps } from './MilestoneLinks';
+import { useFeature } from '../../hooks/useFeature';
+import { MILESTONE_LINKS_FEATURE } from '../../features';
 import { milestoneColor, milestoneState } from './planModel';
 import { fieldStyle, inputStyle, sectionStyle } from './TaskPanel';
 
@@ -117,25 +120,31 @@ export interface MilestonePanelProps {
   onSave: (m: PlanMilestone, change: PlanMilestoneInput) => void;
   onDelete: (m: PlanMilestone) => void;
   onAssign: MilestoneTasksProps['onAssign'];
+  /** Changes what the milestone waits for or how its date is set; absent where that is not offered. */
+  onLink?: MilestoneLinksProps['onLink'];
   onSelectTask: MilestoneTasksProps['onSelectTask'];
   onClose: () => void;
 }
 
-export const MilestonePanel: React.FC<MilestonePanelProps> = ({ plan, milestone: m, projectId, editable, busy, onSave, onDelete, onAssign, onSelectTask, onClose }) => {
+/** The date the milestone was given: its own, not the one the plan gives it. */
+const typed = (m: PlanMilestone): string => (m.date_mode === 'plan' ? m.fixed_date : m.date) || '';
+
+export const MilestonePanel: React.FC<MilestonePanelProps> = ({ plan, milestone: m, projectId, editable, busy, onSave, onDelete, onAssign, onLink, onSelectTask, onClose }) => {
+  const links = useFeature(MILESTONE_LINKS_FEATURE) && Boolean(onLink);
   const stored = (): PlanCriterion[] => m.criteria.map(({ metric, target }) => ({ metric, target }));
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(m.name);
-  const [date, setDate] = useState(m.date || '');
+  const [date, setDate] = useState(typed(m));
   const [description, setDescription] = useState(m.description);
   const [criteria, setCriteria] = useState<PlanCriterion[]>(stored);
   useEffect(() => {
     setEditing(false);
     setName(m.name);
-    setDate(m.date || '');
+    setDate(typed(m));
     setDescription(m.description);
     setCriteria(stored());
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [m.key, m.name, m.date, m.description, JSON.stringify(m.criteria)]);
+  }, [m.key, m.name, m.date, m.fixed_date, m.description, JSON.stringify(m.criteria)]);
 
   const release = m.kind === 'release';
   const state = milestoneState(m);
@@ -156,7 +165,10 @@ export const MilestonePanel: React.FC<MilestonePanelProps> = ({ plan, milestone:
         <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', overflowWrap: 'anywhere' }}>{m.name}</div>
         <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
           <Chip tone={state.tone}>{state.label}</Chip>
-          <span style={mutedStyle}>{m.date ? shortDate(m.date, plan.today) : 'No date'}</span>
+          <span style={mutedStyle}>
+            {m.date ? shortDate(m.date, plan.today) : 'No date'}
+            {links && m.date_mode === 'plan' ? ' · by the plan' : ''}
+          </span>
           {release && (
             <Link to={`/projects/${projectId}/releases?release=${m.release_id}`} style={{ fontSize: 12, marginLeft: 'auto' }}>
               Open the release
@@ -180,6 +192,7 @@ export const MilestonePanel: React.FC<MilestonePanelProps> = ({ plan, milestone:
       </div>
 
       <MilestoneTasks plan={plan} milestone={m} editable={editable} busy={busy} onAssign={onAssign} onSelectTask={onSelectTask} />
+      {links && onLink && <MilestoneLinks plan={plan} milestone={m} editable={editable} busy={busy} onLink={onLink} onSelectTask={onSelectTask} />}
 
       {!editing && (
         <div style={{ ...sectionStyle, borderBottom: 'none' }}>
@@ -220,7 +233,7 @@ export const MilestonePanel: React.FC<MilestonePanelProps> = ({ plan, milestone:
                 <input value={name} onChange={(e) => setName(e.target.value)} required style={inputStyle} />
               </label>
               <label style={fieldStyle}>
-                Date
+                {links && m.date_mode === 'plan' ? 'Date, when nothing it waits for is scheduled' : 'Date'}
                 <input type="date" value={date} onChange={(e) => setDate(e.target.value)} style={inputStyle} />
               </label>
               <label style={fieldStyle}>

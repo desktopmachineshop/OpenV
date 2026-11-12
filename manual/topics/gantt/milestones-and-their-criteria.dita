@@ -6,8 +6,10 @@
   <prolog>
     <resourceid appname="openv-web" appid="gantt.milestone"/>
     <resourceid appname="openv-web" appid="gantt.add-milestone"/>
+    <resourceid appname="openv-web" appid="gantt.milestone-links"/>
   </prolog>
   <conbody>
+    <p>A milestone can also <b>wait for</b> tasks. In its panel, <b>Waits for</b> lists them: choose one under <b>Wait for a task…</b>, or drag a link from the + at the end of a task's bar onto the milestone's diamond. The chart draws a line from each to the milestone's date. <b>Its date is</b> says how the date is set. <b>Fixed</b> keeps the date you give it, and a task that finishes after it turns its line red and dashed and is flagged in the panel. <b>By the plan</b> puts the milestone on the day the last task it waits for finishes, and it moves when they do; until one is scheduled it keeps its own date. A release's milestone can wait for tasks too, but its date is always its release's. A task with sub-tasks cannot be waited for: choose the sub-task.</p>
     <simpletable>
       <sthead><stentry>Criterion</stentry><stentry>What it counts</stentry></sthead>
       <strow><stentry>User needs addressed</stentry><stentry>User needs that at least one requirement derives from</stentry></strow>
