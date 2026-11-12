@@ -72,7 +72,11 @@ test('navigates by the bar and the row of the group, and by More, which closes o
     .getByRole('navigation', { name: 'Define pages' })
     .getByRole('link', { name: 'Requirements', exact: true })
     .click();
-  await expect(page.getByRole('heading', { name: 'Requirements' })).toBeVisible();
+  // The address and the exact heading: "Guided requirements definition", the
+  // page being left, also has "Requirements" in its heading, and More closes
+  // on arrival, so it must not be opened before the page has arrived.
+  await expect(page).toHaveURL(/\/requirements$/);
+  await expect(page.getByRole('heading', { name: 'Requirements', exact: true })).toBeVisible();
   await expectNoHorizontalScroll(page);
 
   // More is the whole menu, every page a tile, and it closes on arrival.
@@ -82,11 +86,13 @@ test('navigates by the bar and the row of the group, and by More, which closes o
   await expectNoHorizontalScroll(page);
   await menu.getByRole('link', { name: 'Board', exact: true }).click();
   await expect(menu).toBeHidden();
+  await expect(page).toHaveURL(/\/board$/);
   await expect(page.getByRole('navigation', { name: 'Plan pages' })).toBeVisible();
 
   // The Define tab returns to the page last read there.
   await bar.getByRole('link', { name: 'Define', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Requirements' })).toBeVisible();
+  await expect(page).toHaveURL(/\/requirements$/);
+  await expect(page.getByRole('heading', { name: 'Requirements', exact: true })).toBeVisible();
   await expectNoHorizontalScroll(page);
 });
 
