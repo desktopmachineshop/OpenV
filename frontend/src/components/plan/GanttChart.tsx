@@ -48,7 +48,7 @@ const TickRow: React.FC<{ ticks: Tick[]; width: number; strong?: boolean }> = ({
           padding: t.width > 22 ? '0 6px' : 0,
           textAlign: t.width > 22 ? 'left' : 'center',
           lineHeight: `${HEAD_ROW}px`,
-          fontSize: strong ? 12 : 11,
+          fontSize: 12,
           fontWeight: strong ? 600 : 400,
           color: strong ? 'var(--text-secondary)' : 'var(--text-muted)',
           borderLeft: '1px solid var(--border-soft)',
@@ -131,7 +131,7 @@ const MilestoneLane: React.FC<{
                 }}
               />
               <span style={{ ...ellipsis, fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{m.name}</span>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{m.progress}%</span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m.progress}%</span>
               <OpenIcon />
             </button>
           </React.Fragment>

@@ -9,8 +9,8 @@ import { BAR_COLORS, BarEnd, barTone } from './planModel';
 import { Scale, addDays, shortDate, spanLabel } from './ganttScale';
 
 const caret: React.CSSProperties = {
-  width: 20,
-  height: 20,
+  width: 24,
+  height: 24,
   padding: 0,
   border: 'none',
   background: 'none',
@@ -77,13 +77,13 @@ export const OutlineCell: React.FC<{
           {folded ? '▶' : '▼'}
         </button>
       ) : (
-        <span style={{ width: 20, flexShrink: 0 }} />
+        <span style={{ width: 24, flexShrink: 0 }} />
       )}
       <span
         draggable={Boolean(onDropRow)}
         onDragStart={(e) => e.dataTransfer.setData('text/plain', task.id)}
         title={onDropRow ? 'Drag onto another task to move this one after it' : undefined}
-        style={{ fontFamily: MONO, fontSize: 11, color: 'var(--text-muted)', flexShrink: 0, cursor: onDropRow ? 'grab' : undefined }}
+        style={{ fontFamily: MONO, fontSize: 12, color: 'var(--text-muted)', flexShrink: 0, cursor: onDropRow ? 'grab' : undefined }}
       >
         {task.wbs}
       </span>
@@ -112,7 +112,7 @@ export const OutlineCell: React.FC<{
       )}
       <span
         title={task.late ? 'Late' : task.conflicts.length > 0 ? 'Its dates break a relationship' : undefined}
-        style={{ fontSize: 11, flexShrink: 0, color: task.late || task.conflicts.length > 0 ? 'var(--danger-strong)' : task.done ? 'var(--success-text)' : 'var(--text-muted)' }}
+        style={{ fontSize: 12, flexShrink: 0, color: task.late || task.conflicts.length > 0 ? 'var(--danger-strong)' : task.done ? 'var(--success-text)' : 'var(--text-muted)' }}
       >
         {task.conflicts.length > 0 && !task.late ? '⚠ ' : ''}
         {task.progress}%
@@ -123,7 +123,7 @@ export const OutlineCell: React.FC<{
         aria-label={`Open ${task.title}`}
         title="Open the full task"
         data-open-task={task.id}
-        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 22, height: 22, padding: 0, flexShrink: 0, border: '1px solid transparent', borderRadius: 4, background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+        style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 24, height: 24, padding: 0, flexShrink: 0, border: '1px solid transparent', borderRadius: 4, background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
       >
         <OpenIcon />
       </button>
@@ -310,7 +310,7 @@ export const TaskBar: React.FC<{
       </button>
       <span
         aria-hidden
-        style={{ position: 'absolute', left: left + width + 6, top: 0, lineHeight: `${ROW_HEIGHT}px`, fontSize: 11, color: 'var(--text-muted)', whiteSpace: 'nowrap', pointerEvents: 'none' }}
+        style={{ position: 'absolute', left: left + width + 6, top: 0, lineHeight: `${ROW_HEIGHT}px`, fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap', pointerEvents: 'none' }}
       >
         {drag ? spanLabel(start, end, today) : ''}
       </span>
@@ -392,7 +392,7 @@ export const AddTaskRow: React.FC<{ width: number; busy?: boolean; onAdd: (title
           style={{ flex: 1, minWidth: 0, minHeight: 26, padding: '2px 6px', boxSizing: 'border-box', border: '1px solid transparent', background: 'transparent', fontSize: 13 }}
         />
         {title.trim() && (
-          <button type="submit" disabled={busy} style={{ flexShrink: 0, padding: '2px 8px', border: '1px solid var(--border)', borderRadius: 4, background: 'var(--surface-alt)', color: 'var(--text-secondary)', fontSize: 11, cursor: 'pointer' }}>
+          <button type="submit" disabled={busy} style={{ flexShrink: 0, padding: '2px 8px', border: '1px solid var(--border)', borderRadius: 4, background: 'var(--surface-alt)', color: 'var(--text-secondary)', fontSize: 12, cursor: 'pointer' }}>
             Add ↵
           </button>
         )}

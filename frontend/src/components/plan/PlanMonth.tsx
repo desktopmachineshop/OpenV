@@ -40,7 +40,7 @@ export const PlanMonth: React.FC<{ plan: ProjectPlan; selectedTaskId: string; on
       </div>
       <div role="grid" aria-label="Month" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(110px, 1fr))', borderTop: '1px solid var(--border-soft)', minWidth: 770 }}>
         {WEEKDAYS.map((w) => (
-          <div key={w.day} role="columnheader" style={{ padding: '4px 6px', fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid var(--border-soft)' }}>
+          <div key={w.day} role="columnheader" style={{ padding: '4px 6px', fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid var(--border-soft)' }}>
             {w.name}
           </div>
         ))}
@@ -56,9 +56,9 @@ export const PlanMonth: React.FC<{ plan: ProjectPlan; selectedTaskId: string; on
               data-day={day}
               style={{ minHeight: 96, padding: 4, boxSizing: 'border-box', borderRight: '1px solid var(--border-soft)', borderBottom: '1px solid var(--border-soft)', background: off ? 'var(--surface-inset)' : undefined, opacity: outside ? 0.55 : 1, display: 'flex', flexDirection: 'column', gap: 2 }}
             >
-              <span style={{ fontSize: 11, fontWeight: day === plan.today ? 700 : 400, color: day === plan.today ? 'var(--danger-strong)' : 'var(--text-muted)' }}>{Number(day.slice(8))}</span>
+              <span style={{ fontSize: 12, fontWeight: day === plan.today ? 700 : 400, color: day === plan.today ? 'var(--danger-strong)' : 'var(--text-muted)' }}>{Number(day.slice(8))}</span>
               {due.map((m) => (
-                <span key={m.key} title={m.name} style={{ ...ellipsis, fontSize: 11, color: 'var(--text-secondary)' }}>
+                <span key={m.key} title={m.name} style={{ ...ellipsis, fontSize: 12, color: 'var(--text-secondary)' }}>
                   ◆ {m.name}
                 </span>
               ))}
@@ -70,7 +70,7 @@ export const PlanMonth: React.FC<{ plan: ProjectPlan; selectedTaskId: string; on
                     type="button"
                     onClick={() => onSelectTask(t)}
                     title={t.title}
-                    style={{ ...ellipsis, padding: '1px 4px', fontSize: 11, textAlign: 'left', cursor: 'pointer', borderRadius: 3, border: `1px solid ${t.critical ? 'var(--warning)' : c.border}`, background: c.track, color: 'var(--text)', boxShadow: t.id === selectedTaskId ? '0 0 0 2px var(--tint-blue-border)' : undefined }}
+                    style={{ ...ellipsis, padding: '1px 4px', fontSize: 12, textAlign: 'left', cursor: 'pointer', borderRadius: 3, border: `1px solid ${t.critical ? 'var(--warning)' : c.border}`, background: c.track, color: 'var(--text)', boxShadow: t.id === selectedTaskId ? '0 0 0 2px var(--tint-blue-border)' : undefined }}
                   >
                     {t.title}
                   </button>

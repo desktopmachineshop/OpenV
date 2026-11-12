@@ -186,7 +186,7 @@ export function TreeDiagram<T>(p: TreeDiagramProps<T>): React.ReactElement {
                   strokeDasharray={e.style?.dashed ? '4 3' : undefined}
                 />
                 {e.style?.label && (
-                  <text x={e.labelX} y={e.labelY} textAnchor="middle" fontSize={11} fill={e.style.color ?? 'var(--text-muted)'}>
+                  <text x={e.labelX} y={e.labelY} textAnchor="middle" fontSize={12} fill={e.style.color ?? 'var(--text-muted)'}>
                     {e.style.label}
                   </text>
                 )}
@@ -278,7 +278,7 @@ export function TreeDiagram<T>(p: TreeDiagramProps<T>): React.ReactElement {
                     width: 36,
                     top: n.y + m.boxHeight / 2 - 8,
                     textAlign: n.side === 'left' ? 'right' : 'left',
-                    fontSize: 11,
+                    fontSize: 12,
                     color: 'var(--text-muted)',
                     pointerEvents: 'none',
                   }}

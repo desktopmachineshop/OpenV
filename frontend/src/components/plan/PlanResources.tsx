@@ -62,7 +62,7 @@ export const PlanResources: React.FC<{
   useEffect(() => setCurrency(plan.currency), [plan.currency]);
   const over = plan.resources.filter((r) => r.overallocations.length > 0);
   const cell: React.CSSProperties = { padding: '6px 8px', borderBottom: '1px solid var(--border-soft)', textAlign: 'left', verticalAlign: 'top', fontSize: 13 };
-  const head: React.CSSProperties = { ...cell, fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' };
+  const head: React.CSSProperties = { ...cell, fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' };
   return (
     <Modal title="Resources" width={760} onClose={onClose}>
       <div data-help-key="gantt.resources" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -59,6 +59,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   too: a group opens the project you last opened, and More lists the
   workspace's own pages.
 
+- **A calmer Gantt header and projects list.** The Gantt's header keeps how
+  you look at the plan (a **View** picker, **Critical path**, **Today** and
+  the zoom) and moves what changes it (Calendar, Resources, Tracking,
+  Recalculate) into one **Plan tools** menu, which turns red when someone
+  is over-allocated. The chart's small text and its fold arrows are larger.
+  On the projects page each project's four unlabelled icons are one **⋯**
+  menu of named actions, and a workspace with no activity yet no longer
+  shows an empty Activity panel.
+
 ### Maintenance updates
 
 - On Home, a suspect link's two buttons now say what they do, **Still valid**

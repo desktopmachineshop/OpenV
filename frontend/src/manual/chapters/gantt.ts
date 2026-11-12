@@ -14,6 +14,14 @@ task here, and a task added here is a card there: one title, one assignee,
 one due date. The plan adds what a schedule needs and a board does not: a
 start date, sub-tasks, and the relationships between tasks.
 
+On a computer the chart's header holds what changes how you look at the
+plan: the **View** picker, **Critical path**, **Today** and the zoom. What
+changes the plan itself is one step away in **Plan tools**: **Calendar**,
+**Resources**, **Tracking**, **Recalculate** and, while the critical path
+is marked, **List only the critical tasks**. Where this chapter says a
+button is above the chart, look in **Plan tools**. The button turns red
+and counts the people asked for more than they have.
+
 ## Reading the chart
 
 The outline on the left lists the tasks, numbered as an outline (1, 1.1,
@@ -548,7 +556,7 @@ relationships, with \`schedule_work_item\`, which also assigns it to a milestone
 
 ## Other views of the plan
 
-The row of views under the chart's header shows the same plan in other ways.
+The **View** picker at the start of the chart's header shows the same plan in other ways.
 
 - **Network** draws a box for each task and an arrow for each relationship, each task one column to the right of the tasks that drive it. Critical tasks have an amber border.
 - **Calendar** shows a month: each day lists the tasks that run on it and the milestones due, with the days the plan does not work shaded.

@@ -120,8 +120,8 @@ export const PlanNetwork: React.FC<{ plan: ProjectPlan; selectedTaskId: string; 
               <div style={{ ...ellipsis, fontSize: 12, fontWeight: 600 }}>
                 <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{t.wbs}</span> {t.title}
               </div>
-              <div style={{ ...ellipsis, fontSize: 11, color: 'var(--text-muted)' }}>{t.span_start ? spanLabel(t.span_start, t.span_end, plan.today) : 'Not scheduled'}</div>
-              <div style={{ fontSize: 11, color: t.late ? 'var(--danger-strong)' : 'var(--text-muted)' }}>
+              <div style={{ ...ellipsis, fontSize: 12, color: 'var(--text-muted)' }}>{t.span_start ? spanLabel(t.span_start, t.span_end, plan.today) : 'Not scheduled'}</div>
+              <div style={{ fontSize: 12, color: t.late ? 'var(--danger-strong)' : 'var(--text-muted)' }}>
                 {t.progress}%{t.float_days !== null && !t.done ? ` · float ${t.float_days}d` : ''}
               </div>
             </button>

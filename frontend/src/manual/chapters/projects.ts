@@ -44,14 +44,17 @@ of the rail on every page.
   verification stands behind them) and the share verified (their tests
   pass, or they are verified by hand). A project with no requirements yet
   says so instead. The project you opened last is marked with a blue edge.
-  Each row carries its action buttons:
+  The **⋯** button at the end of a row opens its actions by name:
 
-| Icon | Action |
+| Action | What it does |
 | --- | --- |
-| ⧉ | **Save as template** — snapshot this project as a reusable template |
-| ✎ | **Edit project** — rename it or change the description |
-| ↓ | **Download** — opens the download wizard (format, sections, attachments) |
-| ✕ | **Delete project** — removes the project and all its artifacts |
+| **Edit project** | rename it or change the description |
+| **Download** | opens the download wizard (format, sections, attachments) |
+| **Save as template** | snapshot this project as a reusable template |
+| **Delete project** | removes the project and all its artifacts |
+
+A workspace with no activity yet shows no Activity panel: **Needs you**
+takes the width until there is something to report.
 
 Click anywhere else on the row to open the project.
 
