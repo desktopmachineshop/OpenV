@@ -28,6 +28,16 @@ export const isoWeekday = (date: string): number => new Date(`${date}T00:00:00Z`
 
 export const addDays = (date: string, days: number): string => fromDay(toDay(date) + days);
 
+/**
+ * A day's ISO 8601 week number, 1 to 53: weeks start on Monday, and week 1
+ * is the one that holds the year's first Thursday.
+ */
+export const isoWeek = (date: string): number => {
+  const thursday = toDay(date) + 4 - isoWeekday(date);
+  const year = new Date(thursday * DAY_MS).getUTCFullYear();
+  return Math.floor((thursday - Math.round(Date.UTC(year, 0, 1) / DAY_MS)) / 7) + 1;
+};
+
 /** "3 Mar", with the year when it is not this plan's. */
 export const shortDate = (date: string | null, today?: string): string => {
   if (!date) return '';
@@ -158,7 +168,8 @@ export const buildTicks = (scale: Scale, workingDays: number[] = [1, 2, 3, 4, 5]
       }
     } else {
       for (let day = scale.first; day <= scale.last; day += 7) {
-        push(lower, String(day), String(new Date(day * DAY_MS).getUTCDate()), day, day + 7);
+        // A week by its Monday, with its week number: "9 (W46)".
+        push(lower, String(day), `${new Date(day * DAY_MS).getUTCDate()} (W${isoWeek(fromDay(day))})`, day, day + 7);
       }
     }
   } else if (scale.zoom === 'months') {

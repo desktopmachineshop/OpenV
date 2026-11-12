@@ -21,6 +21,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   plan's scheduling mode and whether a new task's effort decides its
   duration, so you no longer set that task by task.
 
+### Maintenance updates
+
+- **Projects on Home show their hierarchy.** A project with a parent is
+  listed under it, indented, and the arrow before a parent folds its
+  children away. The fold is remembered in your browser.
+- **Week numbers in the weeks views.** At the Weeks scale the Gantt labels
+  each week with its ISO week number, as in *9 (W46)*, and the Calendar
+  shows it beside each Monday.
+
 ### Bug fixes
 
 - **The Gantt's Import button lines up.** **Import…** sat a few pixels

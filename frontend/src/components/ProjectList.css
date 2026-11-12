@@ -363,6 +363,14 @@
   gap: 5px;
 }
 
+/* The projects as a hierarchy: what is under a project's name lines up
+   with the name, past the fold button. */
+.projects-grid.is-tree .project-description,
+.projects-grid.is-tree .project-meters,
+.projects-grid.is-tree .project-footer {
+  margin-left: 24px;
+}
+
 .projects-grid.is-rows .project-card:last-child {
   border-bottom: none;
 }
