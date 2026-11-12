@@ -374,7 +374,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                   borderColor: allowedTools.length === 0 ? 'var(--danger)' : undefined,
                 }}
               />
-              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                 {allowedTools.length === 0
                   ? 'Required: an empty list means the vendor CLI runs with every tool it has, so the agent cannot be saved without one.'
                   : 'mcp__openv__* grants the OpenV tools. Add vendor tools (Read, Edit, WebSearch…) only where this agent needs them.'}

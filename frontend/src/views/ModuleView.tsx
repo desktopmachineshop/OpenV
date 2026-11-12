@@ -624,6 +624,9 @@ export const ModuleView: React.FC = () => {
     setError('');
   };
 
+  // On a wide screen a new artifact is written in the document pane, beside
+  // the list it will join; stacked, its form sits above the list.
+  const creatingInPane = isCreating && !stacked && !isBaselineView;
   const activeArtifacts = isBaselineView ? (baselineData?.artifacts || []) : artifacts;
   const activeLinks = isBaselineView ? (baselineData?.links || []) : allLinks;
 
@@ -1064,7 +1067,22 @@ export const ModuleView: React.FC = () => {
         {/* The document and its editor read at the measure on a wide screen;
             the column itself keeps the notes handle at the window's edge. */}
         <div className={stacked ? undefined : 'measure'} style={{ width: '100%' }}>
-        {!isBaselineView && isEditing && editingArtifact && (
+        {creatingInPane && (
+          <ArtifactEditor
+            artifacts={artifacts}
+            projectId={projectId}
+            initialData={pendingCreateContext ?? undefined}
+            onSave={handleCreateArtifact}
+            onCancel={() => {
+              setIsCreating(false);
+              setPendingCreateContext(null);
+              setPendingCreatePlacement(null);
+              setError('');
+            }}
+          />
+        )}
+
+        {!isBaselineView && isEditing && editingArtifact && !creatingInPane && (
           <ArtifactEditor
             artifact={editingArtifact}
             artifacts={artifacts}
@@ -1095,7 +1113,7 @@ export const ModuleView: React.FC = () => {
           />
         )}
 
-        {selectedArtifact && !isEditing && (
+        {selectedArtifact && !isEditing && !creatingInPane && (
           <>
             <ArtifactHeader
               artifact={selectedArtifact}
@@ -1166,7 +1184,7 @@ export const ModuleView: React.FC = () => {
           </>
         )}
 
-        {!selectedArtifact && !isEditing && (
+        {!selectedArtifact && !isEditing && !creatingInPane && (
           <div className="card">
             <h3>No Artifact Selected</h3>
             <p>Select an artifact from the list to view details.</p>

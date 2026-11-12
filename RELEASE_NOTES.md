@@ -9,6 +9,20 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **An artifact's ⋯ menu.** The ⋯ button at the end of a requirements row
+  stays in view on a narrower window instead of sitting off the right edge
+  of the table, so opening it no longer slides the table sideways. The menu
+  always fits the screen (on a phone its last entries were cut off), and the
+  heavy lines between its entries are gone.
+- **+ New Artifact on a computer** opens its form in the panel on the right,
+  where editing happens, instead of in a short scrolling box above the table.
+- The labels under the icons of the left-hand rail are larger and easier to
+  read.
+- On a phone, the list of test cases in a test run no longer has a heavy
+  line above its first row.
+
 ## 0.32.1 — 2026-11-11
 
 Stable channel release since 2026-11-11.

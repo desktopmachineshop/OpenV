@@ -33,7 +33,7 @@ export const PhoneCaseList: React.FC<{
           minHeight: 56,
           padding: '8px 12px',
           border: 'none',
-          borderTop: i ? '1px solid var(--border-soft)' : undefined,
+          borderTop: i ? '1px solid var(--border-soft)' : 'none',
           background: 'var(--surface)',
           color: 'var(--text)',
           textAlign: 'left',

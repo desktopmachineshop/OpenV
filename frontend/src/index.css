@@ -645,7 +645,7 @@ textarea {
   background: none;
   color: var(--sidebar-text-dim);
   font: inherit;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.15;
   text-align: center;
@@ -701,7 +701,7 @@ textarea {
 }
 .ov-rail-flyout-title {
   padding: 4px 10px 8px;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -944,7 +944,7 @@ body.ov-has-rail {
 }
 .ov-topbar-help kbd {
   font: inherit;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
   padding: 0 5px;
   border: 1px solid var(--border);
