@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.34.0 — 2026-11-12
+
 ### New features
 
 - **Size a plan before you staff it.** A **planned resource** is a

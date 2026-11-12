@@ -2,6 +2,40 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.34.0",
+   "date": "2026-11-12",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Size a plan before you staff it.** A **planned resource** is a placeholder for someone you will choose later: add one by name in the plan's Resources dialog, with a day rate and a capacity, and assign tasks to it like anyone else. The plan's cost, load, levelling and effort-driven durations count it, so a plan can be sized and costed before anyone is named. When you know who it is, **Staff with…** hands its tasks to that person or agent. **Defaults**, in Plan tools, sets the plan's scheduling mode and whether a new task's effort decides its duration, so you no longer set that task by task.",
+      "**Milestones can wait for tasks, and take their date from them.** In a milestone's panel, **Waits for** lists the tasks that must finish before it; add one there, or drag a link from a task's bar onto the milestone's diamond, and the chart draws a line to it. **Its date is** chooses between **Fixed**, the date you give it, and **By the plan**, the day the last of those tasks finishes, so the milestone moves when the work does. A fixed milestone flags any task that finishes after it."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**Projects on Home show their hierarchy.** A project with a parent is listed under it, indented, and the arrow before a parent folds its children away. The fold is remembered in your browser.",
+      "**Week numbers in the weeks views.** At the Weeks scale the Gantt labels each week with its ISO week number, as in *9 (W46)*, and the Calendar shows it beside each Monday."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**A parent task's float follows its sub-tasks.** A task with sub-tasks that nothing was linked to showed float all the way to the plan's last day, even when the sub-tasks under it were critical. Its float is now the least of its sub-tasks', so a parent over critical work shows none.",
+      "**A task with sub-tasks can no longer be linked.** It is one of its sub-tasks that another task waits for, so the Gantt no longer offers a parent in a task's relationships or as the end of a dragged link, and its own panel says to link the sub-task. Relationships a parent already has stay until you remove them.",
+      "**The Gantt's Import button lines up.** **Import…** sat a few pixels higher than **Add task**, **Add milestone** and **Export…** beside it; the four are level now.",
+      "**Critical path works in every view of the plan.** The button used to change the Gantt only. It now turns the amber marking on and off in the Network, the Calendar, the Timeline and All projects too, and Resource usage underlines the weeks in which someone has critical work.",
+      "**The critical path is the top row of the Timeline and of All projects**, instead of sitting wherever its dates happened to pack it.",
+      "**The Calendar follows the time scale.** Days shows a week with every task of each day, Weeks four weeks, Months a month and Quarters a quarter; the arrows step by that much and **Today** returns to the present. Before, the scale did nothing there.",
+      "**The Timeline and All projects scroll.** Both squeezed the whole plan into the page's width, so a long plan became unreadable. They are now drawn on the Gantt's time scale, under the same rows of dates, and scroll sideways; in All projects the projects' names stay in place.",
+      "**The time scale works in every view that has time.** Besides the Calendar, Days, Weeks, Months and Quarters now set how wide the Timeline and All projects are drawn and whether Resource usage counts by day, week, month or quarter. The Network has no time axis, so the scale is not offered there."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.33.0",
    "date": "2026-11-12",
    "stableSince": "2026-11-12",
