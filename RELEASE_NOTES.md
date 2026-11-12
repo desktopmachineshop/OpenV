@@ -24,6 +24,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   task of each day, Weeks four weeks, Months a month and Quarters a
   quarter; the arrows step by that much and **Today** returns to the
   present. Before, the scale did nothing there.
+- **The Timeline and All projects scroll.** Both squeezed the whole plan
+  into the page's width, so a long plan became unreadable. They are now
+  drawn on the Gantt's time scale, under the same rows of dates, and
+  scroll sideways; in All projects the projects' names stay in place.
+- **The time scale works in every view that has time.** Besides the
+  Calendar, Days, Weeks, Months and Quarters now set how wide the
+  Timeline and All projects are drawn and whether Resource usage counts by
+  day, week, month or quarter. The Network has no time axis, so the scale
+  is not offered there.
 
 ## 0.33.0 — 2026-11-12
 

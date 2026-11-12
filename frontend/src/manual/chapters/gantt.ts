@@ -558,10 +558,10 @@ relationships, with \`schedule_work_item\`, which also assigns it to a milestone
 
 The **View** picker at the start of the chart's header shows the same plan in other ways.
 
-- **Network** draws a box for each task and an arrow for each relationship, each task one column to the right of the tasks that drive it.
+- **Network** draws a box for each task and an arrow for each relationship, each task one column to the right of the tasks that drive it. It has no time axis, so the time scale is not offered there.
 - **Calendar** lists, on each day, the tasks that run on it and the milestones due, with the days the plan does not work shaded. The time scale chooses how much it shows: **Days** a week, with every task of each day; **Weeks** four weeks; **Months** a month; **Quarters** the three months of a quarter. The arrows step by that much, and **Today** returns to the present.
-- **Resource usage** lists each person and agent with work on the plan and the days of their time each week asks for. A week that asks for more than they can give is red.
-- **Timeline** fits the top-level tasks and the milestones on one band across the page. The critical path is its top row.
+- **Resource usage** lists each person and agent with work on the plan and the days of their time each column asks for. The time scale makes a column a day, a week, a month or a quarter. A column that asks for more than they can give is red.
+- **Timeline** draws the top-level tasks and the milestones on one band, under the same two rows of dates as the Gantt. The time scale sets how wide a day is, and the band scrolls sideways when the plan is longer than the page, so a long plan stays readable. **Today** scrolls it to the present. The critical path is its top row.
 
 **Critical path** in the header works in every view. While it is on, critical tasks have an amber border in the Network, the Calendar (which lists them first in a day), the Timeline and All projects, and Resource usage underlines in amber the weeks in which someone has critical work. While it is off, no view marks them.
 
@@ -569,7 +569,7 @@ Select a task in any of them to open its panel.
 
 ## All projects, and links between them
 
-**All projects** shows the plan of every project of the workspace that you can read, each on a line with its top-level tasks, its milestones and its progress. Each project's critical path is the top row of its line. A project's name opens its Gantt.
+**All projects** shows the plan of every project of the workspace that you can read, each on a line with its top-level tasks, its milestones and its progress. Each project's critical path is the top row of its line. The lines share one time scale and scroll sideways together, while the projects' names stay in place. A project's name opens its Gantt.
 
 A task can wait on a task of another project of the same workspace. In the task's panel, under **Other projects**, choose **Wait on a task of another project**, then the project, the task, the relationship and an offset. The task then follows the other one when the plan is recalculated, or at once on an automatic plan. The other project's task is never moved from here, and it is not a row of this plan: it is named on the task it is linked to, in both projects, and under **Links between projects** in All projects. A link whose dates are broken is marked.
 

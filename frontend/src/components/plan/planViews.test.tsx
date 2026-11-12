@@ -4,7 +4,7 @@ import type { PlanTask, ProjectPlan } from '../../api/client';
 import { lanes, PlanTimeline, type Bar } from './PlanLines';
 import { calendarRange, PlanMonth } from './PlanMonth';
 import { PlanNetwork } from './PlanNetwork';
-import { PlanUsage } from './PlanUsage';
+import { PlanUsage, usageColumns } from './PlanUsage';
 
 // The views of the plan other than the Gantt: each answers the Critical path
 // button, the timeline keeps the critical path on its top row, and the
@@ -121,6 +121,36 @@ describe('PlanNetwork and PlanUsage', () => {
     container.remove();
     await mount(<PlanUsage plan={plan} showCritical={false} />);
     expect(container.querySelectorAll('td[data-critical]')).toHaveLength(0);
+  });
+});
+
+describe('the time scale in the other views', () => {
+  it('buckets Resource usage by day, week, month or quarter', async () => {
+    expect(usageColumns('weeks', '2026-11-02', '2026-12-20')).toHaveLength(7);
+    expect(usageColumns('months', '2026-11-02', '2026-12-20')).toEqual([
+      { start: '2026-11-01', end: '2026-11-30' },
+      { start: '2026-12-01', end: '2026-12-31' },
+    ]);
+    expect(usageColumns('quarters', '2026-11-02', '2026-12-20')).toHaveLength(1);
+    await mount(<PlanUsage plan={plan} zoom="months" />);
+    const heads = Array.from(container.querySelectorAll('thead th')).map((th) => th.textContent);
+    expect(heads).toEqual(['Who · days asked each month', 'Nov 2026', 'Dec 2026']);
+    // Order steel: ten working days, all in November.
+    expect(Array.from(container.querySelectorAll('tbody td')).map((td) => td.textContent)).toEqual(['10', '']);
+  });
+
+  it('draws the Timeline at the scale, so a long plan scrolls instead of squeezing', async () => {
+    const paint = () => Array.from(container.querySelectorAll<HTMLElement>('[data-plan-view="timeline"] button')).find((b) => b.textContent === 'Paint')!;
+    // A bar's width is its days at the scale's pixels a day: Paint runs 12 days.
+    await mount(<PlanTimeline plan={plan} onSelectTask={() => {}} zoom="quarters" />);
+    expect(parseFloat(paint().style.width)).toBeCloseTo(19.2);
+    act(() => root.unmount());
+    container.remove();
+    await mount(<PlanTimeline plan={plan} onSelectTask={() => {}} zoom="days" />);
+    expect(paint().style.width).toBe('360px');
+    const view = container.querySelector<HTMLElement>('[data-plan-view="timeline"]')!;
+    expect(view.style.overflow).toBe('auto');
+    expect(parseFloat(container.querySelector<HTMLElement>('[data-plan-ticks]')!.style.width)).toBeGreaterThan(window.innerWidth);
   });
 });
 
