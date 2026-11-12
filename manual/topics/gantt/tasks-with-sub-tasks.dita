@@ -3,7 +3,7 @@
 <concept id="tasks-with-sub-tasks">
   <title>Tasks with sub-tasks</title>
   <conbody>
-    <p>A task with sub-tasks is a folder for them, and has no dates of its own. It starts when its first sub-task starts and finishes when its last one finishes; its duration is the working days between the two, and its effort is its sub-tasks' effort added up. Its panel shows these, with no fields to set, and its bar does not drag: schedule the sub-tasks to move it. Dates a task had before it was given sub-tasks are no longer used.</p>
+    <p>A task with sub-tasks is a folder for them, and has no dates of its own. It starts when its first sub-task starts and finishes when its last one finishes; its duration is the working days between the two, and its effort is its sub-tasks' effort added up. Its panel shows these, with no fields to set, and its bar does not drag: schedule the sub-tasks to move it. Dates a task had before it was given sub-tasks are no longer used. Its float is the least of its sub-tasks': it has no room when one of them has none. It cannot be linked to another task, since it is one of its sub-tasks that the other task waits for: link that sub-task. A relationship it was given before stays until you remove it.</p>
     <p>Fold a task with the arrow in the outline and its bar stands for everything under it:</p>
     <ul>
       <li>A relationship between one of its sub-tasks and a task outside it is still drawn. The arrow leaves or lands on the folded bar at the point along it where the sub-task's own start or finish falls, marked with a small dot, so an arrow from a sub-task that finishes halfway through leaves the bar halfway along.</li>

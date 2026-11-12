@@ -2034,3 +2034,90 @@ func TestAPlannedResourceSizesThePlanAndIsStaffedLater(t *testing.T) {
 		t.Fatalf("removed: %v %+v", err, repo.assignments["c"])
 	}
 }
+
+// A task with sub-tasks has no work of its own to slip: its float is the
+// least of its sub-tasks', whatever it is linked to itself. Before, a
+// parent nothing waited for could "slip" to the plan's last day while the
+// sub-tasks under it were critical.
+func TestAParentTasksFloatIsTheLeastOfItsSubtasks(t *testing.T) {
+	// phase1 holds design 1-5 and build 6-12 (after design); phase2 holds
+	// test 13-20 (after build), the last task, and docs 13-15, which
+	// nothing waits for. Nothing is linked to either phase.
+	mk := func(id, start, end, parent string, age int) (*workitems.WorkItem, *TaskSchedule) {
+		sc := &TaskSchedule{WorkItemID: id, StartDate: sp("2027-03-" + start)}
+		if parent != "" {
+			sc.ParentID = sp(parent)
+		}
+		return item(id, id, workitems.ColumnTodo, day("2027-03-"+end), age), sc
+	}
+	in := Inputs{WorkingDays: everyDay}
+	for i, r := range [][4]string{
+		{"phase1", "01", "12", ""}, {"design", "01", "05", "phase1"}, {"build", "06", "12", "phase1"},
+		{"phase2", "13", "20", ""}, {"test", "13", "20", "phase2"}, {"docs", "13", "15", "phase2"},
+		{"spare", "01", "03", ""}, {"note", "01", "03", "spare"},
+	} {
+		it, sc := mk(r[0], r[1], r[2], r[3], i)
+		in.Items, in.Schedules = append(in.Items, it), append(in.Schedules, sc)
+	}
+	in.Dependencies = []Dependency{
+		{WorkItemID: "build", DependsOnID: "design", Type: RelFinishToStart},
+		{WorkItemID: "test", DependsOnID: "build", Type: RelFinishToStart},
+	}
+	p := Build(in, now)
+	for id, want := range map[string]int{
+		"design": 0, "build": 0, "test": 0, "docs": 5, "note": 17,
+		"phase1": 0,  // not the 8 days to the plan's end: its sub-tasks are critical
+		"phase2": 0,  // the least of test (0) and docs (5)
+		"spare":  17, // its one sub-task can slip to the plan's last day, and so can it
+	} {
+		if got := task(p, id); got.FloatDays == nil || *got.FloatDays != want {
+			t.Errorf("%s: float %v, want %d", id, got.FloatDays, want)
+		}
+	}
+	for _, id := range []string{"phase1", "phase2"} {
+		if got := task(p, id); got.Critical || !got.CriticalSubtasks || got.FloatUntil != nil {
+			t.Errorf("%s: the path runs through it, it is not marked itself, and it has no room to draw: %+v", id, got)
+		}
+	}
+	// A relationship an older plan gave a parent can only take float away.
+	in.Dependencies = append(in.Dependencies, Dependency{WorkItemID: "docs", DependsOnID: "spare", Type: RelFinishToStart})
+	// Spare drives docs: nine days until docs starts, and docs' own five.
+	if got := task(Build(in, now), "spare"); *got.FloatDays != 14 {
+		t.Errorf("spare drives docs: float %d, want 14, less than its sub-task's 17", *got.FloatDays)
+	}
+}
+
+// A task with sub-tasks cannot be linked: it is one of its sub-tasks that
+// another task waits for. A relationship it already had stays.
+func TestATaskWithSubtasksCannotBeLinked(t *testing.T) {
+	svc, repo, _, _ := newService()
+	if err := svc.Schedule("b", ScheduleRequest{ParentID: sp("a")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	for name, err := range map[string]error{
+		"the parent waits":      svc.Relate("a", "c", RelFinishToStart, false, 0, ""),
+		"the parent drives":     svc.Relate("a", "c", RelFinishToStart, true, 0, ""),
+		"from the other end":    svc.Relate("c", "a", RelFinishToStart, false, 0, ""),
+		"through the schedule":  svc.Schedule("c", ScheduleRequest{DependsOn: &[]string{"a"}}, "tester"),
+		"the parent's schedule": svc.Schedule("a", ScheduleRequest{DependsOn: &[]string{"c"}}, "tester"),
+	} {
+		if !errors.Is(err, ErrParentRelationship) {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	if len(repo.deps) != 0 {
+		t.Fatalf("nothing was linked: %+v", repo.deps)
+	}
+	// Its sub-task links as any task does.
+	if err := svc.Relate("c", "b", RelFinishToStart, false, 0, ""); err != nil {
+		t.Fatal(err)
+	}
+	// C gains a sub-task after it was linked: saving its schedule again
+	// keeps the relationship it had.
+	if err := svc.Schedule("a", ScheduleRequest{ParentID: sp("c")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Schedule("c", ScheduleRequest{DependsOn: &[]string{"b"}}, "tester"); err != nil {
+		t.Fatalf("a relationship it already had: %v", err)
+	}
+}

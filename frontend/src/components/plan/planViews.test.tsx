@@ -4,6 +4,7 @@ import type { PlanTask, ProjectPlan } from '../../api/client';
 import { lanes, PlanTimeline, type Bar } from './PlanLines';
 import { calendarRange, PlanMonth } from './PlanMonth';
 import { PlanNetwork } from './PlanNetwork';
+import { buildScale, buildTicks, isoWeek } from './ganttScale';
 import { PlanUsage, usageColumns } from './PlanUsage';
 
 // The views of the plan other than the Gantt: each answers the Critical path
@@ -151,6 +152,39 @@ describe('the time scale in the other views', () => {
     const view = container.querySelector<HTMLElement>('[data-plan-view="timeline"]')!;
     expect(view.style.overflow).toBe('auto');
     expect(parseFloat(container.querySelector<HTMLElement>('[data-plan-ticks]')!.style.width)).toBeGreaterThan(window.innerWidth);
+  });
+});
+
+describe('week numbers', () => {
+  it('counts ISO weeks: Monday to Sunday, week 1 holding the first Thursday', () => {
+    expect(isoWeek('2026-11-09')).toBe(46);
+    expect(isoWeek('2026-11-15')).toBe(46);
+    expect(isoWeek('2026-11-16')).toBe(47);
+    // 1 January 2027 is a Friday: still the last week of 2026, which has 53.
+    expect(isoWeek('2027-01-01')).toBe(53);
+    expect(isoWeek('2027-01-04')).toBe(1);
+    // 30 December 2024 is the Monday of week 1 of 2025.
+    expect(isoWeek('2024-12-30')).toBe(1);
+  });
+
+  it('labels each week of the Gantt at the weeks scale with its number, and no other scale', () => {
+    const weeks = buildTicks(buildScale('weeks', '2026-11-02', '2026-12-20', '2026-11-12')).lower;
+    expect(weeks.map((t) => t.label)).toEqual(expect.arrayContaining(['9 (W46)', '16 (W47)', '28 (W53)']));
+    expect(weeks.every((t) => /^\d+ \(W\d+\)$/.test(t.label))).toBe(true);
+    expect(buildTicks(buildScale('days', '2026-11-02', '2026-11-20', '2026-11-12')).lower.some((t) => t.label.includes('W'))).toBe(false);
+  });
+
+  it('gives each Monday of the Calendar its week number in the week views only', async () => {
+    const weekOf = (day: string) => container.querySelector(`[data-day="${day}"] [data-week]`)?.textContent;
+    await mount(<PlanMonth plan={plan} selectedTaskId="" onSelectTask={() => {}} zoom="weeks" />);
+    expect(weekOf('2026-11-09')).toBe(' (W46)');
+    expect(weekOf('2026-11-16')).toBe(' (W47)');
+    expect(weekOf('2026-11-10')).toBeUndefined();
+    expect(container.querySelectorAll('[data-week]')).toHaveLength(4);
+    act(() => root.unmount());
+    container.remove();
+    await mount(<PlanMonth plan={plan} selectedTaskId="" onSelectTask={() => {}} zoom="months" />);
+    expect(container.querySelector('[data-week]')).toBeNull();
   });
 });
 

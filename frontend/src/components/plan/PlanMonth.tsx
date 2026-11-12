@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import type { PlanTask, ProjectPlan } from '../../api/client';
 import { buttonStyle, ellipsis } from '../ui';
-import { addDays, isoWeekday, type Zoom } from './ganttScale';
+import { addDays, isoWeek, isoWeekday, type Zoom } from './ganttScale';
 import { BAR_COLORS, WEEKDAYS, barTone, worksOn } from './planModel';
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -125,6 +125,8 @@ export const PlanMonth: React.FC<{
               >
                 <span style={{ fontSize: 12, fontWeight: day === plan.today ? 700 : 400, color: day === plan.today ? 'var(--danger-strong)' : 'var(--text-muted)' }}>
                   {block.month === undefined && Number(day.slice(8)) === 1 ? dayLabel(day) : Number(day.slice(8))}
+                  {/* A week's Monday carries its week number, where weeks are what is shown. */}
+                  {block.month === undefined && isoWeekday(day) === 1 && <span data-week={isoWeek(day)} style={{ fontWeight: 400, color: 'var(--text-muted)' }}> (W{isoWeek(day)})</span>}
                 </span>
                 {due.map((m) => (
                   <span key={m.key} title={m.name} style={{ ...ellipsis, fontSize: 12, color: 'var(--text-secondary)' }}>

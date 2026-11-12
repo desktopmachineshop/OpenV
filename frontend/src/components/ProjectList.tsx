@@ -53,6 +53,7 @@ import { COMPACT_LAYOUT_FEATURE, REDESIGN_PAGES_FEATURE, TODOS_FEATURE } from '.
 import { NewProjectAction, ProjectCount, ProjectMeters } from './ProjectListFigures';
 import { ProjectListHome } from './ProjectListHome';
 import { ProjectActions } from './ProjectListActions';
+import { ProjectFold, projectRows, useFoldedProjects } from './ProjectListTree';
 import { useUiRefresh } from '../hooks/useUiRefresh';
 import { loadWorkspaceHome, type WorkspaceHomeData } from './ProjectListHomeLoad';
 import { COMMENT_READS_FEATURE } from './noteReadState';
@@ -117,6 +118,11 @@ export const ProjectList: React.FC = () => {
   // traced and verified share (ProjectListHome, ProjectListHomeLoad).
   const homeDesign = useFeature(REDESIGN_PAGES_FEATURE);
   const refresh = useUiRefresh();
+  // The projects as a hierarchy, children indented under their parent, on
+  // the redesigned Home of the refreshed interface; a flat list otherwise.
+  const [folded, toggleFold] = useFoldedProjects();
+  const tree = homeDesign && refresh;
+  const rows = React.useMemo(() => (tree ? projectRows(projects, folded) : projects.map((project) => ({ project, depth: 0, below: 0, folded: false }))), [tree, projects, folded]);
   const todosOn = useFeature(TODOS_FEATURE);
   const commentReadsOn = useFeature(COMMENT_READS_FEATURE);
   const meId = useAppStore((s) => s.currentUser?.id || null);
@@ -695,7 +701,7 @@ export const ProjectList: React.FC = () => {
         <div className="loading">Loading projects...</div>
       ) : (
         <>
-          <div className={homeDesign ? 'projects-grid is-rows' : 'projects-grid'} data-help-key={homeDesign ? 'home.projects' : undefined}>
+          <div className={homeDesign ? `projects-grid is-rows${tree ? ' is-tree' : ''}` : 'projects-grid'} data-help-key={homeDesign ? 'home.projects' : undefined}>
             {homeDesign && projects.length > 0 && (
               <PanelHeader title="Projects" count={projects.length} action={<NewProjectAction onClick={() => { setCreateMode('blank'); setIsCreating(true); }} />} />
             )}
@@ -740,14 +746,17 @@ export const ProjectList: React.FC = () => {
                 </div>
               </div>
             ) : (
-              projects.map((project) => (
+              rows.map(({ project, ...row }) => (
                 <div
                   key={project.id}
                   className={`project-card ${projectId === project.id ? 'selected' : ''}`}
+                  style={tree && row.depth ? { paddingLeft: 12 + row.depth * 20 } : undefined}
                   onClick={() => handleSelectProject(project.id)}
                 >
                   <div className="project-card-header">
+                    {tree && <ProjectFold row={{ project, ...row }} onToggle={toggleFold} />}
                     <h3>{project.name}</h3>
+                    {tree && row.folded && <span className="project-count">+{row.below} folded</span>}
                     {homeDesign && <ProjectCount figures={figures[project.id]} />}
                     <ProjectActions
                       name={project.name}

@@ -271,6 +271,7 @@ export const TaskBar: React.FC<{
         aria-label={label}
         title={label}
         data-task-bar={task.id}
+        data-task-summary={task.subtasks_total > 0 ? "" : undefined}
         onClick={() => {
           if (!dragged.current) onSelect();
           dragged.current = false;

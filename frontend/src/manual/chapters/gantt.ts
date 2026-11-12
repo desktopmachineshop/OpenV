@@ -58,7 +58,7 @@ milestone, with its name and progress. The thin band leading up to a
 diamond, from the milestone before it, fills as that milestone's criteria
 are met. The red vertical line is today.
 
-**Days**, **Weeks**, **Months** and **Quarters** change the scale. The page
+**Days**, **Weeks**, **Months** and **Quarters** change the scale (**Weeks** numbers each week, as in *9 (W46)*). The page
 opens at the scale that shows the whole plan, on the whole plan. A plan too
 long to fit opens with today a third of the way in from the left, so that
 most of what you see is ahead of you.
@@ -125,7 +125,7 @@ starts when its first sub-task starts and finishes when its last one
 finishes; its duration is the working days between the two, and its effort
 is its sub-tasks' effort added up. Its panel shows these, with no fields to
 set, and its bar does not drag: schedule the sub-tasks to move it. Dates a
-task had before it was given sub-tasks are no longer used.
+task had before it was given sub-tasks are no longer used. Its float is the least of its sub-tasks': it has no room when one of them has none. It cannot be linked to another task, since it is one of its sub-tasks that the other task waits for: link that sub-task. A relationship it was given before stays until you remove it.
 
 Fold a task with the arrow in the outline and its bar stands for everything
 under it:
@@ -566,7 +566,7 @@ relationships, with \`schedule_work_item\`, which also assigns it to a milestone
 The **View** picker at the start of the chart's header shows the same plan in other ways.
 
 - **Network** draws a box for each task and an arrow for each relationship, each task one column to the right of the tasks that drive it. It has no time axis, so the time scale is not offered there.
-- **Calendar** lists, on each day, the tasks that run on it and the milestones due, with the days the plan does not work shaded. The time scale chooses how much it shows: **Days** a week, with every task of each day; **Weeks** four weeks; **Months** a month; **Quarters** the three months of a quarter. The arrows step by that much, and **Today** returns to the present.
+- **Calendar** lists, on each day, the tasks that run on it and the milestones due, with the days the plan does not work shaded. The time scale chooses how much it shows: **Days** a week, with every task of each day; **Weeks** four weeks, each Monday with its week number, as in *9 (W46)*; **Months** a month; **Quarters** the three months of a quarter. The arrows step by that much, and **Today** returns to the present.
 - **Resource usage** lists each person and agent with work on the plan and the days of their time each column asks for. The time scale makes a column a day, a week, a month or a quarter. A column that asks for more than they can give is red.
 - **Timeline** draws the top-level tasks and the milestones on one band, under the same two rows of dates as the Gantt. The time scale sets how wide a day is, and the band scrolls sideways when the plan is longer than the page, so a long plan stays readable. **Today** scrolls it to the present. The critical path is its top row.
 

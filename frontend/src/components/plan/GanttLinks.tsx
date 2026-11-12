@@ -186,7 +186,8 @@ export const useLinkDrag = (body: React.RefObject<HTMLElement | null>, onLink?: 
       const bar = (document.elementFromPoint?.(e.clientX, e.clientY) as HTMLElement | null)?.closest<HTMLElement>('[data-task-bar]');
       const id = bar?.dataset.taskBar;
       let over: LinkDrag['over'] = null;
-      if (bar && id && id !== d.fromId) {
+      // A task with sub-tasks takes no link: its sub-tasks do.
+      if (bar && id && id !== d.fromId && bar.dataset.taskSummary === undefined) {
         const box = bar.getBoundingClientRect();
         over = { id, end: e.clientX < box.left + box.width / 2 ? 'start' : 'end' };
       }

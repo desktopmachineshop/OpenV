@@ -324,6 +324,17 @@ describe('Plan page', () => {
     expect(container.querySelector('button[aria-label="Unfold Build the rig"]')?.getAttribute('aria-expanded')).toBe('false');
   });
 
+  it('offers no relationship on a task with sub-tasks, and no link handle on its bar', async () => {
+    await mount();
+    await click(container.querySelector('[data-task-bar="build"]'));
+    const panel = container.querySelector('aside[aria-label="Task Build the rig"]')!;
+    expect(panel.querySelector('#gantt-relationship-add')).toBeNull();
+    expect(panel.querySelector('[data-no-parent-links]')?.textContent).toContain('A task with sub-tasks is not linked');
+    expect(container.querySelector('[data-task-bar="build"]')!.hasAttribute('data-task-summary')).toBe(true);
+    expect(container.querySelector('[data-task-bar="wiring"]')!.hasAttribute('data-task-summary')).toBe(false);
+    expect(container.querySelector('[data-link-handle^="build:"]')).toBeNull();
+  });
+
   it('opens a task from its row, with its schedule, float, to-dos and relationships', async () => {
     await mount();
     await click(container.querySelector('[data-task-bar="wiring"]'));
@@ -345,7 +356,8 @@ describe('Plan page', () => {
     const parent = panel.querySelector('#gantt-parent') as HTMLSelectElement;
     expect(Array.from(parent.options).map((o) => o.value)).toEqual(['', 'build', 'frame', 'loose']);
     const add = panel.querySelector('#gantt-relationship-add') as HTMLSelectElement;
-    expect(Array.from(add.options).map((o) => o.value)).toEqual(['', 'build', 'loose']);
+    // Build has sub-tasks, so it is not offered: a task links to its sub-tasks.
+    expect(Array.from(add.options).map((o) => o.value)).toEqual(['', 'loose']);
 
     const section = panel.querySelector('[data-help-key="gantt.relationships"]')!;
     expect(section.querySelector('h3')?.textContent).toBe('Relationships · 1');

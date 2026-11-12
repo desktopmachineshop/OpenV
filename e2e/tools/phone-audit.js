@@ -335,7 +335,7 @@ const routes = [
   [/\/api\/v1\/projects\/p1\/review-queue/, { suspect_links: [{ ...links[1], from_title: 'Positioning accuracy', from_type: 'requirement', to_title: 'Cut aluminium parts without a machinist', to_type: 'user-need' }], in_review_artifacts: [artifacts[4], artifacts.find((a) => a.type === 'requirement' && a !== artifacts[4]) || artifacts[5]] }],
   [/\/api\/v1\/projects\/p1$/, project],
   [/\/api\/v1\/projects\/p1\//, []],
-  [/\/api\/v1\/projects$/, [project, { ...project, id: 'p2', name: 'Second project' }]],
+  [/\/api\/v1\/projects$/, [project, { ...project, id: 'p2', name: 'Second project', parent_project_id: 'p1' }, { ...project, id: 'p3', name: 'Spindle drive', parent_project_id: 'p2' }]],
   [/\/api\/v1\/artifacts\?/, (url) => { const t = new URL(url).searchParams.get('type'); return t ? artifacts.filter((a) => a.type === t) : artifacts; }],
   [/\/api\/v1\/artifacts\/[^/]+\/versions/, (url) => [byId[url.match(/artifacts\/([^/]+)\/versions/)[1]]]],
   [/\/api\/v1\/artifacts\/[^/]+\/quality/, { score: 96, band: 'good', findings: [] }],

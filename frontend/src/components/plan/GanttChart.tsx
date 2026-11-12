@@ -425,7 +425,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       showFloat={showCritical}
                       onSelect={() => onSelectTask(t)}
                       onReschedule={onReschedule ? (start, end) => onReschedule(t, start, end) : undefined}
-                      onLinkStart={onLink && !link && (pointed === t.id || t.id === selectedTaskId) ? (end, e) => beginLink(t.id, end, e) : undefined}
+                      onLinkStart={onLink && !link && t.subtasks_total === 0 && (pointed === t.id || t.id === selectedTaskId) ? (end, e) => beginLink(t.id, end, e) : undefined}
                     />
                   ) : (
                     <ScheduleTrack

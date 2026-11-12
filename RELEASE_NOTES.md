@@ -21,8 +21,26 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   plan's scheduling mode and whether a new task's effort decides its
   duration, so you no longer set that task by task.
 
+### Maintenance updates
+
+- **Projects on Home show their hierarchy.** A project with a parent is
+  listed under it, indented, and the arrow before a parent folds its
+  children away. The fold is remembered in your browser.
+- **Week numbers in the weeks views.** At the Weeks scale the Gantt labels
+  each week with its ISO week number, as in *9 (W46)*, and the Calendar
+  shows it beside each Monday.
+
 ### Bug fixes
 
+- **A parent task's float follows its sub-tasks.** A task with sub-tasks
+  that nothing was linked to showed float all the way to the plan's last
+  day, even when the sub-tasks under it were critical. Its float is now
+  the least of its sub-tasks', so a parent over critical work shows none.
+- **A task with sub-tasks can no longer be linked.** It is one of its
+  sub-tasks that another task waits for, so the Gantt no longer offers a
+  parent in a task's relationships or as the end of a dragged link, and
+  its own panel says to link the sub-task. Relationships a parent already
+  has stay until you remove them.
 - **The Gantt's Import button lines up.** **Import…** sat a few pixels
   higher than **Add task**, **Add milestone** and **Export…** beside it;
   the four are level now.

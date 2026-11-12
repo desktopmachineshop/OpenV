@@ -44,6 +44,9 @@ of the rail on every page.
   verification stands behind them) and the share verified (their tests
   pass, or they are verified by hand). A project with no requirements yet
   says so instead. The project you opened last is marked with a blue edge.
+  A project that has a parent (set under **Edit project**) is listed under
+  it, indented, and the arrow before a parent's name folds its children
+  away; the fold is remembered in this browser.
   The **⋯** button at the end of a row opens its actions by name:
 
 | Action | What it does |
