@@ -286,7 +286,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({ variant = 'l
           color: dark ? 'var(--sidebar-text-dim)' : 'var(--text)',
         }}
       >
-        <span aria-hidden="true" style={{ display: 'inline-flex' }}><NavIcon d={SHELL_ICONS.bell} size={20} /></span>
+        <span aria-hidden="true" style={{ display: 'flex', justifyContent: 'center' }}><NavIcon d={SHELL_ICONS.bell} size={20} /></span>
         {unread > 0 && (
           <span
             style={{
