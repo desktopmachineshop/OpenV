@@ -11,6 +11,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## 0.33.0 — 2026-11-12
 
+Stable channel release since 2026-11-12.
+
 ### New features
 
 - **One navigation on every screen.** A project's menu now runs in the order
