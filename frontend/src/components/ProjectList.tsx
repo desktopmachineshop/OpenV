@@ -52,6 +52,8 @@ import { useHelpShortcut } from '../hooks/useHelpShortcut';
 import { COMPACT_LAYOUT_FEATURE, REDESIGN_PAGES_FEATURE, TODOS_FEATURE } from '../features';
 import { NewProjectAction, ProjectCount, ProjectMeters } from './ProjectListFigures';
 import { ProjectListHome } from './ProjectListHome';
+import { ProjectActions } from './ProjectListActions';
+import { useUiRefresh } from '../hooks/useUiRefresh';
 import { loadWorkspaceHome, type WorkspaceHomeData } from './ProjectListHomeLoad';
 import { COMMENT_READS_FEATURE } from './noteReadState';
 import { useViewport } from '../hooks/useViewport';
@@ -114,6 +116,7 @@ export const ProjectList: React.FC = () => {
   // project picker, the Projects panel's rows with each project's size and
   // traced and verified share (ProjectListHome, ProjectListHomeLoad).
   const homeDesign = useFeature(REDESIGN_PAGES_FEATURE);
+  const refresh = useUiRefresh();
   const todosOn = useFeature(TODOS_FEATURE);
   const commentReadsOn = useFeature(COMMENT_READS_FEATURE);
   const meId = useAppStore((s) => s.currentUser?.id || null);
@@ -746,43 +749,14 @@ export const ProjectList: React.FC = () => {
                   <div className="project-card-header">
                     <h3>{project.name}</h3>
                     {homeDesign && <ProjectCount figures={figures[project.id]} />}
-                    <div className="project-actions">
-                      <button
-                        className="icon-btn template-btn"
-                        onClick={(e) => handleSaveTemplate(project, e)}
-                        title="Save as template"
-                      >
-                        ⧉
-                      </button>
-                      <button
-                        className="icon-btn edit-btn"
-                        onClick={(e) => handleEditProject(project, e)}
-                        title="Edit project"
-                      >
-                        ✎
-                      </button>
-                      <button
-                        className="icon-btn export-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDownloadProjectId(project.id);
-                        }}
-                        title="Download this project — choose a format, sections and attachments"
-                        data-help-key="projects.download"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        className="icon-btn delete-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteProject(project.id);
-                        }}
-                        title="Delete project"
-                      >
-                        ✕
-                      </button>
-                    </div>
+                    <ProjectActions
+                      name={project.name}
+                      menu={refresh}
+                      onTemplate={(e) => handleSaveTemplate(project, e)}
+                      onEdit={(e) => handleEditProject(project, e)}
+                      onDownload={() => setDownloadProjectId(project.id)}
+                      onDelete={() => handleDeleteProject(project.id)}
+                    />
                   </div>
                   {project.description && (
                     <p className="project-description">{project.description}</p>

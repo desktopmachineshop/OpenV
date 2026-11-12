@@ -34,7 +34,7 @@ export const WorkingDays: React.FC<{
               borderLeft: w.day > 1 ? '1px solid var(--border-soft)' : 'none',
               background: on ? 'var(--tint-blue)' : 'var(--surface-inset)',
               color: on ? 'var(--accent-text)' : 'var(--text-muted)',
-              fontSize: 11,
+              fontSize: 12,
               fontWeight: on ? 600 : 400,
               cursor: onChange && !busy && !last ? 'pointer' : 'default',
             }}

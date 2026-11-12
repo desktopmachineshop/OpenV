@@ -15,7 +15,7 @@ const cellStyle = (width: number): React.CSSProperties => ({ ...ellipsis, width,
 export const GridHead: React.FC<{ columns: ColumnSpec[] }> = ({ columns }) => (
   <>
     {columns.map((c) => (
-      <span key={c.key} role="columnheader" style={{ ...cellStyle(c.width), fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+      <span key={c.key} role="columnheader" style={{ ...cellStyle(c.width), fontSize: 12, fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
         {c.label}
       </span>
     ))}
@@ -101,7 +101,7 @@ export const GridCells: React.FC<{
                 if (e.key === 'Enter') commit();
                 if (e.key === 'Escape') setEditing(null);
               }}
-              style={{ width: c.width, flexShrink: 0, boxSizing: 'border-box', minHeight: 24, height: 24, padding: '0 2px', fontSize: 11 }}
+              style={{ width: c.width, flexShrink: 0, boxSizing: 'border-box', minHeight: 24, height: 24, padding: '0 2px', fontSize: 12 }}
             />
           );
         }

@@ -231,7 +231,7 @@ export const LinkBand: React.FC<{ link: LinkDrag }> = ({ link }) => {
       </svg>
       <span
         role="status"
-        style={{ position: 'absolute', left: link.x + 12, top: link.y - 28, zIndex: 5, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--surface)', color: view ? 'var(--text)' : 'var(--text-muted)', fontSize: 11, whiteSpace: 'nowrap', pointerEvents: 'none' }}
+        style={{ position: 'absolute', left: link.x + 12, top: link.y - 28, zIndex: 5, padding: '2px 8px', borderRadius: 4, border: '1px solid var(--border)', background: 'var(--surface)', color: view ? 'var(--text)' : 'var(--text-muted)', fontSize: 12, whiteSpace: 'nowrap', pointerEvents: 'none' }}
       >
         {view ? relationshipLabel(view.type) : 'Drop on the start or the end of another bar'}
       </span>

@@ -23,7 +23,7 @@ const hint: React.CSSProperties = {
   alignItems: 'center',
   padding: '0 8px',
   borderRadius: 4,
-  fontSize: 11,
+  fontSize: 12,
   whiteSpace: 'nowrap',
   pointerEvents: 'none',
 };

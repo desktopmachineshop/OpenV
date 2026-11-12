@@ -238,9 +238,10 @@ test('downloads the project as JSON through the wizard', async () => {
   const card = page.locator('.project-card').filter({ hasText: projectName });
   await expect(card).toBeVisible();
 
-  // One download button per project now, and the format is chosen in the
-  // wizard it opens rather than by picking a different button.
-  await card.getByTitle(/^Download this project/).click();
+  // A project's actions are one menu, and the format is chosen in the
+  // wizard Download opens rather than by picking a different button.
+  await card.getByRole('button', { name: `Actions for ${projectName}` }).click();
+  await card.getByRole('menuitem', { name: 'Download' }).click();
   const wizard = page.getByRole('dialog');
   await expect(wizard).toBeVisible();
   await wizard.getByText('JSON data').click();

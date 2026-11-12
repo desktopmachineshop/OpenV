@@ -1,9 +1,17 @@
 // The chart's panel on the Plan page (views/Gantt.tsx): its header with the
 // working days, the critical path switch, Today and the zoom; the chart; the
 // milestones that have no date yet; and a line on how to use it.
+//
+// In the refreshed interface (ui-refresh) the header is regrouped by what a
+// control acts on, so the chart starts higher: the view is a picker in the
+// header in place of a row of its own; what is looked at stays as buttons
+// (the critical path, Today, the zoom); and the plan's own tools (calendar,
+// resources, tracking, recalculate, only the critical tasks) sit behind one
+// Plan tools menu, which says when someone is overallocated.
 import React, { useState } from 'react';
 import type { PlanMilestone, PlanResourceLoad, ProjectPlan } from '../../api/client';
-import { Modal, PanelHeader, SegmentedControl, buttonStyle, mutedStyle, panelStyle } from '../ui';
+import { ActionMenu, Modal, PanelHeader, SegmentedControl, buttonStyle, mutedStyle, panelStyle } from '../ui';
+import { useUiRefresh } from '../../hooks/useUiRefresh';
 import { GanttChart, type GanttChartProps } from './GanttChart';
 import { PlanCalendar, type PlanSettingsChange } from './PlanCalendar';
 import type { PlanHistory } from './planHistory';
@@ -59,6 +67,9 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
   const [onlyLater, setOnlyLater] = useState(false);
   const [todaySignal, setTodaySignal] = useState(0);
   const undated = plan.milestones.filter((m) => !m.date);
+  // A touch screen has one view and no room for a menu's worth of tools.
+  const regroup = useUiRefresh() && !touch;
+  const over = plan.summary.overallocated;
   const openMilestone = onSelectMilestone;
   return (
         <section aria-label="Plan" style={{ ...panelStyle, flex: 1, minWidth: 0, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
@@ -66,6 +77,16 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
             title="Plan"
             action={
               <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                {regroup && (
+                  <select aria-label="View" data-help-key="gantt.views" value={mode} onChange={(e) => setMode(e.target.value as PlanMode)} style={{ width: 'auto', height: 28, padding: '0 8px', fontSize: 12 }}>
+                    {MODES.map((m) => (
+                      <option key={m.value} value={m.value}>
+                        {m.label}
+                      </option>
+                    ))}
+                  </select>
+                )}
+                {!regroup && <>
                 <button type="button" onClick={() => setCalendar(true)} data-help-key="gantt.holidays" title="Holidays, how the plan is scheduled, and when a task counts as critical" style={buttonStyle('secondary', { compact: true })}>
                   Calendar{plan.holidays.length ? ` · ${plan.holidays.length}` : ''}
                   {plan.scheduling_mode === 'auto' ? ' · auto' : ''}
@@ -95,6 +116,7 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
                 >
                   Recalculate
                 </button>
+                </>}
                 <button
                   type="button"
                   aria-pressed={showCritical}
@@ -109,7 +131,7 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
                   <span aria-hidden style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--warning)' }} />
                   Critical path
                 </button>
-                {showCritical && (
+                {showCritical && !regroup && (
                   <button
                     type="button"
                     aria-pressed={onlyCritical}
@@ -124,10 +146,30 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
                   Today
                 </button>
                 <SegmentedControl aria-label="Zoom" options={ZOOMS} value={zoom} onChange={onZoom} style={{ fontSize: 12 }} />
+                {regroup && (
+                  <ActionMenu
+                    label="Plan tools"
+                    triggerStyle={{
+                      ...buttonStyle('secondary', { compact: true }),
+                      ...(over ? { background: 'var(--tint-red)', borderColor: 'var(--danger)', color: 'var(--danger-strong)' } : {}),
+                    }}
+                    items={[
+                      { key: 'calendar', label: `Calendar${plan.holidays.length ? ` · ${plan.holidays.length}` : ''}${plan.scheduling_mode === 'auto' ? ' · auto' : ''}`, onSelect: () => setCalendar(true) },
+                      { key: 'resources', label: `Resources${over ? ` · ${over} over` : ''}`, onSelect: () => setResources(true) },
+                      { key: 'tracking', label: `Tracking${plan.baselines.length ? ` · ${plan.baselines.length}` : ''}`, onSelect: () => setTracking(true) },
+                      { key: 'recalculate', label: 'Recalculate…', disabled: busy, onSelect: () => setRecalculating(true) },
+                      ...(showCritical
+                        ? [{ key: 'only-critical', label: onlyCritical ? 'List every task' : 'List only the critical tasks', onSelect: () => setOnlyCritical((on) => !on) }]
+                        : []),
+                    ]}
+                  >
+                    Plan tools{over ? ` · ${over} over` : ''}
+                  </ActionMenu>
+                )}
               </span>
             }
           />
-          {!touch && (
+          {!touch && !regroup && (
             <div data-help-key="gantt.views" style={{ padding: '6px 12px', borderBottom: '1px solid var(--border-soft)' }}>
               <SegmentedControl aria-label="View" options={MODES} value={mode} onChange={setMode} style={{ fontSize: 12 }} />
             </div>

@@ -2,7 +2,7 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="other-views-of-the-plan">
   <title>Other views of the plan</title>
-  <shortdesc>The row of views under the chart's header shows the same plan in other ways.</shortdesc>
+  <shortdesc>The <b>View</b> picker at the start of the chart's header shows the same plan in other ways.</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="gantt.views"/>
   </prolog>

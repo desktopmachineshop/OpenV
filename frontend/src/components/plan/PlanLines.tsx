@@ -54,7 +54,7 @@ const Band: React.FC<{
       {milestones
         .filter((m) => m.date)
         .map((m) => (
-          <span key={m.key} title={`${m.name}, ${shortDate(m.date, today)}`} style={{ ...ellipsis, position: 'absolute', left: `${span.left(m.date!)}%`, top: 0, maxWidth: 160, fontSize: 11, color: m.met ? 'var(--success-text)' : m.late ? 'var(--danger-strong)' : 'var(--text-secondary)', transform: 'translateX(-5px)' }}>
+          <span key={m.key} title={`${m.name}, ${shortDate(m.date, today)}`} style={{ ...ellipsis, position: 'absolute', left: `${span.left(m.date!)}%`, top: 0, maxWidth: 160, fontSize: 12, color: m.met ? 'var(--success-text)' : m.late ? 'var(--danger-strong)' : 'var(--text-secondary)', transform: 'translateX(-5px)' }}>
             ◆ {m.name}
           </span>
         ))}
@@ -66,7 +66,7 @@ const Band: React.FC<{
             disabled={!onBar}
             onClick={() => onBar?.(b.id)}
             title={`${b.title}: ${spanLabel(b.start, b.end, today)}, ${b.progress}%`}
-            style={{ ...ellipsis, position: 'absolute', left: `${span.left(b.start!)}%`, width: `${Math.max(span.width(b.start!, b.end!), 0.6)}%`, top: 24 + i * 24, height: 20, boxSizing: 'border-box', padding: '0 6px', fontSize: 11, lineHeight: '18px', textAlign: 'left', cursor: onBar ? 'pointer' : 'default', borderRadius: 4, border: `1px solid ${b.critical ? 'var(--warning)' : b.late ? 'var(--danger)' : 'var(--border)'}`, color: 'var(--text)', background: `linear-gradient(90deg, ${b.done ? 'var(--success)' : 'var(--accent)'} ${b.progress}%, var(--surface-alt) ${b.progress}%)` }}
+            style={{ ...ellipsis, position: 'absolute', left: `${span.left(b.start!)}%`, width: `${Math.max(span.width(b.start!, b.end!), 0.6)}%`, top: 24 + i * 24, height: 20, boxSizing: 'border-box', padding: '0 6px', fontSize: 12, lineHeight: '18px', textAlign: 'left', cursor: onBar ? 'pointer' : 'default', borderRadius: 4, border: `1px solid ${b.critical ? 'var(--warning)' : b.late ? 'var(--danger)' : 'var(--border)'}`, color: 'var(--text)', background: `linear-gradient(90deg, ${b.done ? 'var(--success)' : 'var(--accent)'} ${b.progress}%, var(--surface-alt) ${b.progress}%)` }}
           >
             <span style={{ background: 'color-mix(in srgb, var(--surface) 70%, transparent)', borderRadius: 2, padding: '0 2px' }}>{b.title}</span>
           </button>
@@ -84,7 +84,7 @@ export const PlanTimeline: React.FC<{ plan: ProjectPlan; onSelectTask: (t: PlanT
   if (!plan.start) return <p style={{ ...mutedStyle, padding: 16, margin: 0 }}>Nothing is scheduled yet.</p>;
   return (
     <div data-plan-view="timeline" data-help-key="gantt.views" style={{ flex: 1, minHeight: 120, overflow: 'auto', padding: '12px 16px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-muted)', marginBottom: 6 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
         <span>{shortDate(plan.start, plan.today)}</span>
         <span>{shortDate(plan.end, plan.today)}</span>
       </div>

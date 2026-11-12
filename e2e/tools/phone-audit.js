@@ -17,9 +17,10 @@
 //   - page errors,
 //   - how much of the window is chrome: the height above the element a page
 //     marks data-page-content (where its own content starts) plus the tab
-//     bar below, in pixels and as a share of the window. Printed beside the
-//     screen's flags for the pages that carry the marker; a number to keep
-//     down, not a failure.
+//     bar below, in pixels and as a share of the window. A page with no
+//     marker is measured from the shell's <main>. Printed beside the
+//     screen's flags; a screen over CHROME_BUDGET percent of the window
+//     (default 35) fails the run.
 // It is the regression tool for the class of defect fixed in the phone
 // polish pass (docs/plans/mobile-support.md §8): run it after any layout
 // change and compare the summary with the previous run.
@@ -36,6 +37,7 @@
 //                  desktop:<profile+...> restricts the desktop pass, e.g.
 //                  desktop:laptop-1366+fhd-1920 (see DESKTOP_PROFILES)
 //   TAGS           comma list of screen tags to restrict the run
+//   CHROME_BUDGET  the most of the window chrome may take, in percent (default 35)
 //   CHROMIUM_PATH  executablePath override for Chromium
 //   SHOT_SIZE      exact-size screenshot mode for the PWA manifest's
 //                  screenshots, which must declare fixed pixel dimensions:
@@ -51,6 +53,7 @@ const { chromium, webkit, devices } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 const OUT = process.env.OUT || path.join(__dirname, '..', 'test-results', 'phone-audit');
+const CHROME_BUDGET = Number(process.env.CHROME_BUDGET) || 35;
 const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:5000';
 const COLOR_SCHEME = process.env.COLOR_SCHEME === 'dark' ? 'dark' : 'light';
 fs.mkdirSync(OUT, { recursive: true });
@@ -453,7 +456,9 @@ const AUDIT = (opts) => {
   }
   // Chrome: what stands between the top of the window and the page's own
   // content, plus the tab bar under it.
-  const content = Array.from(document.querySelectorAll('[data-page-content]')).find(vis);
+  // A page that marks no content start, or whose mark is pushed off the
+  // window by a form open above it, is measured from the shell's <main>.
+  const content = Array.from(document.querySelectorAll('[data-page-content]')).find((el) => vis(el) && el.getBoundingClientRect().top < window.innerHeight) || Array.from(document.querySelectorAll('main')).find(vis);
   if (content) {
     const bar = document.querySelector('.ov-tabbar');
     const top = Math.max(0, Math.round(content.getBoundingClientRect().top));
@@ -706,6 +711,7 @@ const desktopDevice = (p) => ({
       if (r.blurry && r.blurry.length) flags.push(`blurry:${r.blurry.length}`);
       if (r.errors && r.errors.length) { flags.push(`errors:${r.errors.length}`); failed = true; }
       if (r.openErr) flags.push('open-failed');
+      if (r.chrome && r.chrome.share > CHROME_BUDGET) { flags.push(`CHROME ${r.chrome.share}%>${CHROME_BUDGET}%`); failed = true; }
       const chrome = r.chrome ? `  chrome ${r.chrome.top}+${r.chrome.bottom}px (${r.chrome.share}%)` : '';
       console.log(`${eng} ${r.tag.padEnd(22)} ${flags.join(' ') || 'ok'}${chrome}`);
     }

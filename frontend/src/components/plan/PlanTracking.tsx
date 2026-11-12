@@ -33,7 +33,7 @@ export const PlanTracking: React.FC<{
   const cell: React.CSSProperties = { padding: '6px 8px', borderBottom: '1px solid var(--border-soft)', textAlign: 'left', fontSize: 13 };
   const figure = (label: string, value: string, hint: string, bad = false) => (
     <div title={hint} style={{ flex: '1 1 110px', padding: '6px 8px', border: '1px solid var(--border-soft)', borderRadius: 6 }}>
-      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{label}</div>
+      <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{label}</div>
       <div style={{ fontSize: 15, fontWeight: 600, color: bad ? 'var(--danger-strong)' : undefined }}>{value}</div>
     </div>
   );
