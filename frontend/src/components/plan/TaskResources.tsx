@@ -54,7 +54,7 @@ export const TaskResources: React.FC<{
     const has = new Set(assigned.map((a) => `${a.type}:${a.id}`));
     return plan.people
       .filter((p) => !has.has(`${p.type}:${p.id}`))
-      .map((p) => ({ value: `${p.type}:${p.id}`, label: p.name || p.id, meta: p.type === 'agent' ? 'Agent' : undefined }));
+      .map((p) => ({ value: `${p.type}:${p.id}`, label: p.name || p.id, meta: p.type === 'agent' ? 'Agent' : p.type === 'planned' ? 'Planned' : undefined }));
   }, [plan.people, assigned]);
   const commitFixed = () => {
     const n = fixed.trim() === '' ? 0 : Number(fixed);
@@ -70,6 +70,7 @@ export const TaskResources: React.FC<{
           <span style={{ flex: 1, minWidth: 0, fontSize: 13, overflowWrap: 'anywhere' }}>
             {personName(plan.people, a)}
             {a.type === 'agent' && <span style={mutedStyle}> · agent</span>}
+            {a.type === 'planned' && <span style={mutedStyle}> · planned</span>}
           </span>
           {editable ? (
             <>

@@ -1,8 +1,8 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 352
-  axios instance calls: 342 (DELETE 42, GET 135, HEAD 1, POST 111, PUT 53)
+call sites: 354
+  axios instance calls: 344 (DELETE 42, GET 135, HEAD 1, POST 111, PUT 55)
   helper calls (a function that passes its argument to the instance): 1
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 6 (3 of them axios calls)
@@ -255,7 +255,7 @@ PUT     /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAP
 POST    /api/v1/projects/{id}/plan/recalculate                            planAPI.recalculate
 PUT     /api/v1/projects/{id}/plan/release-milestones/{releaseId}         planAPI.setReleaseCriteria
 POST    /api/v1/projects/{id}/plan/reschedule-remaining                   planAPI.rescheduleRemaining
-PUT     /api/v1/projects/{id}/plan/resources/{assigneeId}                 planAPI.setResource
+PUT     /api/v1/projects/{id}/plan/resources/{assigneeId}                 planAPI.removePlanned, planAPI.setResource, planAPI.staffPlanned
 PUT     /api/v1/projects/{id}/plan/settings                               planAPI.setSettings, planAPI.setWorkingDays
 GET     /api/v1/projects/{id}/priority-detection                          projectAPI.priorityDetection
 PUT     /api/v1/projects/{id}/priority-detection                          projectAPI.setPriorityDetection

@@ -37,6 +37,7 @@ import { MilestonePanel } from '../components/plan/MilestonePanel';
 import { AddMilestoneForm, AddTaskForm, ExportControl, NewTask } from '../components/plan/PlanForms';
 import { PlanPhone } from '../components/plan/PlanPhone';
 import { PlanChartPanel } from '../components/plan/PlanChartPanel';
+import type { PlannedAction } from '../components/plan/PlanPlanned';
 import type { TrackingAction } from '../components/plan/PlanTracking';
 import { usePlanHistory } from '../components/plan/planHistory';
 import { useAssistantPageContext } from '../components/wizard/assistantStore';
@@ -104,6 +105,13 @@ const recalculatePlan = async (projectId: string, onlyLater: boolean): Promise<s
 };
 
 /** Levels the plan; answers what to tell the user. */
+/** Adds, removes or staffs a planned resource: a placeholder for someone to be chosen later. */
+const plannedResource = (projectId: string, action: PlannedAction) => {
+  if (action.kind === 'add') return planAPI.setResource(projectId, 'planned', crypto.randomUUID(), { daily_rate: action.daily_rate, capacity: action.capacity, planned_name: action.name });
+  if (action.kind === 'remove') return planAPI.removePlanned(projectId, action.id);
+  return planAPI.staffPlanned(projectId, action.id, action.with.type, action.with.id);
+};
+
 const levelPlan = async (projectId: string): Promise<string> => {
   const n = (await planAPI.level(projectId)).data.moved;
   return n === 0 ? 'Nothing moved: no delay would clear the over-allocation.' : `${n} ${n === 1 ? 'task' : 'tasks'} delayed.`;
@@ -396,7 +404,8 @@ const PlanPage: React.FC = () => {
           onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
           onLink={coarsePointer ? undefined : relate}
           onRecalculate={recalculate}
-          onResource={(res, change) => run(() => planAPI.setResource(projectId, res.type, res.id, change), 'Failed to save the resource')}
+          onResource={(res, change) => run(() => planAPI.setResource(projectId, res.type, res.id, res.type === 'planned' ? { ...change, planned_name: res.planned_name } : change), 'Failed to save the resource')}
+          onPlanned={(action) => run(() => plannedResource(projectId, action), 'Failed to change the planned resource')}
           onLevel={() => run(async () => setNote(await levelPlan(projectId)), 'Failed to level the plan')}
           onTracking={(action) => run(async () => setNote(await trackPlan(projectId, action)), 'Failed to update the tracking')}
           onSettings={(change) => run(() => planAPI.setSettings(projectId, change), 'Failed to save the plan settings')}

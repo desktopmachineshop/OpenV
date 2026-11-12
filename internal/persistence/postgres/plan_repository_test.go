@@ -88,6 +88,56 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 	if err := repo.SaveResource(project, plan.Resource{Type: "user", ID: "nobody", DailyRate: 1, Capacity: 100}); err != plan.ErrResource {
 		t.Fatalf("an id that is not one: %v", err)
 	}
+	// A planned resource is a row with a name: tasks are assigned to it,
+	// staffing hands them to a person (adding to a share they already
+	// have), and removing one takes it off its tasks.
+	welder, painter := "22222222-2222-4222-8222-222222222222", "33333333-3333-4333-8333-333333333333"
+	for id, name := range map[string]string{welder: "Welder", painter: "Painter"} {
+		if err := repo.SaveResource(project, plan.Resource{Type: plan.TypePlanned, ID: id, PlannedName: name, DailyRate: 300, Capacity: 100}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if got, err := repo.ListResources(project); err != nil || len(got) != 3 || got[0].Type != plan.TypePlanned || got[0].PlannedName != "Welder" || got[2].PlannedName != "" {
+		t.Fatalf("planned resources keep their names: %+v %v", got, err)
+	}
+	if err := repo.SetAssignments(project, a, []plan.Assignment{{Type: "user", ID: ann, Units: 75}, {Type: plan.TypePlanned, ID: welder, Units: 50}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.SetAssignments(project, b, []plan.Assignment{{Type: plan.TypePlanned, ID: welder, Units: 100}, {Type: plan.TypePlanned, ID: painter, Units: 100}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.ReplaceAssignee(project, plan.Assignment{Type: plan.TypePlanned, ID: welder}, plan.Assignment{Type: "user", ID: ann}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.RemoveResource(project, plan.TypePlanned, painter); err != nil {
+		t.Fatal(err)
+	}
+	units := map[string]int{}
+	staffed, err := repo.ListAssignments(project)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, as := range staffed {
+		units[as.WorkItemID+" "+as.Type] = as.Units
+	}
+	if len(staffed) != 2 || units[a+" user"] != 125 || units[b+" user"] != 100 {
+		t.Fatalf("staffed and removed: %+v", staffed)
+	}
+	if got, _ := repo.ListResources(project); len(got) != 1 || got[0].Type != "user" {
+		t.Fatalf("the placeholders are gone: %+v", got)
+	}
+	if err := repo.SetAssignments(project, a, []plan.Assignment{{Type: "user", ID: ann, Units: 75}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.SetAssignments(project, b, nil); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.SaveSettings(project, plan.Settings{WorkingDays: []int{1, 2, 3, 4, 5}, Scheduling: plan.Scheduling{Mode: plan.ModeManual, ScheduleFrom: plan.FromStart, EffortDrivenDefault: true}}); err != nil {
+		t.Fatal(err)
+	}
+	if set, _ := repo.Settings(project); !set.EffortDrivenDefault {
+		t.Fatalf("the effort-driven default: %+v", set)
+	}
 	budget := 25000.0
 	if err := repo.SaveSettings(project, plan.Settings{WorkingDays: []int{1, 2, 3, 4, 5}, Currency: "GBP", Budget: &budget, Scheduling: plan.Scheduling{Mode: plan.ModeManual, ScheduleFrom: plan.FromStart}}); err != nil {
 		t.Fatal(err)

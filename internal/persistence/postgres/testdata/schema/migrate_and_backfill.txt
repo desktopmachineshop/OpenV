@@ -856,6 +856,7 @@ table plan_resources rows 0
   column assignee_id uuid NOT NULL
   column daily_rate numeric(12,2) NOT NULL DEFAULT 0
   column capacity integer NOT NULL DEFAULT 100
+  column name character varying(120) NOT NULL DEFAULT ''::character varying
   constraint plan_resources_pkey PRIMARY KEY (project_id, assignee_type, assignee_id)
   constraint plan_resources_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index plan_resources_pkey CREATE UNIQUE INDEX plan_resources_pkey ON public.plan_resources USING btree (project_id, assignee_type, assignee_id)
@@ -873,6 +874,7 @@ table plan_settings rows 0
   column budget numeric(14,2)
   column status_date date
   column active_baseline_id uuid
+  column effort_driven_default boolean NOT NULL DEFAULT false
   constraint plan_settings_pkey PRIMARY KEY (project_id)
   constraint plan_settings_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index plan_settings_pkey CREATE UNIQUE INDEX plan_settings_pkey ON public.plan_settings USING btree (project_id)
@@ -1125,7 +1127,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 87
+table schema_migrations rows 88
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1498,3 +1500,4 @@ ledger 0084 plan_tracking
 ledger 0085 plan_task_order
 ledger 0086 plan_external_links
 ledger 0087 plan_workspace_calendar
+ledger 0088 plan_sizing

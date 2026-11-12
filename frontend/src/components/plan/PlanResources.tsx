@@ -9,6 +9,9 @@ import { Chip, Modal, buttonStyle, eyebrowStyle, mutedStyle } from '../ui';
 import { spanLabel } from './ganttScale';
 import type { PlanSettingsChange } from './PlanCalendar';
 import { money } from './planModel';
+import { PlanPlanned, type PlannedAction } from './PlanPlanned';
+import { useFeature } from '../../hooks/useFeature';
+import { PLAN_SIZING_FEATURE } from '../../features';
 
 const inputStyle: React.CSSProperties = { padding: '4px 6px', minHeight: 30, boxSizing: 'border-box' };
 
@@ -56,8 +59,11 @@ export const PlanResources: React.FC<{
   onResource: (res: PlanResourceLoad, change: { daily_rate: number; capacity: number }) => void;
   onSettings: (change: PlanSettingsChange) => void;
   onLevel: () => void;
+  /** Adds, removes or staffs a planned resource; absent where the plan cannot be edited that way. */
+  onPlanned?: (action: PlannedAction) => void;
   onClose: () => void;
-}> = ({ plan, busy, onResource, onSettings, onLevel, onClose }) => {
+}> = ({ plan, busy, onResource, onSettings, onLevel, onPlanned, onClose }) => {
+  const sizing = useFeature(PLAN_SIZING_FEATURE);
   const [currency, setCurrency] = useState(plan.currency);
   useEffect(() => setCurrency(plan.currency), [plan.currency]);
   const over = plan.resources.filter((r) => r.overallocations.length > 0);
@@ -117,6 +123,7 @@ export const PlanResources: React.FC<{
                     <td style={cell}>
                       {r.name || r.id}
                       {r.type === 'agent' && <span style={mutedStyle}> · agent</span>}
+                      {r.type === 'planned' && <span style={mutedStyle}> · planned</span>}
                       {r.overallocations.map((o) => (
                         <div key={o.start} style={{ fontSize: 12, color: 'var(--danger-strong)' }}>
                           {o.units}% on {spanLabel(o.start, o.end, plan.today)}
@@ -145,6 +152,7 @@ export const PlanResources: React.FC<{
             </table>
           </div>
         )}
+        {sizing && onPlanned && <PlanPlanned plan={plan} busy={busy} onPlanned={onPlanned} />}
         <h3 style={eyebrowStyle}>Levelling</h3>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <span style={{ ...mutedStyle, flex: '1 1 320px' }}>

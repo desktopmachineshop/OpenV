@@ -9,6 +9,18 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Size a plan before you staff it.** A **planned resource** is a
+  placeholder for someone you will choose later: add one by name in the
+  plan's Resources dialog, with a day rate and a capacity, and assign
+  tasks to it like anyone else. The plan's cost, load, levelling and
+  effort-driven durations count it, so a plan can be sized and costed
+  before anyone is named. When you know who it is, **Staff with…** hands
+  its tasks to that person or agent. **Defaults**, in Plan tools, sets the
+  plan's scheduling mode and whether a new task's effort decides its
+  duration, so you no longer set that task by task.
+
 ### Bug fixes
 
 - **The Gantt's Import button lines up.** **Import…** sat a few pixels

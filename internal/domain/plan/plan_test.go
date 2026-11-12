@@ -278,8 +278,58 @@ func (r *fakeRepo) SetAssignments(_, id string, a []Assignment) error {
 }
 func (r *fakeRepo) ListResources(string) ([]Resource, error) { return r.resources, nil }
 func (r *fakeRepo) SaveResource(_ string, res Resource) error {
+	for i, old := range r.resources {
+		if old.Type == res.Type && old.ID == res.ID {
+			r.resources[i] = res
+			return nil
+		}
+	}
 	r.resources = append(r.resources, res)
 	return nil
+}
+func (r *fakeRepo) RemoveResource(_, kind, id string) error {
+	kept := r.resources[:0]
+	for _, res := range r.resources {
+		if res.Type != kind || res.ID != id {
+			kept = append(kept, res)
+		}
+	}
+	r.resources = kept
+	for task, list := range r.assignments {
+		out := []Assignment{}
+		for _, a := range list {
+			if a.Type != kind || a.ID != id {
+				out = append(out, a)
+			}
+		}
+		r.assignments[task] = out
+	}
+	return nil
+}
+func (r *fakeRepo) ReplaceAssignee(_ string, from, to Assignment) error {
+	for task, list := range r.assignments {
+		out, moved := []Assignment{}, 0
+		for _, a := range list {
+			if a.Type == from.Type && a.ID == from.ID {
+				moved += a.Units
+				continue
+			}
+			out = append(out, a)
+		}
+		if moved > 0 {
+			merged := false
+			for i := range out {
+				if out[i].Type == to.Type && out[i].ID == to.ID {
+					out[i].Units, merged = min(out[i].Units+moved, MaxUnits), true
+				}
+			}
+			if !merged {
+				out = append(out, Assignment{Type: to.Type, ID: to.ID, Units: moved})
+			}
+		}
+		r.assignments[task] = out
+	}
+	return r.RemoveResource("", from.Type, from.ID)
 }
 func (r *fakeRepo) SetOrder(_ string, order map[string]int) error {
 	for id, n := range order {
@@ -1869,5 +1919,118 @@ func TestWorkspaceCalendarAndTimeOff(t *testing.T) {
 	}
 	if p, _ = svc.Plan("p", Evidence{}, now); *task(p, "a").SpanEnd != "2027-03-19" {
 		t.Fatalf("back at work: ends %s", *task(p, "a").SpanEnd)
+	}
+}
+
+// A plan's default says whether a task scheduled for the first time lets
+// its effort decide its duration; a task that has chosen keeps its choice.
+func TestTheEffortDrivenDefaultAppliesToATaskWithNoScheduleYet(t *testing.T) {
+	svc, repo, board, _ := newService()
+	repo.days = []int{1, 2, 3, 4, 5}
+	yes, no := true, false
+	set, err := svc.SetSettings("p", SettingsRequest{EffortDrivenDefault: &yes})
+	if err != nil || !set.EffortDrivenDefault {
+		t.Fatalf("the default: %+v %v", set, err)
+	}
+	p, err := svc.Plan("p", Evidence{}, now)
+	if err != nil || !p.EffortDrivenDefault {
+		t.Fatalf("the plan says its default: %v", err)
+	}
+	for _, task := range p.Tasks {
+		if !task.EffortDriven {
+			t.Fatalf("%s has no schedule yet and follows the default", task.ID)
+		}
+	}
+	// Four days of effort for one person at half time: eight days, with no
+	// effort_driven in the request.
+	four := 4.0
+	half := []Assignment{{Type: "user", ID: "ann", Units: 50}}
+	if err := svc.Schedule("a", ScheduleRequest{StartDate: sp("2027-03-01"), EffortDays: &four, Assignments: &half}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if !repo.schedules["a"].EffortDriven || board.items["a"].DueDate.Format(DateLayout) != "2027-03-10" {
+		t.Fatalf("the default drove the duration: %+v due %s", repo.schedules["a"], board.items["a"].DueDate.Format(DateLayout))
+	}
+	// A task that says otherwise keeps saying so when the default changes.
+	if err := svc.Schedule("b", ScheduleRequest{StartDate: sp("2027-03-01"), DueDate: sp("2027-03-02"), EffortDriven: &no}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if repo.schedules["b"].EffortDriven {
+		t.Fatal("b chose not to be effort driven")
+	}
+	if _, err := svc.SetSettings("p", SettingsRequest{EffortDrivenDefault: &no}); err != nil {
+		t.Fatal(err)
+	}
+	if !repo.schedules["a"].EffortDriven {
+		t.Fatal("a keeps what it was scheduled with")
+	}
+}
+
+// A planned resource stands in for someone to be chosen later: it has a
+// name, a rate and a capacity, tasks are assigned to it, it costs and loads
+// like a person, and staffing it hands its tasks to a real one.
+func TestAPlannedResourceSizesThePlanAndIsStaffedLater(t *testing.T) {
+	svc, repo, _, _ := newService()
+	repo.days = []int{1, 2, 3, 4, 5}
+	if _, err := svc.SetResource("p", Resource{Type: TypePlanned, ID: "weld"}); !errors.Is(err, ErrResource) {
+		t.Fatalf("a planned resource needs a name: %v", err)
+	}
+	if _, err := svc.SetResource("p", Resource{Type: "user", ID: "ann", PlannedName: "Ann"}); !errors.Is(err, ErrResource) {
+		t.Fatalf("only a planned resource has a name: %v", err)
+	}
+	res, err := svc.SetResource("p", Resource{Type: TypePlanned, ID: "weld", PlannedName: " Welder ", DailyRate: 400})
+	if err != nil || res.PlannedName != "Welder" || res.Capacity != 100 {
+		t.Fatalf("the planned resource: %+v %v", res, err)
+	}
+	planned := []Assignment{{Type: TypePlanned, ID: "weld"}}
+	if err := svc.Schedule("a", ScheduleRequest{StartDate: sp("2027-03-01"), DueDate: sp("2027-03-05"), Assignments: &planned}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	both := []Assignment{{Type: TypePlanned, ID: "weld", Units: 50}, {Type: "user", ID: "ann", Units: 50}}
+	if err := svc.Schedule("b", ScheduleRequest{StartDate: sp("2027-03-08"), DueDate: sp("2027-03-09"), Assignments: &both}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	p, err := svc.Plan("p", Evidence{}, now)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var load *ResourceLoad
+	for i := range p.Resources {
+		if p.Resources[i].Type == TypePlanned {
+			load = &p.Resources[i]
+		}
+	}
+	// Five days on A and half of two on B, at 400 a day.
+	if load == nil || load.PlannedName != "Welder" || load.Tasks != 2 || load.WorkDays != 6 || load.Cost != 2400 {
+		t.Fatalf("the planned resource's load: %+v", load)
+	}
+	// Ann is chosen: she takes A whole, and her half of B becomes all of it.
+	if err := svc.StaffPlanned("p", "weld", Assignment{Type: "planned", ID: "other"}); !errors.Is(err, ErrResource) {
+		t.Fatalf("a placeholder is staffed with a user or an agent: %v", err)
+	}
+	if err := svc.StaffPlanned("p", "weld", Assignment{Type: "user", ID: "ann"}); err != nil {
+		t.Fatal(err)
+	}
+	if a := repo.assignments["a"]; len(a) != 1 || a[0].ID != "ann" || a[0].Units != 100 {
+		t.Fatalf("a after staffing: %+v", a)
+	}
+	if b := repo.assignments["b"]; len(b) != 1 || b[0].ID != "ann" || b[0].Units != 100 {
+		t.Fatalf("b after staffing: %+v", b)
+	}
+	for _, r := range repo.resources {
+		if r.Type == TypePlanned {
+			t.Fatalf("the placeholder is gone: %+v", r)
+		}
+	}
+	// Removing one takes it off its tasks.
+	if _, err := svc.SetResource("p", Resource{Type: TypePlanned, ID: "paint", PlannedName: "Painter"}); err != nil {
+		t.Fatal(err)
+	}
+	paint := []Assignment{{Type: TypePlanned, ID: "paint"}}
+	if err := svc.Schedule("c", ScheduleRequest{StartDate: sp("2027-03-10"), DueDate: sp("2027-03-10"), Assignments: &paint}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.RemovePlanned("p", "paint"); err != nil || len(repo.assignments["c"]) != 0 {
+		t.Fatalf("removed: %v %+v", err, repo.assignments["c"])
 	}
 }

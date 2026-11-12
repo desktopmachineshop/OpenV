@@ -505,6 +505,9 @@ func (b *builder) tasks() {
 	}
 	for _, t := range b.byID {
 		t.Mode, t.ConstraintType = mode, ConstraintASAP
+		// Until a task has a schedule of its own, the plan's default says
+		// whether its effort decides its duration.
+		t.EffortDriven = b.in.Scheduling.EffortDrivenDefault
 	}
 	for _, sc := range b.in.Schedules {
 		t := b.byID[sc.WorkItemID]

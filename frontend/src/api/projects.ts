@@ -26,6 +26,7 @@ import type {
   WorkspacePlanCalendar,
   PlanLagUnit,
   PlanRelationshipDirection,
+  PlanResourceType,
   PlanSettings,
   PlanRelationshipType,
   PlanScheduleInput,
@@ -230,8 +231,13 @@ export const planAPI = {
   /** Delays tasks until nobody is asked for more than their capacity; answers how many moved. */
   level: (projectId: string) => client.post<{ moved: number }>(`/api/v1/projects/${projectId}/plan/level`),
   /** What a day of a person's or an agent's time costs, and the share of a day they can give. */
-  setResource: (projectId: string, type: 'user' | 'agent', id: string, change: { daily_rate: number; capacity: number }) =>
+  setResource: (projectId: string, type: PlanResourceType, id: string, change: { daily_rate: number; capacity: number; planned_name?: string }) =>
     client.put(`/api/v1/projects/${projectId}/plan/resources/${id}`, { type, ...change }),
+  /** Drops a planned resource and takes it off every task. */
+  removePlanned: (projectId: string, id: string) => client.put(`/api/v1/projects/${projectId}/plan/resources/${id}`, { type: 'planned', remove: true }),
+  /** Gives a planned resource's tasks to a person or an agent, who takes its place. */
+  staffPlanned: (projectId: string, id: string, withType: 'user' | 'agent', withId: string) =>
+    client.put(`/api/v1/projects/${projectId}/plan/resources/${id}`, { type: 'planned', staff_with: { type: withType, id: withId } }),
   /** The workspace's plan calendar: its working days and its people's time off. */
   workspaceCalendar: (orgId: string) => client.get<WorkspacePlanCalendar>(`/api/v1/orgs/${orgId}/plan-calendar`),
   setWorkspaceWorkingDays: (orgId: string, workingDays: number[]) => client.put<WorkspacePlanCalendar>(`/api/v1/orgs/${orgId}/plan-calendar`, { working_days: workingDays }),

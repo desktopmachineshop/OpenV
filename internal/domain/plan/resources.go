@@ -17,7 +17,7 @@ import (
 // Assignment puts a person or an agent on a task for a share of their time.
 type Assignment struct {
 	WorkItemID string `json:"-"`
-	// Type is "user" or "agent"; ID is theirs.
+	// Type is "user", "agent" or "planned"; ID is theirs.
 	Type string `json:"type"`
 	ID   string `json:"id"`
 	// Units is the percentage of their working time the task takes.
@@ -32,7 +32,20 @@ type Resource struct {
 	ID        string  `json:"id"`
 	DailyRate float64 `json:"daily_rate"`
 	Capacity  int     `json:"capacity"`
+	// PlannedName names a planned resource: a placeholder for someone to
+	// be chosen later, which sizes the plan before it is staffed.
+	PlannedName string `json:"planned_name,omitempty"`
 }
+
+// TypePlanned is the type of a planned resource; MaxPlannedName bounds its
+// name.
+const (
+	TypePlanned    = "planned"
+	MaxPlannedName = 120
+)
+
+// assignable says whether a task can be assigned to a resource of the type.
+func assignable(kind string) bool { return kind == "user" || kind == "agent" || kind == TypePlanned }
 
 // Bounds on assignments and resources.
 const (
@@ -85,7 +98,7 @@ func CleanAssignments(in []Assignment) ([]Assignment, error) {
 		if a.Units == 0 {
 			a.Units = 100
 		}
-		if (a.Type != "user" && a.Type != "agent") || a.ID == "" || a.Units < 1 || a.Units > MaxUnits {
+		if !assignable(a.Type) || a.ID == "" || a.Units < 1 || a.Units > MaxUnits {
 			return nil, ErrAssignment
 		}
 		if key := a.Type + ":" + a.ID; !seen[key] {
@@ -105,11 +118,35 @@ func (s *DefaultService) SetResource(projectID string, res Resource) (Resource, 
 	if res.Capacity == 0 {
 		res.Capacity = 100
 	}
-	if (res.Type != "user" && res.Type != "agent") || res.ID == "" || res.DailyRate < 0 || res.DailyRate > 1e9 ||
+	res.PlannedName = strings.TrimSpace(res.PlannedName)
+	if !assignable(res.Type) || res.ID == "" || res.DailyRate < 0 || res.DailyRate > 1e9 ||
 		res.Capacity < 1 || res.Capacity > MaxUnits {
 		return res, ErrResource
 	}
+	// A planned resource is known by its name alone; nobody else has one.
+	if planned := res.Type == TypePlanned; planned != (res.PlannedName != "") || len([]rune(res.PlannedName)) > MaxPlannedName {
+		return res, ErrResource
+	}
 	return res, s.repo.SaveResource(projectID, res)
+}
+
+// RemovePlanned drops a planned resource and takes it off every task.
+func (s *DefaultService) RemovePlanned(projectID, id string) error {
+	if strings.TrimSpace(id) == "" {
+		return ErrResource
+	}
+	return s.repo.RemoveResource(projectID, TypePlanned, id)
+}
+
+// StaffPlanned gives a planned resource's tasks to a user or an agent, at
+// the share the placeholder had (added to theirs on a task they are
+// already on, up to the most a task allows), and drops the placeholder.
+func (s *DefaultService) StaffPlanned(projectID, id string, with Assignment) error {
+	with.Type, with.ID = strings.ToLower(strings.TrimSpace(with.Type)), strings.TrimSpace(with.ID)
+	if strings.TrimSpace(id) == "" || (with.Type != "user" && with.Type != "agent") || with.ID == "" {
+		return ErrResource
+	}
+	return s.repo.ReplaceAssignee(projectID, Assignment{Type: TypePlanned, ID: id}, with)
 }
 
 // drivenDuration is the duration an effort-driven task's effort gives it:
@@ -147,7 +184,7 @@ func (b *builder) resources(p *Plan) {
 	}
 	for _, res := range b.in.Resources {
 		l := get(res.Type, res.ID)
-		l.DailyRate, l.Capacity = res.DailyRate, res.Capacity
+		l.DailyRate, l.Capacity, l.PlannedName = res.DailyRate, res.Capacity, res.PlannedName
 	}
 	for _, t := range p.Tasks {
 		t.Assignments = b.who(t)

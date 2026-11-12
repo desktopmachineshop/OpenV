@@ -52,8 +52,8 @@ var (
 	ErrWorkingDays       = errors.New("working days are weekday numbers from 1 (Monday) to 7 (Sunday), at least one")
 	ErrInvalidLag        = errors.New("a relationship's offset is a whole number, at most 3650 either way, in working days (d), elapsed days (ed) or percent of the driving task's duration (%)")
 	ErrHoliday           = errors.New("a holiday is a date written YYYY-MM-DD with a name of at most 80 characters, and a plan has at most 366")
-	ErrAssignment        = errors.New("a task is assigned to at most 20 users or agents, each for 1 to 1000 percent of their time")
-	ErrResource          = errors.New("a resource is a user or an agent with a daily rate of 0 or more and a capacity of 1 to 1000 percent")
+	ErrAssignment        = errors.New("a task is assigned to at most 20 users, agents or planned resources, each for 1 to 1000 percent of their time")
+	ErrResource          = errors.New("a resource is a user, an agent or a named planned resource, with a daily rate of 0 or more and a capacity of 1 to 1000 percent")
 	ErrInvalidCost       = errors.New("a cost or a budget is 0 or more, and a currency is at most three letters")
 	ErrTooManyBaselines  = errors.New("a plan keeps at most 11 baselines")
 	ErrTimeOff           = errors.New("time off runs for at most a year, with a name of at most 80 characters")
@@ -268,6 +268,11 @@ type Repository interface {
 	// ListResources lists the rates and capacities the project keeps.
 	ListResources(projectID string) ([]Resource, error)
 	SaveResource(projectID string, res Resource) error
+	// RemoveResource forgets a resource and takes it off every task.
+	// ReplaceAssignee gives the tasks of one resource to another, adding to
+	// the share of a task the other is already on, then forgets the first.
+	RemoveResource(projectID, kind, id string) error
+	ReplaceAssignee(projectID string, from, to Assignment) error
 	// ListBaselines lists the project's baselines with their tasks, oldest
 	// first; DeleteBaseline answers ErrNotFound for one it has not.
 	ListBaselines(projectID string) ([]*Baseline, error)
@@ -352,6 +357,11 @@ type Service interface {
 	Level(projectID, actor string, now time.Time) (int, error)
 	// SetResource stores a person's or an agent's daily rate and capacity.
 	SetResource(projectID string, res Resource) (Resource, error)
+	// RemovePlanned drops a planned resource and takes it off every task.
+	// StaffPlanned gives a planned resource's tasks to a user or an agent,
+	// and drops it: the person chosen later takes the placeholder's place.
+	RemovePlanned(projectID, id string) error
+	StaffPlanned(projectID, id string, with Assignment) error
 	// SaveBaseline records the plan as it stands; DeleteBaseline removes
 	// one.
 	SaveBaseline(projectID, name string, now time.Time) (*Baseline, error)
@@ -482,7 +492,7 @@ func (s *DefaultService) schedule(workItemID string, req ScheduleRequest, actor 
 	if err != nil {
 		return err
 	}
-	current := &TaskSchedule{WorkItemID: item.ID, ProjectID: item.ProjectID}
+	current := s.unscheduled(item.ID, item.ProjectID)
 	parents := map[string]string{}
 	for _, sc := range schedules {
 		if sc.WorkItemID == item.ID {

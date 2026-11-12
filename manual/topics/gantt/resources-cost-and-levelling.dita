@@ -5,6 +5,8 @@
   <shortdesc>A task's panel has a <b>Resources</b> section: the people and agents who do the task. <b>Assign someone</b> adds one, and the percentage beside each name is the share of their working time the task takes: 100% is full time, 50% half. With nobody assigned there, the card's assignee on the board does the task at 100%.</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="gantt.resources"/>
+    <resourceid appname="openv-web" appid="gantt.planned"/>
+    <resourceid appname="openv-web" appid="gantt.defaults"/>
   </prolog>
   <conbody>
     <p>Tick <b>Effort decides the duration</b> and the task's length follows from its effort and its people: six days of effort for two people at full time takes three days, and for one person at 50% twelve. Add or remove someone and the due date moves.</p>
@@ -20,5 +22,13 @@
     <p>Someone asked for more than their capacity on a day is <b>over-allocated</b>. The dialog shows when and by how much, the button turns red with the count, and each task that loads them during those days says <b>Over-allocated</b> in its panel.</p>
     <p><b>Level the plan</b> clears it. Where someone is over-allocated, the task with the most float is delayed until after the first of the others ends, and the tasks it drives follow. Levelling only ever delays; it does not move a task earlier or one that is done, and it cannot help someone who is over-allocated by a single task.</p>
     <p>A task's <b>cost</b> is its people's work at their day rates plus its <b>Fixed cost</b>, for materials or a supplier. A task with sub-tasks costs what they cost. Set the plan's <b>Currency</b> and <b>Budget</b> in the Resources dialog: the figures above the chart then show the plan's cost against its budget, in red when it is over.</p>
+    <section id="planned-resources">
+      <title>Planned resources</title>
+      <p>A <b>planned resource</b> is a placeholder for someone you will choose later: a welder, a second developer. Under <b>Planned resources</b> in the Resources dialog, give it a name, a day rate and a capacity and choose <b>Add planned resource</b>. Assign tasks to it as you would to a person: it is in every task's <b>Assign someone</b> list, marked <i>Planned</i>, and the plan's cost, load, levelling and effort-driven durations count it like anyone else. So a plan can be sized and costed before anyone is named. When you know who it is, choose them under <b>Staff with…</b>: its tasks go to that person or agent at the same share (added to theirs on a task they are already on), and the placeholder goes. <b>Remove</b> drops it and takes it off its tasks.</p>
+    </section>
+    <section id="plan-defaults">
+      <title>Plan defaults</title>
+      <p><b>Defaults</b>, in <b>Plan tools</b>, sets what a task does until it says otherwise. <b>Scheduling mode</b> is manual or automatic (see <xref href="#automatic-scheduling-and-constraints" scope="external" format="html">Automatic scheduling and constraints</xref>); a task's own panel can override it. <b>Effort decides the duration of new tasks</b> makes a task that has not been scheduled yet effort-driven from the start, so its effort and the resources on it set its length; a task already scheduled keeps what it was given.</p>
+    </section>
   </conbody>
 </concept>
