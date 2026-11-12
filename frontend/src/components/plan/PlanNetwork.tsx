@@ -29,7 +29,7 @@ const ranks = (tasks: PlanTask[]): Map<string, number> => {
   return rank;
 };
 
-export const PlanNetwork: React.FC<{ plan: ProjectPlan; selectedTaskId: string; onSelectTask: (t: PlanTask) => void }> = ({ plan, selectedTaskId, onSelectTask }) => {
+export const PlanNetwork: React.FC<{ plan: ProjectPlan; selectedTaskId: string; onSelectTask: (t: PlanTask) => void; showCritical?: boolean }> = ({ plan, selectedTaskId, onSelectTask, showCritical = true }) => {
   const layout = useMemo(() => {
     const nodes = plan.tasks.filter((t) => t.subtasks_total === 0 || t.relationships.length > 0 || t.drives.length > 0);
     const rank = ranks(nodes);
@@ -68,7 +68,7 @@ export const PlanNetwork: React.FC<{ plan: ProjectPlan; selectedTaskId: string; 
               const y2 = to.y + BOX.h / 2;
               const mid = (x1 + to.x) / 2;
               const on = plan.tasks.find((x) => x.id === rel.task_id);
-              const tone = rel.conflict ? 'conflict' : t.critical && on?.critical ? 'critical' : 'ok';
+              const tone = rel.conflict ? 'conflict' : showCritical && t.critical && on?.critical ? 'critical' : 'ok';
               return (
                 <g key={`${rel.task_id}>${t.id}`}>
                   <path
@@ -92,6 +92,7 @@ export const PlanNetwork: React.FC<{ plan: ProjectPlan; selectedTaskId: string; 
         {layout.nodes.map((t) => {
           const p = layout.at.get(t.id)!;
           const selected = t.id === selectedTaskId;
+          const critical = showCritical && t.critical;
           return (
             <button
               key={t.id}
@@ -111,7 +112,7 @@ export const PlanNetwork: React.FC<{ plan: ProjectPlan; selectedTaskId: string; 
                 font: 'inherit',
                 cursor: 'pointer',
                 borderRadius: 6,
-                border: `${t.critical ? 2 : 1}px solid ${t.critical ? 'var(--warning)' : t.late ? 'var(--danger)' : 'var(--border)'}`,
+                border: `${critical ? 2 : 1}px solid ${critical ? 'var(--warning)' : t.late ? 'var(--danger)' : 'var(--border)'}`,
                 background: t.done ? 'var(--tint-green, var(--surface-alt))' : 'var(--surface)',
                 boxShadow: selected ? '0 0 0 2px var(--tint-blue-border)' : undefined,
                 color: 'var(--text)',

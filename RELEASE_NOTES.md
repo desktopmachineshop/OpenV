@@ -14,6 +14,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 - **The Gantt's Import button lines up.** **Import…** sat a few pixels
   higher than **Add task**, **Add milestone** and **Export…** beside it;
   the four are level now.
+- **Critical path works in every view of the plan.** The button used to
+  change the Gantt only. It now turns the amber marking on and off in the
+  Network, the Calendar, the Timeline and All projects too, and Resource
+  usage underlines the weeks in which someone has critical work.
+- **The critical path is the top row of the Timeline and of All
+  projects**, instead of sitting wherever its dates happened to pack it.
+- **The Calendar follows the time scale.** Days shows a week with every
+  task of each day, Weeks four weeks, Months a month and Quarters a
+  quarter; the arrows step by that much and **Today** returns to the
+  present. Before, the scale did nothing there.
 
 ## 0.33.0 — 2026-11-12
 
