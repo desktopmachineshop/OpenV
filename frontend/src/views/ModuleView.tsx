@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
-import { artifactAPI, linkAPI, attachmentAPI, agentsAPI, Artifact, Link, Attachment } from '../api/client';
+import { artifactAPI, linkAPI, attachmentAPI, Artifact, Link, Attachment } from '../api/client';
 import type { ArtifactContextAction } from '../components/ArtifactList';
 import { matchesFieldFilters, matchesSearch } from '../utils/artifactFilter';
 import { AttachmentViewer } from '../components/AttachmentViewer';
@@ -15,7 +15,7 @@ import { FLOATING_ASSISTANT_FEATURE } from '../components/wizard/assistantStore'
 import { revealHistory, useRequirementsAssistant } from './moduleView/assistantPane';
 import { StackedPaneTabs } from './moduleView/StackedPaneTabs';
 import { DownloadWizard } from '../components/DownloadWizard';
-import { buttonStyle, useAlert, useConfirm } from '../components/ui';
+import { useAlert, useConfirm } from '../components/ui';
 import { ArtifactTraceSummary } from '../components/ArtifactTraceSummary';
 import { apiErrorMessage } from '../api/errors';
 import { useViewport } from '../hooks/useViewport';
@@ -34,6 +34,13 @@ import { ListToolbar } from './moduleView/ListToolbar';
 import { useListView } from './moduleView/useListView';
 import { useFoldAll } from './moduleView/useFoldAll';
 import { REQUIREMENTS_TREE_FEATURE } from './moduleView/requirementsViews';
+import { draftTestCases } from './moduleView/draftTestCases';
+import { ToolbarMenu } from './moduleView/ToolbarMenu';
+import { BackToList, NewArtifactButton, PushedScreen, ToolsButton } from './moduleView/HeaderBits';
+import { useUiRefresh } from '../hooks/useUiRefresh';
+import { ArtifactStatement } from '../components/ArtifactStatement';
+import { TracePanels } from './DesignItemsParts';
+import { DESIGN_TYPE, traceOf } from './DesignItemsTree';
 import { ListChipSearch } from './moduleView/ListChipSearch';
 import { filterSummary } from './moduleView/filterSummary';
 import { PhoneActionBar } from './moduleView/PhoneActionBar';
@@ -58,6 +65,8 @@ export const ModuleView: React.FC = () => {
   const treeViews = useFeature(REQUIREMENTS_TREE_FEATURE);
   // #725, #726: History in the artifact's pane, the assistant floating; no Notes column.
   const historyInPane = useFeature(FLOATING_ASSISTANT_FEATURE);
+  const refresh = useUiRefresh();
+  const drafting = useState(false);
   const [searchText, setSearchText] = useState<string>('');
   const [searchExact, setSearchExact] = useState<boolean>(false);
   const [filterLogic, setFilterLogic] = useState<'and' | 'or'>('and');
@@ -118,7 +127,6 @@ export const ModuleView: React.FC = () => {
   >(null);
   // "Draft test cases" launch guard: disables the button while the run is being
   // enqueued so a double-click can't launch two runs (issue #218).
-  const [draftingTests, setDraftingTests] = useState(false);
   // The download wizard, opened from the one Download button above.
   const [downloadOpen, setDownloadOpen] = useState(false);
 
@@ -837,27 +845,7 @@ export const ModuleView: React.FC = () => {
   // Requirements the "Draft test cases" action will cover: the selected
   // requirement if one is selected, otherwise every requirement in view. Only
   // the IDs are sent — the agent fetches each requirement's content itself.
-  const requirementTargets =
-    selectedArtifact && selectedArtifact.type === 'requirement'
-      ? [selectedArtifact]
-      : activeArtifacts.filter((a) => a.type === 'requirement');
-
-  const handleDraftTestCases = async () => {
-    if (!projectId || requirementTargets.length === 0 || draftingTests) return;
-    setDraftingTests(true);
-    try {
-      await agentsAPI.draftTestCases(
-        projectId,
-        requirementTargets.map((a) => a.id)
-      );
-      setError('');
-      navigate(`/projects/${projectId}/agent-runs`);
-    } catch (error: any) {
-      setError(`Failed to launch test-case drafting: ${apiErrorMessage(error, 'Unknown error')}`);
-    } finally {
-      setDraftingTests(false);
-    }
-  };
+  const { requirementTargets, draftingTests, handleDraftTestCases } = draftTestCases(projectId, selectedArtifact, activeArtifacts, drafting, setError, navigate);
 
   const filtersActive = !!searchText.trim() || filterRows.some((row) => row.value.trim() !== '') || !!quick;
   const clearFilters = () => {
@@ -867,9 +855,10 @@ export const ModuleView: React.FC = () => {
   };
 
   const newButton = !isBaselineView ? (
-    <button
-      type="button"
-      onClick={() => {
+    <NewArtifactButton
+      isCreating={isCreating}
+      stacked={stacked}
+      onToggle={() => {
         if (stacked) setStackedPane('tree');
         setIsCreating(!isCreating);
         // A manual open (or cancel) always starts from a blank form, and
@@ -878,11 +867,7 @@ export const ModuleView: React.FC = () => {
         setPendingCreatePlacement(null);
         setError('');
       }}
-      style={{ ...(isCreating ? buttonStyle('secondary') : buttonStyle('primary')), ...(stacked ? { minHeight: 40 } : { height: 30, minHeight: 30 }) }}
-      data-help-key="requirements.create"
-    >
-      {isCreating ? 'Cancel' : '+ New Artifact'}
-    </button>
+    />
   ) : null;
 
   const toolbarActions = (
@@ -894,6 +879,7 @@ export const ModuleView: React.FC = () => {
       projectId={projectId}
       handleDeleteBaseline={handleDeleteBaseline}
       stacked={stacked}
+      menu={refresh}
       handleCaptureBaseline={handleCaptureBaseline}
       handleDraftTestCases={handleDraftTestCases}
       isBaselineView={isBaselineView}
@@ -901,6 +887,38 @@ export const ModuleView: React.FC = () => {
       requirementTargets={requirementTargets}
       selectedArtifact={selectedArtifact}
       setDownloadOpen={setDownloadOpen}
+    />
+  );
+
+  // The refreshed page on a wide screen has one bar: the list's search,
+  // filters and views, then the toolbar behind one menu and the create button.
+  const headerToolbar = refresh && !stacked;
+  const listToolbar = (
+    <ListToolbar
+      phone={stacked}
+      view={view}
+      setView={setView}
+      typeCounts={typeCounts}
+      total={chips.chipSearched.length}
+      typeTab={typeTab}
+      setTypeTab={setTypeTab}
+      quick={quick}
+      setQuick={setQuick}
+      quickCounts={quickCounts}
+      searchText={searchText}
+      setSearchText={setSearchText}
+      filterSummary={filterSummary(searchText, searchExact, filterRows, filterLogic)}
+      filtersActive={filtersActive}
+      clearFilters={clearFilters}
+      showFilterPanel={showFilterPanel}
+      setShowFilterPanel={setShowFilterPanel}
+      pickDepth={(depth) => setDepthTrigger((prev) => ({ depth, token: prev.token + 1 }))}
+      treeViews={treeViews}
+      folded={fold.folded}
+      toggleFold={fold.toggleFold}
+      newButton={stacked ? <>{refresh && <ToolsButton toolsOpen={toolsOpen} onOpen={() => setToolsOpen(true)} />}{newButton}</> : undefined}
+      trailing={headerToolbar ? <><ToolbarMenu isBaselineView={isBaselineView} toolbarActions={toolbarActions} />{newButton}</> : undefined}
+      chipSearch={chips.chipSearch ? <ListChipSearch {...chips} phone={stacked} canSave={!isBaselineView} /> : undefined}
     />
   );
 
@@ -912,18 +930,21 @@ export const ModuleView: React.FC = () => {
     // around the whole app — every panel that needs to scroll scrolls itself.
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* The floating help panel is mounted once in ProjectLayout now. */}
-      <DocumentHeader
-        stacked={stacked}
-        toolsOpen={toolsOpen}
-        setToolsOpen={setToolsOpen}
-        toolbarActions={toolbarActions}
-        newButton={newButton}
-        isBaselineView={isBaselineView}
-      />
+      {headerToolbar || (refresh && stacked) ? (headerToolbar && listToolbar) : (
+        <DocumentHeader
+          stacked={stacked}
+          toolsOpen={toolsOpen}
+          setToolsOpen={setToolsOpen}
+          toolbarActions={toolbarActions}
+          newButton={newButton}
+          isBaselineView={isBaselineView}
+        />
+      )}
       {stacked && toolsOpen && (
         <PhoneActionsSheet setToolsOpen={setToolsOpen} toolbarActions={toolbarActions} />
       )}
-      {stacked && (
+      {stacked && refresh && shownPane !== 'tree' && <><PushedScreen /><BackToList onBack={() => setStackedPane('tree')} /></>}
+      {stacked && !refresh && (
         <StackedPaneTabs
           panes={historyInPane ? ['tree', 'document'] : ['tree', 'document', 'notes']}
           shown={shownPane}
@@ -952,33 +973,7 @@ export const ModuleView: React.FC = () => {
         showFilterPanel={!chips.chipSearch && showFilterPanel}
         tableGroups={chips.tableGroups}
         groupedBy={chips.groupedBy}
-        toolbar={
-          <ListToolbar
-            phone={stacked}
-            view={view}
-            setView={setView}
-            typeCounts={typeCounts}
-            total={chips.chipSearched.length}
-            typeTab={typeTab}
-            setTypeTab={setTypeTab}
-            quick={quick}
-            setQuick={setQuick}
-            quickCounts={quickCounts}
-            searchText={searchText}
-            setSearchText={setSearchText}
-            filterSummary={filterSummary(searchText, searchExact, filterRows, filterLogic)}
-            filtersActive={filtersActive}
-            clearFilters={clearFilters}
-            showFilterPanel={showFilterPanel}
-            setShowFilterPanel={setShowFilterPanel}
-            pickDepth={(depth) => setDepthTrigger((prev) => ({ depth, token: prev.token + 1 }))}
-            treeViews={treeViews}
-            folded={fold.folded}
-            toggleFold={fold.toggleFold}
-            newButton={stacked ? newButton : undefined}
-            chipSearch={chips.chipSearch ? <ListChipSearch {...chips} phone={stacked} canSave={!isBaselineView} /> : undefined}
-          />
-        }
+        toolbar={headerToolbar ? null : listToolbar}
         filterPanel={
           <FilterPanel
             searchText={searchText}
@@ -1151,7 +1146,10 @@ export const ModuleView: React.FC = () => {
                 loadCoverage();
               }}
               hideTransitions={viewport.isPhone}
-            />
+              statementFirst={refresh}
+            >
+              <ArtifactStatement artifact={selectedArtifact} onReferenceClick={handleReferenceClick} />
+            </ArtifactHeader>
             <ArtifactTraceSummary
               artifact={selectedArtifact}
               artifacts={activeArtifacts}
@@ -1160,6 +1158,10 @@ export const ModuleView: React.FC = () => {
               onSelect={handleSelectArtifact}
               touch={viewport.coarsePointer}
             />
+            {/* What the Design page showed of a design item: what it satisfies and the tests that reach it. */}
+            {refresh && selectedArtifact.type === DESIGN_TYPE && projectId && (
+              <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}><TracePanels {...traceOf(selectedArtifact.id, activeArtifacts, activeLinks, { entries: coverage })} projectId={projectId} /></div>
+            )}
             <ArtifactDetails
               artifact={selectedArtifact} 
               links={activeLinks} 
@@ -1173,6 +1175,7 @@ export const ModuleView: React.FC = () => {
               allowLinkDelete={!isBaselineView && selectedArtifact !== archived}
               liveLinks={!isBaselineView && selectedArtifact !== archived}
               showHistory={historyInPane}
+              hideDescription={refresh && !previewVersion}
               projectId={projectId || undefined}
               onLinksChanged={() => {
                 // Link writes auto-version both artifacts server-side;

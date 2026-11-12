@@ -18,11 +18,18 @@ export const REFRESH_GROUPS = ['Plan', 'Define', 'Verify', 'Agents'] as const;
 /** The pages that move to the head of Plan, in the order they sit there. */
 const PLAN_HEAD = ['', 'home'];
 
+/**
+ * Pages the refreshed menu no longer lists. Design showed the design items
+ * Requirements already holds; its facts are in the artifact's pane there now,
+ * and its address leads to Requirements filtered to design items.
+ */
+const DROPPED = ['design'];
+
 /** The menu regrouped for the refreshed shell. Sections left empty are dropped. */
 export const refreshSections = (sections: NavSection[]): NavSection[] => {
-  const all = sections.flatMap((s) => s.items);
+  const all = sections.flatMap((s) => s.items).filter((item) => !DROPPED.includes(item.to));
   const head = PLAN_HEAD.flatMap((to) => all.filter((item) => item.to === to));
-  const rest = (items: NavItem[]) => items.filter((item) => !PLAN_HEAD.includes(item.to));
+  const rest = (items: NavItem[]) => items.filter((item) => !PLAN_HEAD.includes(item.to) && !DROPPED.includes(item.to));
   const grouped = REFRESH_GROUPS.map((label) => {
     const items = rest(sections.find((s) => s.label === label)?.items ?? []);
     return { label, items: label === 'Plan' ? [...head, ...items] : items };

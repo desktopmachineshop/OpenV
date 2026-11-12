@@ -23,6 +23,21 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   read in it, the **☰** button is gone, and **More** shows every page as a
   tile under its group.
 
+- **Requirements: one toolbar, and the requirement's text first.** On a
+  computer the page has one bar: the search and filters, the view switch,
+  then **Working copy**, which opens the baseline picker with Compare,
+  Capture Baseline, Delete baseline, Draft test cases and Download, and
+  **+ New Artifact**. Opening an artifact shows its own text straight under
+  its title; its type, owner, version and dates fold to one line with the
+  rest behind **Details**, and History and Archive sit behind a **⋯** menu
+  beside Edit. On a phone the list is the page and an artifact opens as a
+  screen of its own, with **‹ Requirements** to go back, in place of the
+  Tree / Document tabs.
+- **Design items are read in Requirements.** The separate Design page is
+  gone from the menu, and its old address opens Requirements filtered to
+  design items. A design item's panel there shows what the page showed:
+  what it satisfies and **Verified through**, the tests that reach it.
+
 ### Maintenance updates
 
 - The notification bell is drawn in the same line style as the other icons

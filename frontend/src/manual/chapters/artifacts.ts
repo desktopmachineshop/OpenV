@@ -36,9 +36,9 @@ last section of the detail panel (see *History*). The V&V Assistant floats over
 the page from the **✦ Assistant** button in the bottom corner (see *Guided
 definition & the V&V Assistant* → *The V&V Assistant on every page*).
 
-The header holds the baseline picker and the project actions — **Compare**,
-**Capture Baseline**, **Draft test cases**, **↓ Download** — with one blue
-button, **+ New Artifact**, at its end.
+One bar runs across the top: the search and its filters, the **Table / Tree** switch, then **Working copy** (it reads
+**Baseline** while you view one), which opens the baseline picker with **Compare**, **Capture Baseline**, **Delete baseline**,
+**Draft test cases** and **↓ Download**, and one blue button, **+ New Artifact**, at its end.
 
 **Help** in the top bar (or **?** on the keyboard) opens the help panel for
 this page, with the artifact and link types.
@@ -115,12 +115,12 @@ On a phone, **Tree** shows the outline instead.
 
 ## The detail panel
 
-The selected artifact opens on the right (on a phone, in the **Document**
-pane). Its header carries the **ref**, the **status**, **quality** and
-**priority** chips, and **Edit**, **History** and **Archive**; below the title
-are its type, owner, verification method, the **releases** it is planned for
-(when it sets its own and the project plans target releases, such as *MVP
-onwards*), version and when it last changed, then the review step it can take next (**Submit for review**, **Approve**, …).
+The selected artifact opens on the right (on a phone, as a screen of its own: **‹ Requirements** at its top goes back
+to the list). Its header carries the **ref**, the **status**, **quality** and **priority** chips, **Edit**, and a **⋯**
+menu with **History** and **Archive**. Straight under the title is the artifact's own text (with **Show impact →** on a
+requirement), then one line of facts: its type, owner, verification method, the **releases** it is planned for
+(when it sets its own and the project plans target releases, such as *MVP onwards*), version and when it last changed.
+**Details** opens them as a table with its UID. Then comes the review step it can take next (**Submit for review**, **Approve**, …).
 
 - **Trace** lists every artifact this one is linked to, ↑ above and ↓ below,
   with the link's type; a **suspect** link is marked in yellow. Click one to
@@ -128,13 +128,13 @@ onwards*), version and when it last changed, then the review step it can take ne
 - **Verification** shows how many of the tests verifying it pass, a
   pass / fail / blocked bar, each test with its latest result, and the
   requirement's rollup.
-- Below them are the **description** (with **Show impact →**), the
-  attributes, the figures and the full list of **traceability links**, where a
-  link can be deleted.
+- A design item also shows what it **satisfies** and **Verified through**: the test cases that verify those
+  requirements, each with its last result (tests verify requirements, so this is the evidence that reaches the item).
+- Below them are the attributes, the figures and the full list of **traceability links**, where a link can be deleted.
 
 On a phone the artifact ends in a bar under your thumb: **Comment** scrolls to
 its History, where the comment box is, and the review step forward (**Submit for review**, **Approve**)
-is the blue button beside it.
+is the blue button beside it. While an artifact is open, the app's own bottom bar steps aside for this one.
 
 ## Creating and organizing artifacts
 
@@ -182,8 +182,8 @@ use the ‹ / › buttons.)
 On a phone or tablet, swipe the document sideways: **left** for the next
 artifact, **right** for the one before. Scrolling up and down is never
 interrupted, and a table or code block wide enough to scroll keeps its own
-sideways swipe. The **Tree / Document** buttons still switch panes:
-**Tree** holds the list in whichever view you chose.
+sideways swipe. **‹ Requirements** at the top goes back to the list,
+in whichever view you chose.
 
 Wherever a step lands, the tree opens the sections above it so you can see where
 you are — and only those, so a section you collapsed on purpose stays shut.

@@ -96,12 +96,15 @@ test('navigates by the bar and the row of the group, and by More, which closes o
   await expectNoHorizontalScroll(page);
 });
 
-test('the requirements module stacks into tree and document panes, with History in the document', async () => {
-  const panes = page.getByRole('tablist', { name: 'Requirements panes' });
-  await expect(panes).toBeVisible();
-  await expect(panes.getByRole('tab', { name: 'Tree' })).toHaveAttribute('aria-selected', 'true');
+test('the requirements page is a list, and an artifact opens as a screen of its own with its History', async () => {
+  // The list is the page: no pane switcher, and no way back to show.
+  const back = page.getByRole('button', { name: 'Back to the list' });
+  const bar = page.getByRole('navigation', { name: 'Project tabs' });
+  await expect(page.getByRole('tablist', { name: 'Requirements panes' })).toHaveCount(0);
+  await expect(back).toBeHidden();
+  await expect(bar).toBeVisible();
 
-  // The tree pane holds the create form.
+  // The list holds the create form.
   await page.getByRole('button', { name: '+ New Artifact' }).click();
   await chooseOption(page, '#type', 'requirement');
   await page.locator('#title').fill(reqTitle);
@@ -112,24 +115,28 @@ test('the requirements module stacks into tree and document panes, with History 
 
   // Tapping an artifact moves to its document, which is what the tap meant.
   await page.getByText(reqTitle, { exact: true }).first().click();
-  await expect(panes.getByRole('tab', { name: 'Document' })).toHaveAttribute('aria-selected', 'true');
+  await expect(back).toBeVisible();
   await expect(page.getByRole('heading', { name: reqTitle }).first()).toBeVisible();
+  // An open artifact is a screen of its own: the shell's bar steps aside for
+  // the artifact's own actions.
+  await expect(bar).toBeHidden();
   await expectNoHorizontalScroll(page);
 
   // The artifact's comments and changes are its History, at the foot of the
   // document, rather than a Notes pane of their own (#725).
-  await expect(panes.getByRole('tab', { name: 'Notes' })).toHaveCount(0);
   await expect(page.getByRole('region', { name: 'History' })).toBeVisible();
   await expectNoHorizontalScroll(page);
 
-  // And back to the tree, which kept its state.
-  await panes.getByRole('tab', { name: 'Tree' }).click();
+  // And back to the list, which kept its state.
+  await back.click();
+  await expect(back).toBeHidden();
+  await expect(bar).toBeVisible();
   await expect(page.getByText(reqTitle, { exact: true }).first()).toBeVisible();
 });
 
 test('stepping between artifacts works by control and by swipe', async () => {
   const second = `${reqTitle} second`;
-  const panes = page.getByRole('tablist', { name: 'Requirements panes' });
+  const back = page.getByRole('button', { name: 'Back to the list' });
 
   // A second artifact, so there is somewhere to step to.
   await page.getByRole('button', { name: '+ New Artifact' }).click();
@@ -139,7 +146,7 @@ test('stepping between artifacts works by control and by swipe', async () => {
   await page.getByRole('button', { name: 'Create', exact: true }).click();
 
   await page.getByText(reqTitle, { exact: true }).first().click();
-  await expect(panes.getByRole('tab', { name: 'Document' })).toHaveAttribute('aria-selected', 'true');
+  await expect(back).toBeVisible();
   // Exactly: the stepper renders the count visibly and again in the
   // screen-reader live region, which also names the artifact.
   await expect(page.getByText('1 of 2', { exact: true })).toBeVisible();
@@ -152,8 +159,8 @@ test('stepping between artifacts works by control and by swipe', async () => {
   await next.click();
   await expect(page.getByText('2 of 2', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: second }).first()).toBeVisible();
-  // Stepping stays on the document; it is not a pane switch.
-  await expect(panes.getByRole('tab', { name: 'Document' })).toHaveAttribute('aria-selected', 'true');
+  // Stepping stays on the artifact; it does not go back to the list.
+  await expect(back).toBeVisible();
   await expectNoHorizontalScroll(page);
 
   // The gesture, where the engine can build one.

@@ -1866,3 +1866,90 @@ input[type='checkbox'].ov-switch:focus-visible {
 .ov-more-refresh .ov-more-body {
   padding-bottom: 88px;
 }
+
+/* ---- The action menu (components/ui/ActionMenu.tsx): a popover under its
+   trigger on a computer, a sheet from the bottom of the screen on a phone. */
+.ov-action-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 4px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+.ov-action-menu.is-sheet {
+  position: fixed;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1601;
+  padding: 8px 0 12px;
+  border: none;
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.2);
+}
+.ov-action-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  background: var(--overlay);
+}
+.ov-action-item {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.ov-action-menu.is-sheet .ov-action-item {
+  min-height: 48px;
+  padding: 0 20px;
+  font-size: 15px;
+}
+.ov-action-item:hover:not(:disabled),
+.ov-action-item:focus-visible {
+  background: var(--surface-hover);
+  outline: none;
+}
+.ov-action-item.is-danger {
+  color: var(--danger-strong);
+}
+.ov-action-item:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+.ov-toolbar-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 1000;
+  width: 260px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+.ov-toolbar-menu.action-sheet > button,
+.ov-toolbar-menu.action-sheet > select {
+  min-height: 32px;
+  font-size: 13px;
+}
+/* An open artifact on a phone is a screen of its own (usePushedScreen): the
+   shell's row of pages and its bottom bar step aside for it. */
+.ov-pushed .ov-phone-shell > .ov-grouptabs,
+.ov-pushed .ov-phone-shell > .ov-tabbar {
+  display: none;
+}

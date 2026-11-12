@@ -100,6 +100,20 @@ export async function openMenuGroup(page: Page, group: string): Promise<void> {
 }
 
 /** Navigate to a project module through the menu, opening its group first. */
+/**
+ * The requirements toolbar: the baseline picker with Compare, Capture
+ * Baseline, Delete baseline, Draft test cases and Download. On a wide screen
+ * it sits behind one button, named for the copy on screen (Working copy, or
+ * Baseline); a use of one of its buttons closes it. This opens it unless it
+ * is open already.
+ */
+export async function openRequirementsToolbar(page: Page): Promise<void> {
+  const picker = page.locator('select[title="Select baseline"]');
+  if (await picker.isVisible()) return;
+  await page.getByRole('button', { name: /^(Working copy|Baseline)/ }).click();
+  await expect(picker).toBeVisible();
+}
+
 export async function openModule(page: Page, group: string, label: string): Promise<void> {
   await openMenuGroup(page, group);
   // The group's flyout lists the page; so does the row of the group's pages
