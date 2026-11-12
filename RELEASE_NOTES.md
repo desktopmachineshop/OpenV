@@ -38,8 +38,31 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   design items. A design item's panel there shows what the page showed:
   what it satisfies and **Verified through**, the tests that reach it.
 
+- **One Overview for what the product is and where the project stands.**
+  A project's Summary and Overview are one page now, the first under Plan
+  and the page a project opens on. The product's definition, metrics,
+  constraints, personas and needs are on the left; on the right are the
+  project's figures, **Needs you** and the recent activity (on a phone,
+  those come first). The changes agents have proposed are lines of Needs you
+  instead of a separate band, and the old Summary address opens the
+  Overview.
+
+- **Approvals and runs you can decide on from a phone.** A proposal's
+  **Approve** is one press and **Reject** asks why first, so the note field
+  is there when it is wanted instead of on every card; **Select several**
+  brings out the ticks and the bulk bar when you want to decide many at once.
+  The runs' Status filter is a row of chips, and on a phone each run is a
+  two-line row (the agent and its status, then when, how long and the cost)
+  instead of a squeezed table.
+- **The bottom bar stays on a workspace page.** On a phone, Home, Plan,
+  Define, Verify and More are under the workspace's Home, runs and settings
+  too: a group opens the project you last opened, and More lists the
+  workspace's own pages.
+
 ### Maintenance updates
 
+- On Home, a suspect link's two buttons now say what they do, **Still valid**
+  and **Remove**, instead of ✓ and ✗.
 - The notification bell is drawn in the same line style as the other icons
   instead of as an emoji, so it looks the same on every device.
 

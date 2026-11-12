@@ -3,7 +3,7 @@
 // audit trail, the workspace's projects with their traced and verified share,
 // and the agent proposals waiting for review. Gated by redesign-pages.
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
 import { apiErrorMessage } from '../api/errors';
 import {
   ErrorBanner,
@@ -20,13 +20,14 @@ import {
 import { REDESIGN_PAGES_FEATURE } from '../features';
 import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
+import { useUiRefresh } from '../hooks/useUiRefresh';
 import { useAppStore } from '../state/store';
 import { COMMENT_READS_FEATURE } from '../components/noteReadState';
 import { baselineDate } from '../utils/baselines';
 import { ActivityRows, NeedsPanel, fitPanel, panelScroll } from '../components/ProjectListHomePanels';
 import { loadHome, proposalLabel, type ActivityItem, type HomeData, type TodoItem } from './ProjectHomeData';
 
-const figure = (value: number | null, suffix = '') => (value === null ? '–' : `${value}${suffix}`);
+export const figure = (value: number | null, suffix = '') => (value === null ? '–' : `${value}${suffix}`);
 
 const Figure: React.FC<{ value: string; label: string; danger?: boolean }> = ({ value, label, danger }) => (
   <span>
@@ -35,7 +36,7 @@ const Figure: React.FC<{ value: string; label: string; danger?: boolean }> = ({ 
   </span>
 );
 
-const PhoneFigure: React.FC<{ value: string; label: string; to: string; danger?: boolean }> = ({ value, label, to, danger }) => (
+export const PhoneFigure: React.FC<{ value: string; label: string; to: string; danger?: boolean }> = ({ value, label, to, danger }) => (
   <Link
     to={to}
     style={{
@@ -58,7 +59,7 @@ const PhoneFigure: React.FC<{ value: string; label: string; to: string; danger?:
 // panels share the height left, each scrolling on its own (fit). A phone
 // scrolls the page as a whole.
 
-const NeedsYou: React.FC<{ items: TodoItem[]; projectId: string; limit: number; flex?: string; fit?: boolean }> = ({ items, projectId, limit, flex = '1.3 1 420px', fit = false }) => (
+export const NeedsYou: React.FC<{ items: TodoItem[]; projectId: string; limit: number; flex?: string; fit?: boolean }> = ({ items, projectId, limit, flex = '1.3 1 420px', fit = false }) => (
   <NeedsPanel
     items={items}
     limit={limit}
@@ -68,7 +69,7 @@ const NeedsYou: React.FC<{ items: TodoItem[]; projectId: string; limit: number; 
   />
 );
 
-const AuditTrail: React.FC<{ items: ActivityItem[]; projectId: string; title: string; flex?: string; fit?: boolean }> = ({
+export const AuditTrail: React.FC<{ items: ActivityItem[]; projectId: string; title: string; flex?: string; fit?: boolean }> = ({
   items,
   projectId,
   title,
@@ -224,8 +225,15 @@ const HomeContent: React.FC = () => {
   );
 };
 
-export const ProjectHome: React.FC = () => (
-  <FeatureGate feature={REDESIGN_PAGES_FEATURE} name="Home">
-    <HomeContent />
-  </FeatureGate>
-);
+export const ProjectHome: React.FC = () => {
+  // The refreshed interface (ui-refresh) has one page for what the project
+  // is and where it stands: the Overview. Summary's address leads there.
+  const refresh = useUiRefresh();
+  const { projectId = '' } = useParams<{ projectId: string }>();
+  if (refresh) return <Navigate to={`/projects/${projectId}`} replace />;
+  return (
+    <FeatureGate feature={REDESIGN_PAGES_FEATURE} name="Home">
+      <HomeContent />
+    </FeatureGate>
+  );
+};

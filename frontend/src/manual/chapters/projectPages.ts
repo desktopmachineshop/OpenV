@@ -3,26 +3,25 @@ const content = `
 # Home, Design, Tests and Baselines
 
 Four project pages bring together what you would otherwise collect from
-several others. **Summary** (a project's Home) is under **Plan** in the project
-menu, **Tests** and **Baselines** under **Verify**; design items are read in **Requirements**. They show what the
+several others. A project's own Home is part of its **Overview**, first under **Plan** in the project
+menu; **Tests** and **Baselines** under **Verify**; design items are read in **Requirements**. They show what the
 project already holds; you edit artifacts, record results and capture
 baselines where you always have.
 
 ## Home
 
-**Summary**, a project's own Home, is the project at a glance; the workspace's **Home**, at the top of the rail, gathers the same for every project. Along the top are its figures: how many
-artifacts it holds, the share of requirements that are **traced** (a test
-case verifies them) and **verified**, and how many fail their tests. Beside
-the project's name are its last baseline and the number of members.
+The workspace's **Home**, at the top of the rail, gathers what needs you across every project. A project's
+own Home is the right-hand side of its **Overview** (on a phone, its top): the project's figures as four
+tiles, **Needs you** and **Recent activity**. The old Summary address opens the Overview.
 
 **Needs you** lists what waits on the team. Click a line to open the
 artifact it names; the button on the right says what it does. **Review
 all** in its header opens the **Review Queue**.
 
 - **approve**: an artifact in review; **Review** opens it.
-- **suspect**: a link whose ends changed after it was made. **✓** confirms
-  the link still holds and **✗** removes it, after you confirm, right there
-  on Home; the line leaves the list.
+- **suspect**: a link whose ends changed after it was made. **Still valid**
+  confirms the link still holds and **Remove** deletes it, after you
+  confirm, right there on the line; the line leaves the list.
 - **test run**: a run still in progress, with how many test cases are left.
 - **failing**: a test case whose last result is a fail, and the
   requirements it verifies.
@@ -31,21 +30,12 @@ all** in its header opens the **Review Queue**.
   marks them read. **Mark read** clears the artifact's comments from the
   list without opening it, **Mark all read** in the header clears them all,
   and **Undo** on the line they leave puts them back.
+- **proposal**: a change an agent has proposed; **Review** opens the agent
+  runs, where you approve or reject it.
 
-The **Audit trail** shows the newest events of the project, who did what to
+**Recent activity** shows the newest events of the project, who did what to
 which artifact; click one to open what it is about. **Full history** opens
-the **Activity** page. **Projects**
-lists your workspace's projects with how far each is traced and verified,
-and when agents have proposed changes, a card counts the proposals waiting
-and opens the agent runs to review them.
-
-On a computer or tablet, Home fits the window: **Needs you**, the
-**Audit trail** and **Projects** share the height below the figures, and
-each scrolls on its own when it has more than fits, so **Needs you** lists
-everything waiting.
-
-On a phone, Home shows the figures as four tiles, then **Needs you**, the
-proposals and the recent activity.
+the **Activity** page.
 
 ## Activity log
 

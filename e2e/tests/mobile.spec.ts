@@ -249,9 +249,11 @@ test('the agent pages open their side panes as sheets', async () => {
   await sheet.getByRole('button', { name: 'Close editor' }).click();
   await expect(sheet).toBeHidden();
 
-  // Runs and automations: the tables keep to the phone's width.
+  // Runs: a list of rows under the Status chips, with no table to squeeze.
+  // Automations: the table keeps to the phone's width.
   await page.goto(`/projects/${projectId}/agent-runs`);
-  await expect(page.getByRole('columnheader', { name: 'Agent' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Status' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Runs' })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Tokens' })).toHaveCount(0);
   await expectNoHorizontalScroll(page);
   await page.goto(`/projects/${projectId}/automations`);

@@ -13,6 +13,7 @@ import { ProposalReviewPanel } from '../components/agents/ProposalReviewPanel';
 import { RunnerConnectPrompt } from '../components/RunnerConnectPrompt';
 import { ErrorBanner, buttonStyle, chipStyle } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
+import { useUiRefresh } from '../hooks/useUiRefresh';
 
 // Cap the 5s poll: this page re-fetches every run in the project on a timer,
 // which is unbounded as run history grows. 200 covers the visible table; the
@@ -60,6 +61,7 @@ export const AgentRunsPage: React.FC = () => {
   // A phone shows the three columns that identify a run; the rest is in the
   // detail. A compact viewport opens that detail as a sheet over the list.
   const { isPhone, isCompact } = useViewport();
+  const refresh = useUiRefresh();
 
   useEffect(() => {
     if (!projectId) return;
@@ -177,7 +179,7 @@ export const AgentRunsPage: React.FC = () => {
           </span>
         )}
         <div style={{ flex: 1 }} />
-        <RunStatusFilter value={statusFilter} onChange={setStatusFilter} />
+        <RunStatusFilter value={statusFilter} onChange={setStatusFilter} chips={refresh} />
       </div>
 
       <ErrorBanner message={error} onDismiss={() => setRaised(null)} style={{ marginBottom: 8 }} />
@@ -259,6 +261,7 @@ export const AgentRunsPage: React.FC = () => {
             selectedRunId={selectedRunId}
             onSelect={selectRun}
             isPhone={isPhone}
+            rows={refresh && isPhone}
             emptyText="No runs yet. Launch an agent from the Agents page or the board."
           />
         </div>

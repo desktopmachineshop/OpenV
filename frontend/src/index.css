@@ -1953,3 +1953,53 @@ input[type='checkbox'].ov-switch:focus-visible {
 .ov-pushed .ov-phone-shell > .ov-tabbar {
   display: none;
 }
+
+/* The Overview of the refreshed interface: what the product is on the left,
+   where the project stands on the right; stacked on a narrow screen, with
+   what needs you first. */
+.ov-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  gap: 16px;
+  align-items: start;
+}
+.ov-overview-status {
+  position: sticky;
+  top: 16px;
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .ov-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ov-overview-status {
+    position: static;
+    order: -1;
+  }
+}
+
+/* The bottom bar of a workspace page on a phone (ui-refresh): fixed to the
+   foot of the window, with the page padded clear of it. Inside a project the
+   bar is a row of the shell's column instead. */
+.ov-tabbar-fixed {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 890;
+}
+body.ov-has-tabbar {
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+}
+.ov-tabbar-item.is-disabled {
+  color: var(--neutral-mid);
+  cursor: default;
+}
+/* More is the last cell of the bar's grid: the menu's wrapper fills the cell
+   and its sheet opens over the page. */
+.ov-tabbar > span:has(> .ov-tabbar-item) {
+  display: flex;
+}
+.ov-tabbar > span > .ov-tabbar-item {
+  flex: 1;
+}

@@ -223,12 +223,12 @@ admin); only the rail's buttons change.
     workspace.
   - **Switch project**: click the project's name (it reads **All projects**
     on a workspace page) for the workspace's projects. Choose one to open
-    it at its Summary; **All projects** opens the Projects page and **+ New
+    it at its Overview; **All projects** opens the Projects page and **+ New
     project** starts a project from wherever you are.
 - **The rail inside a project** has a button for each part of the project,
   in the order the work runs — **Plan**, **Define**, **Verify** and
   **Agents** — and links to **Activity** and **Settings**. Click a group to
-  open its pages beside the rail (Plan holds Overview, Summary, Board, Gantt
+  open its pages beside the rail (Plan holds Overview, Board, Gantt
   and Releases, for example), then click the page. The group holding the
   page you are on is marked. The list closes when you arrive, or with
   **Esc** or a click anywhere else.
@@ -254,7 +254,10 @@ sideways when it is wider than the screen). **More** is the whole menu as a
 page of its own: the workspace switcher, the project switcher and the
 search, then every page as a tile under its group, **Help** for the page you
 were on, the **Manual**, **All projects**, and under **You** your account
-menu.
+menu. The same bar stays under a workspace page: **Home** is the workspace's
+Home, a group's tab opens the project you last opened at the page you last
+read in that group (it is greyed until you have opened a project), and
+**More** lists the workspace's own pages.
 
 ## Keyboard shortcuts
 

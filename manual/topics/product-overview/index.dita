@@ -2,9 +2,10 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="product-overview">
   <title>Product Overview</title>
-  <shortdesc>The <b>Overview</b> page (the project's landing page) is the single source of truth for what the product is and how success is measured.</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="overview"/>
   </prolog>
-  <conbody/>
+  <conbody>
+    <p>The <b>Overview</b> page is the project's landing page, first under <b>Plan</b>. It says what the product is and where the project stands: the product's definition, metrics, constraints, personas and needs on the left, and on the right the project's figures, what needs you and its latest activity. On a phone, where the project stands comes first.</p>
+  </conbody>
 </concept>

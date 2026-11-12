@@ -16,7 +16,9 @@ cancelled
 
 - Click a run to open the **detail panel**: the prompt, live progress/log,
   results, and links to related runs (e.g. a retry of a failed run).
-- The **Status** dropdown filters the list.
+- The **Status** chips above the list filter it: **All runs**, or one status.
+- On a phone each run is a row of two lines: the agent and its status, then
+  when it started, how long it took and what it cost. Tap it for the rest.
 - A queued run may show **"reserved for launcher's runner"** — it's waiting
   briefly for the launcher's personal runner before other runners may claim it.
 
@@ -59,8 +61,11 @@ Each proposal is a card that reads as the change it makes:
 - **Raw payload**, which opens the exact data the agent sent;
 - **from its run**, which opens the run that made the proposal beside the list.
 
-Add an optional review note, then **Approve** or **Reject**. Tick several
-cards (or **Select all**) to approve or reject them together with one note.
+**Approve** takes one press. **Reject** first asks why: a note field opens,
+and pressing **Reject** again rejects with whatever you wrote, or nothing.
+**Add a note** opens the same field for an approval. To decide several
+together, press **Select several**: each card gets a tick, and a bar offers
+**Select all**, one note and **Approve Selected** or **Reject Selected**.
 
 ## Runner types
 

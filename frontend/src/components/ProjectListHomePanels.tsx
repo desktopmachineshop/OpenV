@@ -21,6 +21,7 @@ const KIND_TONE: Record<TodoKind, ChipTone> = {
   failing: 'danger',
   comment: 'neutral',
   'to-do': 'info',
+  proposal: 'agent',
 };
 
 /** An artifact reference (REQ-12), drawn in monospace; a name is not. */
@@ -29,13 +30,14 @@ const REF = /^[A-Z][A-Z0-9]*-\d+$/;
 const iconButton = (tone: 'ok' | 'bad'): React.CSSProperties => ({
   ...tapTarget,
   justifyContent: 'center',
-  padding: 0,
+  padding: '0 8px',
   border: '1px solid var(--border)',
   borderRadius: 6,
   background: 'var(--surface)',
   color: tone === 'ok' ? 'var(--success-text)' : 'var(--danger-strong)',
-  fontSize: 15,
-  fontWeight: 700,
+  fontSize: 12,
+  fontWeight: 600,
+  whiteSpace: 'nowrap',
   cursor: 'pointer',
 });
 
@@ -87,7 +89,7 @@ const SuspectActions: React.FC<TodoRowProps> = ({ t, onDone }) => {
         onClick={() => act(() => linkAPI.confirm(t.linkId!))}
         style={iconButton('ok')}
       >
-        ✓
+        Still valid
       </button>
       <button
         type="button"
@@ -97,7 +99,7 @@ const SuspectActions: React.FC<TodoRowProps> = ({ t, onDone }) => {
         onClick={reject}
         style={iconButton('bad')}
       >
-        ✗
+        Remove
       </button>
     </span>
   );

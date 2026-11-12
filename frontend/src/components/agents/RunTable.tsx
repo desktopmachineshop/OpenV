@@ -92,11 +92,49 @@ const formatDuration = (run: AgentRun): string => {
   return `${Math.floor(mins / 60)}h ${mins % 60}m`;
 };
 
-/** The status a Runs page lists ('all' for every one), as a labelled select. */
-export const RunStatusFilter: React.FC<{ value: string; onChange: (status: string) => void }> = ({
+const statusLabel = (status: string): string =>
+  status === 'all' ? 'All runs' : (status.charAt(0).toUpperCase() + status.slice(1)).replace(/_/g, ' ');
+
+/**
+ * The status a Runs page lists ('all' for every one): a labelled select, or
+ * with chips (the refreshed interface) one chip a status in a row that
+ * scrolls sideways on a narrow screen.
+ */
+export const RunStatusFilter: React.FC<{ value: string; onChange: (status: string) => void; chips?: boolean }> = ({
   value,
   onChange,
-}) => (
+  chips = false,
+}) =>
+  chips ? (
+    <div role="group" aria-label="Status" className="tab-strip" style={{ display: 'flex', gap: 6, overflowX: 'auto', maxWidth: '100%' }}>
+      {STATUS_FILTERS.map((s) => {
+        const on = value === s;
+        return (
+          <button
+            key={s}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onChange(s)}
+            style={{
+              flex: 'none',
+              minHeight: 32,
+              padding: '0 12px',
+              border: on ? '1px solid var(--sidebar-bg)' : '1px solid var(--border)',
+              borderRadius: 16,
+              background: on ? 'var(--sidebar-bg)' : 'var(--surface)',
+              color: on ? 'var(--sidebar-text)' : 'var(--text)',
+              fontSize: 13,
+              fontWeight: on ? 600 : 400,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {statusLabel(s)}
+          </button>
+        );
+      })}
+    </div>
+  ) : (
   <>
     <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Status</label>
     <select value={value} onChange={(e) => onChange(e.target.value)} style={{ width: 180, padding: '6px 10px' }}>
@@ -121,10 +159,79 @@ interface RunTableProps {
   isPhone: boolean;
   /** What the table says when there is no run to list. */
   emptyText: string;
+  /**
+   * A phone in the refreshed interface lists the runs as rows of two lines,
+   * the agent and its status, then when it ran and what it cost, in place of
+   * a table squeezed to three columns.
+   */
+  rows?: boolean;
 }
 
+const PULSE = '@keyframes ovPulseRun { 0% { opacity: 1; } 50% { opacity: 0.45; } 100% { opacity: 1; } }';
+
+/** A run as a row of two lines: who and how it went, then when, how long and the cost. */
+const RunRow: React.FC<{ run: AgentRun; selected: boolean; onSelect: (runId: string) => void }> = ({ run, selected, onSelect }) => {
+  const facts = [
+    run.started_at ? new Date(run.started_at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : 'Not started',
+    run.started_at ? formatDuration(run) : '',
+    run.cost_usd != null && run.cost_usd > 0 ? '$' + run.cost_usd.toFixed(2) : '',
+  ].filter(Boolean);
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(run.id)}
+      aria-current={selected ? 'true' : undefined}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        width: '100%',
+        minHeight: 56,
+        padding: '8px 12px',
+        border: 'none',
+        borderBottom: '1px solid var(--neutral-soft)',
+        background: selected ? 'var(--tint-blue)' : 'var(--surface)',
+        color: 'var(--text)',
+        font: 'inherit',
+        textAlign: 'left',
+        cursor: 'pointer',
+      }}
+    >
+      <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ fontSize: 14, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {run.agent_name || run.agent_id}
+        </span>
+        <span style={{ fontSize: 12, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {facts.join(' · ')}
+        </span>
+      </span>
+      <span style={{ flex: 'none', display: 'flex', alignItems: 'center' }}>
+        <span style={{ ...chipStyle(runStatusTone(run.status)), animation: run.status === 'running' ? 'ovPulseRun 1.4s ease-in-out infinite' : undefined }}>
+          {run.status}
+        </span>
+        <ErrorClassChip errorClass={run.error_class} />
+      </span>
+    </button>
+  );
+};
+
 /** The runs of a Runs page, a row each; a row's click selects its run. */
-export const RunTable: React.FC<RunTableProps> = ({ runs, selectedRunId, onSelect, isPhone, emptyText }) => {
+export const RunTable: React.FC<RunTableProps> = ({ runs, selectedRunId, onSelect, isPhone, emptyText, rows = false }) => {
+  if (rows) {
+    return (
+      <div className="table-container" role="list" aria-label="Runs">
+        <style>{PULSE}</style>
+        {runs?.map((run) => (
+          <div key={run.id} role="listitem">
+            <RunRow run={run} selected={selectedRunId === run.id} onSelect={onSelect} />
+          </div>
+        ))}
+        {!runs?.length && (
+          <p style={{ margin: 0, padding: 16, color: 'var(--text-muted)', background: 'var(--surface)' }}>{runs ? emptyText : 'Loading runs…'}</p>
+        )}
+      </div>
+    );
+  }
   const columns = isPhone
     ? ['Agent', 'Status', 'Started']
     : ['Agent', 'Status', 'Started', 'Duration', 'Tokens', 'Cost'];

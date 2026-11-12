@@ -8,22 +8,23 @@ import { sectionHasActive } from './navSections';
 // on a computer and the bottom bar on a phone read the same list in the same
 // order: Plan, Define, Verify, Agents, then the pages with no group.
 //
-// What moves: Overview and Summary leave Define for the head of Plan. They
-// are where a project starts and where it stands, which is what Plan opens
-// on.
+// What moves: Overview leaves Define for the head of Plan. It is what the
+// project is and where it stands, which is what Plan opens on.
 
 /** The groups of the refreshed menu, in the order every shell draws them. */
 export const REFRESH_GROUPS = ['Plan', 'Define', 'Verify', 'Agents'] as const;
 
 /** The pages that move to the head of Plan, in the order they sit there. */
-const PLAN_HEAD = ['', 'home'];
+const PLAN_HEAD = [''];
 
 /**
  * Pages the refreshed menu no longer lists. Design showed the design items
  * Requirements already holds; its facts are in the artifact's pane there now,
- * and its address leads to Requirements filtered to design items.
+ * and its address leads to Requirements filtered to design items. Summary
+ * (the project's Home) said where the project stands and Overview what it
+ * is; the Overview now says both, and Summary's address leads to it.
  */
-const DROPPED = ['design'];
+const DROPPED = ['design', 'home'];
 
 /** The menu regrouped for the refreshed shell. Sections left empty are dropped. */
 export const refreshSections = (sections: NavSection[]): NavSection[] => {
