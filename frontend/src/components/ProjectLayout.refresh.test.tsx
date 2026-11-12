@@ -108,7 +108,7 @@ describe('the refreshed shell on a wide screen', () => {
   it("lists the current group's pages in a row and lights the one in view", async () => {
     await mount('/projects/p1/requirements');
     expect(groupRow()?.getAttribute('aria-label')).toBe('Define pages');
-    expect(rowLinks()).toEqual(['Guided Definition', 'Requirements*', 'Design', 'Interviews']);
+    expect(rowLinks()).toEqual(['Guided Definition', 'Requirements*', 'Interviews']);
     // The row names the page, so the top bar's crumb does not.
     expect(document.querySelector('.ov-topbar-page')).toBeNull();
   });
@@ -142,7 +142,7 @@ describe('the refreshed shell on a phone', () => {
   it('reads Home, Plan, Define, Verify, More along the bar and lights the group in view', async () => {
     await mount('/projects/p1/requirements', { width: 390 });
     expect(barItems()).toEqual(['Home', 'Plan', 'Define*', 'Verify', 'More']);
-    expect(rowLinks()).toEqual(['Guided Definition', 'Requirements*', 'Design', 'Interviews']);
+    expect(rowLinks()).toEqual(['Guided Definition', 'Requirements*', 'Interviews']);
     // No menu button in the header: More is the one way to the menu.
     expect(document.querySelector('button[aria-label="Project menu"]')).toBeNull();
   });
@@ -179,7 +179,7 @@ describe('the refreshed shell on a phone', () => {
     ]);
     const tiles = (label: string) =>
       Array.from(menu.querySelectorAll(`section[aria-label="${label}"] .ov-more-tile`)).map(text);
-    expect(tiles('Define')).toEqual(['Guided Definition', 'Requirements', 'Design', 'Interviews']);
+    expect(tiles('Define')).toEqual(['Guided Definition', 'Requirements', 'Interviews']);
     expect(tiles('Project')).toEqual(['Activity', 'Settings', 'Help', 'Manual', 'All projects']);
     expect(barItems()).toEqual(['Home', 'Plan', 'Define', 'Verify', 'More*']);
     // The page stays mounted under the menu, hidden.

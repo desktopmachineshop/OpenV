@@ -1,14 +1,14 @@
 import { apiErrorMessage } from '../api/errors';
 import React, { useState, useEffect, useRef } from 'react';
 import { Artifact, ArtifactStatus, artifactAPI } from '../api/client';
-import { Chip, buttonStyle, useAlert, useConfirm } from './ui';
+import { ActionMenu, Chip, buttonStyle, useAlert, useConfirm } from './ui';
 import { useViewport } from '../hooks/useViewport';
-import { useReleaseRangeLabel } from './ArtifactReleaseFact';
+import { ArtifactHeaderFacts } from './ArtifactHeaderFacts';
 import { ArtifactStepper, ArtifactStepperProps } from './ArtifactStepper';
 import { ArtifactVersionList } from './ArtifactVersionList';
 import { MONO, QualityChip } from './artifactCells';
 import { NEXT_STATUSES, TRANSITION_LABELS, isForward, useStatusChange } from './artifactStatusChange';
-import { QualityFacts, STATUS_META, ago, priorityOf, statusOf, typeLabel, verificationMethodOf } from '../utils/artifactFacts';
+import { QualityFacts, STATUS_META, priorityOf, statusOf } from '../utils/artifactFacts';
 
 interface ArtifactHeaderProps {
   artifact: Artifact;
@@ -47,6 +47,13 @@ interface ArtifactHeaderProps {
   quality?: QualityFacts;
   /** A phone moves the review transitions into its bottom action bar. */
   hideTransitions?: boolean;
+  /**
+   * The refreshed pane (ui-refresh): the artifact's text, passed as children,
+   * sits straight under its title; the facts fold to one line; and History
+   * and Archive move behind a ⋯ menu beside Edit.
+   */
+  statementFirst?: boolean;
+  children?: React.ReactNode;
 }
 
 export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
@@ -63,6 +70,8 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
   onReinstate,
   quality,
   hideTransitions = false,
+  statementFirst = false,
+  children,
 }) => {
   const confirm = useConfirm();
   const alertDialog = useAlert();
@@ -164,28 +173,12 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
 
   const meta = STATUS_META[displayStatus];
   const previewing = localPreviewVersion !== null;
-  const owner = typeof displayArtifact.attributes?.owner === 'string' ? displayArtifact.attributes.owner : '';
   const priority = priorityOf(displayArtifact);
-  const method = verificationMethodOf(displayArtifact);
-  const releases = useReleaseRangeLabel(displayArtifact);
   const action = (kind: 'secondary' | 'danger', disabled = false): React.CSSProperties => ({
     ...buttonStyle(kind, { compact: !touch, disabled }),
     ...(touch ? { minHeight: 40 } : {}),
     flex: isPhone ? '1 1 auto' : undefined,
   });
-  const facts: Array<[string, React.ReactNode]> = [
-    ['Type', typeLabel(displayArtifact.type)],
-    ...(priority ? [['Priority', priority] as [string, React.ReactNode]] : []),
-    ...(owner ? [['Owner', owner] as [string, React.ReactNode]] : []),
-    ...(method ? [['Verify by', method] as [string, React.ReactNode]] : []),
-    ...(releases ? [['Releases', releases] as [string, React.ReactNode]] : []),
-    [
-      'Version',
-      `${displayArtifact.version}${!readOnly && displayArtifact.version > 1 ? ` · ${versions.length} total` : ''}`,
-    ],
-    ['Updated', /^\d+[mhdw]$/.test(ago(displayArtifact.updated_at)) ? `${ago(displayArtifact.updated_at)} ago` : ago(displayArtifact.updated_at)],
-  ];
-
   return (
     <div className="card" style={{ marginBottom: 12, padding: '12px 14px' }}>
       {/* Above everything, in its own row, so it neither fights the title for
@@ -222,7 +215,20 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                 Edit
               </button>
             )}
-            {displayArtifact.version > 1 && (
+            {statementFirst && !archivedAt && (
+              <ActionMenu
+                label="More actions"
+                triggerStyle={{ ...action('secondary'), flex: 'none', minWidth: touch ? 44 : undefined }}
+                items={[
+                  ...(displayArtifact.version > 1
+                    ? [{ key: 'history', label: showVersions ? 'Hide history' : 'History', onSelect: () => setShowVersions(!showVersions) }]
+                    : []),
+                  { key: 'archive', label: 'Archive', danger: true, disabled: previewing, onSelect: () => onDelete(displayArtifact.id) },
+                ]}
+              />
+            )}
+            {/* An archived artifact is read through its history, so History stays a button there. */}
+            {(!statementFirst || archivedAt) && displayArtifact.version > 1 && (
               <button
                 type="button"
                 data-help-key="requirements.versions"
@@ -233,7 +239,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
                 History
               </button>
             )}
-            {!archivedAt && (
+            {!statementFirst && !archivedAt && (
               <button
                 type="button"
                 onClick={() => onDelete(displayArtifact.id)}
@@ -266,26 +272,14 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
           )}
         </p>
       )}
-      <dl
-        style={{
-          margin: 0,
-          display: 'grid',
-          gridTemplateColumns: isPhone ? '84px minmax(0, 1fr)' : '84px minmax(0, 1fr) 72px minmax(0, 1fr)',
-          gap: '4px 8px',
-          fontSize: 12,
-        }}
-      >
-        {facts.map(([label, value]) => (
-          <React.Fragment key={label}>
-            <dt style={{ color: 'var(--text-muted)' }}>{label}</dt>
-            <dd style={{ margin: 0, color: 'var(--text)', overflowWrap: 'anywhere' }}>{value}</dd>
-          </React.Fragment>
-        ))}
-        <dt style={{ color: 'var(--text-muted)', gridColumn: 1 }}>UID</dt>
-        <dd style={{ margin: 0, gridColumn: isPhone ? undefined : 'span 3' }}>
-          <code style={{ fontSize: 12, color: 'var(--text-secondary)', wordBreak: 'break-all' }}>{displayArtifact.id}</code>
-        </dd>
-      </dl>
+      {statementFirst && !previewing && children}
+      <ArtifactHeaderFacts
+        artifact={displayArtifact}
+        versionCount={versions.length}
+        readOnly={readOnly}
+        isPhone={isPhone}
+        folded={statementFirst}
+      />
       {!readOnly && !archivedAt && !hideTransitions && !localPreviewVersion && NEXT_STATUSES[status].length > 0 && (
         <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }} data-help-key="review">
           {NEXT_STATUSES[status].map((next) => (

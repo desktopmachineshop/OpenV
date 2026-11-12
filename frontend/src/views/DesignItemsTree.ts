@@ -96,7 +96,7 @@ export const traceOf = (
   id: string,
   artifacts: Artifact[],
   links: Link[],
-  coverage: CoverageReport | null
+  coverage: Pick<CoverageReport, 'entries'> | null
 ): { traces: Traced[]; tracedFrom: Traced[]; verifications: Verification[] } => {
   const byId = new Map(artifacts.map((a) => [a.id, a]));
   const traces: Traced[] = [];

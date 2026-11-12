@@ -256,7 +256,7 @@ const routes = [
   // The workspace's feature gates, ahead of the org catch-all below, which
   // would otherwise answer {} and crash every useFeature on the page. All
   // on, so gated cards and controls render with their buttons.
-  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true, 'redesign-pages': true, 'review-queue-decisions': true, 'project-review-round': true, 'editor-pickers': true, 'gantt-plan': true, 'floating-assistant': true, 'ui-refresh': true } }],
+  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true, 'redesign-pages': true, 'review-queue-decisions': true, 'project-review-round': true, 'editor-pickers': true, 'gantt-plan': true, 'floating-assistant': true, 'ui-refresh': true, 'chip-search': true, 'requirements-tree': true } }],
   [/\/api\/v1\/orgs\/org1$/, org],
   [/\/api\/v1\/orgs\//, {}],
   [/\/api\/v1\/meta\/artifact-types/, [{ type: 'requirement', label: 'Requirement' }, { type: 'heading', label: 'Heading' }, { type: 'user-need', label: 'User Need' }, { type: 'test-case', label: 'Test Case' }]],
@@ -504,7 +504,7 @@ const SCREENS = [
   { tag: 'requirements-edit', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await press(ex.first()); await press(p.getByText('Positioning accuracy').first()); await p.waitForTimeout(500); await press(p.getByRole('button', { name: 'Edit', exact: true }).first()); } },
   // On a phone the toolbar folds into an action sheet; a desktop has the
   // Download button in the toolbar itself.
-  { tag: 'requirements-download', path: '/projects/p1/requirements', open: async (p) => { await press(p.getByRole('button', { name: 'Requirements actions' })); await press(p.getByRole('button', { name: /Download/ }).first()); }, openDesktop: async (p) => press(p.getByRole('button', { name: /Download/ }).first()) },
+  { tag: 'requirements-download', path: '/projects/p1/requirements', open: async (p) => { await press(p.getByRole('button', { name: 'Requirements actions' })); await press(p.getByRole('button', { name: /Download/ }).first()); }, openDesktop: async (p) => { const menu = p.getByRole('button', { name: /^(Working copy|Baseline)/ }); if (await menu.count()) await press(menu.first()); await press(p.getByRole('button', { name: /Download/ }).first()); } },
   { tag: 'requirements-menu', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await press(ex.first()); await press(p.getByRole('button', { name: /Actions for Positioning/ })); } },
   // The tree and the layers (a phone's outline and its drill-down by level).
   { tag: 'requirements-tree', path: '/projects/p1/requirements?view=tree&artifact=req-2' },

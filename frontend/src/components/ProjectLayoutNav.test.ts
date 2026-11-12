@@ -36,6 +36,11 @@ describe('refreshSections', () => {
     ]);
   });
 
+  it('drops Design, whose items Requirements holds', () => {
+    const withDesign = sidebar.map((s) => (s.label === 'Define' ? { ...s, items: [...s.items, { to: 'design', label: 'Design' }] } : s));
+    expect(shape(refreshSections(withDesign))[1]).toBe('Define: Guided Definition, Requirements');
+  });
+
   it('keeps Overview current only on its own path', () => {
     expect(refreshSections(sidebar)[0].items[0]).toEqual({ to: '', label: 'Overview', end: true });
   });

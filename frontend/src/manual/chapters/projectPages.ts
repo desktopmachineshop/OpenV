@@ -3,8 +3,8 @@ const content = `
 # Home, Design, Tests and Baselines
 
 Four project pages bring together what you would otherwise collect from
-several others. **Summary** (a project's Home) and **Design** are under **Define** in the project
-menu, **Tests** and **Baselines** under **Verify**. They show what the
+several others. **Summary** (a project's Home) is under **Plan** in the project
+menu, **Tests** and **Baselines** under **Verify**; design items are read in **Requirements**. They show what the
 project already holds; you edit artifacts, record results and capture
 baselines where you always have.
 
@@ -73,23 +73,20 @@ Click **▸** at the end of an event for its detail:
 
 ## Design
 
-**Design** shows the project's design items as a tree: an item nested under
-another in the **Requirements** view is nested here too. The number beside
-an item counts the design items beneath it. Type in **Filter** to find an
-item by its reference or title.
+Design items are read in **Requirements**; there is no separate Design page,
+and its old address opens Requirements with the **Type: Design item** filter
+on. Switch to **Tree** to see the items nested as they are in the document:
+an item under another is drawn under it.
 
-Select an item to read it: its description, its **Attributes** as a table,
-the requirements it **satisfies** (and anything else it links to, such as
-the hazards it mitigates), and **Verified through**: the test cases that
-verify those requirements, each with its last result. Test cases verify
-requirements rather than design items, so this is the evidence that reaches
-the item through them. **Properties** gives its parent, how many items it
-contains, its version and when it last changed.
+Select an item to read it in the detail panel: its text straight under its
+title, its attributes, the requirements it **satisfies** (and anything else
+it links to, such as the hazards it mitigates), and **Verified through**:
+the test cases that verify those requirements, each with its last result.
+Test cases verify requirements rather than design items, so this is the
+evidence that reaches the item through them.
 
-**Edit** opens the item in the **Requirements** view. To see what a change
-would touch, run **Impact** from a requirement the item satisfies: it flows
-down to the item and what it links to. On a phone the page walks the tree instead: the path to
-the item, the item, what it contains and the other items beside it.
+To see what a change would touch, run **Impact** from a requirement the item
+satisfies: it flows down to the item and what it links to.
 
 ## Tests
 

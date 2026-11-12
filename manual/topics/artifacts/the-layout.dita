@@ -9,7 +9,7 @@
       <li><b>The detail panel</b> — on the right, the selected artifact: its status, quality and priority, its text, its place in the trace and its tests (see <i>The detail panel</i>). Drag its left edge to make it wider; the width is remembered.</li>
     </ul>
     <p>The selected artifact's comments and recorded changes are its <b>History</b>, the last section of the detail panel (see <i>History</i>). The V&amp;V Assistant floats over the page from the <b>✦ Assistant</b> button in the bottom corner (see <i>Guided definition &amp; the V&amp;V Assistant</i> → <i>The V&amp;V Assistant on every page</i>).</p>
-    <p>The header holds the baseline picker and the project actions — <b>Compare</b>, <b>Capture Baseline</b>, <b>Draft test cases</b>, <b>↓ Download</b> — with one blue button, <b>+ New Artifact</b>, at its end.</p>
+    <p>One bar runs across the top: the search and its filters, the <b>Table / Tree</b> switch, then <b>Working copy</b> (it reads <b>Baseline</b> while you view one), which opens the baseline picker with <b>Compare</b>, <b>Capture Baseline</b>, <b>Delete baseline</b>, <b>Draft test cases</b> and <b>↓ Download</b>, and one blue button, <b>+ New Artifact</b>, at its end.</p>
     <p><b>Help</b> in the top bar (or <b>?</b> on the keyboard) opens the help panel for this page, with the artifact and link types.</p>
   </conbody>
 </concept>

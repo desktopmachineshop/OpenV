@@ -99,6 +99,8 @@ interface ArtifactDetailsProps {
   showHistory?: boolean;
   /** The project, for the History's mentions and to-dos. */
   projectId?: string;
+  /** The refreshed pane shows the artifact's text under its title, so not here again. */
+  hideDescription?: boolean;
 }
 
 export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({ 
@@ -116,6 +118,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
   onLinksChanged,
   showHistory = false,
   projectId,
+  hideDescription = false,
 }) => {
   const { isPhone } = useViewport();
   const confirm = useConfirm();
@@ -590,7 +593,7 @@ export const ArtifactDetails: React.FC<ArtifactDetailsProps> = ({
         <>
       {/* The header above carries the title, type and version; this card
           is the artifact's content and its full set of links. */}
-      <div style={{ marginBottom: '12px' }}>
+      <div style={{ marginBottom: '12px', display: hideDescription ? 'none' : undefined }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
           <h4 style={sectionHeadingStyle}>Description</h4>
           {artifact.project_id && artifact.type === 'requirement' && (

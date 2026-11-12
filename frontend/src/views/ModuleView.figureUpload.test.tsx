@@ -167,7 +167,7 @@ describe('ModuleView figure upload', () => {
   });
 
   it('shows the version adding a figure took the artifact to', async () => {
-    expect(container.textContent).toContain('Version1');
+    expect(container.textContent).toContain('version 1');
     await click('Edit');
     // The server answers the upload with the figure and has versioned the
     // artifact; the next read of the artifacts says so.
@@ -178,7 +178,7 @@ describe('ModuleView figure upload', () => {
     await click('Add figure');
     expect(upload).toHaveBeenCalledTimes(1);
     await click('Leave editor');
-    expect(container.textContent).toContain('Version2');
-    expect(container.textContent).not.toContain('Version1');
+    expect(container.textContent).toContain('version 2');
+    expect(container.textContent).not.toContain('version 1');
   });
 });

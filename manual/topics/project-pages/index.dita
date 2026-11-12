@@ -3,6 +3,6 @@
 <concept id="project-pages">
   <title>Home, Design, Tests and Baselines</title>
   <conbody>
-    <p>Four project pages bring together what you would otherwise collect from several others. <b>Summary</b> (a project's Home) and <b>Design</b> are under <b>Define</b> in the project menu, <b>Tests</b> and <b>Baselines</b> under <b>Verify</b>. They show what the project already holds; you edit artifacts, record results and capture baselines where you always have.</p>
+    <p>Four project pages bring together what you would otherwise collect from several others. <b>Summary</b> (a project's Home) is under <b>Plan</b> in the project menu, <b>Tests</b> and <b>Baselines</b> under <b>Verify</b>; design items are read in <b>Requirements</b>. They show what the project already holds; you edit artifacts, record results and capture baselines where you always have.</p>
   </conbody>
 </concept>

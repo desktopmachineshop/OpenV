@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { chooseOption, makeRunId, openModule } from './helpers';
+import { chooseOption, makeRunId, openModule, openRequirementsToolbar } from './helpers';
 
 // OpenV E2E smoke journey (issue #135).
 //
@@ -175,6 +175,7 @@ test('links the requirement to the user need (derives-from)', async () => {
 });
 
 test('captures a baseline via the prompt dialog', async () => {
+  await openRequirementsToolbar(page);
   await page.getByRole('button', { name: 'Capture Baseline' }).click();
 
   const dialog = page.getByRole('dialog');
@@ -183,6 +184,7 @@ test('captures a baseline via the prompt dialog', async () => {
   await dialog.getByRole('button', { name: 'OK' }).click();
 
   // The new baseline appears in the baseline selector.
+  await openRequirementsToolbar(page);
   const baselineSelect = page.locator('select[title="Select baseline"]');
   const baselineOption = baselineSelect.locator('option', { hasText: baselineName });
   await expect(baselineOption).toHaveCount(1);
