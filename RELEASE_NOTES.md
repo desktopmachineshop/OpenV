@@ -54,9 +54,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 - **A chat with an agent no longer puts a card on the board.** Typing a
   prompt to an agent with **Launch run** made an *Agent run* card for it.
   A chat is not a task, so it now makes none: the run is on the Runs page.
-  A card you assign to an agent still launches it, and work an automation
-  or a schedule starts is still tracked on the board. Cards already made
-  this way stay until you delete them.
+  A card you assign to an agent still launches it, and work an automation,
+  a schedule or a script calling the API starts is still tracked on the
+  board. Cards already made this way stay until you delete them.
 - **A scheduled backup whose database dump failed still wrote a
   bundle.** On a self-hosted server with the backup sidecar, a run that
   could not reach the database went on to write a bundle with no
