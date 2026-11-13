@@ -984,7 +984,7 @@
     {
       "name": "save_plan_baseline",
       "read_only": false,
-      "description": "Save a baseline of a project's plan: every task's dates, duration, effort and cost as they stand, kept so get_plan can report how far each task has moved since (its variance) and the plan's earned value. A plan keeps at most 11. Answers the baseline's id and name.",
+      "description": "Save a baseline of a project's plan: every task's dates, duration, effort and cost as they stand, kept so get_plan can report how far each task has moved since (its variance) and the plan's earned value. It is a baseline of the project, the same as create_baseline takes: the artifacts and links are recorded with it. Answers the baseline's id and name.",
       "input_schema": {
         "properties": {
           "name": {

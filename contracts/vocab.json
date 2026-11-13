@@ -226,7 +226,8 @@
     "ui-refresh",
     "plan-sizing",
     "milestone-links",
-    "workspace-plan"
+    "workspace-plan",
+    "joined-baselines"
   ],
   "event_types": [
     "artifact.created",

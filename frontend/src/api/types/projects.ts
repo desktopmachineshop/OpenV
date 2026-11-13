@@ -49,6 +49,19 @@ export interface Baseline {
   /** That account's display name, resolved server-side so a reader never
    *  sees a bare id. Absent whenever created_by is. */
   created_by_name?: string;
+  /** Where the project's plan stood when the baseline was taken. Absent for one taken before the plan was recorded with it, or of a project with no plan. */
+  plan?: BaselinePlan;
+}
+
+/** A plan as a baseline recorded it: how far along it was, its tasks done and late, the days it ran from and to, and its milestones. */
+export interface BaselinePlan {
+  progress: number;
+  tasks: number;
+  done: number;
+  late: number;
+  start: string | null;
+  end: string | null;
+  milestones: { key: string; name: string; kind: string; date: string | null; progress: number; met: boolean }[];
 }
 
 export interface Template {
@@ -211,6 +224,9 @@ export interface BaselineDiff {
   modified: BaselineDiffModified[];
   links_added: BaselineDiffLink[];
   links_removed: BaselineDiffLink[];
+  /** Where the plan stood on each side; absent for a side that has no plan recorded. */
+  plan_base?: BaselinePlan;
+  plan_target?: BaselinePlan;
 }
 
 export interface ArtifactTypeDef {

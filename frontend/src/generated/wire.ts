@@ -208,6 +208,7 @@ export interface WireBaseline {
   created_at: string;
   created_by?: string;
   created_by_name?: string;
+  plan?: unknown;
 }
 
 /** notifications.Notification (internal/domain/notifications). */

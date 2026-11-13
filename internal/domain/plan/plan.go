@@ -57,6 +57,7 @@ var (
 	ErrResource           = errors.New("a resource is a user, an agent or a named planned resource, with a daily rate of 0 or more and a capacity of 1 to 1000 percent")
 	ErrInvalidCost        = errors.New("a cost or a budget is 0 or more, and a currency is at most three letters")
 	ErrTooManyBaselines   = errors.New("a plan keeps at most 11 baselines")
+	ErrJoinedBaseline     = errors.New("this baseline belongs to a project baseline: delete it on the Baselines page")
 	ErrTimeOff            = errors.New("time off runs for at most a year, with a name of at most 80 characters")
 	ErrSameProject        = errors.New("the two tasks are in the same project: relate them on its plan")
 	ErrImport             = errors.New("the file is not a Microsoft Project XML plan this can read")
@@ -347,6 +348,8 @@ type Service interface {
 	// SaveBaseline records the plan as it stands; DeleteBaseline removes
 	// one.
 	SaveBaseline(projectID, name string, now time.Time) (*Baseline, error)
+	SaveBaselineOf(p *Plan, name string, joined *string, now time.Time) (*Baseline, error)
+	BaselineMoments(projectID string) (map[string]*Moment, error)
 	DeleteBaseline(projectID, id string) error
 	// RescheduleRemaining moves unstarted work that should have started
 	// by the status date to that date, and answers how many tasks moved.

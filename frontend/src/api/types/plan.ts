@@ -160,6 +160,8 @@ export interface PlanBaselineInfo {
   name: string;
   created_at: string;
   tasks: number;
+  /** It belongs to a baseline of the project, which records the artifacts with the plan and is deleted on the Baselines page. */
+  project: boolean;
 }
 
 /** Earned value: the baseline's cost, what was planned, earned and spent by the status day, and the variances and indices from them. */

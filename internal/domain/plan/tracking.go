@@ -5,10 +5,7 @@
 package plan
 
 import (
-	"strings"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // MaxBaselines bounds the baselines a plan keeps.
@@ -32,6 +29,11 @@ type Baseline struct {
 	Name      string         `json:"name"`
 	CreatedAt time.Time      `json:"created_at"`
 	Tasks     []BaselineTask `json:"tasks,omitempty"`
+	// BaselineID is the project baseline this one belongs to, nil for one
+	// saved from the plan alone; Moment where the plan stood, nil for a
+	// baseline saved before that was kept.
+	BaselineID *string `json:"baseline_id,omitempty"`
+	Moment     *Moment `json:"moment,omitempty"`
 }
 
 // BaselineInfo names a baseline on the plan, without its tasks.
@@ -40,6 +42,9 @@ type BaselineInfo struct {
 	Name      string    `json:"name"`
 	CreatedAt time.Time `json:"created_at"`
 	Tasks     int       `json:"tasks"`
+	// Project: the baseline belongs to a project baseline, which records
+	// the definition with it and is deleted from the Baselines page.
+	Project bool `json:"project"`
 }
 
 // Tracking is what a plan is tracked against: the day its progress is
@@ -84,35 +89,18 @@ func (e *EarnedValue) derive() {
 	}
 }
 
-// SaveBaseline records the plan as it stands as a new baseline.
+// SaveBaseline records the plan as it stands as a new baseline of the plan
+// alone.
 func (s *DefaultService) SaveBaseline(projectID, name string, now time.Time) (*Baseline, error) {
-	existing, err := s.repo.ListBaselines(projectID)
-	if err != nil {
-		return nil, err
-	}
-	if len(existing) >= MaxBaselines {
-		return nil, ErrTooManyBaselines
-	}
-	name = strings.TrimSpace(name)
-	if name == "" {
-		name = "Baseline " + now.UTC().Format(DateLayout)
-	}
-	if len(name) > 120 {
-		return nil, ErrNameRequired
-	}
 	in, _, _, err := s.inputs(projectID)
 	if err != nil {
 		return nil, err
 	}
-	p := Build(in, now)
-	b := &Baseline{ID: uuid.NewString(), ProjectID: projectID, Name: name, CreatedAt: now.UTC(), Tasks: []BaselineTask{}}
-	for _, t := range p.Tasks {
-		b.Tasks = append(b.Tasks, BaselineTask{ID: t.ID, Start: t.SpanStart, End: t.SpanEnd, DurationDays: t.DurationDays, EffortDays: t.EffortDays, Cost: t.Cost})
-	}
-	return b, s.repo.CreateBaseline(b)
+	return s.SaveBaselineOf(Build(in, now), name, nil, now)
 }
 
-// DeleteBaseline removes a baseline of the project.
+// DeleteBaseline removes a baseline of the project that was saved from the
+// plan alone; one that belongs to a project baseline is ErrJoinedBaseline.
 func (s *DefaultService) DeleteBaseline(projectID, id string) error {
 	return s.repo.DeleteBaseline(projectID, id)
 }
@@ -152,7 +140,7 @@ func (b *builder) tracking(p *Plan) {
 	p.Baselines = []BaselineInfo{}
 	var active *Baseline
 	for _, bl := range b.in.Baselines {
-		p.Baselines = append(p.Baselines, BaselineInfo{ID: bl.ID, Name: bl.Name, CreatedAt: bl.CreatedAt, Tasks: len(bl.Tasks)})
+		p.Baselines = append(p.Baselines, BaselineInfo{ID: bl.ID, Name: bl.Name, CreatedAt: bl.CreatedAt, Tasks: len(bl.Tasks), Project: bl.BaselineID != nil})
 		if b.in.Tracking.ActiveBaselineID != nil && *b.in.Tracking.ActiveBaselineID == bl.ID {
 			active = bl
 		}

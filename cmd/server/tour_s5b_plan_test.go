@@ -211,8 +211,13 @@ func planTour(tr *tour) {
 		jsonBody(`{"status_date":"","active_baseline_id":""}`))
 	baseline := "DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}"
 	tr.step("the viewer may not delete the baseline: 403", viewer, baseline, at("id", "{{p}}", "baselineId", "{{bl}}"))
-	tr.step("the baseline deleted", o, baseline, at("id", "{{p}}", "baselineId", "{{bl}}"))
-	tr.step("deleted again: 404", o, baseline, at("id", "{{p}}", "baselineId", "{{bl}}"))
+	// A baseline saved from the plan is a baseline of the project: it
+	// records the definition with it, and belongs to the Baselines page.
+	tr.step("it belongs to a project baseline, so the plan does not delete it: 400", o, baseline, at("id", "{{p}}", "baselineId", "{{bl}}"))
+	tr.step("the project's baselines say where the plan stood", o, "GET /api/v1/projects/{id}/baselines", at("id", "{{p}}")).capture("pbl", "/0/id")
+	tr.step("compared with the project as it is: the plan on both sides", o, "GET /api/v1/baselines/{id}/diff", at("id", "{{pbl}}"), query("against=live"))
+	tr.step("the project baseline deleted", o, "DELETE /api/v1/baselines/{id}", at("id", "{{pbl}}"))
+	tr.step("and the plan's with it: 404", o, baseline, at("id", "{{p}}", "baselineId", "{{bl}}"))
 	tr.step("dates on Build, which has sub-tasks: 400", o, schedule, at("id", "{{build}}"), jsonBody(`{"start_date":"2099-03-01"}`))
 
 	settings := "PUT /api/v1/projects/{id}/plan/settings"

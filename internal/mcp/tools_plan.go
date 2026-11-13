@@ -303,8 +303,9 @@ func planBaselineTool() Tool {
 	return Tool{
 		Name: "save_plan_baseline",
 		Description: "Save a baseline of a project's plan: every task's dates, duration, effort and cost as they stand, kept so " +
-			"get_plan can report how far each task has moved since (its variance) and the plan's earned value. A plan keeps " +
-			"at most 11. Answers the baseline's id and name.",
+			"get_plan can report how far each task has moved since (its variance) and the plan's earned value. It is a " +
+			"baseline of the project, the same as create_baseline takes: the artifacts and links are recorded with it. " +
+			"Answers the baseline's id and name.",
 		InputSchema: schema([]string{"project_id"}, map[string]interface{}{
 			"project_id": str("Project ID"),
 			"name":       str("What to call it; \"Baseline <today>\" when left out"),

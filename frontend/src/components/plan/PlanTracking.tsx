@@ -3,6 +3,7 @@
 // against, earned value at that day, and moving the work that has not
 // started up to it.
 import React from 'react';
+import { Link } from 'react-router-dom';
 import type { ProjectPlan } from '../../api/client';
 import { Chip, Modal, buttonStyle, eyebrowStyle, mutedStyle } from '../ui';
 import { shortDate } from './ganttScale';
@@ -29,7 +30,6 @@ export const PlanTracking: React.FC<{
   const [name, setName] = React.useState('');
   const ev = plan.earned_value;
   const behind = plan.tasks.filter((t) => t.behind_schedule && t.subtasks_total === 0).length;
-  const full = plan.baselines.length >= 11;
   const cell: React.CSSProperties = { padding: '6px 8px', borderBottom: '1px solid var(--border-soft)', textAlign: 'left', fontSize: 13 };
   const figure = (label: string, value: string, hint: string, bad = false) => (
     <div title={hint} style={{ flex: '1 1 110px', padding: '6px 8px', border: '1px solid var(--border-soft)', borderRadius: 6 }}>
@@ -82,9 +82,16 @@ export const PlanTracking: React.FC<{
                     {shortDate(b.created_at.slice(0, 10), plan.today)} · {b.tasks} {b.tasks === 1 ? 'task' : 'tasks'}
                   </td>
                   <td style={{ ...cell, textAlign: 'right' }}>
-                    <button type="button" disabled={busy} onClick={() => onAction({ kind: 'delete', id: b.id })} aria-label={`Delete ${b.name}`} style={buttonStyle('ghost', { compact: true, disabled: busy })}>
-                      Delete
-                    </button>
+                    {b.project ? (
+                      // A baseline of the project records the definition too: it is deleted where it is compared.
+                      <Link to={`/projects/${plan.project_id}/baselines`} title="This baseline records the project's artifacts as well as its plan. Compare it, or delete it, on the Baselines page." style={{ fontSize: 12 }}>
+                        Project baseline
+                      </Link>
+                    ) : (
+                      <button type="button" disabled={busy} onClick={() => onAction({ kind: 'delete', id: b.id })} aria-label={`Delete ${b.name}`} style={buttonStyle('ghost', { compact: true, disabled: busy })}>
+                        Delete
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -92,17 +99,17 @@ export const PlanTracking: React.FC<{
           </table>
         )}
         <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-          <input value={name} maxLength={80} disabled={busy || full} aria-label="Baseline name" placeholder={`Baseline ${plan.today}`} onChange={(e) => setName(e.target.value)} style={{ ...inputStyle, flex: '1 1 200px' }} />
+          <input value={name} maxLength={80} disabled={busy} aria-label="Baseline name" placeholder={`Baseline ${plan.today}`} onChange={(e) => setName(e.target.value)} style={{ ...inputStyle, flex: '1 1 200px' }} />
           <button
             type="button"
             data-save-baseline
-            disabled={busy || full}
-            title={full ? 'A plan keeps at most 11 baselines: delete one first' : undefined}
+            disabled={busy}
+            title="Records the plan and the project's artifacts together, as a baseline of the project"
             onClick={() => {
               onAction({ kind: 'save', name: name.trim() });
               setName('');
             }}
-            style={buttonStyle('secondary', { disabled: busy || full })}
+            style={buttonStyle('secondary', { disabled: busy })}
           >
             Save a baseline
           </button>

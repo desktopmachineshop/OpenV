@@ -459,12 +459,14 @@ func (h *Handler) SavePlanBaseline(w http.ResponseWriter, r *http.Request) {
 	if r.ContentLength != 0 && !decodeJSON(w, r, &req) {
 		return
 	}
-	b, err := h.PlanService.SaveBaseline(projectID, req.Name, time.Now())
-	if err != nil {
-		writePlanError(w, r, err)
+	// A baseline saved from the plan is a baseline of the project: it
+	// records the definition with the plan, as one taken on the Baselines
+	// page does.
+	_, b, ok := h.captureBaseline(w, r, projectID, req.Name, true)
+	if !ok {
 		return
 	}
-	respondJSON(w, http.StatusCreated, plan.BaselineInfo{ID: b.ID, Name: b.Name, CreatedAt: b.CreatedAt, Tasks: len(b.Tasks)})
+	respondJSON(w, http.StatusCreated, plan.BaselineInfo{ID: b.ID, Name: b.Name, CreatedAt: b.CreatedAt, Tasks: len(b.Tasks), Project: true})
 }
 
 // DeletePlanBaseline removes a baseline of the project; one the project

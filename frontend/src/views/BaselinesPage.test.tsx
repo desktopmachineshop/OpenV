@@ -35,6 +35,8 @@ vi.mock('../api/client', async (orig) => {
           ],
           links_added: [{ from_id: 'tc2', to_id: 'req1', type: 'verifies', from_title: 'Detection latency', to_title: 'Detect wheel slip' }],
           links_removed: [],
+          plan_base: { progress: 30, tasks: 4, done: 1, late: 0, start: '2026-10-01', end: '2026-11-10', milestones: [] },
+          plan_target: { progress: 55, tasks: 4, done: 3, late: 0, start: '2026-10-01', end: '2026-11-17', milestones: [] },
         }),
     },
     artifactAPI: { list: () => f.ok(live) },
@@ -76,6 +78,31 @@ afterEach(() => {
 });
 
 describe('Baselines page', () => {
+  it('shows where the plan stood on each side, once joined-baselines is on', async () => {
+    await render(true);
+    expect(container.querySelector('section[aria-label="Plan"]')).toBeNull();
+    act(() => root.unmount());
+    container.remove();
+    useAppStore.setState({ features: { ...features(true), features: { 'redesign-pages': true, 'joined-baselines': true } } as never });
+    container = document.createElement('div');
+    document.body.appendChild(container);
+    root = createRoot(container);
+    await act(async () => {
+      root.render(
+        <MemoryRouter initialEntries={['/projects/p1/baselines']}>
+          <Routes>
+            <Route path="/projects/:projectId/baselines" element={<BaselinesPage />} />
+          </Routes>
+        </MemoryRouter>
+      );
+    });
+    await flush();
+    const plan = container.querySelector('section[aria-label="Plan"]')!;
+    expect(plan.textContent).toContain('where the plan stood at BL-2, and at Working copy');
+    expect(plan.textContent).toContain('30% → 55%');
+    expect(plan.textContent).toContain('7 days later');
+  });
+
   it('reads nothing while the gate is off', async () => {
     vi.mocked(baselineAPI.list).mockClear();
     await render(false);

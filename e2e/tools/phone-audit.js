@@ -161,7 +161,7 @@ const rdCoverage = { project_id: 'p1', entries: [
 ], summary: { total: 2, covered: 2, uncovered: 0, verified: 1, pass: 1, fail: 1 } };
 const rdResult = (id, run, tc, status) => ({ id, run_id: run, test_case_id: tc, test_case_version: 2, status, notes: '', evidence: [], executed_at: now });
 const rdEvent = (id, type, who, entity, payload, kind) => ({ id, event_type: type, project_id: 'p1', actor: `user:${who}`, actor_kind: kind || 'user', actor_name: who, entity_name: entity, payload, created_at: now });
-const rdBaseline0 = { id: 'b0', project_id: 'p1', name: 'Concept review', created_at: '2026-08-02T09:00:00Z', created_by: 'u1', created_by_name: 'Sam Example' };
+const rdBaseline0 = { id: 'b0', project_id: 'p1', name: 'Concept review', created_at: '2026-08-02T09:00:00Z', created_by: 'u1', created_by_name: 'Sam Example', plan: { progress: 5, tasks: 2, done: 0, late: 0, start: '2026-10-01', end: '2026-10-28', milestones: [] } };
 const rdRoutes = [
   [/\/api\/v1\/artifacts\?/, rdArtifacts],
   [/\/api\/v1\/links/, rdLinks],
@@ -180,7 +180,7 @@ const rdRoutes = [
   ]],
   [/\/api\/v1\/proposals/, [{ id: 'pr1', project_id: 'p1', run_id: 'r1', op: 'update_artifact', target_id: 'req-2', payload: { title: 'Positioning accuracy' }, status: 'pending', review_note: '', created_at: now }, { id: 'pr2', project_id: 'p1', run_id: 'r1', op: 'create_artifact', payload: { title: 'Spindle runout test' }, status: 'pending', review_note: '', created_at: now }]],
   [/\/api\/v1\/projects\/p1\/baselines/, [baseline, rdBaseline0]],
-  [/\/api\/v1\/baselines\/[^/]+\/diff/, { base: { id: 'b1', name: 'Release candidate 1' }, target: { id: 'live', name: 'Live project' },
+  [/\/api\/v1\/baselines\/[^/]+\/diff/, { base: { id: 'b1', name: 'Release candidate 1' }, target: { id: 'live', name: 'Live project' }, plan_base: { progress: 12, tasks: 3, done: 0, late: 0, start: '2026-10-01', end: '2026-11-03', milestones: [{ key: 'ms-1', name: 'Definition complete', kind: 'custom', date: '2026-10-15', progress: 60, met: false }, { key: 'release:rel-2', name: 'V1.0', kind: 'release', date: '2026-11-24', progress: 0, met: false }] }, plan_target: { progress: 34, tasks: 4, done: 1, late: 1, start: '2026-10-01', end: '2026-11-10', milestones: [{ key: 'ms-1', name: 'Definition complete', kind: 'custom', date: '2026-10-15', progress: 100, met: true }, { key: 'release:rel-2', name: 'V1.0', kind: 'release', date: '2026-12-01', progress: 50, met: false }] },
     added: [{ id: 'tc-2', type: 'test-case', title: 'Repeatability over 50 moves' }, { id: 'des-3', type: 'design-item', title: 'X axis drive' }],
     removed: [{ id: 'req-9', type: 'requirement', title: 'Manual lubrication schedule' }],
     modified: [
@@ -259,7 +259,7 @@ const routes = [
   // The workspace's feature gates, ahead of the org catch-all below, which
   // would otherwise answer {} and crash every useFeature on the page. All
   // on, so gated cards and controls render with their buttons.
-  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true, 'redesign-pages': true, 'review-queue-decisions': true, 'project-review-round': true, 'editor-pickers': true, 'gantt-plan': true, 'floating-assistant': true, 'ui-refresh': true, 'plan-sizing': true, 'milestone-links': true, 'workspace-plan': true, 'chip-search': true, 'requirements-tree': true } }],
+  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true, 'redesign-pages': true, 'review-queue-decisions': true, 'project-review-round': true, 'editor-pickers': true, 'gantt-plan': true, 'floating-assistant': true, 'ui-refresh': true, 'plan-sizing': true, 'milestone-links': true, 'workspace-plan': true, 'joined-baselines': true, 'chip-search': true, 'requirements-tree': true } }],
   [/\/api\/v1\/orgs\/org1$/, org],
   [/\/api\/v1\/orgs\//, {}],
   [/\/api\/v1\/meta\/artifact-types/, [{ type: 'requirement', label: 'Requirement' }, { type: 'heading', label: 'Heading' }, { type: 'user-need', label: 'User Need' }, { type: 'test-case', label: 'Test Case' }]],

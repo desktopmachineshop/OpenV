@@ -481,7 +481,7 @@ func (r *PlanRepository) SetAssignments(projectID, workItemID string, assignment
 // ListBaselines lists the project's baselines with their tasks, oldest
 // first.
 func (r *PlanRepository) ListBaselines(projectID string) ([]*plan.Baseline, error) {
-	rows, err := r.db.Query(`SELECT id, project_id, name, tasks, created_at FROM plan_baselines WHERE project_id = $1 ORDER BY created_at, id`, projectID)
+	rows, err := r.db.Query(`SELECT id, project_id, name, tasks, created_at, baseline_id, moment FROM plan_baselines WHERE project_id = $1 ORDER BY created_at, id`, projectID)
 	if err != nil {
 		return nil, err
 	}
@@ -489,9 +489,13 @@ func (r *PlanRepository) ListBaselines(projectID string) ([]*plan.Baseline, erro
 	out := []*plan.Baseline{}
 	for rows.Next() {
 		b := &plan.Baseline{}
-		var tasks []byte
-		if err := rows.Scan(&b.ID, &b.ProjectID, &b.Name, &tasks, &b.CreatedAt); err != nil {
+		var tasks, moment []byte
+		if err := rows.Scan(&b.ID, &b.ProjectID, &b.Name, &tasks, &b.CreatedAt, &b.BaselineID, &moment); err != nil {
 			return nil, err
+		}
+		// A moment of a shape this build does not read counts as none.
+		if len(moment) > 0 && json.Unmarshal(moment, &b.Moment) != nil {
+			b.Moment = nil
 		}
 		// Tasks of a shape this build does not read count as none.
 		if err := json.Unmarshal(tasks, &b.Tasks); err != nil || b.Tasks == nil {
@@ -503,20 +507,32 @@ func (r *PlanRepository) ListBaselines(projectID string) ([]*plan.Baseline, erro
 	return out, rows.Err()
 }
 
-// CreateBaseline inserts a baseline.
+// CreateBaseline inserts a baseline, with the project baseline it belongs to
+// and where the plan stood, when it has them.
 func (r *PlanRepository) CreateBaseline(b *plan.Baseline) error {
 	tasks, err := json.Marshal(b.Tasks)
 	if err != nil {
 		return err
 	}
-	_, err = r.db.Exec(`INSERT INTO plan_baselines (id, project_id, name, tasks, created_at) VALUES ($1, $2, $3, $4, $5)`,
-		b.ID, b.ProjectID, b.Name, tasks, b.CreatedAt.UTC())
+	// A nil here is SQL NULL; an empty []byte would not be JSON.
+	var moment interface{}
+	if b.Moment != nil {
+		raw, err := json.Marshal(b.Moment)
+		if err != nil {
+			return err
+		}
+		moment = raw
+	}
+	_, err = r.db.Exec(`INSERT INTO plan_baselines (id, project_id, name, tasks, created_at, baseline_id, moment) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		b.ID, b.ProjectID, b.Name, tasks, b.CreatedAt.UTC(), b.BaselineID, moment)
 	return err
 }
 
-// DeleteBaseline removes a baseline of the project.
+// DeleteBaseline removes a baseline of the project that was saved from the
+// plan alone: one that belongs to a project baseline is
+// plan.ErrJoinedBaseline, and goes when that baseline is deleted.
 func (r *PlanRepository) DeleteBaseline(projectID, id string) error {
-	res, err := r.db.Exec(`DELETE FROM plan_baselines WHERE id = $1 AND project_id = $2`, id, projectID)
+	res, err := r.db.Exec(`DELETE FROM plan_baselines WHERE id = $1 AND project_id = $2 AND baseline_id IS NULL`, id, projectID)
 	if malformedID(err) {
 		return plan.ErrNotFound
 	}
@@ -524,6 +540,10 @@ func (r *PlanRepository) DeleteBaseline(projectID, id string) error {
 		return err
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
+		var joined bool
+		if r.db.QueryRow(`SELECT EXISTS (SELECT 1 FROM plan_baselines WHERE id = $1 AND project_id = $2)`, id, projectID).Scan(&joined) == nil && joined {
+			return plan.ErrJoinedBaseline
+		}
 		return plan.ErrNotFound
 	}
 	return nil

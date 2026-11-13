@@ -25,7 +25,9 @@ export const Timeline: React.FC<{
   target: string;
   onPick: (id: string) => void;
   phone?: boolean;
-}> = ({ baselines, liveCount, base, target, onPick, phone }) => {
+  /** Say how far the plan had got at each baseline that recorded it. */
+  plan?: boolean;
+}> = ({ baselines, liveCount, base, target, onPick, phone, plan }) => {
   const entries = [
     {
       id: LIVE,
@@ -35,7 +37,7 @@ export const Timeline: React.FC<{
     ...baselines.map((b) => ({
       id: b.id,
       name: b.name,
-      meta: [baselineDate(b.created_at), baselineAuthor(b)].filter(Boolean).join(' · '),
+      meta: [baselineDate(b.created_at), baselineAuthor(b), plan && b.plan ? `plan ${b.plan.progress}%` : ''].filter(Boolean).join(' · '),
     })),
   ];
   return (
