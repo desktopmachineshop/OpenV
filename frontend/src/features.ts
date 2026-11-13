@@ -113,6 +113,9 @@ export const PLAN_SIZING_FEATURE: FeatureKey = 'plan-sizing';
  */
 export const MILESTONE_LINKS_FEATURE: FeatureKey = 'milestone-links';
 
+/** The workspace's Plan page (/org/plan): every project's plan on one chart, and its entry in the workspace's menu. */
+export const WORKSPACE_PLAN_FEATURE: FeatureKey = 'workspace-plan';
+
 /**
  * The refreshed project shell, on top of the compact layout: the menu's
  * groups in the order Plan, Define, Verify, Agents (Overview and Summary

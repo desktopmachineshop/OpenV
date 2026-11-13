@@ -9,6 +9,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **A Plan page for the whole workspace.** **Plan**, in the workspace's
+  menu beside Home, shows every project's plan on one chart: a line for
+  each project you can see, with its top-level tasks and milestones on a
+  time scale they all share, and the links between projects' tasks
+  listed beneath. Each project's critical path is the top row of its
+  line, the chart scrolls sideways with the project names kept in place,
+  and a project's name opens its own Gantt.
+
 ### Maintenance updates
 
 - **The Gantt's outline keeps the order you give it.** Rows no longer

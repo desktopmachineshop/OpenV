@@ -6,7 +6,7 @@
     <resourceid appname="openv-web" appid="gantt.master"/>
   </prolog>
   <conbody>
-    <p><b>All projects</b> shows the plan of every project of the workspace that you can read, each on a line with its top-level tasks, its milestones and its progress. Each project's critical path is the top row of its line. The lines share one time scale and scroll sideways together, while the projects' names stay in place. A project's name opens its Gantt.</p>
+    <p><b>All projects</b> shows the plan of every project of the workspace that you can read, each on a line with its top-level tasks, its milestones and its progress. Each project's critical path is the top row of its line. The lines share one time scale and scroll sideways together, while the projects' names stay in place. A project's name opens its Gantt. The same chart has a page of its own that belongs to no project: <b>Plan</b>, in the workspace's menu beside Home, with its own <b>Critical path</b>, <b>Today</b> and time scale.</p>
     <p>A task can wait on a task of another project of the same workspace. In the task's panel, under <b>Other projects</b>, choose <b>Wait on a task of another project</b>, then the project, the task, the relationship and an offset. The task then follows the other one when the plan is recalculated, or at once on an automatic plan. The other project's task is never moved from here, and it is not a row of this plan: it is named on the task it is linked to, in both projects, and under <b>Links between projects</b> in All projects. A link whose dates are broken is marked.</p>
   </conbody>
 </concept>

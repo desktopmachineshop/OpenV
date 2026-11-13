@@ -63,6 +63,7 @@ export const FEATURE_KEYS = [
   'ui-refresh',
   'plan-sizing',
   'milestone-links',
+  'workspace-plan',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 
