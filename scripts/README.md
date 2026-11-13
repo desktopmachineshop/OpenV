@@ -33,6 +33,7 @@ Everything here is the tooling area of `docs/areas.json`, through
 | `refactor/refactor_guard.py` | the Refactor guard (S14b): `GOLDEN_LIST`, `FROZEN_DATA`, `PROTECTED_PATHS`, `GUARD_CODE`, and the per-commit class checks |
 | `refactor/classify_commits.py` | the layers and files each commit touches, and the hub-touch rates of plan §10 |
 | `backup.sh` | the backup recipe `make backup` and the backup sidecar run |
+| `backup_drill.sh` | `make backup-drill`: backs up a scratch database and volumes with `backup.sh`, restores them as `make restore` does and compares, plain and encrypted |
 | `**/*_test.py` | the unittest suite of each script beside it |
 | `.github/workflows/ci.yml` | the jobs every pull request runs: backend, backend-pgvector, frontend, vuln, secrets, docker, e2e |
 | `.github/workflows/refactor-guard.yml` | the Refactor guard, on every pull request and every label change |

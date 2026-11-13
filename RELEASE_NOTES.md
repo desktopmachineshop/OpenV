@@ -9,6 +9,26 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **Encrypted, off-host backups for a self-hosted server.** Set
+  `BACKUP_PASSPHRASE` and every backup bundle is encrypted; `make restore`
+  decrypts it with the same passphrase. `BACKUP_COPY_HOST_DIR` copies each
+  bundle to a second place, such as a mounted network disk, and
+  `BACKUP_POST_HOOK` runs a command of yours on it, to push it wherever
+  you keep copies. `make backup-drill` proves on a scratch database that
+  a backup restores. See *Backup and restore* in the operations guide.
+
+### Bug fixes
+
+- **A scheduled backup whose database dump failed still wrote a
+  bundle.** On a self-hosted server with the backup sidecar, a run that
+  could not reach the database went on to write a bundle with no
+  database in it, which looked like any other. It now writes nothing and
+  tries again at the next interval. Manual `make backup` was not
+  affected. If you rely on scheduled backups, check that a recent bundle
+  holds a non-empty `openv-db.sql`.
+
 ## 0.35.0 — 2026-11-13
 
 ### New features

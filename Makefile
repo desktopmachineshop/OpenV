@@ -19,7 +19,7 @@ GITLEAKS_VERSION := 8.21.2
 # relative to that, and check-fast tests the Go packages changed since then.
 BASE_REF ?= origin/master
 
-.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp vapid-keys test check check-fast vuln secrets backup restore
+.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp vapid-keys test check check-fast vuln secrets backup restore backup-drill
 
 ## Build all Docker images.
 build:
@@ -83,13 +83,19 @@ backup:
 ## Usage: make restore BACKUP=backups/openv-backup-<stamp>.tar.gz
 ## Stops the API while data is swapped, then starts it again. DESTRUCTIVE:
 ## replaces the database and the contents of the data/uploads volumes.
+## An encrypted bundle (.tar.gz.enc) is decrypted first, with BACKUP_PASSPHRASE
+## or BACKUP_PASSPHRASE_FILE from the environment; it needs the openssl command.
+restore: RESTORE_BUNDLE = $(if $(filter %.enc,$(BACKUP)),.restore-$(notdir $(basename $(BACKUP))),$(notdir $(BACKUP)))
 restore:
 	@test -n "$(BACKUP)" || { echo "Usage: make restore BACKUP=backups/openv-backup-<stamp>.tar.gz"; exit 1; }
+	@case "$(BACKUP)" in *.enc) \
+		test -n "$$BACKUP_PASSPHRASE$$BACKUP_PASSPHRASE_FILE" || { echo "An encrypted bundle needs BACKUP_PASSPHRASE or BACKUP_PASSPHRASE_FILE"; exit 1; }; \
+		sh scripts/backup.sh --decrypt "backups/$(notdir $(BACKUP))" "backups/$(RESTORE_BUNDLE)" || { echo "Could not decrypt $(BACKUP): is the passphrase right?"; exit 1; };; esac
 	docker stop openv-api
 	docker run --rm --volumes-from openv-api -v "$(CURDIR)/backups:/backup" alpine sh -c '\
 		set -e && \
 		rm -rf /tmp/restore && mkdir -p /tmp/restore && \
-		tar xzf "/backup/$(notdir $(BACKUP))" -C /tmp/restore && \
+		tar xzf "/backup/$(RESTORE_BUNDLE)" -C /tmp/restore && \
 		find /data -mindepth 1 -delete && tar xzf /tmp/restore/openv-data.tar.gz -C /data && \
 		find /uploads -mindepth 1 -delete && tar xzf /tmp/restore/uploads-data.tar.gz -C /uploads && \
 		mkdir -p /backup/.restore && cp /tmp/restore/openv-db.sql /backup/.restore/openv-db.sql'
@@ -97,8 +103,22 @@ restore:
 	docker exec openv-postgres sh -c 'psql -U postgres -d openv -q -f /tmp/openv-db.sql'
 	docker exec openv-postgres sh -c 'rm -f /tmp/openv-db.sql'
 	rm -rf backups/.restore
+	@case "$(BACKUP)" in *.enc) unlink "backups/$(RESTORE_BUNDLE)";; esac
 	docker start openv-api
 	@echo "Restore complete."
+
+## Prove that a backup restores: back up a scratch database and scratch
+## volumes with scripts/backup.sh, restore them as `make restore` does, and
+## compare; then the same encrypted, and what must fail. Needs a Postgres
+## (OPENV_TEST_DATABASE_URL, or DB_HOST/DB_PORT/DB_USER) and pg_dump, psql
+## and openssl. Touches only its own scratch databases.
+backup-drill:
+	@url="$${OPENV_TEST_DATABASE_URL:-}"; \
+	if [ -n "$$url" ]; then \
+		hostport="$${url#*@}"; hostport="$${hostport%%/*}"; userinfo="$${url#*://}"; userinfo="$${userinfo%%@*}"; \
+		export DB_HOST="$${hostport%%:*}" DB_PORT="$${hostport##*:}" DB_USER="$${userinfo%%:*}"; \
+		case "$$userinfo" in *:*) export PGPASSWORD="$${userinfo#*:}";; esac; \
+	fi; sh scripts/backup_drill.sh
 
 ## Build host worker binaries for Windows (bin/agentd.exe, bin/openv-mcp.exe).
 worker:
