@@ -356,6 +356,18 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     ],
     chapter: { slug: 'runs-runners', title: 'Runs & runners' },
   },
+  'org/plan': {
+    title: 'Workspace plan',
+    summary:
+      "Every project's plan on one chart: a line for each project you can see, with its top-level tasks and milestones on a time scale they share.",
+    tips: [
+      'Days, Weeks, Months and Quarters set how wide a day is drawn; the chart scrolls sideways and the project names stay in place.',
+      "Each project's critical path is the top row of its line; Critical path turns its marking on and off.",
+      "A project's name opens its own Gantt, where its tasks are scheduled.",
+      'Links between the tasks of different projects are listed under the chart.',
+    ],
+    chapter: { slug: 'gantt', title: 'The plan (Gantt)' },
+  },
   'org/todos': {
     title: 'My to-dos',
     summary:

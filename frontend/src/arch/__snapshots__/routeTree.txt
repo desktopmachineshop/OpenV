@@ -1,8 +1,8 @@
 # UI routes declared in src/App.tsx (invariant I19).
 # Regenerate: npx vitest run src/arch -u
 
-<Route> elements: 48
-  rendering a lazy() component: 23
+<Route> elements: 49
+  rendering a lazy() component: 24
   rendering an eagerly imported component: 21
   redirects only: 4
 index routes: 1
@@ -43,6 +43,7 @@ index routes: 1
   ActivityLog         ./views/ActivityLog#ActivityLog
   BaselineCompare     ./views/BaselineCompare#BaselineCompare
   MyTodosPage         ./views/MyTodos#MyTodosPage
+  GanttWorkspace      ./views/GanttWorkspace#GanttWorkspace
   WorkspaceRunsPage   ./views/WorkspaceRunsPage#WorkspaceRunsPage
   SharedProjectView   ./views/SharedProjectView#SharedProjectView
   ReviewQueue         ./views/ReviewQueue#ReviewQueue
@@ -66,6 +67,7 @@ index routes: 1
   /projects                        <ProjectList>  [eager ./components/ProjectList#ProjectList]  when !walled
   /org/settings                    <OrgSettings>  [eager ./views/OrgSettings#OrgSettings]  when !walled
   /org/runs                        <WorkspaceRunsPage>  [lazy ./views/WorkspaceRunsPage#WorkspaceRunsPage]  when !walled
+  /org/plan                        <GanttWorkspace>  [lazy ./views/GanttWorkspace#GanttWorkspace]  when !walled
   /org/todos                       <MyTodosPage>  [lazy ./views/MyTodos#MyTodosPage]  when !walled
   /manual                          <ManualView>  [lazy ./views/ManualView#ManualView]  when !walled
   /manual/:chapterSlug             <ManualView>  [lazy ./views/ManualView#ManualView]  when !walled
@@ -116,6 +118,7 @@ index routes: 1
   /projects                                           when !walled
   /org/settings                                       when !walled
   /org/runs                                           when !walled
+  /org/plan                                           when !walled
   /org/todos                                          when !walled
   /manual                                             when !walled
   /manual/:chapterSlug                                when !walled

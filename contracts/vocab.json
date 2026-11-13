@@ -225,7 +225,8 @@
     "gantt-plan",
     "ui-refresh",
     "plan-sizing",
-    "milestone-links"
+    "milestone-links",
+    "workspace-plan"
   ],
   "event_types": [
     "artifact.created",

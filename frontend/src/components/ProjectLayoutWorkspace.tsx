@@ -11,7 +11,7 @@ import { lastProject } from '../appShortcuts';
 import { useUiRefresh } from '../hooks/useUiRefresh';
 import { TopBar } from './ProjectLayoutRail';
 import { WORKSPACE_RUNS_FEATURE } from './agents/workspaceRuns';
-import { TODOS_FEATURE } from '../features';
+import { GANTT_PLAN_FEATURE, TODOS_FEATURE, WORKSPACE_PLAN_FEATURE } from '../features';
 import { MY_TODOS_PATH } from './todos/todoText';
 import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
@@ -43,8 +43,12 @@ const WORKSPACE_ICONS = {
 const useWorkspacePages = (): { to: string; label: string; icon: string }[] => {
   const runs = useFeature(WORKSPACE_RUNS_FEATURE);
   const todos = useFeature(TODOS_FEATURE);
+  // Every project's plan on one chart, where the workspace has plans at all.
+  const gantt = useFeature(GANTT_PLAN_FEATURE);
+  const plan = useFeature(WORKSPACE_PLAN_FEATURE) && gantt;
   const isAdmin = useAppStore((s) => Boolean(s.currentUser?.is_admin));
   return [
+    ...(plan ? [{ to: '/org/plan', label: 'Plan', icon: groupIconPath('Plan') }] : []),
     ...(todos ? [{ to: MY_TODOS_PATH, label: 'My to-dos', icon: WORKSPACE_ICONS.todos }] : []),
     ...(runs ? [{ to: '/org/runs', label: 'Runs', icon: WORKSPACE_ICONS.runs }] : []),
     { to: '/whats-new', label: 'News', icon: WORKSPACE_ICONS.news },

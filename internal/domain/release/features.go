@@ -83,6 +83,7 @@ var Registry = []Feature{
 	{Key: FeatureUIRefresh, ShippedIn: "0.33.0", Summary: "One navigation on every screen: Home, Plan, Define, Verify and Agents in the same order down the rail on a computer and along the bottom bar on a phone, the pages of the group you are in listed in a row under the top bar, and each page named once"},
 	{Key: FeaturePlanSizing, ShippedIn: "0.34.0", Summary: "Size a plan before it is staffed: planned resources stand in for people to be chosen later, with a rate and a capacity, and are handed to a person or an agent when one is chosen; and a plan's defaults say how new tasks are scheduled and whether their effort decides their duration"},
 	{Key: FeatureMilestoneLinks, ShippedIn: "0.34.0", Summary: "Milestones that wait for tasks: link tasks to a milestone from its panel or by dragging a link onto its diamond, and date it by the plan, on the day the last of them finishes, or keep its date fixed"},
+	{Key: FeatureWorkspacePlan, ShippedIn: "0.35.0", Summary: "A Plan page for the whole workspace: every project's plan on one chart, a line for each project with its top-level tasks and milestones on a shared time scale"},
 }
 
 // Feature keys the code gates on.
@@ -343,6 +344,10 @@ const (
 	// dropped on its diamond, and the lines drawn to it. The plan's API
 	// accepts both either way; the key gates the interface.
 	FeatureMilestoneLinks = "milestone-links"
+	// FeatureWorkspacePlan is the workspace's Plan page (/org/plan), the
+	// chart of every project's plan, and its entry in the workspace's
+	// menu. Frontend only: it reads the master plan the Gantt already has.
+	FeatureWorkspacePlan = "workspace-plan"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given
