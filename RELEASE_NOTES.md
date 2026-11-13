@@ -11,6 +11,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **The Timeline has a level of detail.** A project's Timeline view has
+  the same **Level** menu as All projects: Level 1 is the top-level
+  tasks, each level further adds the sub-tasks on rows beneath their
+  parents, whose bars stay, and **All levels** goes all the way down. The
+  two views share the choice.
 - **All projects follows the project hierarchy.** On the workspace's
   Plan page and a Gantt's All projects view, a project that belongs under
   another is listed beneath it, indented, and a parent folds its projects

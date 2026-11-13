@@ -24,6 +24,7 @@ const mount = async (ui: React.ReactElement) => {
 };
 
 afterEach(() => {
+  localStorage.clear();
   // The pure tests mount nothing.
   if (!container?.isConnected) return;
   act(() => root.unmount());
@@ -99,6 +100,37 @@ describe('lanes', () => {
 
 describe('PlanTimeline', () => {
   const tops = () => Array.from(container.querySelectorAll<HTMLElement>('[data-plan-view="timeline"] button')).map((b) => [b.textContent, b.style.top]);
+
+  it('opens on the top-level tasks and digs down a level, the parent kept above its sub-tasks', async () => {
+    const nested = {
+      ...plan,
+      tasks: [
+        task('1', 'Build', '2026-11-02', '2026-11-20', { subtasks_total: 2 } as never),
+        task('1.1', 'Cut', '2026-11-02', '2026-11-06', { depth: 1 }),
+        task('1.2', 'Join', '2026-11-09', '2026-11-20', { depth: 1 }),
+        task('2', 'Ship', '2026-11-23', '2026-11-27'),
+      ],
+    } as unknown as ProjectPlan;
+    await mount(<PlanTimeline plan={nested} onSelectTask={() => {}} />);
+    const level = container.querySelector<HTMLSelectElement>('select[aria-label="Level of detail"]')!;
+    expect(level.value).toBe('1');
+    expect(tops().map(([name]) => name)).toEqual(['Build', 'Ship']);
+    expect(container.querySelectorAll('[data-summary]')).toHaveLength(0);
+    await act(async () => {
+      level.value = '2';
+      level.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    // Build and Ship share the top row; Cut and Join the one beneath.
+    expect(tops()).toEqual([
+      ['Build', '24px'],
+      ['Ship', '24px'],
+      ['Cut', '48px'],
+      ['Join', '48px'],
+    ]);
+    expect(container.querySelector('[data-summary]')?.textContent).toBe('Build');
+    // The level is the one All projects opens on too.
+    expect(localStorage.getItem('openv-plan-master-levels')).toBe('2');
+  });
 
   it('draws the critical tasks on the first row and marks them only while Critical path is on', async () => {
     await mount(<PlanTimeline plan={plan} onSelectTask={() => {}} showCritical />);
