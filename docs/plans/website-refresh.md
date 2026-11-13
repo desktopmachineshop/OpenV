@@ -416,12 +416,16 @@ Made, 2026-11-13:
 - **Storage.** In git for now, since it is free and nothing breaks;
   YouTube later (section 5).
 
-- **The sample product.** A desktop CNC mill, as seven projects: the
-  mill, its frame and axes, spindle and drive (a supplier's), controller,
-  control software, and enclosure and safety, with the motion firmware
-  under the controller. The draft content and its loader are in
-  `examples/desktop-cnc-mill/`. Sector pages may each add a screenshot or
-  two from a small project in that sector's own vocabulary.
+- **The sample product.** A desktop CNC mill, as fifteen projects in three
+  tiers: the mill; its frame and structure, motion, control, enclosure
+  and safety; and under the first three the substructure, XY table and Z
+  axis, the X, Y and Z motors and drives and the spindle and drive (a
+  supplier's), and the control electronics and control software. Each has
+  draft requirements that refine its parent's, a plan from January 2026
+  to December 2027 with milestones, and the mill has its 1.0 release.
+  The content and its loader are in `examples/desktop-cnc-mill/`. Sector
+  pages may each add a screenshot or two from a small project in that
+  sector's own vocabulary.
 
 Still open:
 
