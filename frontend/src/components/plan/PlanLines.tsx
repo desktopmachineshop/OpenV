@@ -5,11 +5,12 @@
 // long plan stays readable.
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { planAPI, type MasterLevels, type MasterPlan, type PlanTask, type ProjectPlan } from '../../api/client';
+import { planAPI, type MasterLevels, type MasterPlan, type PlanTask, type Project, type ProjectPlan } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import { ellipsis, eyebrowStyle, mutedStyle } from '../ui';
 import { buildScale, buildTicks, openingScroll, shortDate, spanLabel, toDay, todayScroll, type Scale, type Tick, type Zoom } from './ganttScale';
 import { useViewport } from '../../hooks/useViewport';
+import { projectRows } from '../ProjectListTree';
 import { barTone, relationshipLabel } from './planModel';
 import { PlanBar } from './PlanBar';
 
@@ -169,6 +170,12 @@ export const PlanTimeline: React.FC<{ plan: ProjectPlan; onSelectTask: (t: PlanT
 };
 
 const MASTER_LEVELS: MasterLevels[] = ['1', '2', '3', '4', 'all'];
+const toggled = (set: ReadonlySet<string>, id: string): ReadonlySet<string> => {
+  const next = new Set(set);
+  if (!next.delete(id)) next.add(id);
+  return next;
+};
+
 const LEVELS_KEY = 'openv-plan-master-levels';
 
 /** The level All projects opens on: the one last chosen in this browser, or Level 1. */
@@ -203,6 +210,7 @@ export const PlanMaster: React.FC<{ currentProjectId: string } & LinesProps> = (
   const [levels, setLevels] = useState<MasterLevels>(rememberedLevels);
   // A thumb needs a taller control, and a field under 16px makes a phone zoom in.
   const { isPhone } = useViewport();
+  const [folded, setFolded] = useState<ReadonlySet<string>>(new Set());
   useEffect(() => {
     let live = true;
     planAPI
@@ -220,6 +228,8 @@ export const PlanMaster: React.FC<{ currentProjectId: string } & LinesProps> = (
   const scroller = useScroller(scale, start, end, today, todaySignal, NAME_WIDTH);
   if (error) return <p role="alert" style={{ padding: 16, margin: 0, color: 'var(--danger-strong)' }}>{error}</p>;
   if (!master) return <p style={{ ...mutedStyle, padding: 16, margin: 0 }}>Loading every project's plan…</p>;
+  // A project sits under its parent, as on the projects page, and a parent folds its children away.
+  const rows = projectRows(master.projects.map((p) => ({ id: p.project_id, parent_project_id: p.parent_project_id, p }) as unknown as Project & { p: (typeof master.projects)[number] }), folded) as unknown as { project: { p: (typeof master.projects)[number] }; depth: number; below: number; folded: boolean }[];
   const name = (id: string) => master.projects.find((p) => p.project_id === id)?.name || 'Another project';
   const nameCell: React.CSSProperties = { position: 'sticky', left: 0, zIndex: 2, width: NAME_WIDTH, flexShrink: 0, boxSizing: 'border-box', padding: '6px 12px', fontSize: 12, background: 'var(--surface)', borderRight: '1px solid var(--border-soft)' };
   return (
@@ -240,9 +250,20 @@ export const PlanMaster: React.FC<{ currentProjectId: string } & LinesProps> = (
             </div>
             <Ticks scale={scale} />
           </div>
-          {master.projects.map((p) => (
-            <section key={p.project_id} data-master-project={p.project_id} style={{ display: 'flex', width: NAME_WIDTH + scale.width, borderBottom: '1px solid var(--border-soft)' }}>
-              <div style={nameCell}>
+          {rows.map(({ project: { p }, depth, below, folded: isFolded }) => (
+            <section key={p.project_id} data-master-project={p.project_id} data-depth={depth} style={{ display: 'flex', width: NAME_WIDTH + scale.width, borderBottom: '1px solid var(--border-soft)' }}>
+              <div style={{ ...nameCell, paddingLeft: 12 + Math.min(depth, 4) * 12 }}>
+                {below > 0 && (
+                  <button
+                    type="button"
+                    aria-expanded={!isFolded}
+                    aria-label={`${isFolded ? 'Show' : 'Hide'} the ${below} ${below === 1 ? 'project' : 'projects'} under ${p.name}`}
+                    onClick={() => setFolded((f) => toggled(f, p.project_id))}
+                    style={{ border: 'none', background: 'none', padding: 0, marginRight: 4, minWidth: isPhone ? 32 : 16, minHeight: isPhone ? 32 : 16, cursor: 'pointer', color: 'var(--text-muted)', fontSize: 12 }}
+                  >
+                    {isFolded ? '▸' : '▾'}
+                  </button>
+                )}
                 <Link to={`/projects/${p.project_id}/gantt`} style={{ fontWeight: 600, fontSize: 13 }}>
                   {p.name}
                 </Link>
@@ -251,6 +272,7 @@ export const PlanMaster: React.FC<{ currentProjectId: string } & LinesProps> = (
                   {p.summary.progress}% · {p.summary.done}/{p.summary.tasks} tasks{p.summary.late ? ` · ${p.summary.late} late` : ''}
                 </div>
                 <div style={mutedStyle}>{p.start ? spanLabel(p.start, p.end, master.today) : 'Not scheduled'}</div>
+                {isFolded && <div style={mutedStyle}>{below} {below === 1 ? 'project' : 'projects'} folded</div>}
               </div>
               <div style={{ padding: '6px 0' }}>
                 <Band bars={p.tasks.map((t) => ({ ...t, summary: t.summary && p.tasks.some((c) => c.depth === t.depth + 1 && c.wbs.startsWith(`${t.wbs}.`)) }))} milestones={p.milestones} scale={scale} today={master.today} showCritical={showCritical} />

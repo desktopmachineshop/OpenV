@@ -29,7 +29,7 @@ func TestMasterPlanLevels(t *testing.T) {
 		{MasterAllLevels, []string{"build", "frame", "weld", "paint", "wire", "ship"}},
 	} {
 		m := MasterPlan{}
-		m.Add("P", p, tc.levels)
+		m.Add("P", "", p, tc.levels)
 		got := []string{}
 		for _, task := range m.Projects[0].Tasks {
 			got = append(got, task.ID)
@@ -39,7 +39,10 @@ func TestMasterPlanLevels(t *testing.T) {
 		}
 	}
 	m := MasterPlan{}
-	m.Add("P", p, 2)
+	m.Add("P", "parent", p, 2)
+	if m.Projects[0].ParentProjectID != "parent" {
+		t.Errorf("a line says which project it belongs under: %+v", m.Projects[0])
+	}
 	tasks := m.Projects[0].Tasks
 	if !tasks[0].Summary || !tasks[1].Summary || tasks[2].Summary || tasks[3].Summary {
 		t.Errorf("a task with sub-tasks is a summary, shown or not: %+v", tasks)

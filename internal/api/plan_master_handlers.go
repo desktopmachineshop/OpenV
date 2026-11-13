@@ -67,7 +67,7 @@ func (h *Handler) GetMasterPlan(w http.ResponseWriter, r *http.Request) {
 		if len(p.Tasks) == 0 && len(p.Milestones) == 0 {
 			continue
 		}
-		out.Add(project.Name, p, levels)
+		out.Add(project.Name, project.ParentProjectID, p, levels)
 	}
 	// Only links between two projects the caller can read are named.
 	shown := map[string]bool{}

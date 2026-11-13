@@ -93,6 +93,25 @@ afterEach(() => {
 const bars = () => Array.from(container.querySelectorAll<HTMLElement>('[data-master-project="p1"] button')).map((b) => b.textContent);
 
 describe('GanttWorkspace', () => {
+  it('lists a project under its parent, which folds its children away', async () => {
+    const two = master('Brake ECU');
+    const child = { ...two.projects[0], project_id: 'p2', parent_project_id: 'p1', name: 'Wheel sensor' };
+    vi.mocked(planAPI.master).mockResolvedValueOnce({ data: { ...two, projects: [child, { ...two.projects[0], parent_project_id: '' }] } } as never);
+    await mount(gates(true));
+    const lines = () => Array.from(container.querySelectorAll<HTMLElement>('[data-master-project]')).map((el) => [el.dataset.masterProject, el.dataset.depth]);
+    // The parent first, though the server listed its child before it.
+    expect(lines()).toEqual([
+      ['p1', '0'],
+      ['p2', '1'],
+    ]);
+    const fold = container.querySelector<HTMLButtonElement>('button[aria-label="Hide the 1 project under Brake ECU"]')!;
+    await act(async () => fold.click());
+    expect(lines()).toEqual([['p1', '0']]);
+    expect(container.textContent).toContain('1 project folded');
+    await act(async () => container.querySelector<HTMLButtonElement>('button[aria-label="Show the 1 project under Brake ECU"]')!.click());
+    expect(lines()).toHaveLength(2);
+  });
+
   it('draws each project on a line of the shared chart, its critical path on the top row', async () => {
     await mount(gates(true));
     expect(planAPI.master).toHaveBeenCalledTimes(1);

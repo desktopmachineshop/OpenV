@@ -11,6 +11,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **All projects follows the project hierarchy.** On the workspace's
+  Plan page and a Gantt's All projects view, a project that belongs under
+  another is listed beneath it, indented, and a parent folds its projects
+  away.
 - **A baseline comparison names the tasks that changed.** Under
   **Plan** on the Baselines page, **Tasks that changed** lists each task
   that was added, removed, finished or moved between the two sides, with

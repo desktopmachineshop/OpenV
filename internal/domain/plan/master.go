@@ -45,13 +45,16 @@ type MasterLink struct {
 
 // MasterProject is one project's line of the master plan.
 type MasterProject struct {
-	ProjectID  string            `json:"project_id"`
-	Name       string            `json:"name"`
-	Start      *string           `json:"start"`
-	End        *string           `json:"end"`
-	Summary    Summary           `json:"summary"`
-	Tasks      []MasterTask      `json:"tasks"`
-	Milestones []MasterMilestone `json:"milestones"`
+	ProjectID string `json:"project_id"`
+	// ParentProjectID is the project this one belongs under, "" for none:
+	// a chart lists a project beneath its parent.
+	ParentProjectID string            `json:"parent_project_id"`
+	Name            string            `json:"name"`
+	Start           *string           `json:"start"`
+	End             *string           `json:"end"`
+	Summary         Summary           `json:"summary"`
+	Tasks           []MasterTask      `json:"tasks"`
+	Milestones      []MasterMilestone `json:"milestones"`
 }
 
 // MasterPlan is the plans of the projects a reader can see.
@@ -72,14 +75,14 @@ const MasterAllLevels = 0
 // level further adds the sub-tasks of the tasks above, which stay, as a
 // Gantt keeps a parent's bar over its sub-tasks. MasterAllLevels goes all
 // the way down.
-func (m *MasterPlan) Add(name string, p *Plan, levels int) {
+func (m *MasterPlan) Add(name, parentProjectID string, p *Plan, levels int) {
 	parent := map[string]bool{}
 	for _, t := range p.Tasks {
 		if t.ParentID != nil {
 			parent[*t.ParentID] = true
 		}
 	}
-	line := MasterProject{ProjectID: p.ProjectID, Name: name, Start: p.Start, End: p.End, Summary: p.Summary, Tasks: []MasterTask{}, Milestones: []MasterMilestone{}}
+	line := MasterProject{ProjectID: p.ProjectID, ParentProjectID: parentProjectID, Name: name, Start: p.Start, End: p.End, Summary: p.Summary, Tasks: []MasterTask{}, Milestones: []MasterMilestone{}}
 	for _, t := range p.Tasks {
 		if levels == MasterAllLevels || t.Depth < levels {
 			line.Tasks = append(line.Tasks, MasterTask{ID: t.ID, Title: t.Title, WBS: t.WBS, Depth: t.Depth, Summary: parent[t.ID], Start: t.SpanStart, End: t.SpanEnd, Progress: t.Progress,
