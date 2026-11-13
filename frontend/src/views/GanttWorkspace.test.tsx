@@ -92,6 +92,8 @@ describe('GanttWorkspace', () => {
   it('draws each project on a line of the shared chart, its critical path on the top row', async () => {
     await mount(gates(true));
     expect(planAPI.master).toHaveBeenCalledTimes(1);
+    // Level 1, the top-level tasks, to begin with.
+    expect(planAPI.master).toHaveBeenLastCalledWith('1');
     expect(container.querySelector('[data-plan-view="master"]')).not.toBeNull();
     expect(container.querySelector('[data-master-project="p1"] a')?.getAttribute('href')).toBe('/projects/p1/gantt');
     // Weld is critical, so it is listed first although Paint starts earlier.
@@ -112,6 +114,20 @@ describe('GanttWorkspace', () => {
     await flush();
     expect(planAPI.master).toHaveBeenCalledTimes(2);
     expect(container.textContent).toContain('Other rig');
+  });
+
+  it('digs a level down when the reader asks for it', async () => {
+    await mount(gates(true));
+    const level = container.querySelector<HTMLSelectElement>('select[aria-label="Level of detail"]')!;
+    expect(Array.from(level.options).map((o) => o.textContent)).toEqual(['Level 1', 'Level 2', 'Level 3', 'Level 4', 'All levels']);
+    expect(level.value).toBe('1');
+    await act(async () => {
+      level.value = 'all';
+      level.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    await flush();
+    expect(planAPI.master).toHaveBeenLastCalledWith('all');
+    expect(container.querySelector<HTMLSelectElement>('select[aria-label="Level of detail"]')!.value).toBe('all');
   });
 
   it('waits for the gates, and without the page or the Gantt plan leads to the projects list', async () => {

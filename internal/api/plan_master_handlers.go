@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/mux"
 
@@ -13,6 +14,9 @@ import (
 // maxMasterProjects bounds the projects one master plan reads.
 const maxMasterProjects = 60
 
+// maxMasterLevels bounds the level a master plan may be asked for by number.
+const maxMasterLevels = 20
+
 // registerPlanMasterRoutes registers the master plan and the links between
 // tasks of two projects.
 func (h *Handler) registerPlanMasterRoutes(router *mux.Router) {
@@ -22,9 +26,21 @@ func (h *Handler) registerPlanMasterRoutes(router *mux.Router) {
 }
 
 // GetMasterPlan answers the plans of the active workspace's projects the
-// caller can read, each as a line: its span, figures, top-level tasks and
-// dated milestones, with the links between tasks of different projects.
+// caller can read, each as a line: its span, figures, its tasks down to
+// ?levels= (1, the top-level tasks, when left out; "all" for every level)
+// and dated milestones, with the links between tasks of different projects.
 func (h *Handler) GetMasterPlan(w http.ResponseWriter, r *http.Request) {
+	levels := 1
+	if q := r.URL.Query().Get("levels"); q == "all" {
+		levels = plan.MasterAllLevels
+	} else if q != "" {
+		n, err := strconv.Atoi(q)
+		if err != nil || n < 1 || n > maxMasterLevels {
+			writeJSONError(w, http.StatusBadRequest, "levels is a number from 1 to 20, or all")
+			return
+		}
+		levels = n
+	}
 	out := plan.MasterPlan{Projects: []plan.MasterProject{}, Links: []plan.MasterLink{}}
 	org := ActiveOrg(r)
 	if h.PlanService == nil || org == "" {
@@ -51,7 +67,7 @@ func (h *Handler) GetMasterPlan(w http.ResponseWriter, r *http.Request) {
 		if len(p.Tasks) == 0 && len(p.Milestones) == 0 {
 			continue
 		}
-		out.Add(project.Name, p)
+		out.Add(project.Name, p, levels)
 	}
 	// Only links between two projects the caller can read are named.
 	shown := map[string]bool{}

@@ -308,6 +308,8 @@ func planTour(tr *tour) {
 	tr.step("two tasks of one project: 400", o, ext, at("id", "{{order}}", "otherId", "{{frame}}"), jsonBody(`{}`))
 	tr.step("the viewer may not link them: 403", viewer, ext, at("id", "{{order}}", "otherId", "{{q_task}}"), jsonBody(`{}`))
 	tr.step("the master plan: P and Q, and the link from Q to P", o, "GET /api/v1/plan/master")
+	tr.step("the master plan a level down: sub-tasks in place of their parents", o, "GET /api/v1/plan/master", query("levels=2"))
+	tr.step("a level that is not one: 400", o, "GET /api/v1/plan/master", query("levels=0"))
 	unext := "DELETE /api/v1/work-items/{id}/external-links/{otherId}"
 	tr.step("the link removed", o, unext, at("id", "{{order}}", "otherId", "{{q_task}}"))
 	tr.step("removed again: 404", o, unext, at("id", "{{order}}", "otherId", "{{q_task}}"))
