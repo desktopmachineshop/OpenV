@@ -97,9 +97,33 @@ running it again, not a day of re-recording.
 - **Screenshots.** The same steps, with a `shot('name')` call where a
   screenshot is wanted. Light theme, 2× scale, written as WebP with the
   width and height recorded so the page reserves the space.
-- **Narration.** The lines live in the repository as text. The voice is an
-  open question (section 10): this container has ffmpeg and no speech
-  engine, and nothing records which voice the current five use.
+- **Narration.** The lines live in the repository as text, one per step.
+  The voice is an offline speech model, as it was for the current five.
+  First choice is Kokoro (open, runs on a CPU, the most natural of the
+  small models); Piper is the fallback if Kokoro will not install in a
+  session. Model, voice and version are pinned in the script's config so
+  every video has the same voice and a later run reproduces it.
+- **Editable afterwards.** A video is never one opaque file. Each has a
+  folder:
+  - `video.yaml`: the steps in order, each with its actions, its narration
+    line, and any pause or zoom.
+  - `build/steps/NN-name/`: that step's picture (`clip.mp4`) and voice
+    (`voice.wav`), kept after the run. Not in git; rebuilt on demand.
+  - `overrides/NN-name/`: drop a `voice.wav` here to replace the machine
+    voice for one step with a human recording, or a `clip.mp4` to replace
+    the picture with one recorded by hand. The build uses an override
+    where it finds one and stretches the step to fit.
+  - `timeline.json`: written by the build, with each step's start and end
+    in the finished video.
+
+  So the three kinds of edit are each one small change. To reword a line,
+  edit the text and run `site-media build <video> --only <step>`: only
+  that step is re-voiced and the video is rejoined, with captions and
+  transcript regenerated. To re-shoot a step after a UI change, the same
+  command with `--record`. To cut by hand in an editor, `site-media
+  export <video>` writes the step clips, the voice tracks and an edit
+  list an editor can open. `scripts/site-media/README.md` says all of this
+  for the next person or agent.
 - **A check.** `make site-media-check` runs the scripts without recording
   and fails if a step no longer finds its button. That tells us when a UI
   change has made a video stale.
@@ -144,7 +168,34 @@ They replace the current five.
 
 `/demos` becomes: getting started first, then the short set grouped as
 desktop and phone, each with its transcript under it (folded shut). The
-old files stay on disk for one release so old links still play, then go.
+five old videos and their posters are deleted in the same pull request
+that adds the new ones.
+
+### Where the files live
+
+The videos are ordinary files in git today, not Git LFS: neither
+repository has LFS set up, and the five mp4s total about 10 MB. Ordinary
+git storage on GitHub is never billed. Its limits are 100 MiB per file (a
+push is refused), a warning at 50 MiB, and a recommendation to keep a
+repository under 1 GB. LFS would be free up to 10 GiB of storage and
+10 GiB of downloads a month and metered after that, but nothing here
+needs it.
+
+So the videos stay in git for now. Screen recordings compress well: the
+current ones run at about 170 kbit/s at 720p. At 1080p the build targets
+the nine-minute video under 40 MiB and the whole set under 100 MB, and
+fails if a file passes 50 MiB. The one cost is that git keeps every
+version, so each full re-recording adds the set's size again.
+
+Long term the videos go on YouTube, where they are wanted anyway. To make
+that a small change later: each video's entry carries an optional YouTube
+id, and the player shows the YouTube embed when it is set and the local
+file when it is not. Moving is then a field per video plus allowing
+`youtube-nocookie.com` as a frame source in the content-security policy.
+The transcript, captions and `VideoObject` data stay on our pages either
+way, since those are what search reads. Uploading is the maintainer's;
+the build writes the title, description, chapters and caption file ready
+to paste.
 
 The durations on the page come from the files, read at build time, so the
 "five minutes" that is really two cannot happen again.
@@ -178,7 +229,7 @@ with a section on the front page that links to each. They use the topic
 page layout and its rules: open with the answer, close with what OpenV
 does not do, link into the manual, carry a date.
 
-Proposed sectors, to be confirmed (section 10):
+The sectors:
 
 | Sector | What that reader works to |
 |---|---|
@@ -188,6 +239,8 @@ Proposed sectors, to be confirmed (section 10):
 | Rail | EN 50126, EN 50128, EN 50129 |
 | Industrial and machinery | IEC 61508, ISO 13849 |
 | Space | ECSS, NASA systems engineering |
+| Software and digital products | ISO/IEC/IEEE 29148 and 12207; SOC 2 or ISO 27001 evidence where a customer asks |
+| Education and research | no standard: systems engineering courses, capstone projects, student teams (Formula Student, CubeSat, rocketry), research labs |
 | Hardware start-ups and product teams | no standard yet, wants the habit |
 
 Each page says, for that sector: the artifacts those teams keep and how
@@ -197,6 +250,13 @@ screenshot or two from a sample project in that sector's vocabulary; and
 the plain statement the site already makes on `/safety-critical`: no
 certification, no tool qualification kit, no claim of compliance with any
 standard. That statement is on every sector page, not just the hub.
+
+The software page is for teams whose product is the software, and says
+plainly where OpenV sits beside an issue tracker rather than replacing
+it; embedded software in a regulated product is covered by that product's
+sector. The education page is written for the lecturer and the team
+captain: what a student project looks like in OpenV and how a course
+marks it.
 
 `/safety-critical` stays and links to the hub. A starter template per
 sector inside the app would make these pages stronger, but it is product
@@ -290,27 +350,37 @@ list to the pages that exist.
 - Re-run the Conviora scan a month after release, against the 0/100
   baseline.
 
-## 10. Decisions needed
+## 10. Decisions
 
-1. **The sectors.** Are the seven in section 7 the right ones, and is there
-   one to lead with? If there are customers or conversations in a
-   particular sector, that page gets written first and best.
-2. **The narration voice.** What produced the voice on the current five?
-   If it is a service, this session needs a key for it. If it does not
-   matter, I pick an open speech model that runs offline and is the same
-   every time.
-3. **The sample product.** Something generic (a ventilator, a drone, a
-   brake controller) or something from Desktop Machine Shop's own world?
-   One product is used for the getting-started video, the short videos and
-   every `/features` screenshot.
-4. **Where the video files live.** They are in OpenV's
-   `frontend/public/videos` now. Ten 1080p videos and a nine-minute one is
-   roughly 150 to 250 MB in git. Options: keep them in `openv-hosted` and
-   accept the size, or put them in a bucket behind the site's own host
-   name (the content-security policy stays same-origin). I lean to the
-   bucket.
-5. **The old five videos.** Keep for one release and then delete, as
-   proposed, or delete at once?
+Made, 2026-11-13:
+
+- **Sectors.** The seven first proposed, plus software and education
+  (section 7).
+- **Narration.** An offline speech model, with every video left editable
+  (section 4).
+- **Old videos.** Deleted when the new ones go up.
+- **Storage.** In git for now, since it is free and nothing breaks;
+  YouTube later (section 5).
+
+Still open:
+
+1. **The sample product,** to be chosen with the maintainer. It has to
+   break into sub-projects, because the programme features (child
+   projects, requirements refined downward, verification rolling up,
+   a supplier's project) are part of what the videos show. Candidates:
+
+   | Product | Sub-projects | For | Against |
+   |---|---|---|---|
+   | Desktop CNC mill | frame and axes, spindle and drive (supplier), controller firmware, control software, guarding and e-stop | Desktop Machine Shop's own ground; hardware, firmware, software and real hazards in one product; anyone can picture it | not a regulated product, so the regulated sectors see an analogy |
+   | Delivery drone | airframe, flight controller, battery pack (supplier), ground station app | familiar, clear safety case, software and hardware | aviation readers will hold it to their standards |
+   | Infusion pump | pump mechanism, firmware, clinician app, pressure sensor (supplier) | the classic regulated example; hazards are obvious | reads as a medical-device tool to everyone else |
+   | CubeSat | structure, power, comms, payload, ground segment | the textbook decomposition; suits education and space | remote from most buyers |
+
+   My pick is the desktop CNC mill for the videos and `/features`, with
+   one or two screenshots on each sector page taken from a small project
+   in that sector's own vocabulary.
+2. **Which sector leads.** If there are customers or conversations in one
+   sector, that page is written first.
 
 ## 11. What each pull request also carries
 
