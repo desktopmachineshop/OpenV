@@ -14,7 +14,7 @@
       <li><b>Click</b> a date, and the task is scheduled for the period of the scale that holds it: that day at <b>Days</b>, that week at <b>Weeks</b>, that month at <b>Months</b>, that quarter at <b>Quarters</b>. The row shows the period as you point at it.</li>
       <li><b>Drag</b> across the row, and the task is scheduled for the range you drag over, drawn as it grows with its dates beside it.</li>
     </ul>
-    <p>Select a task, by its title in the outline or by its bar, to see it beside the chart. <b>Open the full task</b> in that panel, like the open button on the row, shows everything else about it. In the panel you can:</p>
+    <p>Select a task, by its title in the outline or by its bar, to see it beside the chart. <b>Open the full task</b> in that panel, like the open button on the row, shows everything else about it. <b>Ctrl</b>-click (<b>Cmd</b> on a Mac) a row or a bar to add a task to those selected, or to drop it, and <b>Shift</b>-click to take every task between, on the Gantt and on the Timeline. With several selected, the panel lists them, assigns them all to a milestone and moves their dates by a number of days; a plain click goes back to one. In the panel you can:</p>
     <ul>
       <li>set its <b>Start</b> and <b>Due</b> dates, its <b>Duration</b> and its <b>Effort</b>: see <xref href="#duration-and-effort" scope="external" format="html">Duration and effort</xref>. The due date is the card's own, so the board shows the same day;</li>
       <li>make it a <b>sub-task of</b> another task, or a top-level task again;</li>

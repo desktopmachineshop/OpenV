@@ -59,7 +59,7 @@ export const OutlineCell: React.FC<{
   /** Drawn as on the critical path. */
   critical?: boolean;
   onToggle: () => void;
-  onSelect: () => void;
+  onSelect: (e?: React.MouseEvent) => void;
   onOpen: () => void;
   /** In a sorted or grouped list: no indent and no fold control. */
   flat?: boolean;
@@ -227,7 +227,7 @@ export const TaskBar: React.FC<{
   critical?: boolean;
   /** Draws the task's float after its bar: a dashed line to the last day it can slip to, ended by a tick. */
   showFloat?: boolean;
-  onSelect: () => void;
+  onSelect: (e?: React.MouseEvent) => void;
   onReschedule?: (start: string, end: string) => void;
   /** Set while the row is pointed at, where links can be drawn: the "+" at each end begins one. */
   onLinkStart?: (end: BarEnd, e: React.PointerEvent) => void;
@@ -300,8 +300,8 @@ export const TaskBar: React.FC<{
         button={{
           'data-task-bar': task.id,
           'data-task-summary': summary ? '' : undefined,
-          onClick: () => {
-            if (!dragged.current) onSelect();
+          onClick: (e) => {
+            if (!dragged.current) onSelect(e);
             dragged.current = false;
           },
           onPointerDown: begin('move'),

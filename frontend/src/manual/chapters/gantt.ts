@@ -99,7 +99,7 @@ To place a task that has no dates, use its empty row on the timeline:
 
 Select a task, by its title in the outline or by its bar, to see it beside
 the chart. **Open the full task** in that panel, like the open button on
-the row, shows everything else about it. In the panel you can:
+the row, shows everything else about it. **Ctrl**-click (**Cmd** on a Mac) a row or a bar to add a task to those selected, or to drop it, and **Shift**-click to take every task between, on the Gantt and on the Timeline. With several selected, the panel lists them, assigns them all to a milestone and moves their dates by a number of days; a plain click goes back to one. In the panel you can:
 
 - set its **Start** and **Due** dates, its **Duration** and its **Effort**:
   see [Duration and effort](#duration-and-effort). The due date is the

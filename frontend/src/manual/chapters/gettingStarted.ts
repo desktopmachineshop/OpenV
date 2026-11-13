@@ -287,7 +287,7 @@ Every page keeps the same margin from the edge of the screen.
 
 ## Help on every page
 
-Press **Help** in the top bar, or the **?** or **F1** key, to open the help
+Press the **?** button in the top bar, or the **?** or **F1** key, to open the help
 panel (on a phone, tap **?** in the top bar). Outside a project — the
 projects list, workspace settings, workspace runs, platform admin and
 *What's new* — the **?** sits beside the notification bell, and the keys work

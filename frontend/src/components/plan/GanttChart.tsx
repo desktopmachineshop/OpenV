@@ -13,6 +13,7 @@ import { DEFAULT_VIEW, PlanView, arrange, isOutline, shownColumns } from './plan
 import { ScheduleTrack } from './GanttSchedule';
 import { Scale, Tick, Zoom, buildScale, buildTicks, openingScroll, shortDate, todayScroll } from './ganttScale';
 import { descendants, milestoneColor } from './planModel';
+import type { PickKeys } from './planSelection';
 
 const HEAD_ROW = 24;
 const LANE_HEIGHT = 38;
@@ -180,7 +181,10 @@ export interface GanttChartProps {
   outlineWidth: number;
   selectedTaskId: string;
   selectedMilestoneKey: string;
-  onSelectTask: (t: PlanTask) => void;
+  /** Every task picked, where more than one is: each is drawn selected. */
+  selectedIds?: readonly string[];
+  /** A click on a task, with the modifier keys held: Ctrl and Shift pick more than one. */
+  onSelectTask: (t: PlanTask, keys?: PickKeys) => void;
   /** Opens the task in full: its description, assignee, linked artifacts and activity. */
   onOpenTask: (t: PlanTask) => void;
   onSelectMilestone: (m: PlanMilestone) => void;
@@ -220,6 +224,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   zoom,
   outlineWidth,
   selectedTaskId,
+  selectedIds,
   selectedMilestoneKey,
   onSelectTask,
   onOpenTask,
@@ -411,10 +416,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 <OutlineCell
                   task={t}
                   width={outlineWidth}
-                  selected={t.id === selectedTaskId}
+                  selected={t.id === selectedTaskId || Boolean(selectedIds?.includes(t.id))}
                   folded={folded.has(t.id)}
                   onToggle={() => toggle(t.id)}
-                  onSelect={() => onSelectTask(t)}
+                  onSelect={(e) => onSelectTask(t, e)}
                   onOpen={() => onOpenTask(t)}
                   critical={critical}
                   flat={r.flat}
@@ -433,10 +438,10 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                       task={t}
                       scale={scale}
                       today={plan.today}
-                      selected={t.id === selectedTaskId}
+                      selected={t.id === selectedTaskId || Boolean(selectedIds?.includes(t.id))}
                       critical={critical}
                       showFloat={showCritical}
-                      onSelect={() => onSelectTask(t)}
+                      onSelect={(e) => onSelectTask(t, e)}
                       onReschedule={onReschedule ? (start, end) => onReschedule(t, start, end) : undefined}
                       onLinkStart={onLink && !link && t.subtasks_total === 0 && (pointed === t.id || t.id === selectedTaskId) ? (end, e) => beginLink(t.id, end, e) : undefined}
                     />

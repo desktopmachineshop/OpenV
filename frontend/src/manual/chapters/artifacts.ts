@@ -40,7 +40,7 @@ One bar runs across the top: the search and its filters, the **Table / Tree** sw
 **Baseline** while you view one), which opens the baseline picker with **Compare**, **Capture Baseline**, **Delete baseline**,
 **Draft test cases** and **↓ Download**, and one blue button, **+ New Artifact**, at its end.
 
-**Help** in the top bar (or **?** on the keyboard) opens the help panel for
+The **?** button in the top bar (or **?** on the keyboard) opens the help panel for
 this page, with the artifact and link types.
 
 ## Table and tree
