@@ -15,6 +15,7 @@ video or screenshot shows a screen that has already changed.
 4. A full feature walkthrough with screenshots.
 5. Plainer wording everywhere.
 6. Better SEO everywhere.
+7. A news section for announcements: features, versions, demos.
 
 ## 2. Where the site is today
 
@@ -50,11 +51,11 @@ video or screenshot shows a screen that has already changed.
   the sentences, not the vocabulary: long lists of nouns, a slogan with a
   twist ("DOORS-grade rigour without the DOORS-grade licence",
   "Programmes, not just projects"), three-item runs, and every card built
-  the same way. Section 8 is written for that.
+  the same way. Section 9 is written for that.
 
 ## 3. Order of work
 
-Six pull requests in `openv-hosted`, plus one in OpenV for the recording
+Seven pull requests in `openv-hosted`, plus one in OpenV for the recording
 tooling. Each is shippable alone.
 
 | # | Pull request | Depends on |
@@ -64,7 +65,8 @@ tooling. Each is shippable alone.
 | 3 | `/features`: the walkthrough with screenshots | 1 |
 | 4 | Videos: getting started, the short set, the new `/demos` | 1 |
 | 5 | `/industries` and the sector pages | 2 (so they are written in the new voice) |
-| 6 | SEO sweep over everything, old and new | 3, 4, 5 |
+| 6 | `/news`: the section, its feed, and the first posts | 2 |
+| 7 | SEO sweep over everything, old and new | 3, 4, 5, 6 |
 
 2 can be written tonight before the UI lands, because it touches no
 screens. 1 is the long pole.
@@ -262,7 +264,59 @@ marks it.
 sector inside the app would make these pages stronger, but it is product
 work and a new feature, so it is left out of this plan.
 
-## 8. Wording (pull request 2, and the rule for 3 to 5)
+## 8. News (pull request 6)
+
+A place to announce things, so the site gains a dated, indexable page each
+time something ships and has a reason to be linked to.
+
+- **Pages.** A list at `/news`, newest first, and a page per post at
+  `/news/<slug>`. The slug is the title in words and never changes once
+  published. The front page shows the latest three, and the footer and
+  the top navigation link to the list.
+- **What a post is.** One Markdown file per post in
+  `site/frontend/src/site/news/`, with a short header: title, date,
+  summary, kind, author, and optionally a share image, a video id and the
+  version it is about. Publishing is a pull request that adds a file. No
+  database and no admin screen.
+- **Kinds.** Release, new feature, demo or video, industry, and general
+  announcement. The list filters by kind, and each kind has its own
+  address (`/news/releases` and so on) so a filtered list can be linked
+  and indexed.
+- **How it differs from `/changelog`.** The changelog is the complete
+  record, every version and every bullet, generated from the release
+  notes. News is the selected story: what a feature is for, with a
+  screenshot or the video, written to be read by someone who has not used
+  OpenV. A release post links to its changelog entry and the changelog
+  entry links back.
+- **Where posts come from.** At each promotion I draft a post for the
+  release from its notes and the manual topics of its new features, with
+  screenshots taken by the section 4 tooling, and the maintainer approves
+  or edits it before it merges. Not every patch release needs one: a post
+  goes out for each minor version and for anything worth a headline in
+  between. New videos, new sector pages and new comparison pages each get
+  a short post too.
+- **Length and voice.** 300 to 700 words, in the section 9 style, with the
+  limits stated where there are any. A post that only repeats the release
+  bullets adds nothing for search and is not published.
+- **For search.** Each post is pre-rendered, in the sitemap with its date,
+  in `llms.txt`, and carries `BlogPosting` JSON-LD with headline, date,
+  author and image. An Atom feed at `/news/feed.xml` is linked from every
+  page's head. Each post links to the feature section, topic page or
+  video it is about, and those link back to the latest post about them,
+  so news feeds the pages that are meant to rank and does not compete
+  with them. The IndexNow ping that already follows a production deploy
+  picks up new posts through the sitemap.
+- **In the app.** The "What's new" notice a workspace sees after a release
+  can link to the post. That is a change to the app, so it is noted here
+  and left out of this plan.
+- **First posts,** published as the rest of this plan ships: the new
+  getting-started video, the feature walkthrough, industries, and one for
+  the plan, Timeline and All projects work of the last few releases.
+- **Guards.** A test holds every post to a title, a date not in the
+  future, a summary within the description length, a unique slug and at
+  least one link into the site.
+
+## 9. Wording (pull request 2, and the rule for 3 to 6)
 
 A short style sheet goes in `openv-hosted` as `site/STYLE.md`, and every
 string on the site is rewritten against it: `landing/content.ts`,
@@ -296,7 +350,7 @@ A test keeps it from drifting back: a short list of patterns
 appears in site copy, the way `topics.test.ts` already guards the topic
 pages.
 
-## 9. SEO (pull request 6, and a checklist for 3 to 5)
+## 10. SEO (pull request 7, and a checklist for 3 to 6)
 
 Every new page meets these when it is built; the sweep applies the same
 list to the pages that exist.
@@ -326,7 +380,7 @@ list to the pages that exist.
 - Each sector page links to the topics and comparisons that matter to it,
   and back. `/features` sections link to topics, videos and the manual.
   A test fails on a public page nothing links to.
-- The footer lists industries and features.
+- The footer lists industries, features and news.
 
 **Speed**
 - Measure the front page, `/features` and `/demos` with Lighthouse on a
@@ -350,7 +404,7 @@ list to the pages that exist.
 - Re-run the Conviora scan a month after release, against the 0/100
   baseline.
 
-## 10. Decisions
+## 11. Decisions
 
 Made, 2026-11-13:
 
@@ -382,14 +436,14 @@ Still open:
 2. **Which sector leads.** If there are customers or conversations in one
    sector, that page is written first.
 
-## 11. What each pull request also carries
+## 12. What each pull request also carries
 
 - `openv-hosted` has no release notes file; the OpenV pull request for the
   tooling is labelled `no-release-notes` and `no-docs-change`, since no
   workspace member sees it.
 - The OpenV Platform project gets requirements under the existing
-  Discoverability need for the sector pages, the feature page and video
-  captions, a test case each, and a test run when they pass. A baseline
+  Discoverability need for the sector pages, the feature page, news and
+  video captions, a test case each, and a test run when they pass. A baseline
   after the last one merges.
 - The manual's getting-started topic links to the new video. That is a
   manual change, made in the chapters and synced.
