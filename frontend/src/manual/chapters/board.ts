@@ -59,8 +59,10 @@ Either way the card lets you:
 - Edit the **title** and **description**.
 - See **linked artifacts** (from the artifact IDs) with links into the
   Requirements view.
-- Follow the **activity feed** — comments, moves, status changes, and agent
-  run events — and add your own comments.
+- Follow its **History** — comments, moves, status changes, and agent
+  run events — and add your own comments. It is the same History an
+  artifact has: **Comments**, **Changes** and **All** choose what it
+  lists, and with the card opened in full it is a card of its own.
 - Delete the card.
 
 ## Moving cards

@@ -1,4 +1,5 @@
 import { apiErrorMessage } from '../api/errors';
+import { OpenIcon } from './ui/OpenIcon';
 import React, { useState, useEffect, useRef } from 'react';
 import { Artifact, ArtifactStatus, artifactAPI } from '../api/client';
 import { ActionMenu, Chip, buttonStyle, useAlert, useConfirm } from './ui';
@@ -53,6 +54,8 @@ interface ArtifactHeaderProps {
    * and Archive move behind a ⋯ menu beside Edit.
    */
   statementFirst?: boolean;
+  /** Opens the artifact in full, over the page, with its History in a card of its own. */
+  onOpen?: () => void;
   children?: React.ReactNode;
 }
 
@@ -71,6 +74,7 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
   quality,
   hideTransitions = false,
   statementFirst = false,
+  onOpen,
   children,
 }) => {
   const confirm = useConfirm();
@@ -252,7 +256,14 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
           </span>
         )}
       </div>
-      <h3 style={{ margin: '10px 0 8px', fontSize: isPhone ? 20 : 17, lineHeight: 1.3 }}>{displayArtifact.title}</h3>
+      <h3 style={{ margin: '10px 0 8px', fontSize: isPhone ? 20 : 17, lineHeight: 1.3 }}>
+        {displayArtifact.title}
+        {onOpen && (
+          <button type="button" data-open-artifact={artifact.id} onClick={onOpen} aria-label={`Open ${artifact.ref} in full`} title="Open in full, with its history beside it" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px 6px', marginLeft: 4, verticalAlign: 'middle' }}>
+            <OpenIcon />
+          </button>
+        )}
+      </h3>
       {archivedAt && (
         <p role="note" style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
           <span style={{ flex: 1, minWidth: 0 }}>

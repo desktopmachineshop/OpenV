@@ -6,11 +6,11 @@ import {
   WorkItemActivity,
   workItemsAPI,
 } from '../../api/client';
-import { ExpandableText } from '../ExpandableText';
 import { GANTT_PLAN_FEATURE } from '../../features';
 import { useFeature } from '../../hooks/useFeature';
 import { WorkItemTodos } from './WorkItemTodos';
 import { OpenIcon } from '../ui/OpenIcon';
+import { WorkItemHistory } from './WorkItemHistory';
 import { ErrorBanner, buttonStyle, chipStyle, useConfirm } from '../ui';
 
 interface WorkItemDrawerProps {
@@ -37,22 +37,6 @@ interface WorkItemDrawerProps {
   onExpand?: () => void;
 }
 
-const activityStyle = (kind: string): React.CSSProperties => {
-  switch (kind) {
-    case 'comment':
-      return { background: 'var(--tint-yellow)', border: '1px solid var(--tint-yellow-border)' };
-    case 'status':
-    case 'moved':
-      return { background: 'var(--tint-blue)', border: '1px solid var(--tint-blue-border)' };
-    case 'agent':
-    case 'agent_run':
-      return { background: 'var(--tint-purple)', border: '1px solid var(--tint-purple-border)' };
-    case 'error':
-      return { background: 'var(--tint-red)', border: '1px solid var(--tint-red-border)' };
-    default:
-      return { background: 'var(--surface-alt)', border: '1px solid var(--surface-alt)' };
-  }
-};
 
 /** The card at the side of the page, and as a pane in the middle of the window. */
 const DRAWER_FRAME: React.CSSProperties = { top: 0, right: 0, bottom: 0, width: 'min(420px, 100vw)', boxShadow: '-4px 0 16px rgba(0,0,0,0.15)' };
@@ -83,7 +67,6 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [descriptionDirty, setDescriptionDirty] = useState(false);
-  const [comment, setComment] = useState('');
 
   // `load` is memoized on [workItemId] only, so reading `descriptionDirty`
   // directly inside it would capture a stale value (frozen at false) and a
@@ -144,11 +127,10 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
     }
   };
 
-  const addComment = async () => {
-    if (!item || !comment.trim()) return;
+  const addComment = async (text: string) => {
+    if (!item) return;
     try {
-      await workItemsAPI.comment(item.id, comment.trim());
-      setComment('');
+      await workItemsAPI.comment(item.id, text);
       load();
     } catch (err: any) {
       setError(err.response?.data?.error || err.message || 'Failed to add comment');
@@ -228,6 +210,8 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
       <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
       <div style={{ flex: 1, minWidth: 0, overflowY: 'auto', padding: 18 }}>
         <ErrorBanner message={error} onDismiss={() => setError('')} />
+        {/* In the full view the card's fields are one card and its History another. */}
+        <div className={pane ? 'card' : undefined} style={pane ? { margin: '0 0 12px' } : undefined}>
 
         <div className="form-group">
           <label>Description</label>
@@ -280,55 +264,8 @@ export const WorkItemDrawer: React.FC<WorkItemDrawerProps> = ({
 
         {ganttPlan && item && <WorkItemTodos workItemId={item.id} />}
 
-        <label>Activity</label>
-        <div style={{ marginBottom: 12 }}>
-          {activity.length === 0 && (
-            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>No activity yet.</div>
-          )}
-          {activity.map((a) => (
-            <div
-              key={a.id}
-              style={{
-                ...activityStyle(a.kind),
-                borderRadius: 4,
-                padding: '8px 10px',
-                marginBottom: 8,
-                fontSize: 13,
-              }}
-            >
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 3 }}>
-                <strong>{a.actor || 'system'}</strong> · {a.kind} ·{' '}
-                {new Date(a.created_at).toLocaleString()}
-              </div>
-              <div style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', color: 'var(--text)' }}>
-                <ExpandableText text={a.content || ''} limit={600} />
-              </div>
-            </div>
-          ))}
         </div>
-
-        <div className="form-group">
-          <textarea
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Write a comment…"
-            style={{ minHeight: 60, fontSize: 13 }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && e.ctrlKey) {
-                e.preventDefault();
-                addComment();
-              }
-            }}
-          />
-          <button
-            className="button"
-            style={{ marginTop: 6, padding: '6px 16px', fontSize: 13 }}
-            onClick={addComment}
-            disabled={!comment.trim()}
-          >
-            Comment
-          </button>
-        </div>
+        <WorkItemHistory activity={activity} onComment={addComment} variant={pane ? 'card' : 'section'} />
       </div>
       {aside && (
         <div data-task-aside style={{ width: 'min(420px, 42%)', flexShrink: 0, overflowY: 'auto', borderLeft: '1px solid var(--neutral-soft)', background: 'var(--surface-alt)' }}>

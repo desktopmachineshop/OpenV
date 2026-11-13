@@ -514,7 +514,7 @@ On the details view figures are read-only, with the viewer for a closer look.
 ## History
 
 **History** is the last section of the artifact's detail panel, below its
-links and figures. It is the artifact's record: what OpenV wrote down each time the artifact changed, and what people have said about
+links and figures. The open mark beside the artifact's title shows the artifact in full, over the page, with its History in a card of its own beside it. History is the artifact's record: what OpenV wrote down each time the artifact changed, and what people have said about
 it, newest first. A new version, a status move, a link added or removed, a figure
 replaced, a test result recorded — each leaves an entry, alongside the notes
 members write themselves.
