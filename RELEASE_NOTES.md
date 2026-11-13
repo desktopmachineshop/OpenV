@@ -11,6 +11,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **The Assistant button is on every page, and tucks away.** The
+  **✦ Assistant** button now shows on the workspace's pages (Plan, Agents,
+  Settings and the rest) as well as inside a project. The small arrow at
+  its side folds it into a tab on the edge of the window; the tab brings
+  it back, and your browser remembers which. **Alt+A** opens the
+  assistant either way.
 - **A tidier menu.** With no project open the rail is **Home**, **Plan**,
   then **Agents**, **Settings** and **Admin**. **Plan** holds every
   project's plan and two tabs of what is yours across them: **My tasks**,
@@ -61,6 +67,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A milestone's open mark opens it in full.** On the Gantt the mark beside a
+  milestone's name did what the name did. The name now opens the milestone
+  beside the chart and the mark opens it over the page, as for a task.
 - **A chat with an agent no longer puts a card on the board.** Typing a
   prompt to an agent with **Launch run** made an *Agent run* card for it.
   A chat is not a task, so it now makes none: the run is on the Runs page.

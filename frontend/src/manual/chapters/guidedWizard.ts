@@ -78,8 +78,8 @@ everything you've entered so far.
 
 ### The V&V Assistant on every page
 
-The same assistant is on every project page and on the workspace Home, behind
-the **✦ Assistant** button in the bottom corner. It opens a chat panel over the
+The same assistant is on every page of the app, behind
+the **✦ Assistant** button in the bottom corner. The small arrow at its side tucks it into a tab on the edge of the window, which brings it back, and your browser remembers which. It opens a chat panel over the
 page:
 
 - **One conversation per project.** What you asked in the wizard is there on

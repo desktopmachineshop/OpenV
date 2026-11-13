@@ -2,7 +2,7 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="milestones-and-their-criteria">
   <title>Milestones and their criteria</title>
-  <shortdesc>A milestone marks a point the project must reach. Each has <b>criteria</b>: a measure of the project's artifacts and the percentage it must reach.</shortdesc>
+  <shortdesc>A milestone marks a point the project must reach. Each has <b>criteria</b>: a measure of the project's artifacts and the percentage it must reach. On the chart, a milestone's name opens it beside the chart, as a task's does, and the open mark after its name opens it in full, over the page.</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="gantt.milestone"/>
     <resourceid appname="openv-web" appid="gantt.add-milestone"/>

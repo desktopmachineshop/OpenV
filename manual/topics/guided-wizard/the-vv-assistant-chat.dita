@@ -15,7 +15,7 @@
     </ul>
     <section id="the-vv-assistant-on-every-page">
       <title>The V&amp;V Assistant on every page</title>
-      <p>The same assistant is on every project page and on the workspace Home, behind the <b>✦ Assistant</b> button in the bottom corner. It opens a chat panel over the page:</p>
+      <p>The same assistant is on every page of the app, behind the <b>✦ Assistant</b> button in the bottom corner. The small arrow at its side tucks it into a tab on the edge of the window, which brings it back, and your browser remembers which. It opens a chat panel over the page:</p>
       <ul>
         <li><b>One conversation per project.</b> What you asked in the wizard is there on every page and the other way round, and the panel keeps the conversation open while you move between pages. On the workspace Home, choose the project at the top of the panel.</li>
         <li><b>Looking at:</b> under the title says what the assistant is told you are reading: the requirement open in the Requirements page (it reads the whole artifact), or the page you are on. <b>✕</b> stops sending it, until you open something else.</li>

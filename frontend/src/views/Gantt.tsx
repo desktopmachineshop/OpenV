@@ -43,7 +43,7 @@ import { usePlanHistory } from '../components/plan/planHistory';
 import { useAssistantPageContext } from '../components/wizard/assistantStore';
 import { TaskPanel } from '../components/plan/TaskPanel';
 import { money, type RelationshipView } from '../components/plan/planModel';
-import { ErrorBanner, FeatureGate, Sheet, buttonStyle, mutedStyle, pageType, useConfirm } from '../components/ui';
+import { ErrorBanner, FeatureGate, Modal, Sheet, buttonStyle, mutedStyle, pageType, useConfirm } from '../components/ui';
 import { GANTT_PLAN_FEATURE } from '../features';
 import { useMilestoneLinks } from '../components/plan/useMilestoneLinks';
 import { useViewport } from '../hooks/useViewport';
@@ -129,6 +129,25 @@ const trackPlan = async (projectId: string, action: TrackingAction): Promise<str
   return n === 0 ? 'Nothing moved: no unstarted task sits before the status date.' : `${n} ${n === 1 ? 'task' : 'tasks'} moved.`;
 };
 
+/** The plan's figures above the chart: how far along it is, and what needs attention. */
+const PlanFigures: React.FC<{ plan: ProjectPlan }> = ({ plan }) => {
+  const s = plan.summary;
+  return (
+    <div data-help-key="gantt.summary" style={{ display: 'flex', gap: '4px 20px', flexWrap: 'wrap', flex: '1 1 320px' }}>
+      <Figure value={`${s.progress}%`} label="complete" />
+      <Figure value={s.tasks} label={s.tasks === 1 ? 'task' : 'tasks'} />
+      <Figure value={s.done} label="done" color="var(--success-text)" />
+      <Figure value={s.late} label="late" color={s.late ? 'var(--danger-strong)' : undefined} />
+      <Figure value={s.critical} label="on the critical path" color={s.critical ? 'var(--warning-text)' : undefined} />
+      {s.unscheduled > 0 && <Figure value={s.unscheduled} label="not scheduled" />}
+      {s.effort_days > 0 && <Figure value={s.effort_days} label={s.effort_days === 1 ? 'day of effort' : 'days of effort'} />}
+      {s.cost > 0 && <Figure value={money(s.cost, plan.currency)} label={plan.budget ? `of ${money(plan.budget, plan.currency)}` : 'cost'} color={plan.budget && s.cost > plan.budget ? 'var(--danger-strong)' : undefined} />}
+      {s.overallocated > 0 && <Figure value={s.overallocated} label="over-allocated" color="var(--danger-strong)" />}
+      <Figure value={`${plan.milestones.filter((m) => m.met).length}/${plan.milestones.length}`} label="milestones met" />
+    </div>
+  );
+};
+
 const PlanPage: React.FC = () => {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const { isPhone, isCompact, coarsePointer, width } = useViewport();
@@ -145,6 +164,7 @@ const PlanPage: React.FC = () => {
   // The task opened in full, in the board's drawer, and the artifacts it names.
   const [note, setNote] = useState('');
   const [fullTaskId, setFullTaskId] = useState('');
+  const [fullMilestone, setFullMilestone] = useState(false);
 
   const load = useCallback(async () => {
     if (!projectId) return;
@@ -266,7 +286,9 @@ const PlanPage: React.FC = () => {
   );
   const openTask = (t: PlanTask) => setSelection({ kind: 'task', id: t.id });
   const openMilestone = (m: PlanMilestone) => setSelection({ kind: 'milestone', key: m.key });
-  const close = () => setSelection(null);
+  // A milestone's open mark shows it over the page, as a task's does; its name shows it beside the chart.
+  const openMilestoneFull = (m: PlanMilestone) => (openMilestone(m), setFullMilestone(true));
+  const close = () => (setSelection(null), setFullMilestone(false));
   const openFull = (t: PlanTask) => (setSelection({ kind: 'task', id: t.id }), setFullTaskId(t.id));
 
   const errorBanner = <ErrorBanner message={error} onDismiss={() => setError('')} />;
@@ -329,10 +351,11 @@ const PlanPage: React.FC = () => {
       onDelete={deleteMilestone}
       onAssign={(taskId, key) => run(() => planAPI.schedule(taskId, { milestone: key }), 'Failed to assign the task')}
       onLink={milestoneLinks.onLink}
-      onSelectTask={openTask}
+      onSelectTask={(t) => (setFullMilestone(false), openTask(t))}
       onClose={close}
     />
   ) : null;
+  const milestoneOver = fullMilestone && selectedMilestone;
 
   const fullTask = fullTaskId ? (
     <FullTask
@@ -363,22 +386,10 @@ const PlanPage: React.FC = () => {
     );
   }
 
-  const s = plan.summary;
   return (
     <div className="ov-gutter" style={{ ...pageType(false), padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px 20px', flexWrap: 'wrap' }}>
-        <div data-help-key="gantt.summary" style={{ display: 'flex', gap: '4px 20px', flexWrap: 'wrap', flex: '1 1 320px' }}>
-          <Figure value={`${s.progress}%`} label="complete" />
-          <Figure value={s.tasks} label={s.tasks === 1 ? 'task' : 'tasks'} />
-          <Figure value={s.done} label="done" color="var(--success-text)" />
-          <Figure value={s.late} label="late" color={s.late ? 'var(--danger-strong)' : undefined} />
-          <Figure value={s.critical} label="on the critical path" color={s.critical ? 'var(--warning-text)' : undefined} />
-          {s.unscheduled > 0 && <Figure value={s.unscheduled} label="not scheduled" />}
-          {s.effort_days > 0 && <Figure value={s.effort_days} label={s.effort_days === 1 ? 'day of effort' : 'days of effort'} />}
-          {s.cost > 0 && <Figure value={money(s.cost, plan.currency)} label={plan.budget ? `of ${money(plan.budget, plan.currency)}` : 'cost'} color={plan.budget && s.cost > plan.budget ? 'var(--danger-strong)' : undefined} />}
-          {s.overallocated > 0 && <Figure value={s.overallocated} label="over-allocated" color="var(--danger-strong)" />}
-          <Figure value={`${plan.milestones.filter((m) => m.met).length}/${plan.milestones.length}`} label="milestones met" />
-        </div>
+        <PlanFigures plan={plan} />
         {controls}
       </div>
       {errorBanner}
@@ -401,7 +412,8 @@ const PlanPage: React.FC = () => {
           selectedMilestoneKey={selectedMilestone?.key || ''}
           onSelectTask={openTask}
           onOpenTask={openFull}
-          onSelectMilestone={openMilestone}
+          onSelectMilestone={(m) => (setFullMilestone(false), openMilestone(m))}
+          onOpenMilestone={openMilestoneFull}
           onEdit={coarsePointer ? undefined : schedule}
           history={history}
           onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
@@ -416,14 +428,19 @@ const PlanPage: React.FC = () => {
           onAddTask={(title) => addTask({ title, start: '', end: '' }, undefined, true)}
           busy={busy} touch={coarsePointer}
         />
-        {panel && !isCompact && !fullTaskId && (
+        {panel && !isCompact && !fullTaskId && !milestoneOver && (
           <div data-plan-side style={{ width: 340, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>{panel}</div>
         )}
       </div>
-      {panel && isCompact && (
+      {panel && isCompact && !milestoneOver && (
         <Sheet label={selectedTask ? `Task ${selectedTask.title}` : `Milestone ${selectedMilestone?.name}`} onClose={close}>
           {panel}
         </Sheet>
+      )}
+      {milestoneOver && (
+        <Modal title={`Milestone ${milestoneOver.name}`} width={760} onClose={() => setFullMilestone(false)}>
+          <div data-milestone-full>{panel}</div>
+        </Modal>
       )}
       {fullTask}
     </div>

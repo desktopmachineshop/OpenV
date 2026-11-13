@@ -700,6 +700,23 @@ describe('Plan page', () => {
     expect(vi.mocked(planAPI.setReleaseCriteria)).toHaveBeenCalledWith('p1', 'r1', [{ metric: 'needs_addressed', target: 100 }]);
   });
 
+  it('opens a milestone beside the chart from its name, and over the page from its open mark', async () => {
+    await mount();
+    await click(container.querySelector('[data-milestone="m1"]'));
+    expect(container.querySelector('[data-plan-side] aside')?.getAttribute('aria-label')).toContain('Milestone');
+    expect(document.body.querySelector('[data-milestone-full]')).toBeNull();
+    // The open mark is a control of its own, not part of the name.
+    const mark = container.querySelector<HTMLButtonElement>('[data-milestone-open="m1"]')!;
+    expect(mark.getAttribute('aria-label')).toMatch(/^Open .* in full$/);
+    await click(mark);
+    expect(document.body.querySelector('[data-milestone-full] aside')?.getAttribute('aria-label')).toContain('Milestone');
+    expect(container.querySelector('[data-plan-side]')).toBeNull();
+    // Its name brings it back beside the chart.
+    await click(container.querySelector('[data-milestone="m1"]'));
+    expect(document.body.querySelector('[data-milestone-full]')).toBeNull();
+    expect(container.querySelector('[data-plan-side] aside')).not.toBeNull();
+  });
+
   it('is a schedule list on a phone, grouped by milestone, with no timeline', async () => {
     await mount(390);
     expect(container.querySelector('[role="table"]')).toBeNull();
