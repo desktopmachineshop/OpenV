@@ -110,7 +110,6 @@ tab
   /org/settings?tab=members
   /org/settings?tab=usage
   /org/settings?tab=worker-keys
-  /projects/{}/settings?tab=general
   /projects/{}/settings?tab=members
 todo
   /org/todos?todo={}

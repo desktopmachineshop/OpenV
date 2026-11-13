@@ -9,6 +9,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Maintenance updates
+
+- **A project's parent is set on its Overview.** **Part of**, at the top
+  of the Overview, names the project this one belongs under and lets you
+  change it, with its child projects listed beside it. It has moved there
+  from project settings, which now points to it.
+- **Create a project at its level.** On the projects page, **New child
+  project** in a project's **⋯** menu starts a project under it, and the
+  create form has a **Parent project** field for any new project.
+
 ### Bug fixes
 
 - **Even spacing in the phone's workspace header.** Help, the bell and

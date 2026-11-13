@@ -512,6 +512,8 @@ const SCREENS = [
   { tag: 'register', path: '/login?mode=register' },
   { tag: 'projects', path: '/projects' },
   { tag: 'projects-switcher', path: '/projects', open: async (p) => { const b = p.getByRole('button', { name: /Space|workspace/i }).first(); if (await b.count()) await press(b); } },
+  { tag: 'projects-menu', path: '/projects', open: async (p) => { await press(p.getByRole('button', { name: /^Actions for Benchtop/ })); await p.waitForTimeout(300); } },
+  { tag: 'projects-new-child', path: '/projects', open: async (p) => { await press(p.getByRole('button', { name: /^Actions for Benchtop/ })); await p.waitForTimeout(200); await press(p.getByRole('menuitem', { name: 'New child project' })); await p.waitForTimeout(400); } },
   { tag: 'projects-new', path: '/projects', open: async (p) => press(p.getByRole('button', { name: '+ New Project' }).first()) },
   // Random-product mode with a Top 5 leaderboard open: a vote control, a
   // segmented filter and a five-row list, all inside the create form.

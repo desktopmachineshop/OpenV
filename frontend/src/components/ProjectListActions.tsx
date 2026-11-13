@@ -10,6 +10,8 @@ interface Props {
   onEdit: (e: React.MouseEvent) => void;
   onDownload: () => void;
   onDelete: () => void;
+  /** Starts a new project under this one; absent where projects have no parents. */
+  onNewChild?: () => void;
 }
 
 // The handlers stop the card's own click; a menu entry has no event to stop,
@@ -20,7 +22,7 @@ const NO_EVENT = { stopPropagation() {} } as React.MouseEvent;
  * What can be done to a project from its row on the projects page: save it
  * as a template, edit it, download it, delete it.
  */
-export const ProjectActions: React.FC<Props> = ({ name, menu, onTemplate, onEdit, onDownload, onDelete }) => {
+export const ProjectActions: React.FC<Props> = ({ name, menu, onTemplate, onEdit, onDownload, onDelete, onNewChild }) => {
   if (menu) {
     return (
       <div className="project-actions" onClick={(e) => e.stopPropagation()} data-help-key="projects.download">
@@ -28,6 +30,7 @@ export const ProjectActions: React.FC<Props> = ({ name, menu, onTemplate, onEdit
           label={`Actions for ${name}`}
           triggerStyle={{ minWidth: 32, minHeight: 32, border: 'none', background: 'none', color: 'var(--text-muted)', fontSize: 18, cursor: 'pointer', borderRadius: 6 }}
           items={[
+            ...(onNewChild ? [{ key: 'child', label: 'New child project', onSelect: onNewChild }] : []),
             { key: 'edit', label: 'Edit project', onSelect: () => onEdit(NO_EVENT) },
             { key: 'download', label: 'Download', onSelect: onDownload },
             { key: 'template', label: 'Save as template', onSelect: () => onTemplate(NO_EVENT) },

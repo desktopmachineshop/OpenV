@@ -8,6 +8,16 @@ definition, metrics, constraints, personas and needs on the left, and on the
 right the project's figures, what needs you and its latest activity. On a
 phone, where the project stands comes first.
 
+## Where the project sits
+
+At the top of the page, **Part of** names the project this one belongs
+under, and **Child projects** links to the projects that belong under it. A
+subsystem or supplier project sits under the system it is part of: its
+requirements can then *refine* the parent's, and the parent's V&V rolls
+those refinements up. Choose another project under **Part of** to move it,
+or **No parent** to make it top-level. A project cannot go under itself or
+under one of its own children. This used to be set in project settings.
+
 ## Where the project stands
 
 Four tiles give the share of requirements **traced** and **verified**, how

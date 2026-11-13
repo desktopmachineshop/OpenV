@@ -49,11 +49,11 @@ import { PanelHeader, SegmentedControl, useConfirm, usePrompt } from './ui';
 import { WORKSPACE_RUNS_FEATURE, workspaceRunPath } from './agents/workspaceRuns';
 import { useFeature } from '../hooks/useFeature';
 import { useHelpShortcut } from '../hooks/useHelpShortcut';
-import { COMPACT_LAYOUT_FEATURE, REDESIGN_PAGES_FEATURE, TODOS_FEATURE } from '../features';
+import { COMPACT_LAYOUT_FEATURE, FLOW_DOWN_FEATURE, REDESIGN_PAGES_FEATURE, TODOS_FEATURE } from '../features';
 import { NewProjectAction, ProjectCount, ProjectMeters } from './ProjectListFigures';
 import { ProjectListHome } from './ProjectListHome';
 import { ProjectActions } from './ProjectListActions';
-import { ProjectFold, projectRows, useFoldedProjects } from './ProjectListTree';
+import { NewProjectParent, ProjectFold, placeUnder, projectRows, useFoldedProjects } from './ProjectListTree';
 import { useUiRefresh } from '../hooks/useUiRefresh';
 import { loadWorkspaceHome, type WorkspaceHomeData } from './ProjectListHomeLoad';
 import { COMMENT_READS_FEATURE } from './noteReadState';
@@ -121,6 +121,8 @@ export const ProjectList: React.FC = () => {
   // The projects as a hierarchy, children indented under their parent, on
   // the redesigned Home of the refreshed interface; a flat list otherwise.
   const [folded, toggleFold] = useFoldedProjects();
+  const flowDown = useFeature(FLOW_DOWN_FEATURE);
+  const [newParentId, setNewParentId] = useState('');
   const tree = homeDesign && refresh;
   const rows = React.useMemo(() => (tree ? projectRows(projects, folded) : projects.map((project) => ({ project, depth: 0, below: 0, folded: false }))), [tree, projects, folded]);
   const todosOn = useFeature(TODOS_FEATURE);
@@ -453,7 +455,7 @@ export const ProjectList: React.FC = () => {
           name: newProjectName,
           description: newProjectDesc,
         });
-        addProject(response.data);
+        addProject(await placeUnder(response.data, newParentId));
         setProjectId(response.data.id);
         // Seed the Guided Wizard's framing step with the rolled concept and
         // land in the wizard, where the connected V&V Assistant picks it up
@@ -477,7 +479,7 @@ export const ProjectList: React.FC = () => {
           name: newProjectName,
           description: newProjectDesc,
         });
-        addProject(response.data);
+        addProject(await placeUnder(response.data, newParentId));
         openProject(response.data.id);
       } else {
         const response = await templateAPI.createProject(
@@ -485,7 +487,7 @@ export const ProjectList: React.FC = () => {
           newProjectName,
           newProjectDesc
         );
-        addProject(response.data);
+        addProject(await placeUnder(response.data, newParentId));
         openProject(response.data.id);
       }
       setNewProjectName('');
@@ -493,6 +495,7 @@ export const ProjectList: React.FC = () => {
       setSelectedTemplateId('');
       setRandomProduct(null);
       setCreateMode('blank');
+      setNewParentId('');
       setIsCreating(false);
       setError('');
     } catch (err: any) {
@@ -765,6 +768,7 @@ export const ProjectList: React.FC = () => {
                       onEdit={(e) => handleEditProject(project, e)}
                       onDownload={() => setDownloadProjectId(project.id)}
                       onDelete={() => handleDeleteProject(project.id)}
+                      onNewChild={flowDown ? () => { setCreateMode('blank'); setNewParentId(project.id); setIsCreating(true); } : undefined}
                     />
                   </div>
                   {project.description && (
@@ -825,6 +829,7 @@ export const ProjectList: React.FC = () => {
             <div className="create-project-form" data-help-key="projects.create">
               <h3>Create New Project</h3>
               <form onSubmit={handleCreateProject}>
+                {flowDown && <NewProjectParent projects={projects} value={newParentId} onChange={setNewParentId} />}
                 <div className="form-group">
                   <label htmlFor="mode">Project Type</label>
                   <select
@@ -1125,7 +1130,7 @@ export const ProjectList: React.FC = () => {
                     type="button"
                     className="button button-secondary"
                     onClick={() => {
-                      setIsCreating(false);
+                      setIsCreating(false); setNewParentId('');
                       setCreateMode('blank');
                       setSelectedTemplateId('');
                       setNewProjectName('');
