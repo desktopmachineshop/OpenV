@@ -6,7 +6,7 @@
 // away. Tapping a row opens it in a sheet (Gantt.tsx) to edit.
 import React, { useState } from 'react';
 import type { PlanMilestone, PlanTask, ProjectPlan } from '../../api/client';
-import { Chip, PanelHeader, ellipsis, mutedStyle, pageType, panelStyle } from '../ui';
+import { Chip, PanelHeader, buttonStyle, ellipsis, mutedStyle, pageType, panelStyle } from '../ui';
 import { shortDate, spanLabel } from './ganttScale';
 import { BAR_COLORS, barTone, columnLabel, milestoneColor, milestoneState, phoneGroups } from './planModel';
 
@@ -98,6 +98,8 @@ export interface PlanPhoneProps {
 
 export const PlanPhone: React.FC<PlanPhoneProps> = ({ plan, head, forms, error, onOpenTask, onOpenMilestone }) => {
   const [tab, setTab] = useState<Tab>('schedule');
+  // Tasks with no dates say nothing about the schedule: they are folded away until asked for.
+  const [showUnscheduled, setShowUnscheduled] = useState(false);
   const s = plan.summary;
   const groups = phoneGroups(plan.tasks, plan.milestones);
   const under = (parent: PlanTask): PlanTask[] => {
@@ -144,10 +146,20 @@ export const PlanPhone: React.FC<PlanPhoneProps> = ({ plan, head, forms, error, 
             {g.milestone ? (
               <MilestoneHead m={g.milestone} today={plan.today} onOpen={() => onOpenMilestone(g.milestone!)} />
             ) : (
-              <PanelHeader title={g.title} count={g.tasks.length} />
+              <PanelHeader
+                title={g.title}
+                count={g.tasks.length}
+                action={
+                  g.key === 'unscheduled' ? (
+                    <button type="button" aria-expanded={showUnscheduled} onClick={() => setShowUnscheduled((v) => !v)} style={{ ...buttonStyle('secondary', { compact: true }), minHeight: 36 }}>
+                      {showUnscheduled ? 'Hide' : 'Show'}
+                    </button>
+                  ) : undefined
+                }
+              />
             )}
-            {g.tasks.length === 0 && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>No task is assigned to this milestone or due by it.</p>}
-            {g.tasks.map((t) => (
+            {g.tasks.length === 0 && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>No task is assigned to this milestone.</p>}
+            {(g.key === 'unscheduled' && !showUnscheduled ? [] : g.tasks).map((t) => (
               <React.Fragment key={t.id}>
                 <TaskRow task={t} today={plan.today} onOpen={() => onOpenTask(t)} />
                 {under(t).map((c) => (

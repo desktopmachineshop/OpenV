@@ -239,25 +239,25 @@ export interface PhoneGroup {
 
 /**
  * The phone's schedule: the top-level tasks under the milestone they are
- * assigned to, or else the first dated milestone they are due on or before, then those due after the last milestone, then
- * the unscheduled. A sub-task stays under its parent, which the row counts.
+ * assigned to, then the dated ones assigned to none, then the unscheduled.
+ * A task belongs to a milestone only by being assigned to it: one that is
+ * merely due before a milestone's date does not, now that a milestone's
+ * date can follow its tasks. A sub-task stays under its parent, which the
+ * row counts.
  */
 export const phoneGroups = (tasks: PlanTask[], milestones: PlanMilestone[]): PhoneGroup[] => {
-  const dated = milestones.filter((m) => m.date);
-  const groups: PhoneGroup[] = dated.map((m) => ({ key: m.key, milestone: m, title: m.name, tasks: [] }));
-  const later: PhoneGroup = { key: 'later', milestone: null, title: dated.length ? 'After the last milestone' : 'Scheduled', tasks: [] };
+  // Dated milestones in date order as the plan gives them, then the undated.
+  const shown = [...milestones.filter((m) => m.date), ...milestones.filter((m) => !m.date)];
+  const groups: PhoneGroup[] = shown.map((m) => ({ key: m.key, milestone: m, title: m.name, tasks: [] }));
+  const unassigned: PhoneGroup = { key: 'unassigned', milestone: null, title: milestones.length ? 'Not assigned to a milestone' : 'Scheduled', tasks: [] };
   const unscheduled: PhoneGroup = { key: 'unscheduled', milestone: null, title: 'Not scheduled', tasks: [] };
   for (const t of tasks) {
     if (t.depth > 0) continue;
-    if (!t.span_end) {
-      unscheduled.tasks.push(t);
-      continue;
-    }
-    const own = t.milestone ? dated.findIndex((m) => m.key === t.milestone) : -1;
-    const i = own >= 0 ? own : dated.findIndex((m) => t.span_end! <= m.date!);
-    (i >= 0 ? groups[i] : later).tasks.push(t);
+    const own = t.milestone ? groups.find((g) => g.key === t.milestone) : undefined;
+    (own ?? (t.span_end ? unassigned : unscheduled)).tasks.push(t);
   }
-  return [...groups, later, unscheduled].filter((g) => g.milestone || g.tasks.length > 0);
+  // A dated milestone shows even with no task yet; an undated one only with tasks.
+  return [...groups, unassigned, unscheduled].filter((g) => g.milestone?.date || g.tasks.length > 0);
 };
 
 /** The presets Add milestone offers: a name and the criteria that go with it. */

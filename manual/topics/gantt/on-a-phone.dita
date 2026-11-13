@@ -3,7 +3,7 @@
 <concept id="on-a-phone">
   <title>On a phone</title>
   <conbody>
-    <p>A timeline needs more width than a phone has, so the phone shows the same plan as a schedule. Four tiles give the figures. Under <b>Schedule</b>, the tasks are grouped by the milestone they are assigned to, or else the one they are due before, each with its dates, duration and a progress bar, and <b>Critical</b> on a task with no float; <b>Milestones</b> lists the milestones with their progress. Tap a task or a milestone to open it and make the same edits as on a computer, by setting dates rather than dragging.</p>
+    <p>A timeline needs more width than a phone has, so the phone shows the same plan as a schedule. Four tiles give the figures. Under <b>Schedule</b>, the tasks are grouped by the milestone they are assigned to, with the rest under <b>Not assigned to a milestone</b> and those with no dates folded under <b>Not scheduled</b> until you tap <b>Show</b>, each with its dates, duration and a progress bar, and <b>Critical</b> on a task with no float; <b>Milestones</b> lists the milestones with their progress. Tap a task or a milestone to open it and make the same edits as on a computer, by setting dates rather than dragging.</p>
     <p>On a tablet the chart is shown. With a touch screen, bars do not drag and links are not drawn: set a task's dates and relationships in its panel.</p>
   </conbody>
 </concept>
