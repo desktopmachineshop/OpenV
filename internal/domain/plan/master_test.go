@@ -6,8 +6,8 @@ import (
 )
 
 // The master plan cuts each project's plan at a level: level 1 is the
-// top-level tasks, and each level further replaces a task that has
-// sub-tasks with them, so a task and its sub-tasks are never both drawn.
+// top-level tasks, and each level further adds the sub-tasks of the tasks
+// above, which stay and are marked as summaries.
 func TestMasterPlanLevels(t *testing.T) {
 	id := func(s string) *string { return &s }
 	p := &Plan{ProjectID: "p", Today: "2026-11-13", Tasks: []*Task{
@@ -23,10 +23,10 @@ func TestMasterPlanLevels(t *testing.T) {
 		want   []string
 	}{
 		{1, []string{"build", "ship"}},
-		{2, []string{"frame", "wire", "ship"}},
-		{3, []string{"weld", "paint", "wire", "ship"}},
-		{9, []string{"weld", "paint", "wire", "ship"}},
-		{MasterAllLevels, []string{"weld", "paint", "wire", "ship"}},
+		{2, []string{"build", "frame", "wire", "ship"}},
+		{3, []string{"build", "frame", "weld", "paint", "wire", "ship"}},
+		{9, []string{"build", "frame", "weld", "paint", "wire", "ship"}},
+		{MasterAllLevels, []string{"build", "frame", "weld", "paint", "wire", "ship"}},
 	} {
 		m := MasterPlan{}
 		m.Add("P", p, tc.levels)
@@ -40,7 +40,11 @@ func TestMasterPlanLevels(t *testing.T) {
 	}
 	m := MasterPlan{}
 	m.Add("P", p, 2)
-	if d := m.Projects[0].Tasks[0].Depth; d != 1 {
-		t.Errorf("a sub-task carries its depth: got %d", d)
+	tasks := m.Projects[0].Tasks
+	if !tasks[0].Summary || !tasks[1].Summary || tasks[2].Summary || tasks[3].Summary {
+		t.Errorf("a task with sub-tasks is a summary, shown or not: %+v", tasks)
+	}
+	if tasks[1].Depth != 1 {
+		t.Errorf("a sub-task carries its depth: got %d", tasks[1].Depth)
 	}
 }

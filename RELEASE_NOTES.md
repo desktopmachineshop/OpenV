@@ -24,9 +24,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 - **Choose how much detail All projects shows.** A level menu beside the
   Project heading, on the workspace's Plan page and in a Gantt's All
   projects view, sets how far down each project's tasks are drawn. It
-  opens on Level 1, the top-level tasks; each level further shows a
-  task's sub-tasks in its place, and **All levels** goes all the way
-  down. Milestones show at every level.
+  opens on Level 1, the top-level tasks; each level further adds the
+  sub-tasks on rows beneath their parents, whose bars stay in view as
+  they do on the Gantt, and **All levels** goes all the way down.
+  Milestones show at every level.
 - **The Gantt's outline keeps the order you give it.** Rows no longer
   re-sort by start date when a date changes: the outline is a stored
   order. Each task's panel shows its place as **Order in the outline**,

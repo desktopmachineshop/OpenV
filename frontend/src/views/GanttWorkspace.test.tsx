@@ -12,7 +12,9 @@ import { planAPI, type MasterPlan, type OrgFeatures } from '../api/client';
 
 const ok = (data: unknown) => Promise.resolve({ data });
 
-const master = (name: string): MasterPlan =>
+const sub = { id: 'a1', title: 'Prime', wbs: '1.1', depth: 1, summary: false, start: '2026-11-02', end: '2026-11-06', progress: 0, done: false, late: false, critical: false };
+
+const master = (name: string, levels = '1'): MasterPlan =>
   ({
     today: '2026-11-13',
     start: '2026-11-02',
@@ -27,8 +29,9 @@ const master = (name: string): MasterPlan =>
         summary: { progress: 40, tasks: 2, done: 1, late: 0 },
         milestones: [],
         tasks: [
-          { id: 'a', title: 'Paint', wbs: '1', start: '2026-11-02', end: '2026-11-13', progress: 0, done: false, late: false, critical: false },
-          { id: 'b', title: 'Weld', wbs: '2', start: '2026-11-09', end: '2026-12-18', progress: 0, done: false, late: false, critical: true },
+          ...(levels === '1' ? [] : [sub]),
+          { id: 'a', title: 'Paint', wbs: '1', depth: 0, summary: true, start: '2026-11-02', end: '2026-11-13', progress: 0, done: false, late: false, critical: false },
+          { id: 'b', title: 'Weld', wbs: '2', depth: 0, summary: false, start: '2026-11-09', end: '2026-12-18', progress: 0, done: false, late: false, critical: true },
         ],
       },
     ],
@@ -36,7 +39,7 @@ const master = (name: string): MasterPlan =>
 
 vi.mock('../api/client', async (orig) =>
   mockApi(await orig(), {
-    planAPI: { master: () => ok(master(useAppStore.getState().activeOrgId === 'o2' ? 'Other rig' : 'Brake ECU')) },
+    planAPI: { master: (levels?: string) => ok(master(useAppStore.getState().activeOrgId === 'o2' ? 'Other rig' : 'Brake ECU', levels)) },
   })
 );
 
@@ -121,12 +124,16 @@ describe('GanttWorkspace', () => {
     const level = container.querySelector<HTMLSelectElement>('select[aria-label="Level of detail"]')!;
     expect(Array.from(level.options).map((o) => o.textContent)).toEqual(['Level 1', 'Level 2', 'Level 3', 'Level 4', 'All levels']);
     expect(level.value).toBe('1');
+    expect(container.querySelectorAll('[data-summary]')).toHaveLength(0);
     await act(async () => {
       level.value = 'all';
       level.dispatchEvent(new Event('change', { bubbles: true }));
     });
     await flush();
     expect(planAPI.master).toHaveBeenLastCalledWith('all');
+    // The parent stays, drawn as a parent, with its sub-task on a row beneath.
+    expect(bars()).toEqual(['Weld', 'Paint', 'Prime']);
+    expect(container.querySelector('[data-summary]')?.textContent).toBe('Paint');
     expect(container.querySelector<HTMLSelectElement>('select[aria-label="Level of detail"]')!.value).toBe('all');
   });
 

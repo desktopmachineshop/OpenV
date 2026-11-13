@@ -82,6 +82,16 @@ describe('lanes', () => {
     expect(rows.map((r) => r.map((b) => b.id))).toEqual([['c1', 'c2'], ['early']]);
   });
 
+  it('keeps a parent on a row above its sub-tasks, a level at a time', () => {
+    const rows = lanes([
+      { ...bar('weld', '2026-11-01', '2026-11-05', true), depth: 1 },
+      { ...bar('paint', '2026-11-03', '2026-11-10'), depth: 1 },
+      { ...bar('build', '2026-11-01', '2026-11-10', true), depth: 0 },
+      { ...bar('ship', '2026-11-11', '2026-11-12'), depth: 0 },
+    ]);
+    expect(rows.map((r) => r.map((b) => b.id))).toEqual([['build'], ['ship'], ['weld'], ['paint']]);
+  });
+
   it('adds no empty row when nothing is critical', () => {
     expect(lanes([bar('a', '2026-11-01', '2026-11-10'), bar('b', '2026-11-11', '2026-11-12')]).map((r) => r.map((b) => b.id))).toEqual([['a', 'b']]);
   });
