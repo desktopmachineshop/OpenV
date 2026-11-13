@@ -11,6 +11,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **The Assistant button is on every page, and tucks away.** The
+  **✦ Assistant** button now shows on the workspace's pages (Plan, Agents,
+  Settings and the rest) as well as inside a project. The small arrow at
+  its side folds it into a tab on the edge of the window; the tab brings
+  it back, and your browser remembers which. **Alt+A** opens the
+  assistant either way.
 - **A tidier menu.** With no project open the rail is **Home**, **Plan**,
   then **Agents**, **Settings** and **Admin**. **Plan** holds every
   project's plan and two tabs of what is yours across them: **My tasks**,

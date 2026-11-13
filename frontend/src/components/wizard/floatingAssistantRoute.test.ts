@@ -15,9 +15,16 @@ describe('assistantRoute (#726)', () => {
     expect(assistantRoute('/projects/p1/baselines/b1/compare')).toMatchObject({ pageLabel: 'Baseline comparison' });
   });
 
+  it('shows on the workspace pages too, with no project in the address', () => {
+    expect(assistantRoute('/org/plan')).toEqual({ show: true, projectId: null, pageLabel: 'Workspace plan' });
+    expect(assistantRoute('/org/plan/tasks')).toMatchObject({ show: true, pageLabel: 'My tasks' });
+    expect(assistantRoute('/org/settings')).toMatchObject({ show: true, projectId: null, pageLabel: 'Workspace settings' });
+    expect(assistantRoute('/admin')).toMatchObject({ show: true, pageLabel: 'Platform admin' });
+  });
+
   it('stays off the guided wizard, which docks its own assistant, and off other pages', () => {
     expect(assistantRoute('/projects/p1/guided').show).toBe(false);
-    expect(assistantRoute('/org/settings').show).toBe(false);
+    expect(assistantRoute('/pricing').show).toBe(false);
     expect(assistantRoute('/login').show).toBe(false);
   });
 });
