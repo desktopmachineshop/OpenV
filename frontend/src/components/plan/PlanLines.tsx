@@ -20,6 +20,10 @@ export interface Bar {
   done: boolean;
   late: boolean;
   critical: boolean;
+  /** How many tasks sit above this one, where a band draws more than the top level. */
+  depth?: number;
+  /** The bar spans sub-tasks the band also draws: it is drawn as the Gantt draws a parent. */
+  summary?: boolean;
 }
 
 /** Bars packed onto as few lanes as will hold them without overlapping. */
@@ -35,9 +39,17 @@ const pack = (bars: Bar[]): Bar[][] => {
 
 /**
  * The lanes of a band: the critical path first, on the top row (more rows
- * only where critical bars overlap), then everything else beneath it.
+ * only where critical bars overlap), then everything else beneath it; and
+ * where the band draws sub-tasks, each level beneath the one above.
  */
-export const lanes = (bars: Bar[]): Bar[][] => [...pack(bars.filter((b) => b.critical)), ...pack(bars.filter((b) => !b.critical))];
+export const lanes = (bars: Bar[]): Bar[][] => {
+  // A level at a time, so a parent's bar sits over its sub-tasks' rows.
+  const depths = Array.from(new Set(bars.map((b) => b.depth ?? 0))).sort((x, y) => x - y);
+  return depths.flatMap((d) => {
+    const level = bars.filter((b) => (b.depth ?? 0) === d);
+    return [...pack(level.filter((b) => b.critical)), ...pack(level.filter((b) => !b.critical))];
+  });
+};
 
 const Band: React.FC<{
   bars: Bar[];
@@ -65,10 +77,11 @@ const Band: React.FC<{
             key={b.id}
             type="button"
             data-critical={(showCritical && b.critical) || undefined}
+            data-summary={b.summary || undefined}
             disabled={!onBar}
             onClick={() => onBar?.(b.id)}
             title={`${b.title}: ${spanLabel(b.start, b.end, today)}, ${b.progress}%${showCritical && b.critical ? ', on the critical path' : ''}`}
-            style={{ ...ellipsis, position: 'absolute', left: scale.x(b.start!), width: Math.max((toDay(b.end!) - toDay(b.start!) + 1) * scale.dayWidth, 6), top: 24 + i * 24, height: 20, boxSizing: 'border-box', padding: '0 6px', fontSize: 12, lineHeight: '18px', textAlign: 'left', cursor: onBar ? 'pointer' : 'default', borderRadius: 4, border: showCritical && b.critical ? '2px solid var(--warning)' : `1px solid ${b.late ? 'var(--danger)' : 'var(--border)'}`, color: 'var(--text)', background: `linear-gradient(90deg, ${b.done ? 'var(--success)' : 'var(--accent)'} ${b.progress}%, var(--surface-alt) ${b.progress}%)` }}
+            style={{ ...ellipsis, position: 'absolute', left: scale.x(b.start!), width: Math.max((toDay(b.end!) - toDay(b.start!) + 1) * scale.dayWidth, 6), top: 24 + i * 24, height: 20, boxSizing: 'border-box', padding: '0 6px', fontSize: 12, lineHeight: '18px', textAlign: 'left', cursor: onBar ? 'pointer' : 'default', borderRadius: b.summary ? 2 : 4, fontWeight: b.summary ? 600 : 400, border: showCritical && b.critical ? '2px solid var(--warning)' : `1px solid ${b.late ? 'var(--danger)' : b.summary ? 'var(--text-secondary)' : 'var(--border)'}`, color: 'var(--text)', background: b.summary ? 'var(--neutral-soft)' : `linear-gradient(90deg, ${b.done ? 'var(--success)' : 'var(--accent)'} ${b.progress}%, var(--surface-alt) ${b.progress}%)` }}
           >
             <span style={{ background: 'color-mix(in srgb, var(--surface) 70%, transparent)', borderRadius: 2, padding: '0 2px' }}>{b.title}</span>
           </button>
@@ -212,7 +225,7 @@ export const PlanMaster: React.FC<{ currentProjectId: string } & LinesProps> = (
                 <div style={mutedStyle}>{p.start ? spanLabel(p.start, p.end, master.today) : 'Not scheduled'}</div>
               </div>
               <div style={{ padding: '6px 0' }}>
-                <Band bars={p.tasks} milestones={p.milestones} scale={scale} today={master.today} showCritical={showCritical} />
+                <Band bars={p.tasks.map((t) => ({ ...t, summary: t.summary && p.tasks.some((c) => c.depth === t.depth + 1 && c.wbs.startsWith(`${t.wbs}.`)) }))} milestones={p.milestones} scale={scale} today={master.today} showCritical={showCritical} />
               </div>
             </section>
           ))}
