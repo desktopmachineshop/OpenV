@@ -6,7 +6,7 @@ import React from 'react';
 import type { PlanScheduleInput, PlanTask, ProjectPlan } from '../../api/client';
 import { buttonStyle } from '../ui';
 import type { PlanHistory } from './planHistory';
-import { COLUMNS, FILTERS, GROUPS, PlanView, RowMove, SORTS, isOutline, moveChange } from './planView';
+import { COLUMNS, FILTERS, GROUPS, PlanView, RowMove, SORTS, isOutline, moveChange, rememberDated } from './planView';
 
 const control: React.CSSProperties = { minHeight: 28, height: 28, padding: '2px 6px', boxSizing: 'border-box', fontSize: 12, width: 'auto' };
 
@@ -40,6 +40,18 @@ export const PlanViewBar: React.FC<{
           </option>
         ))}
       </select>
+      <label title="Leave out the tasks with no dates, which have nothing to draw on the chart" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, margin: 0, fontWeight: 400, whiteSpace: 'nowrap', cursor: 'pointer' }}>
+        <input
+          type="checkbox"
+          checked={view.dated}
+          onChange={(e) => {
+            rememberDated(e.target.checked);
+            set('dated', e.target.checked);
+          }}
+          style={{ width: 'auto', margin: 0 }}
+        />
+        Dated only
+      </label>
       <select value={view.sort} onChange={(e) => set('sort', e.target.value as PlanView['sort'])} aria-label="Sort" style={control}>
         {SORTS.map((s) => (
           <option key={s.value} value={s.value}>

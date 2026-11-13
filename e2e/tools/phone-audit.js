@@ -543,6 +543,7 @@ const SCREENS = [
   { tag: 'vv', path: '/projects/p1/vv' },
   { tag: 'releases', path: '/projects/p1/releases' },
   { tag: 'gantt', path: '/projects/p1/gantt' },
+  { tag: 'gantt-task', wide: true, path: '/projects/p1/gantt', open: async (p) => { await press(p.locator('[data-task-bar]').nth(1)); await p.waitForTimeout(400); } },
   { tag: 'gantt-milestone', wide: true, path: '/projects/p1/gantt', open: async (p) => { await press(p.locator('[data-milestone]').first()); await p.waitForTimeout(400); } },
   { tag: 'gantt-resources', wide: true, path: '/projects/p1/gantt', open: async (p) => { await press(p.getByRole('button', { name: /^Plan tools/ })); await p.waitForTimeout(200); await press(p.getByRole('menuitem', { name: /^Resources/ })); await p.waitForTimeout(300); } },
   { tag: 'gantt-defaults', wide: true, path: '/projects/p1/gantt', open: async (p) => { await press(p.getByRole('button', { name: /^Plan tools/ })); await p.waitForTimeout(200); await press(p.getByRole('menuitem', { name: /^Defaults/ })); await p.waitForTimeout(300); } },

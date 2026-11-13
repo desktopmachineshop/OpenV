@@ -19,6 +19,8 @@ export interface PlanTask {
   parent_id: string | null;
   depth: number;
   wbs: string;
+  /** Its place among its siblings in the outline, from 1: the order it was put in, which its dates never change. */
+  order: number;
   /** The task's own dates, YYYY-MM-DD; end is the work item's due date. */
   start: string | null;
   end: string | null;
@@ -402,6 +404,8 @@ export interface PlanScheduleInput {
   parent_id?: string;
   /** The sibling the task goes straight after in the outline; empty makes it the first. */
   after_id?: string;
+  /** The place among its siblings to put the task at, from 1; past the last sibling is last. */
+  order?: number;
   /** The key of the milestone the task is assigned to; empty takes it off. */
   milestone?: string;
   /** Replaces the task's relationships to the tasks that drive it. */

@@ -11,6 +11,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **The Gantt's outline keeps the order you give it.** Rows no longer
+  re-sort by start date when a date changes: the outline is a stored
+  order. Each task's panel shows its place as **Order in the outline**,
+  and typing another place moves it there; the arrows and dragging work as
+  before. Tasks you have never moved are listed after the ones you have,
+  in the order they were made, so a plan you had not ordered by hand will
+  show its rows in a different order once.
+- **Dated only.** A checkbox beside the Gantt's filter leaves out the
+  tasks with no dates, which have nothing to draw on the chart. It works
+  with any filter and is remembered in your browser.
 - **A project's parent is set on its Overview.** **Part of**, at the top
   of the Overview, names the project this one belongs under and lets you
   change it, with its child projects listed beside it. It has moved there

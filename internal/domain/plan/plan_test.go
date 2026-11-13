@@ -2199,3 +2199,63 @@ func TestAMilestoneWaitsForTasksAndCanTakeItsDateFromThem(t *testing.T) {
 		t.Fatalf("a release's date is its release's: %v", err)
 	}
 }
+
+// The outline is the order the tasks were put in, stored: a task nobody
+// has placed keeps the order it was made in, whatever its dates, and a
+// task is put at a place by its number.
+func TestTheOutlineOrderIsStoredAndDoesNotFollowDates(t *testing.T) {
+	svc, _, _, _ := newService()
+	order := func() string {
+		t.Helper()
+		p, err := svc.Plan("p", Evidence{}, now)
+		if err != nil {
+			t.Fatal(err)
+		}
+		out := ""
+		for _, task := range p.Tasks {
+			if task.Depth == 0 {
+				out += task.ID + itoa(task.Order)
+			}
+		}
+		return out
+	}
+	// A, B, C were made in that order.
+	if got := order(); got != "a1b2c3" {
+		t.Fatalf("as made: %s", got)
+	}
+	// C is given the earliest dates and B none: nothing moves.
+	if err := svc.Schedule("c", ScheduleRequest{StartDate: sp("2027-01-04"), DueDate: sp("2027-01-08")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if err := svc.Schedule("a", ScheduleRequest{StartDate: sp("2027-06-01"), DueDate: sp("2027-06-02")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if got := order(); got != "a1b2c3" {
+		t.Fatalf("dates do not reorder the outline: %s", got)
+	}
+	// C is put first by its number, then A last; a number past the end is the last place.
+	one, nine := 1, 9
+	if err := svc.Schedule("c", ScheduleRequest{Order: &one}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if got := order(); got != "c1a2b3" {
+		t.Fatalf("c first: %s", got)
+	}
+	if err := svc.Schedule("a", ScheduleRequest{Order: &nine}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if got := order(); got != "c1b2a3" {
+		t.Fatalf("a last: %s", got)
+	}
+	// The order holds when dates change again, and a place below 1 is refused.
+	if err := svc.Schedule("a", ScheduleRequest{StartDate: sp("2026-12-01"), DueDate: sp("2026-12-02")}, "tester"); err != nil {
+		t.Fatal(err)
+	}
+	if got := order(); got != "c1b2a3" {
+		t.Fatalf("the stored order holds: %s", got)
+	}
+	zero := 0
+	if err := svc.Schedule("b", ScheduleRequest{Order: &zero}, "tester"); !errors.Is(err, ErrPosition) {
+		t.Fatalf("a place below 1: %v", err)
+	}
+}

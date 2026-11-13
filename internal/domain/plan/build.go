@@ -53,6 +53,8 @@ type Task struct {
 	// ("2.1").
 	Depth int    `json:"depth"`
 	WBS   string `json:"wbs"`
+	// Order is the task's place among its siblings in the outline, from 1.
+	Order int `json:"order"`
 	// Start and End are the task's own dates; End is the work item's due
 	// date.
 	Start *string `json:"start"`
@@ -615,9 +617,10 @@ func (b *builder) settle(t *Task) {
 	t.Late = !t.Done && t.SpanEnd != nil && *t.SpanEnd < b.today
 }
 
-// outline lists the tasks as a tree: siblings in the order they were put
-// in, where one was moved; otherwise by start, the unscheduled last, then
-// by age.
+// outline lists the tasks as a tree, siblings in the order they were put
+// in. A task nobody has placed comes after those that were, in the order
+// the tasks were made: never by its dates, so a row does not jump when a
+// date changes. Each task is given its place among its siblings (Order).
 func (b *builder) outline(p *Plan, list []*Task, depth int, prefix string) {
 	sort.SliceStable(list, func(i, j int) bool {
 		x, y := list[i], list[j]
@@ -628,12 +631,6 @@ func (b *builder) outline(p *Plan, list []*Task, depth int, prefix string) {
 			return placedX
 		case placedX && ox != oy:
 			return ox < oy
-		case x.SpanStart != nil && y.SpanStart == nil:
-			return true
-		case x.SpanStart == nil && y.SpanStart != nil:
-			return false
-		case x.SpanStart != nil && *x.SpanStart != *y.SpanStart:
-			return *x.SpanStart < *y.SpanStart
 		}
 		if !b.created[x.ID].Equal(b.created[y.ID]) {
 			return b.created[x.ID].Before(b.created[y.ID])
@@ -642,6 +639,7 @@ func (b *builder) outline(p *Plan, list []*Task, depth int, prefix string) {
 	})
 	for i, t := range list {
 		t.Depth = depth
+		t.Order = i + 1
 		t.WBS = prefix + itoa(i+1)
 		p.Tasks = append(p.Tasks, t)
 		b.outline(p, b.children[t.ID], depth+1, t.WBS+".")

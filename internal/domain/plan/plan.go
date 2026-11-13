@@ -202,6 +202,10 @@ type ScheduleRequest struct {
 	// AfterID places the task straight after that sibling in the outline;
 	// empty makes it the first of its siblings.
 	AfterID *string `json:"after_id"`
+	// Order places the task at that place among its siblings, from 1; a
+	// number past the last sibling puts it last. AfterID wins when both
+	// are sent.
+	Order *int `json:"order"`
 	// Elapsed makes the duration count calendar days.
 	Elapsed *bool `json:"elapsed"`
 	// Deadline is YYYY-MM-DD; empty clears it.
@@ -457,6 +461,11 @@ func (s *DefaultService) Schedule(workItemID string, req ScheduleRequest, actor 
 	// the request says where.
 	if req.AfterID != nil || req.ParentID != nil {
 		if err := s.reorder(item.ProjectID, workItemID, req.AfterID); err != nil {
+			return err
+		}
+	}
+	if req.Order != nil && req.AfterID == nil {
+		if err := s.placeAt(item.ProjectID, workItemID, *req.Order); err != nil {
 			return err
 		}
 	}
