@@ -708,6 +708,14 @@ describe('Plan page', () => {
     // Build is assigned to Definition complete, so it is listed there though it is due after it.
     expect(container.querySelector('section[aria-label="Definition complete"]')?.textContent).toContain('Build the rig');
     expect(container.querySelector('section[aria-label="Definition complete"]')?.textContent).toContain('Wire the rig');
+    // The tasks with no dates are folded away until asked for.
+    const loose = () => container.querySelector('section[aria-label="Not scheduled"]')!;
+    const rows = loose().querySelectorAll('button').length;
+    expect(button('Show')?.getAttribute('aria-expanded')).toBe('false');
+    await click(button('Show'));
+    expect(loose().querySelectorAll('button').length).toBeGreaterThan(rows);
+    await click(button('Hide'));
+    expect(loose().querySelectorAll('button')).toHaveLength(rows);
     await click(button('Milestones 2'));
     expect(container.querySelector('section[aria-label="Milestones"]')?.textContent).toContain('0/1 criteria met');
   });
