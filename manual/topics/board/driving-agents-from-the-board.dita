@@ -11,6 +11,7 @@
       <li>When <b>you</b> move a card assigned to an <b>agent</b> into <b>To Do</b>, an <b>agent run</b> is enqueued for that card (skipped if a live run is already attached). Only human moves trigger this — the automatic card moves that track run progress don't.</li>
       <li>A <b>pulsing blue dot</b> on a card means a run is live (queued, claimed, or running). While a run is live the card is <b>locked</b> — it can't be dragged until the run finishes.</li>
       <li>The agent's progress and comments land back on the card's <b>activity feed</b>.</li>
+      <li>A chat is not a task. Talking to the assistant, or typing a prompt to an agent with <b>▶ Launch run</b>, puts no card on the board: the run is on the <b>Runs</b> page. A card is something you assigned; an automation or a schedule that starts an agent on a project still gets one, so its work is tracked.</li>
     </ul>
   </conbody>
 </concept>

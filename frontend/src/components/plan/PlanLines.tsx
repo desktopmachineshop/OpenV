@@ -27,6 +27,8 @@ export interface Bar {
   depth?: number;
   /** The bar spans sub-tasks the band also draws: it is drawn as the Gantt draws a parent. */
   summary?: boolean;
+  /** The task waits on, or drives, a task of another project's plan. */
+  external?: boolean;
 }
 
 /** Bars packed onto as few lanes as will hold them without overlapping. */
@@ -86,8 +88,8 @@ const Band: React.FC<{
             progress={b.progress}
             summary={b.summary}
             critical={showCritical && b.critical}
-            label={`${b.title}: ${spanLabel(b.start, b.end, today)}, ${b.progress}%${showCritical && b.critical ? ', on the critical path' : ''}`}
-            text={b.title}
+            label={`${b.title}: ${spanLabel(b.start, b.end, today)}, ${b.progress}%${showCritical && b.critical ? ', on the critical path' : ''}${b.external ? ', linked to another project' : ''}`}
+            text={b.external ? `⇄ ${b.title}` : b.title}
             cursor={onBar ? 'pointer' : 'default'}
             button={{ 'data-critical': (showCritical && b.critical) || undefined, 'data-summary': b.summary || undefined, disabled: !onBar, onClick: () => onBar?.(b.id) }}
           />
@@ -199,7 +201,7 @@ export const PlanTimeline: React.FC<{ plan: ProjectPlan; onSelectTask: (t: PlanT
   const shown = plan.tasks.filter((t) => levels === 'all' || t.depth < Number(levels));
   // A task whose sub-tasks are drawn too is drawn as a parent, on a row above theirs.
   const deepest = shown.reduce((d, t) => Math.max(d, t.depth), 0);
-  const bars = shown.map((t) => ({ id: t.id, title: t.title, start: t.span_start, end: t.span_end, progress: t.progress, done: t.done, late: t.late, critical: t.critical || t.critical_subtasks, depth: t.depth, summary: t.subtasks_total > 0 && t.depth < deepest }));
+  const bars = shown.map((t) => ({ id: t.id, title: t.title, start: t.span_start, end: t.span_end, progress: t.progress, done: t.done, late: t.late, critical: t.critical || t.critical_subtasks, depth: t.depth, summary: t.subtasks_total > 0 && t.depth < deepest, external: t.external_links.length > 0 }));
   if (!plan.start) return <p style={{ ...mutedStyle, padding: 16, margin: 0 }}>Nothing is scheduled yet.</p>;
   return (
     <div style={{ flex: 1, minHeight: 120, minWidth: 0, display: 'flex', flexDirection: 'column' }}>

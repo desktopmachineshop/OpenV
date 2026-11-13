@@ -42,10 +42,19 @@ The composer takes:
   running). While a run is live the card is **locked** — it can't be dragged
   until the run finishes.
 - The agent's progress and comments land back on the card's **activity feed**.
+- A chat is not a task. Talking to the assistant, or typing a prompt to an
+  agent with **▶ Launch run**, puts no card on the board: the run is on the
+  **Runs** page. A card is something you assigned; an automation or a
+  schedule that starts an agent on a project still gets one, so its work is
+  tracked.
 
 ## The card drawer
 
-Click a card to open its drawer:
+On a computer, click a card to open it beside the board: the board gives
+it room and stays in view, so you can go from card to card. The open mark
+at a card's corner, or in the open card's header, opens the card in full,
+wide in the middle of the window. On a phone a card opens over the board.
+Either way the card lets you:
 
 - Edit the **title** and **description**.
 - See **linked artifacts** (from the artifact IDs) with links into the

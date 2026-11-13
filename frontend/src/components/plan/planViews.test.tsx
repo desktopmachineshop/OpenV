@@ -2,6 +2,7 @@ import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import type { PlanTask, ProjectPlan } from '../../api/client';
 import { lanes, PlanTimeline, type Bar } from './PlanLines';
+import { externalLinksText } from './GanttRows';
 import { calendarRange, PlanMonth } from './PlanMonth';
 import { PlanNetwork } from './PlanNetwork';
 import { buildScale, buildTicks, isoWeek } from './ganttScale';
@@ -49,6 +50,7 @@ const task = (id: string, title: string, start: string, end: string, extra: Part
     late: false,
     critical: false,
     critical_subtasks: false,
+    external_links: [],
     subtasks_total: 0,
     float_days: null,
     elapsed: false,
@@ -95,6 +97,27 @@ describe('lanes', () => {
 
   it('adds no empty row when nothing is critical', () => {
     expect(lanes([bar('a', '2026-11-01', '2026-11-10'), bar('b', '2026-11-11', '2026-11-12')]).map((r) => r.map((b) => b.id))).toEqual([['a', 'b']]);
+  });
+});
+
+describe('a task linked to another project', () => {
+  const link = (direction: 'driven_by' | 'drives', title: string, project: string, conflict = false) => ({ direction, title, project_name: project, conflict }) as never;
+
+  it('says which tasks it waits on and drives, and when the dates break a link', () => {
+    expect(externalLinksText({ external_links: [link('driven_by', 'Order steel', 'Supply')] })).toBe('Waits on Order steel (Supply), in another project');
+    expect(externalLinksText({ external_links: [link('driven_by', 'Order steel', 'Supply'), link('drives', 'Fit out', 'Site', true)] })).toBe(
+      'Waits on Order steel (Supply); drives Fit out (Site), in other projects. The dates break a link',
+    );
+    expect(externalLinksText({ external_links: [link('drives', 'Fit out', 'Site')] })).toBe('Drives Fit out (Site), in another project');
+  });
+
+  it('is marked on the Timeline with the others drawn as they were', async () => {
+    const linked = { ...plan, tasks: plan.tasks.map((t) => (t.title === 'Paint' ? { ...t, external_links: [link('driven_by', 'Order steel', 'Supply')] } : t)) } as unknown as ProjectPlan;
+    await mount(<PlanTimeline plan={linked} onSelectTask={() => {}} />);
+    const names = Array.from(container.querySelectorAll('[data-plan-view="timeline"] button')).map((b) => b.textContent);
+    expect(names).toContain('⇄ Paint');
+    expect(names).toContain('Weld');
+    expect(container.querySelector('button[aria-label*="linked to another project"]')?.textContent).toBe('⇄ Paint');
   });
 });
 

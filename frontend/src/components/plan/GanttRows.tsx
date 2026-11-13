@@ -7,6 +7,9 @@ import { MONO, ellipsis } from '../ui';
 import { ROW_HEIGHT } from './GanttLinks';
 import { BarEnd, barTone } from './planModel';
 import { PlanBar } from './PlanBar';
+import { OpenIcon } from '../ui/OpenIcon';
+
+export { OpenIcon };
 import { Scale, addDays, shortDate, spanLabel } from './ganttScale';
 
 const caret: React.CSSProperties = {
@@ -21,12 +24,27 @@ const caret: React.CSSProperties = {
   flexShrink: 0,
 };
 
-/** The small "open" mark on a row and a milestone: an arrow leaving a box. */
-export const OpenIcon: React.FC = () => (
-  <svg aria-hidden width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-    <path d="M5 2.5H2.5v7h7V7M7 2.5h2.5V5M9.3 2.7L5.5 6.5" />
-  </svg>
-);
+/** What a task's links to other projects' plans say, in a sentence: which tasks it waits on, which wait on it, and whether the dates break one. */
+export const externalLinksText = (task: Pick<PlanTask, 'external_links'>): string => {
+  const names = (direction: string) => task.external_links.filter((l) => l.direction === direction).map((l) => `${l.title} (${l.project_name})`);
+  const waits = names('driven_by');
+  const drives = names('drives');
+  const parts = [waits.length ? `Waits on ${waits.join(', ')}` : '', drives.length ? `${waits.length ? 'd' : 'D'}rives ${drives.join(', ')}` : ''].filter(Boolean);
+  return `${parts.join('; ')}, in ${task.external_links.length === 1 ? 'another project' : 'other projects'}${task.external_links.some((l) => l.conflict) ? '. The dates break a link' : ''}`;
+};
+
+/** The mark of a task linked to another project's plan: two joined rings, red when the dates break a link. */
+export const ExternalMark: React.FC<{ task: Pick<PlanTask, 'external_links'> }> = ({ task }) => {
+  const text = externalLinksText(task);
+  return (
+    <span role="img" data-external-link aria-label={text} title={text} style={{ display: 'inline-flex', flexShrink: 0, color: task.external_links.some((l) => l.conflict) ? 'var(--danger-strong)' : 'var(--text-muted)' }}>
+      <svg aria-hidden width="14" height="12" viewBox="0 0 14 12" fill="none" stroke="currentColor" strokeWidth="1.4">
+        <circle cx="4.5" cy="6" r="3.2" />
+        <circle cx="9.5" cy="6" r="3.2" />
+      </svg>
+    </span>
+  );
+};
 
 /**
  * A task in the outline: its fold control, outline number, title and
@@ -110,6 +128,7 @@ export const OutlineCell: React.FC<{
       >
         {task.title}
       </button>
+      {task.external_links.length > 0 && <ExternalMark task={task} />}
       {critical && (
         <span title="On the critical path: any slip moves the plan's end" aria-label="Critical" role="img" style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--warning)', flexShrink: 0 }} />
       )}

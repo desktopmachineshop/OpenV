@@ -2,11 +2,11 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="the-card-drawer">
   <title>The card drawer</title>
-  <shortdesc>Click a card to open its drawer:</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="board.card"/>
   </prolog>
   <conbody>
+    <p>On a computer, click a card to open it beside the board: the board gives it room and stays in view, so you can go from card to card. The open mark at a card's corner, or in the open card's header, opens the card in full, wide in the middle of the window. On a phone a card opens over the board. Either way the card lets you:</p>
     <ul>
       <li>Edit the <b>title</b> and <b>description</b>.</li>
       <li>See <b>linked artifacts</b> (from the artifact IDs) with links into the Requirements view.</li>

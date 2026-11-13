@@ -67,6 +67,7 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 		RunTokenHash:       tokens.HashToken(token),
 		ArtifactsTouched:   []map[string]interface{}{},
 		LaunchedBy:         req.LaunchedBy,
+		Conversation:       req.Conversation,
 		AttemptCount:       req.AttemptCount,
 		MaxAttempts:        req.MaxAttempts,
 		NextAttemptAt:      req.NextAttemptAt,

@@ -109,6 +109,10 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 	if req.WorkItemID != "" {
 		launch.WorkItemID = &req.WorkItemID
 	}
+	// A prompt typed to an agent is a chat with it. A task is a card of the
+	// board assigned to it, which names itself here; without one, the board
+	// makes no card of the run.
+	launch.Conversation = launch.WorkItemID == nil
 	run, err := h.launchRun(r, launch)
 	if err != nil {
 		writeLaunchError(w, r, launchErrs402, err)

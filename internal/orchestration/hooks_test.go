@@ -1050,3 +1050,24 @@ func TestPendingNudgeOfAnInProgressSessionStillLaunches(t *testing.T) {
 		t.Fatalf("launches = %+v, want the parked nudge launched", launcher.launches)
 	}
 }
+
+// A chat is not a task: a run whose prompt a person typed to an agent gets
+// no card on the board, at any status, and neither does the retry of a run
+// that had none. A run an automation or a job of the app started still does
+// (TestQueuedRootRunAutoCreatesTrackingCard).
+func TestAConversationWithAnAgentMakesNoCard(t *testing.T) {
+	for name, run := range map[string]*agentruns.Run{
+		"a typed prompt":          {ID: "r1", AgentID: "agent-1", AgentName: "V&V Assistant", Status: agentruns.StatusQueued, ProjectID: strptr("p1"), Prompt: "Add the requirements to the MVP release", Conversation: true},
+		"the retry of a chat run": {ID: "r2", AgentID: "agent-1", AgentName: "V&V Assistant", Status: agentruns.StatusQueued, ProjectID: strptr("p1"), RetriedFromRunID: strptr("r1")},
+	} {
+		f := newFixture()
+		f.hooks.RunStatusChanged(run)
+		run.Status = agentruns.StatusRunning
+		f.hooks.RunStatusChanged(run)
+		run.Status = agentruns.StatusSucceeded
+		f.hooks.RunStatusChanged(run)
+		if len(f.workItems.creates) != 0 || len(f.workItems.moves) != 0 || run.WorkItemID != nil {
+			t.Errorf("%s: creates %+v, moves %+v, card %v: want none", name, f.workItems.creates, f.workItems.moves, run.WorkItemID)
+		}
+	}
+}
