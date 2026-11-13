@@ -416,24 +416,16 @@ Made, 2026-11-13:
 - **Storage.** In git for now, since it is free and nothing breaks;
   YouTube later (section 5).
 
+- **The sample product.** A desktop CNC mill, as seven projects: the
+  mill, its frame and axes, spindle and drive (a supplier's), controller,
+  control software, and enclosure and safety, with the motion firmware
+  under the controller. The draft content and its loader are in
+  `examples/desktop-cnc-mill/`. Sector pages may each add a screenshot or
+  two from a small project in that sector's own vocabulary.
+
 Still open:
 
-1. **The sample product,** to be chosen with the maintainer. It has to
-   break into sub-projects, because the programme features (child
-   projects, requirements refined downward, verification rolling up,
-   a supplier's project) are part of what the videos show. Candidates:
-
-   | Product | Sub-projects | For | Against |
-   |---|---|---|---|
-   | Desktop CNC mill | frame and axes, spindle and drive (supplier), controller firmware, control software, guarding and e-stop | Desktop Machine Shop's own ground; hardware, firmware, software and real hazards in one product; anyone can picture it | not a regulated product, so the regulated sectors see an analogy |
-   | Delivery drone | airframe, flight controller, battery pack (supplier), ground station app | familiar, clear safety case, software and hardware | aviation readers will hold it to their standards |
-   | Infusion pump | pump mechanism, firmware, clinician app, pressure sensor (supplier) | the classic regulated example; hazards are obvious | reads as a medical-device tool to everyone else |
-   | CubeSat | structure, power, comms, payload, ground segment | the textbook decomposition; suits education and space | remote from most buyers |
-
-   My pick is the desktop CNC mill for the videos and `/features`, with
-   one or two screenshots on each sector page taken from a small project
-   in that sector's own vocabulary.
-2. **Which sector leads.** If there are customers or conversations in one
+1. **Which sector leads.** If there are customers or conversations in one
    sector, that page is written first.
 
 ## 12. What each pull request also carries
