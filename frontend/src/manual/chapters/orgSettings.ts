@@ -170,6 +170,14 @@ Everything that executes agent work:
 - **Worker keys** — shared workspace keys for self-managed always-on workers.
   The plaintext key is shown **once**, right after creation — store it
   safely. Keys can be revoked at any time.
+
+A script, or an AI client that runs the \`openv-mcp\` server with a key, can
+also **create projects** with one, and file a project under a parent. A
+project made with a workspace key has no owner of its own: the workspace's
+admins manage it, and can make someone its owner under **Settings → Access**
+in the project. A project made with a member's personal runner key is that
+member's, as if they had created it in the app. Either way it counts toward
+the workspace's project limit.
 `;
 
 export default content;

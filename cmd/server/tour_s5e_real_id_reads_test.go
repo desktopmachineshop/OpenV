@@ -111,9 +111,9 @@ import (
 //     token creates none, 403 "agent runs cannot create projects" on the
 //     three project creates (a run acts only inside its own project, REQ-42)
 //     and 401 on the workspace's, which takes a session; W's worker key
-//     creates none either, 403 "runner keys cannot create projects" on the
-//     three (a key has no person to own what it would make), and 401 on the
-//     workspace's.
+//     creates the three projects in W (201; a workspace key's project has
+//     no owner of its own and is its workspace admins'), and gets 401 on
+//     the workspace's.
 func TestTourS5eRealIdReads(t *testing.T) {
 	runTourArea(t, tourArea{
 		slice: "s5e",

@@ -187,8 +187,14 @@ address followed by \`/mcp\`, for example \`https://openv.app/mcp\`;
 2. The app opens OpenV in your browser. Sign in if asked, choose the
    **workspaces** the app may work in and whether it may **read and change**
    or **read only**, and choose **Connect**.
-3. You go back to the app, which can now list your projects, read and edit
-   artifacts and links, record test results and comment, as you.
+3. You go back to the app, which can now list your projects, create a
+   project, read and edit artifacts and links, record test results and
+   comment, as you.
+
+A project the app creates is yours, as if you had made it in OpenV, and it
+can be filed under another project as it is created. Where the app reaches
+more than one workspace, a new project goes in the first of them, the one
+listed first under **Workspaces**.
 
 Everything the app does is recorded as yours, it reaches only the
 workspaces you chose, and your role in each still applies: a viewer's app

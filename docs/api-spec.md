@@ -133,9 +133,15 @@ route's (REQ-16); otherwise it gets what its holder's session gets, `404`
 `project not found` where the holder has no role (as for a project no row
 has) and the project's `403` where the holder's role falls short, and the
 project list (`GET /projects`) gives it the projects its holder's own
-session lists. No worker key creates a project: `POST /projects`,
-`/projects/import` and `/templates/{id}/projects` answer it `403` `runner
-keys cannot create projects`, since only a person owns what it creates.
+session lists. A worker key creates a project in its own workspace (`POST
+/projects`, `/projects/import` and `/templates/{id}/projects`), past the same
+read-only gate and project maximum as a person. A personal key's holder
+becomes the project's owner, as when they create it signed in, and must
+still be a member of the workspace: `403` `this runner key's holder is not a
+member of the workspace` otherwise. A workspace key has no person behind it,
+so its project gets no owner of its own: the workspace's admins hold an
+owner's rights on it, as on every project of the workspace, and the key
+keeps its editor's rights there.
 
 ### 3a. Runner pool nodes — Bearer `RUNNER_POOL_KEY`
 
@@ -447,7 +453,7 @@ their own project, workers pass within their org, a workspace key up to
 
 | Method | Path | Purpose | Auth |
 |---|---|---|---|
-| POST | `/api/v1/projects` | Create project in active workspace `{name, description?, agent_auth?}` → `201` (creator becomes owner); `agent_auth` is `user-account` (the default) or `api-key`, and any other value answers `400` `agent_auth must be "user-account" or "api-key"`. An agent run's token and a runner key are refused (`403`) before the body is read; then `403` `plan_read_only` on a read-only workspace and `403` `limit_reached` at its project maximum | user |
+| POST | `/api/v1/projects` | Create project in active workspace `{name, description?, agent_auth?}` → `201` (creator becomes owner); `agent_auth` is `user-account` (the default) or `api-key`, and any other value answers `400` `agent_auth must be "user-account" or "api-key"`. An agent run's token is refused (`403`) before the body is read; a runner key creates the project in its workspace, owned by a personal key's holder and by no one for a workspace key (see *Authentication*); then `403` `plan_read_only` on a read-only workspace and `403` `limit_reached` at its project maximum | user |
 | GET | `/api/v1/projects` | List projects the caller can access (a personal runner key: those its holder can); an agent run's token, its own project alone | user |
 | GET | `/api/v1/projects/{id}` | Project details | viewer |
 | PUT | `/api/v1/projects/{id}` | Update project: `name`, `description`, `agent_auth` (`400` `agent_auth must be "user-account" or "api-key"` for any other value), `parent_project_id` (the project this one refines, `docs/flow-down.md`; `""` detaches; `403` with the remedy on a workspace whose channel has not received `flow-down`, whenever the key is sent; `400` for a parent in another workspace, the project itself or one of its descendants, and `400` `parent project not found` for one no row has or the caller cannot reach) | editor |
@@ -459,7 +465,7 @@ their own project, workers pass within their org, a workspace key up to
 | GET | `/api/v1/projects/{id}/priority-detection` | Whether the artifact editor fills a requirement's MoSCoW priority from its normative keyword: `{enabled}`, `false` until a project turns it on | viewer |
 | PUT | `/api/v1/projects/{id}/priority-detection` | Turn it on or off `{enabled}`; off removes the key from the project's settings; `403` with the remedy while the workspace's channel has not received `editor-pickers`. Answers as `GET` does | editor |
 | GET | `/api/v1/projects/{id}/export` | Export project JSON | viewer |
-| POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF): the request body is the document itself, and the answer is `201 {status, message, project_id}`; `400` for a document that does not parse. An agent run's token and a runner key are refused (`403`). Counts toward the workspace's project maximum (`403` `limit_reached`) and stays allowed on a read-only workspace (REQ-177) | user |
+| POST | `/api/v1/projects/import` | Import a project export (JSON or ReqIF): the request body is the document itself, and the answer is `201 {status, message, project_id}`; `400` for a document that does not parse. An agent run's token is refused (`403`); a runner key imports as it creates a project. Counts toward the workspace's project maximum (`403` `limit_reached`) and stays allowed on a read-only workspace (REQ-177) | user |
 | GET | `/api/v1/projects/{id}/report` | Legacy: PDF (`?format=pdf`) or Word (`?format=docx`), the specification with the default content but without V&V status: the route reads no test evidence, so the status the download carries by default would be wrong here. The download routes are the supported path | viewer |
 | GET | `/api/v1/projects/{id}/download/options` | What a download can be narrowed to: sections, types, owners (`{owner, count}`, most artifacts first), attachment categories, fields, template presets, defaults. The fields are the attribute keys the artifacts carry: a baseline that kept the attribute definitions (REQ-5) labels a defined key as its definition did and lists the defined keys before the discovered ones, while the live project and an older baseline word each key themselves; a definition no artifact carries is not a field. `plan` `{tasks, milestones}` is there when the live project has a task or a milestone, and never for a baseline | viewer |
 | GET | `/api/v1/projects/{id}/download/{json,csv,excel,reqif,pdf,docx}` | One download in the chosen format; see the download parameters below. `plan=1` takes the project's plan and its tasks beside the document, as `plan/<file>` in an archive (`application/zip`), in the format `GET /api/v1/projects/{id}/plan/export` gives nearest the document's: `json`, `csv` and `excel` beside those, `pdf` beside `pdf` and `docx`, `msproject` beside `reqif`. It is ignored with a `baseline_id`, whose plan is not the one that stands | viewer |
@@ -472,7 +478,7 @@ their own project, workers pass within their org, a workspace key up to
 | DELETE | `/api/v1/share-links/{id}` | Revoke a link: it opens nothing from then on (idempotent) | owner of its project |
 | GET | `/api/v1/templates` | List templates (global + workspace) | user |
 | POST | `/api/v1/templates` | Save a project as a template `{project_id, name, description?}` → `201`; `400` `project_id is required` | editor |
-| POST | `/api/v1/templates/{id}/projects` | Create project from a built-in template or one of the caller's workspace `{name, description?}` → `201` with the project; `404` `template not found` for a UUID no template has and for another workspace's template. An agent run's token and a runner key are refused (`403`); `403` `plan_read_only` on a read-only workspace and `403` `limit_reached` at its project maximum, as `POST /projects` | user |
+| POST | `/api/v1/templates/{id}/projects` | Create project from a built-in template or one of the caller's workspace `{name, description?}` → `201` with the project; `404` `template not found` for a UUID no template has and for another workspace's template. An agent run's token is refused (`403`); a runner key creates it as it creates a project; `403` `plan_read_only` on a read-only workspace and `403` `limit_reached` at its project maximum, as `POST /projects` | user |
 
 **Baselines** carry `created_by` (the capturing account) and
 `created_by_name` (its display name, resolved server-side so a client never

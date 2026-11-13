@@ -9,6 +9,18 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Create projects with a runner key or from a connected AI app.** A
+  script holding a runner key can now create a project, import one or
+  start one from a template, and the MCP tools gain **create_project**,
+  which also files the new project under a parent. So Claude, Cursor or
+  another connected app can set up a project, or a whole programme of
+  sub-projects, when you ask it to. A project made by a connected app or
+  with your personal runner key is yours; one made with a workspace key
+  has no owner of its own and is managed by the workspace's admins. Agent
+  runs still work only inside their own project.
+
 ### Maintenance updates
 
 - **All projects follows the project hierarchy.** On the workspace's
