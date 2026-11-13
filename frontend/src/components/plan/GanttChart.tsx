@@ -70,7 +70,9 @@ const MilestoneLane: React.FC<{
   /** Where the plan's first day falls, in pixels. */
   planStart: number;
   onSelect: (m: PlanMilestone) => void;
-}> = ({ milestones, scale, today, selectedKey, planStart, onSelect }) => {
+  /** Opens the milestone in full, over the page: its open mark, as a task's does. */
+  onOpen?: (m: PlanMilestone) => void;
+}> = ({ milestones, scale, today, selectedKey, planStart, onSelect, onOpen }) => {
   const dated = milestones.filter((m) => m.date);
   const at = (m: PlanMilestone) => scale.x(m.date!) + scale.dayWidth / 2;
   return (
@@ -92,48 +94,52 @@ const MilestoneLane: React.FC<{
                 <span style={{ display: 'block', height: '100%', width: `${m.progress}%`, background: color }} />
               </span>
             )}
+            {/* The name selects the milestone, which shows beside the chart; the open mark opens it in full. */}
+            <span style={{ position: 'absolute', left: x - 9, top: 3, display: 'flex', alignItems: 'center', maxWidth: Math.max(next - x - 4, 24) }}>
             <button
-              type="button"
-              onClick={() => onSelect(m)}
-              aria-current={selectedKey === m.key ? 'true' : undefined}
-              aria-label={`${m.kind === 'release' ? 'Release milestone' : 'Milestone'} ${m.name}, ${shortDate(m.date, today)}${m.date_mode === 'plan' ? ' by the plan' : ''}, ${m.progress}%${m.met ? ', met' : m.late ? ', late' : ''}${m.conflict ? ', a task it waits for finishes after it' : ''}`}
-              data-milestone={m.key}
-              style={{
-                position: 'absolute',
-                left: x - 9,
-                top: 3,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 6,
-                height: 24,
-                maxWidth: Math.max(next - x - 4, 24),
-                overflow: 'hidden',
-                padding: '0 6px 0 0',
-                border: 'none',
-                borderRadius: 4,
-                background: selectedKey === m.key ? 'var(--tint-blue)' : 'transparent',
-                font: 'inherit',
-                cursor: 'pointer',
-              }}
-            >
-              <span
-                aria-hidden
+                type="button"
+                onClick={() => onSelect(m)}
+                aria-current={selectedKey === m.key ? 'true' : undefined}
+                aria-label={`${m.kind === 'release' ? 'Release milestone' : 'Milestone'} ${m.name}, ${shortDate(m.date, today)}${m.date_mode === 'plan' ? ' by the plan' : ''}, ${m.progress}%${m.met ? ', met' : m.late ? ', late' : ''}${m.conflict ? ', a task it waits for finishes after it' : ''}`}
+                data-milestone={m.key}
                 style={{
-                  width: 12,
-                  height: 12,
-                  margin: '0 3px',
-                  flexShrink: 0,
-                  transform: 'rotate(45deg)',
-                  borderRadius: 2,
-                  background: m.kind === 'release' || m.met ? color : 'var(--surface)',
-                  border: `2px solid ${color}`,
-                  boxSizing: 'border-box',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  height: 24,
+                  minWidth: 0,
+                  overflow: 'hidden',
+                  padding: '0 6px 0 0',
+                  border: 'none',
+                  borderRadius: 4,
+                  background: selectedKey === m.key ? 'var(--tint-blue)' : 'transparent',
+                  font: 'inherit',
+                  cursor: 'pointer',
                 }}
-              />
-              <span style={{ ...ellipsis, fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{m.name}</span>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m.progress}%</span>
-              <OpenIcon />
-            </button>
+              >
+                <span
+                  aria-hidden
+                  style={{
+                    width: 12,
+                    height: 12,
+                    margin: '0 3px',
+                    flexShrink: 0,
+                    transform: 'rotate(45deg)',
+                    borderRadius: 2,
+                    background: m.kind === 'release' || m.met ? color : 'var(--surface)',
+                    border: `2px solid ${color}`,
+                    boxSizing: 'border-box',
+                  }}
+                />
+                <span style={{ ...ellipsis, fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>{m.name}</span>
+                <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{m.progress}%</span>
+              </button>
+              {onOpen && (
+                <button type="button" data-milestone-open={m.key} aria-label={`Open ${m.name} in full`} title="Open the milestone in full" onClick={() => onOpen(m)} style={{ display: 'inline-flex', flexShrink: 0, padding: 4, border: 'none', background: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}>
+                  <OpenIcon />
+                </button>
+              )}
+            </span>
           </React.Fragment>
         );
       })}
@@ -178,6 +184,8 @@ export interface GanttChartProps {
   /** Opens the task in full: its description, assignee, linked artifacts and activity. */
   onOpenTask: (t: PlanTask) => void;
   onSelectMilestone: (m: PlanMilestone) => void;
+  /** Opens a milestone in full, over the page; without it a milestone has no open mark. */
+  onOpenMilestone?: (m: PlanMilestone) => void;
   /** Set where the reader may edit with a pointer: bars drag, and an unscheduled row is clicked or dragged across to schedule it. */
   onReschedule?: (t: PlanTask, start: string, end: string) => void;
   /** Set where links can be drawn: a drag from the "+" at an end of a bar to another bar relates the two. */
@@ -216,6 +224,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   onSelectTask,
   onOpenTask,
   onSelectMilestone,
+  onOpenMilestone,
   onReschedule,
   onLink,
   onLinkMilestone,
@@ -384,6 +393,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             selectedKey={selectedMilestoneKey}
             planStart={scale.x(plan.start || plan.today)}
             onSelect={onSelectMilestone}
+            onOpen={onOpenMilestone}
           />
         </div>
 

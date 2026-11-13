@@ -61,6 +61,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A milestone's open mark opens it in full.** On the Gantt the mark beside a
+  milestone's name did what the name did. The name now opens the milestone
+  beside the chart and the mark opens it over the page, as for a task.
 - **A chat with an agent no longer puts a card on the board.** Typing a
   prompt to an agent with **Launch run** made an *Agent run* card for it.
   A chat is not a task, so it now makes none: the run is on the Runs page.
