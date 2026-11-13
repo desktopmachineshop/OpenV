@@ -70,6 +70,9 @@ type DiffResult struct {
 	// record the plan.
 	PlanBase   json.RawMessage `json:"plan_base,omitempty"`
 	PlanTarget json.RawMessage `json:"plan_target,omitempty"`
+	// PlanTasks are the tasks of the plan that differ between the two
+	// sides, for the caller to fill in when both recorded the plan.
+	PlanTasks json.RawMessage `json:"plan_tasks,omitempty"`
 }
 
 // Diff computes the changes from base to target. It is a pure function over

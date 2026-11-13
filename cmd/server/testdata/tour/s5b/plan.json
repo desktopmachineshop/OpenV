@@ -3603,10 +3603,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 1547,
+      "content_length": 1570,
       "kind": "json",
       "body": [
-        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"order\":2,\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":7.5,\"float_days\":20630,\"critical\":true,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":20630,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":\"<date>\",\"actual_finish\":null,\"percent_complete\":40,\"actual_cost\":120,\"baseline\":{\"id\":\"<wiring>\",\"start\":\"<date>\",\"end\":\"<date>\",\"duration_days\":8,\"effort_days\":7.5,\"cost\":0},\"start_variance_days\":0,\"finish_variance_days\":0,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":120,\"sv\":0,\"cv\":-120,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":true,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":40,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false}],\"conflicts\":[],\"external_links\":[]}"
+        "{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"column\":\"todo\",\"assignee_type\":\"user\",\"assignee_id\":null,\"parent_id\":\"<build>\",\"depth\":1,\"wbs\":\"1.2\",\"order\":2,\"start\":\"<date>\",\"end\":\"<date>\",\"span_start\":\"<date>\",\"span_end\":\"<date>\",\"duration_days\":8,\"effort_days\":7.5,\"float_days\":20630,\"critical\":true,\"elapsed\":false,\"deadline\":null,\"deadline_missed\":false,\"mode_own\":\"\",\"mode\":\"manual\",\"constraint_type\":\"asap\",\"constraint_date\":null,\"constraint_violated\":false,\"early_start\":\"<date>\",\"early_finish\":\"<date>\",\"late_start\":\"<date>\",\"late_finish\":\"<date>\",\"free_float_days\":20630,\"assignments\":[],\"fixed_cost\":0,\"cost\":0,\"effort_driven\":false,\"overallocated\":false,\"actual_start\":\"<date>\",\"actual_finish\":null,\"percent_complete\":40,\"actual_cost\":120,\"baseline\":{\"id\":\"<wiring>\",\"start\":\"<date>\",\"end\":\"<date>\",\"duration_days\":8,\"effort_days\":7.5,\"cost\":0,\"title\":\"Wire the rig\"},\"start_variance_days\":0,\"finish_variance_days\":0,\"earned_value\":{\"bac\":0,\"pv\":0,\"ev\":0,\"ac\":120,\"sv\":0,\"cv\":-120,\"spi\":0,\"cpi\":0,\"eac\":0},\"behind_schedule\":true,\"float_until\":\"<date>\",\"critical_subtasks\":false,\"progress\":40,\"done\":false,\"late\":true,\"todos_done\":0,\"todos_total\":0,\"subtasks_done\":0,\"milestone\":null,\"milestone_inherited\":false,\"subtasks_total\":0,\"todos\":[],\"depends_on\":[],\"relationships\":[],\"drives\":[{\"task_id\":\"<frame>\",\"type\":\"FS\",\"lag_days\":0,\"lag_unit\":\"d\",\"conflict\":false}],\"conflicts\":[],\"external_links\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3655,7 +3655,8 @@
           "end": "<date>",
           "duration_days": 8,
           "effort_days": 7.5,
-          "cost": 0
+          "cost": 0,
+          "title": "Wire the rig"
         },
         "start_variance_days": 0,
         "finish_variance_days": 0,
@@ -4147,10 +4148,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 679,
+      "content_length": 1167,
       "kind": "json",
       "body": [
-        "{\"base\":{\"id\":\"<pbl>\",\"name\":\"As approved\"},\"target\":{\"id\":\"live\",\"name\":\"Live Project\"},\"added\":[],\"removed\":[],\"modified\":[],\"links_added\":[],\"links_removed\":[],\"plan_base\":{\"progress\":25,\"tasks\":4,\"done\":1,\"late\":2,\"start\":\"<date>\",\"end\":\"<date>\",\"milestones\":[{\"key\":\"release:<mvp>\",\"name\":\"MVP\",\"kind\":\"release\",\"date\":\"<date>\",\"progress\":0,\"met\":false}]},\"plan_target\":{\"progress\":25,\"tasks\":4,\"done\":1,\"late\":1,\"start\":\"<date>\",\"end\":\"<date>\",\"milestones\":[{\"key\":\"release:<mvp>\",\"name\":\"MVP\",\"kind\":\"release\",\"date\":\"<date>\",\"progress\":0,\"met\":false}]}}"
+        "{\"base\":{\"id\":\"<pbl>\",\"name\":\"As approved\"},\"target\":{\"id\":\"live\",\"name\":\"Live Project\"},\"added\":[],\"removed\":[],\"modified\":[],\"links_added\":[],\"links_removed\":[],\"plan_base\":{\"progress\":25,\"tasks\":4,\"done\":1,\"late\":2,\"start\":\"<date>\",\"end\":\"<date>\",\"milestones\":[{\"key\":\"release:<mvp>\",\"name\":\"MVP\",\"kind\":\"release\",\"date\":\"<date>\",\"progress\":0,\"met\":false}]},\"plan_target\":{\"progress\":25,\"tasks\":4,\"done\":1,\"late\":1,\"start\":\"<date>\",\"end\":\"<date>\",\"milestones\":[{\"key\":\"release:<mvp>\",\"name\":\"MVP\",\"kind\":\"release\",\"date\":\"<date>\",\"progress\":0,\"met\":false}]},\"plan_tasks\":[{\"id\":\"<order>\",\"title\":\"Order the parts\",\"change\":\"moved\",\"before\":{\"id\":\"<order>\",\"start\":\"<date>\",\"end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"cost\":0,\"title\":\"Order the parts\"},\"after\":{\"id\":\"<order>\",\"start\":\"<date>\",\"end\":\"<date>\",\"duration_days\":1,\"effort_days\":null,\"cost\":0,\"title\":\"Order the parts\"},\"start_shift_days\":28909,\"finish_shift_days\":28909}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4202,7 +4203,34 @@
               "met": false
             }
           ]
-        }
+        },
+        "plan_tasks": [
+          {
+            "id": "<order>",
+            "title": "Order the parts",
+            "change": "moved",
+            "before": {
+              "id": "<order>",
+              "start": "<date>",
+              "end": "<date>",
+              "duration_days": 1,
+              "effort_days": null,
+              "cost": 0,
+              "title": "Order the parts"
+            },
+            "after": {
+              "id": "<order>",
+              "start": "<date>",
+              "end": "<date>",
+              "duration_days": 1,
+              "effort_days": null,
+              "cost": 0,
+              "title": "Order the parts"
+            },
+            "start_shift_days": 28909,
+            "finish_shift_days": 28909
+          }
+        ]
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },

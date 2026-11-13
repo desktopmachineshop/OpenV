@@ -9,6 +9,7 @@ import { planAPI, type MasterLevels, type MasterPlan, type PlanTask, type Projec
 import { apiErrorMessage } from '../../api/errors';
 import { ellipsis, eyebrowStyle, mutedStyle } from '../ui';
 import { buildScale, buildTicks, openingScroll, shortDate, spanLabel, toDay, todayScroll, type Scale, type Tick, type Zoom } from './ganttScale';
+import { useViewport } from '../../hooks/useViewport';
 import { barTone, relationshipLabel } from './planModel';
 import { PlanBar } from './PlanBar';
 
@@ -168,6 +169,26 @@ export const PlanTimeline: React.FC<{ plan: ProjectPlan; onSelectTask: (t: PlanT
 };
 
 const MASTER_LEVELS: MasterLevels[] = ['1', '2', '3', '4', 'all'];
+const LEVELS_KEY = 'openv-plan-master-levels';
+
+/** The level All projects opens on: the one last chosen in this browser, or Level 1. */
+const rememberedLevels = (): MasterLevels => {
+  try {
+    const stored = localStorage.getItem(LEVELS_KEY) as MasterLevels | null;
+    return stored && MASTER_LEVELS.includes(stored) ? stored : '1';
+  } catch {
+    return '1';
+  }
+};
+
+const rememberLevels = (levels: MasterLevels): void => {
+  try {
+    if (levels === '1') localStorage.removeItem(LEVELS_KEY);
+    else localStorage.setItem(LEVELS_KEY, levels);
+  } catch {
+    // A browser that keeps nothing still shows the level chosen for this visit.
+  }
+};
 
 /** The width of the column that names each project, which stays put while the bands scroll. */
 const NAME_WIDTH = 200;
@@ -177,8 +198,11 @@ export const PlanMaster: React.FC<{ currentProjectId: string } & LinesProps> = (
   const [master, setMaster] = useState<MasterPlan | null>(null);
   const [error, setError] = useState('');
   // How far down each project's plan is drawn. Level 1, the top-level
-  // tasks, to begin with: a workspace of plans in full is too much to read.
-  const [levels, setLevels] = useState<MasterLevels>('1');
+  // tasks, until the reader chooses another, which this browser remembers:
+  // a workspace of plans in full is too much to read.
+  const [levels, setLevels] = useState<MasterLevels>(rememberedLevels);
+  // A thumb needs a taller control, and a field under 16px makes a phone zoom in.
+  const { isPhone } = useViewport();
   useEffect(() => {
     let live = true;
     planAPI
@@ -206,7 +230,7 @@ export const PlanMaster: React.FC<{ currentProjectId: string } & LinesProps> = (
           <div style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', width: NAME_WIDTH + scale.width }}>
             <div style={{ ...nameCell, zIndex: 4, background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-soft)', fontWeight: 600, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               Project
-              <select value={levels} aria-label="Level of detail" title="How far down each project's tasks are drawn. Milestones always show." onChange={(e) => setLevels(e.target.value as MasterLevels)} style={{ padding: '2px 6px', minHeight: 26, boxSizing: 'border-box', fontSize: 12, fontWeight: 400 }}>
+              <select value={levels} aria-label="Level of detail" title="How far down each project's tasks are drawn. Milestones always show." onChange={(e) => (rememberLevels(e.target.value as MasterLevels), setLevels(e.target.value as MasterLevels))} style={{ padding: '2px 6px', minHeight: isPhone ? 40 : 26, boxSizing: 'border-box', fontSize: isPhone ? 16 : 12, fontWeight: 400 }}>
                 {MASTER_LEVELS.map((l) => (
                   <option key={l} value={l}>
                     {l === 'all' ? 'All levels' : `Level ${l}`}

@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 280; members of exported objects: 352
+exports: 282; members of exported objects: 352
 
 interface AdminUsage
 interface AdminUser
@@ -29,6 +29,8 @@ interface BaselineDiffLink
 interface BaselineDiffModified
 interface BaselineDiffRef
 interface BaselinePlan
+interface BaselineTaskChange
+interface BaselineTaskMoment
 interface BillingSnapshot
 interface BillingState
 interface BulkProposalOutcome

@@ -114,7 +114,9 @@ A baseline records the project's plan as well as its artifacts, so the
 comparison also says how far the project got. **Plan**, above the list of
 changes, gives the plan's progress, its tasks done, how many were late and
 its finish date on each side, and names each milestone or release that was
-met, moved or added between them. The timeline shows the plan's progress at
+met, moved or added between them. **Tasks that changed** lists each task
+that was added, removed, finished or moved, with how many days later or
+earlier it now ends, the ones that slipped furthest first. The timeline shows the plan's progress at
 each baseline. A baseline taken before plans were recorded has no plan to
 show, and the page says so. A baseline saved from the Gantt's **Tracking**
 is the same baseline, and is listed here.
@@ -126,7 +128,7 @@ selected change's text stays on screen below it. With a change selected,
 **↑** and **↓** move to the previous and next change, **Home** and **End**
 to the first and last, and the text follows. When you compare to the working
 copy, the links of that artifact that are suspect now are named under it.
-**Open the full comparison** opens the comparison page with every link.
+**Open the full comparison** opens the comparison page with every link, and the same **Plan** figures above them.
 `;
 
 export default content;

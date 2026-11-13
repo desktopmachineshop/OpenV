@@ -11,7 +11,7 @@ tool, the phone audit, checks every screen's layout against a mocked API.
 | Area (`docs/areas.json`) | Files here |
 |---|---|
 | frontend-shell | `*` (the config, the package files and this guide), `tests/smoke.spec.ts`, `tests/desktop.spec.ts`, `tests/landing.spec.ts`, `tests/mobile.spec.ts`, `tests/helpers.ts`, `tools/**` |
-| requirements-core | `tests/review-queue.spec.ts` |
+| requirements-core | `tests/review-queue.spec.ts`, `tests/plan.spec.ts` |
 | documents | `tests/baseline-diff.spec.ts` |
 | agent-suite | `tests/interviews.spec.ts`, `tests/proposals.spec.ts` |
 
@@ -24,7 +24,7 @@ are claimed so each journey has an owner. A new spec needs no glob.
 |---|---|
 | `playwright.config.ts` | `BASE_URL` (default `http://localhost:3000`), one worker, serial; the projects `chromium` (every spec but the phone one), `webkit` (smoke and landing), `iphone` and `android` (`mobile.spec.ts` only) |
 | `package.json`, `package-lock.json` | Playwright pinned to one version; the scripts `test`, `report`, `audit:phone`, `audit:desktop` |
-| `tests/*.spec.ts` | the journeys; `smoke.spec.ts` is the core one: register, project, artifacts, link, baseline, status, search, export |
+| `tests/*.spec.ts` | the journeys; `smoke.spec.ts` is the core one: register, project, artifacts, link, baseline, status, search, export; `plan.spec.ts` is the plan's: tasks, a milestone, a baseline, its comparison, All projects, the workspace's Plan page and a download with the plan |
 | `tests/helpers.ts` | shared steps: `makeRunId`, `makeUser`, `registerUser`, `createProject`, `openModule`, `openRequirements`, `createRequirement` |
 | `tools/phone-audit.js` | the layout audit: each entry of `SCREENS` rendered from a production build on phone and desktop profiles, against a mocked API; it fails on a page error or a screen whose chrome takes more than `CHROME_BUDGET` percent of the window (default 35) |
 

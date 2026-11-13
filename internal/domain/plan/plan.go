@@ -350,6 +350,7 @@ type Service interface {
 	SaveBaseline(projectID, name string, now time.Time) (*Baseline, error)
 	SaveBaselineOf(p *Plan, name string, joined *string, now time.Time) (*Baseline, error)
 	BaselineMoments(projectID string) (map[string]*Moment, error)
+	JoinedBaselines(projectID string) (map[string]*Baseline, error)
 	DeleteBaseline(projectID, id string) error
 	// RescheduleRemaining moves unstarted work that should have started
 	// by the status date to that date, and answers how many tasks moved.

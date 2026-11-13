@@ -19,6 +19,12 @@ type BaselineTask struct {
 	DurationDays *int     `json:"duration_days"`
 	EffortDays   *float64 `json:"effort_days"`
 	Cost         float64  `json:"cost"`
+	// Title, Progress and Done are the task as it stood, kept so that two
+	// baselines can be compared task by task, a task since deleted among
+	// them. Absent on a baseline saved before they were kept.
+	Title    string `json:"title,omitempty"`
+	Progress int    `json:"progress,omitempty"`
+	Done     bool   `json:"done,omitempty"`
 }
 
 // Baseline is a snapshot of a plan's tasks: what was planned on the day it

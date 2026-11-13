@@ -11,6 +11,9 @@ import {
 import { apiErrorMessage } from '../api/errors';
 import { baselineLabel } from '../utils/baselines';
 import { ErrorBanner } from '../components/ui';
+import { JOINED_BASELINES_FEATURE } from '../features';
+import { useFeature } from '../hooks/useFeature';
+import { PlanChange } from './BaselinesPagePlan';
 
 const typeChipStyle: React.CSSProperties = {
   display: 'inline-block',
@@ -173,6 +176,7 @@ export const BaselineCompare: React.FC = () => {
 
   const [baselines, setBaselines] = useState<Baseline[]>([]);
   const [diff, setDiff] = useState<BaselineDiff | null>(null);
+  const joined = useFeature(JOINED_BASELINES_FEATURE);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -258,6 +262,12 @@ export const BaselineCompare: React.FC = () => {
 
       <ErrorBanner message={error} onDismiss={() => setError('')} />
       {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>Comparing…</div>}
+
+      {!loading && diff && joined && (diff.plan_base || diff.plan_target) && (
+        <div style={{ marginBottom: 12 }}>
+          <PlanChange before={diff.plan_base} after={diff.plan_target} tasks={diff.plan_tasks} fromName={diff.base.name} toName={against === 'live' ? 'Working copy' : diff.target.name} />
+        </div>
+      )}
 
       {!loading && diff && changeCount === 0 && (
         <div

@@ -91,26 +91,37 @@ func (h *Handler) diffPlan(w http.ResponseWriter, r *http.Request, projectID, ag
 	if h.PlanService == nil {
 		return true
 	}
-	moments, err := h.PlanService.BaselineMoments(projectID)
+	joined, err := h.PlanService.JoinedBaselines(projectID)
 	if err != nil {
 		respondInternal(w, r, "failed to load the plan's baselines", err)
 		return false
 	}
-	if m := moments[result.Base.ID]; m != nil {
-		result.PlanBase, _ = json.Marshal(m)
+	base := joined[result.Base.ID]
+	if base != nil && base.Moment != nil {
+		result.PlanBase, _ = json.Marshal(base.Moment)
 	}
+	// The other side: what its baseline recorded, or the plan as it stands.
+	var moment *plan.Moment
+	var tasks []plan.BaselineTask
 	if against != "live" {
-		if m := moments[result.Target.ID]; m != nil {
-			result.PlanTarget, _ = json.Marshal(m)
+		if other := joined[result.Target.ID]; other != nil {
+			moment, tasks = other.Moment, other.Tasks
 		}
-		return true
+	} else {
+		p, ok := h.loadPlan(w, r, projectID)
+		if !ok {
+			return false
+		}
+		if len(p.Tasks) > 0 || len(p.Milestones) > 0 {
+			moment, tasks = plan.MomentOf(p), plan.TasksOf(p)
+		}
 	}
-	p, ok := h.loadPlan(w, r, projectID)
-	if !ok {
-		return false
+	if moment != nil {
+		result.PlanTarget, _ = json.Marshal(moment)
 	}
-	if len(p.Tasks) > 0 || len(p.Milestones) > 0 {
-		result.PlanTarget, _ = json.Marshal(plan.MomentOf(p))
+	// Task by task, where both sides recorded the plan.
+	if base != nil && moment != nil {
+		result.PlanTasks, _ = json.Marshal(plan.TaskChanges(base.Tasks, tasks))
 	}
 	return true
 }

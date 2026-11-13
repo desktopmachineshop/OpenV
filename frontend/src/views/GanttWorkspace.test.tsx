@@ -86,6 +86,7 @@ const mount = async (features: OrgFeatures | null) => {
 afterEach(() => {
   act(() => root.unmount());
   container.remove();
+  localStorage.clear();
   vi.clearAllMocks();
 });
 
@@ -135,6 +136,12 @@ describe('GanttWorkspace', () => {
     expect(bars()).toEqual(['Weld', 'Paint', 'Prime']);
     expect(container.querySelector('[data-summary]')?.textContent).toBe('Paint');
     expect(container.querySelector<HTMLSelectElement>('select[aria-label="Level of detail"]')!.value).toBe('all');
+    // The choice is this browser's: the chart opens on it the next time.
+    act(() => root.unmount());
+    container.remove();
+    await mount(gates(true));
+    expect(container.querySelector<HTMLSelectElement>('select[aria-label="Level of detail"]')!.value).toBe('all');
+    expect(planAPI.master).toHaveBeenLastCalledWith('all');
   });
 
   it('waits for the gates, and without the page or the Gantt plan leads to the projects list', async () => {
