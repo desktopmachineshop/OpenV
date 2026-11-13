@@ -130,7 +130,7 @@ export interface MasterProject {
   start: string | null;
   end: string | null;
   summary: ProjectPlan['summary'];
-  tasks: { id: string; title: string; wbs: string; depth: number; summary: boolean; start: string | null; end: string | null; progress: number; done: boolean; late: boolean; critical: boolean }[];
+  tasks: { id: string; title: string; wbs: string; depth: number; summary: boolean; start: string | null; end: string | null; progress: number; done: boolean; late: boolean; critical: boolean; external?: boolean }[];
   milestones: { key: string; name: string; date: string; progress: number; met: boolean; late: boolean }[];
 }
 

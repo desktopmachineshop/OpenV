@@ -10716,10 +10716,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 1700,
+      "content_length": 1749,
       "kind": "json",
       "body": [
-        "{\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"projects\":[{\"project_id\":\"<q>\",\"parent_project_id\":\"\",\"name\":\"Tour plan elsewhere\",\"start\":null,\"end\":null,\"summary\":{\"tasks\":1,\"done\":0,\"late\":0,\"unscheduled\":1,\"progress\":0,\"critical\":0,\"effort_days\":0,\"cost\":0,\"overallocated\":0},\"tasks\":[{\"id\":\"<q_task>\",\"title\":\"Elsewhere\",\"wbs\":\"1\",\"depth\":0,\"summary\":false,\"start\":null,\"end\":null,\"progress\":0,\"done\":false,\"late\":false,\"critical\":false}],\"milestones\":[]},{\"project_id\":\"<p>\",\"parent_project_id\":\"\",\"name\":\"Tour plan\",\"start\":\"<date>\",\"end\":\"<date>\",\"summary\":{\"tasks\":4,\"done\":1,\"late\":0,\"unscheduled\":0,\"progress\":38,\"critical\":1,\"effort_days\":7.5,\"cost\":0,\"overallocated\":0},\"tasks\":[{\"id\":\"<build>\",\"title\":\"Build the rig\",\"wbs\":\"1\",\"depth\":0,\"summary\":true,\"start\":\"<date>\",\"end\":\"<date>\",\"progress\":75,\"done\":false,\"late\":false,\"critical\":false},{\"id\":\"<order>\",\"title\":\"Order the parts\",\"wbs\":\"2\",\"depth\":0,\"summary\":false,\"start\":\"<date>\",\"end\":\"<date>\",\"progress\":0,\"done\":false,\"late\":false,\"critical\":true}],\"milestones\":[{\"key\":\"<m1>\",\"name\":\"Definition complete\",\"date\":\"<date>\",\"progress\":17,\"met\":false,\"late\":true},{\"key\":\"release:<mvp>\",\"name\":\"MVP\",\"date\":\"<date>\",\"progress\":0,\"met\":false,\"late\":false}]}],\"links\":[{\"from_project_id\":\"<q>\",\"from_title\":\"Elsewhere\",\"to_project_id\":\"<p>\",\"to_title\":\"Order the parts\",\"type\":\"FS\",\"conflict\":false}]}"
+        "{\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"projects\":[{\"project_id\":\"<q>\",\"parent_project_id\":\"\",\"name\":\"Tour plan elsewhere\",\"start\":null,\"end\":null,\"summary\":{\"tasks\":1,\"done\":0,\"late\":0,\"unscheduled\":1,\"progress\":0,\"critical\":0,\"effort_days\":0,\"cost\":0,\"overallocated\":0},\"tasks\":[{\"id\":\"<q_task>\",\"title\":\"Elsewhere\",\"wbs\":\"1\",\"depth\":0,\"summary\":false,\"start\":null,\"end\":null,\"progress\":0,\"done\":false,\"late\":false,\"critical\":false,\"external\":true}],\"milestones\":[]},{\"project_id\":\"<p>\",\"parent_project_id\":\"\",\"name\":\"Tour plan\",\"start\":\"<date>\",\"end\":\"<date>\",\"summary\":{\"tasks\":4,\"done\":1,\"late\":0,\"unscheduled\":0,\"progress\":38,\"critical\":1,\"effort_days\":7.5,\"cost\":0,\"overallocated\":0},\"tasks\":[{\"id\":\"<build>\",\"title\":\"Build the rig\",\"wbs\":\"1\",\"depth\":0,\"summary\":true,\"start\":\"<date>\",\"end\":\"<date>\",\"progress\":75,\"done\":false,\"late\":false,\"critical\":false,\"external\":false},{\"id\":\"<order>\",\"title\":\"Order the parts\",\"wbs\":\"2\",\"depth\":0,\"summary\":false,\"start\":\"<date>\",\"end\":\"<date>\",\"progress\":0,\"done\":false,\"late\":false,\"critical\":true,\"external\":true}],\"milestones\":[{\"key\":\"<m1>\",\"name\":\"Definition complete\",\"date\":\"<date>\",\"progress\":17,\"met\":false,\"late\":true},{\"key\":\"release:<mvp>\",\"name\":\"MVP\",\"date\":\"<date>\",\"progress\":0,\"met\":false,\"late\":false}]}],\"links\":[{\"from_project_id\":\"<q>\",\"from_title\":\"Elsewhere\",\"to_project_id\":\"<p>\",\"to_title\":\"Order the parts\",\"type\":\"FS\",\"conflict\":false}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -10756,7 +10756,8 @@
                 "progress": 0,
                 "done": false,
                 "late": false,
-                "critical": false
+                "critical": false,
+                "external": true
               }
             ],
             "milestones": []
@@ -10790,7 +10791,8 @@
                 "progress": 75,
                 "done": false,
                 "late": false,
-                "critical": false
+                "critical": false,
+                "external": false
               },
               {
                 "id": "<order>",
@@ -10803,7 +10805,8 @@
                 "progress": 0,
                 "done": false,
                 "late": false,
-                "critical": true
+                "critical": true,
+                "external": true
               }
             ],
             "milestones": [
@@ -10860,7 +10863,7 @@
       "content_length": null,
       "kind": "json",
       "body": [
-        "{\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"projects\":[{\"project_id\":\"<q>\",\"parent_project_id\":\"\",\"name\":\"Tour plan elsewhere\",\"start\":null,\"end\":null,\"summary\":{\"tasks\":1,\"done\":0,\"late\":0,\"unscheduled\":1,\"progress\":0,\"critical\":0,\"effort_days\":0,\"cost\":0,\"overallocated\":0},\"tasks\":[{\"id\":\"<q_task>\",\"title\":\"Elsewhere\",\"wbs\":\"1\",\"depth\":0,\"summary\":false,\"start\":null,\"end\":null,\"progress\":0,\"done\":false,\"late\":false,\"critical\":false}],\"milestones\":[]},{\"project_id\":\"<p>\",\"parent_project_id\":\"\",\"name\":\"Tour plan\",\"start\":\"<date>\",\"end\":\"<date>\",\"summary\":{\"tasks\":4,\"done\":1,\"late\":0,\"unscheduled\":0,\"progress\":38,\"critical\":1,\"effort_days\":7.5,\"cost\":0,\"overallocated\":0},\"tasks\":[{\"id\":\"<build>\",\"title\":\"Build the rig\",\"wbs\":\"1\",\"depth\":0,\"summary\":true,\"start\":\"<date>\",\"end\":\"<date>\",\"progress\":75,\"done\":false,\"late\":false,\"critical\":false},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"wbs\":\"1.1\",\"depth\":1,\"summary\":false,\"start\":\"<date>\",\"end\":\"<date>\",\"progress\":100,\"done\":true,\"late\":false,\"critical\":false},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"wbs\":\"1.2\",\"depth\":1,\"summary\":false,\"start\":\"<date>\",\"end\":\"<date>\",\"progress\":50,\"done\":false,\"late\":false,\"critical\":false},{\"id\":\"<order>\",\"title\":\"Order the parts\",\"wbs\":\"2\",\"depth\":0,\"summary\":false,\"start\":\"<date>\",\"end\":\"<date>\",\"progress\":0,\"done\":false,\"late\":false,\"critical\":true}],\"milestones\":[{\"key\":\"<m1>\",\"name\":\"Definition complete\",\"date\":\"<date>\",\"progress\":17,\"met\":false,\"late\":true},{\"key\":\"release:<mvp>\",\"name\":\"MVP\",\"date\":\"<date>\",\"progress\":0,\"met\":false,\"late\":false}]}],\"links\":[{\"from_project_id\":\"<q>\",\"from_title\":\"Elsewhere\",\"to_project_id\":\"<p>\",\"to_title\":\"Order the parts\",\"type\":\"FS\",\"conflict\":false}]}"
+        "{\"today\":\"<date>\",\"start\":\"<date>\",\"end\":\"<date>\",\"projects\":[{\"project_id\":\"<q>\",\"parent_project_id\":\"\",\"name\":\"Tour plan elsewhere\",\"start\":null,\"end\":null,\"summary\":{\"tasks\":1,\"done\":0,\"late\":0,\"unscheduled\":1,\"progress\":0,\"critical\":0,\"effort_days\":0,\"cost\":0,\"overallocated\":0},\"tasks\":[{\"id\":\"<q_task>\",\"title\":\"Elsewhere\",\"wbs\":\"1\",\"depth\":0,\"summary\":false,\"start\":null,\"end\":null,\"progress\":0,\"done\":false,\"late\":false,\"critical\":false,\"external\":true}],\"milestones\":[]},{\"project_id\":\"<p>\",\"parent_project_id\":\"\",\"name\":\"Tour plan\",\"start\":\"<date>\",\"end\":\"<date>\",\"summary\":{\"tasks\":4,\"done\":1,\"late\":0,\"unscheduled\":0,\"progress\":38,\"critical\":1,\"effort_days\":7.5,\"cost\":0,\"overallocated\":0},\"tasks\":[{\"id\":\"<build>\",\"title\":\"Build the rig\",\"wbs\":\"1\",\"depth\":0,\"summary\":true,\"start\":\"<date>\",\"end\":\"<date>\",\"progress\":75,\"done\":false,\"late\":false,\"critical\":false,\"external\":false},{\"id\":\"<frame>\",\"title\":\"Weld the frame\",\"wbs\":\"1.1\",\"depth\":1,\"summary\":false,\"start\":\"<date>\",\"end\":\"<date>\",\"progress\":100,\"done\":true,\"late\":false,\"critical\":false,\"external\":false},{\"id\":\"<wiring>\",\"title\":\"Wire the rig\",\"wbs\":\"1.2\",\"depth\":1,\"summary\":false,\"start\":\"<date>\",\"end\":\"<date>\",\"progress\":50,\"done\":false,\"late\":false,\"critical\":false,\"external\":false},{\"id\":\"<order>\",\"title\":\"Order the parts\",\"wbs\":\"2\",\"depth\":0,\"summary\":false,\"start\":\"<date>\",\"end\":\"<date>\",\"progress\":0,\"done\":false,\"late\":false,\"critical\":true,\"external\":true}],\"milestones\":[{\"key\":\"<m1>\",\"name\":\"Definition complete\",\"date\":\"<date>\",\"progress\":17,\"met\":false,\"late\":true},{\"key\":\"release:<mvp>\",\"name\":\"MVP\",\"date\":\"<date>\",\"progress\":0,\"met\":false,\"late\":false}]}],\"links\":[{\"from_project_id\":\"<q>\",\"from_title\":\"Elsewhere\",\"to_project_id\":\"<p>\",\"to_title\":\"Order the parts\",\"type\":\"FS\",\"conflict\":false}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -10897,7 +10900,8 @@
                 "progress": 0,
                 "done": false,
                 "late": false,
-                "critical": false
+                "critical": false,
+                "external": true
               }
             ],
             "milestones": []
@@ -10931,7 +10935,8 @@
                 "progress": 75,
                 "done": false,
                 "late": false,
-                "critical": false
+                "critical": false,
+                "external": false
               },
               {
                 "id": "<frame>",
@@ -10944,7 +10949,8 @@
                 "progress": 100,
                 "done": true,
                 "late": false,
-                "critical": false
+                "critical": false,
+                "external": false
               },
               {
                 "id": "<wiring>",
@@ -10957,7 +10963,8 @@
                 "progress": 50,
                 "done": false,
                 "late": false,
-                "critical": false
+                "critical": false,
+                "external": false
               },
               {
                 "id": "<order>",
@@ -10970,7 +10977,8 @@
                 "progress": 0,
                 "done": false,
                 "late": false,
-                "critical": true
+                "critical": true,
+                "external": true
               }
             ],
             "milestones": [

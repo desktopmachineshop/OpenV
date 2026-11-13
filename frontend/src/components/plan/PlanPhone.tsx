@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import type { PlanMilestone, PlanTask, ProjectPlan } from '../../api/client';
 import { Chip, PanelHeader, buttonStyle, ellipsis, mutedStyle, pageType, panelStyle } from '../ui';
 import { shortDate, spanLabel } from './ganttScale';
+import { ExternalMark } from './GanttRows';
 import { BAR_COLORS, barTone, columnLabel, milestoneColor, milestoneState, phoneGroups } from './planModel';
 
 type Tab = 'schedule' | 'milestones';
@@ -54,6 +55,7 @@ const TaskRow: React.FC<{ task: PlanTask; today: string; onOpen: () => void }> =
     <button type="button" onClick={onOpen} style={{ ...rowButton, paddingLeft: 12 + t.depth * 14 }}>
       <span style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
         <span style={{ ...ellipsis, flex: 1, fontWeight: t.subtasks_total > 0 ? 600 : 400 }}>{t.title}</span>
+        {t.external_links.length > 0 && <ExternalMark task={t} />}
         {t.late ? <Chip tone="danger">Late</Chip> : t.done ? <Chip tone="success">Done</Chip> : t.critical ? <Chip tone="warning">Critical</Chip> : null}
         <b style={{ fontSize: 13 }}>{t.progress}%</b>
       </span>

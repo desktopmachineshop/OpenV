@@ -20,6 +20,8 @@ type MasterTask struct {
 	Late     bool    `json:"late"`
 	// Critical: the task, or one beneath it, is on its project's critical path.
 	Critical bool `json:"critical"`
+	// External: the task waits on, or drives, a task of another project.
+	External bool `json:"external"`
 }
 
 // MasterMilestone is a dated milestone of a project on the master plan.
@@ -86,7 +88,7 @@ func (m *MasterPlan) Add(name, parentProjectID string, p *Plan, levels int) {
 	for _, t := range p.Tasks {
 		if levels == MasterAllLevels || t.Depth < levels {
 			line.Tasks = append(line.Tasks, MasterTask{ID: t.ID, Title: t.Title, WBS: t.WBS, Depth: t.Depth, Summary: parent[t.ID], Start: t.SpanStart, End: t.SpanEnd, Progress: t.Progress,
-				Done: t.Done, Late: t.Late, Critical: t.Critical || t.CriticalSubtasks})
+				Done: t.Done, Late: t.Late, Critical: t.Critical || t.CriticalSubtasks, External: len(t.ExternalLinks) > 0})
 		}
 		for _, l := range t.ExternalLinks {
 			if l.Direction == ExternalDrivenBy {

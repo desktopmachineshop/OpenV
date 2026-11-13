@@ -76,6 +76,9 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 		ProjectID  string `json:"project_id"`
 		Prompt     string `json:"prompt"`
 		WorkItemID string `json:"work_item_id"`
+		// Conversation: a person is chatting with the agent, not giving it
+		// a task; the board makes no card of the run.
+		Conversation bool `json:"conversation"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
@@ -109,6 +112,12 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 	if req.WorkItemID != "" {
 		launch.WorkItemID = &req.WorkItemID
 	}
+	// A chat with an agent is not a task: the screens where a person types
+	// to one say so (conversation), and the board then makes no card of the
+	// run. A task is a card assigned to the agent, which names itself here.
+	// Left out, the run gets its tracking card as before, so a script's run
+	// is still tracked.
+	launch.Conversation = req.Conversation && launch.WorkItemID == nil
 	run, err := h.launchRun(r, launch)
 	if err != nil {
 		writeLaunchError(w, r, launchErrs402, err)
