@@ -139,8 +139,6 @@ export const ProjectSettings: React.FC = () => {
   const [savingAuth, setSavingAuth] = useState(false);
 
   // General (REQ-144, REQ-147): the parent project and the reference parties.
-  const [allProjects, setAllProjects] = useState<Project[]>([]);
-  const [savingParent, setSavingParent] = useState(false);
   const [parties, setParties] = useState<Party[]>([]);
   const [partyName, setPartyName] = useState('');
   const [partyNote, setPartyNote] = useState('');
@@ -201,14 +199,7 @@ export const ProjectSettings: React.FC = () => {
     } catch {
       // Non-fatal: the Agents tab just shows a loading state.
     }
-    // The other projects of the workspace, for the parent picker and the
-    // list of child projects; the parties this project recognises as owners.
-    try {
-      const res = await projectAPI.list();
-      setAllProjects(res.data || []);
-    } catch {
-      setAllProjects([]);
-    }
+    // The parties this project recognises as owners.
     try {
       const res = await projectAPI.parties(projectId);
       setParties(res.data?.parties || []);
@@ -216,42 +207,6 @@ export const ProjectSettings: React.FC = () => {
       setParties([]);
     }
   }, [projectId]);
-
-  // Projects that cannot be this one's parent: itself and everything filed
-  // under it, since placing it under a descendant would close a loop.
-  const descendantIds = (() => {
-    const out = new Set<string>([projectId || '']);
-    let grew = true;
-    while (grew) {
-      grew = false;
-      for (const p of allProjects) {
-        if (p.parent_project_id && out.has(p.parent_project_id) && !out.has(p.id)) {
-          out.add(p.id);
-          grew = true;
-        }
-      }
-    }
-    return out;
-  })();
-  const parentCandidates = allProjects.filter(
-    (p) => !descendantIds.has(p.id) && (!project || p.org_id === project.org_id)
-  );
-  const childProjects = allProjects.filter((p) => p.parent_project_id === projectId);
-
-  const handleSetParent = async (parentId: string) => {
-    if (!projectId || !project) return;
-    setSavingParent(true);
-    setError('');
-    try {
-      const res = await projectAPI.update(projectId, { parent_project_id: parentId });
-      setProject(res.data);
-      flash(parentId ? 'Parent project set.' : 'Parent project cleared.');
-    } catch (err: any) {
-      setError(`Failed to set the parent project: ${apiErrorMessage(err)}`);
-    } finally {
-      setSavingParent(false);
-    }
-  };
 
   const saveParties = async (next: Party[]) => {
     if (!projectId) return;
@@ -718,10 +673,6 @@ export const ProjectSettings: React.FC = () => {
             flowDown={flowDown}
             ownersOn={ownersOn}
             project={project}
-            parentCandidates={parentCandidates}
-            childProjects={childProjects}
-            savingParent={savingParent}
-            handleSetParent={handleSetParent}
             parties={parties}
             savingParties={savingParties}
             saveParties={saveParties}

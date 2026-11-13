@@ -1,7 +1,7 @@
 // The Home page's projects as a hierarchy: a project whose parent is in the
 // list sits under it, indented, and a parent folds its children away.
 import React, { useCallback, useState } from 'react';
-import type { Project } from '../api/client';
+import { projectAPI, type Project } from '../api/client';
 
 /** One project of the list as drawn: how deep it sits and how many projects are under it. */
 export interface ProjectRow {
@@ -54,6 +54,26 @@ export const projectRows = (projects: Project[], folded: ReadonlySet<string> = n
   for (const p of projects) if (!seen.has(p.id) && !hidden.has(p.id)) visit(p, 0);
   return out;
 };
+
+/** Files a project just created under its parent, when it was given one; answers the project as it then is. */
+export const placeUnder = async (project: Project, parentId: string): Promise<Project> =>
+  parentId ? (await projectAPI.update(project.id, { parent_project_id: parentId })).data : project;
+
+/** The parent of a project being created: none, or one of the workspace's projects. */
+export const NewProjectParent: React.FC<{ projects: Project[]; value: string; onChange: (parentId: string) => void }> = ({ projects, value, onChange }) => (
+  <div className="form-group">
+    <label htmlFor="new-project-parent">Parent project</label>
+    <select id="new-project-parent" value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="">None (top-level project)</option>
+      {projectRows(projects).map(({ project, depth }) => (
+        <option key={project.id} value={project.id}>
+          {'\u00a0\u00a0'.repeat(depth)}
+          {project.name}
+        </option>
+      ))}
+    </select>
+  </div>
+);
 
 const STORAGE_KEY = 'openv-home-folded';
 

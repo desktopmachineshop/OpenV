@@ -44,13 +44,14 @@ of the rail on every page.
   verification stands behind them) and the share verified (their tests
   pass, or they are verified by hand). A project with no requirements yet
   says so instead. The project you opened last is marked with a blue edge.
-  A project that has a parent (set under **Edit project**) is listed under
+  A project that has a parent (set on its **Overview**) is listed under
   it, indented, and the arrow before a parent's name folds its children
   away; the fold is remembered in this browser.
   The **⋯** button at the end of a row opens its actions by name:
 
 | Action | What it does |
 | --- | --- |
+| **New child project** | start a project under this one: the form opens with this project as its parent |
 | **Edit project** | rename it or change the description |
 | **Download** | opens the download wizard (format, sections, attachments) |
 | **Save as template** | snapshot this project as a reusable template |
@@ -69,7 +70,7 @@ short window, or a form open below the list, scrolls the page as before.
 
 ## Creating a project
 
-Click **+ New Project**. The form offers a **Project Type**:
+Click **+ New Project**. **Parent project** places the new project in the hierarchy: leave it at *None* for a top-level project, or choose the project it belongs under. **New child project**, in a project's **⋯** menu, opens the form with that project already chosen. The form then offers a **Project Type**:
 
 - **Blank Project** — start empty; enter a name and optional description.
 - **Templates** — start from a template you previously saved with ⧉.

@@ -17,6 +17,7 @@ import { isUntouchedByWizard } from '../components/wizard/assistantSession';
 import { ErrorBanner, chipStyle, toneForColor } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 import { useUiRefresh } from '../hooks/useUiRefresh';
+import { ProductOverviewParent } from './ProductOverviewParent';
 
 interface MetricRow {
   name: string;
@@ -220,6 +221,7 @@ export const ProductOverview: React.FC = () => {
       )}
 
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
+      {projectId && <ProductOverviewParent projectId={projectId} />}
 
       {/* Quick links: the row of pages and the rail lead to V&V and the board
           in the refreshed interface, so only the guided definition stays. */}
