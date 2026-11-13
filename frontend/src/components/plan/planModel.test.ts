@@ -18,6 +18,7 @@ const task = (id: string, extra: Partial<PlanTask> = {}): PlanTask => ({
   parent_id: null,
   depth: 0,
   wbs: '1',
+  order: 1,
   start: null,
   end: null,
   span_start: null,
@@ -289,6 +290,13 @@ describe('the chart\'s view of the plan', () => {
     expect(ids({}, ['a'])).toEqual(['a', 'b']);
     expect(ids({ filter: 'late' })).toEqual(['a', 'a1']);
     expect(ids({ search: 'wel' })).toEqual(['a', 'a2']);
+  });
+
+  it('leaves out the tasks with no dates when asked, keeping the tasks a dated one sits under', () => {
+    // Beta has no dates; Alpha has none of its own but holds dated sub-tasks.
+    expect(ids({ dated: true })).toEqual(['a', 'a1', 'a2']);
+    expect(ids({ dated: true, sort: 'start' })).toEqual(['a2', 'a1']);
+    expect(ids({ dated: true, filter: 'unscheduled' })).toEqual([]);
   });
 
   it('lists the tasks without sub-tasks flat when sorted, and under headings when grouped', () => {

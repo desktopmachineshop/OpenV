@@ -25,7 +25,7 @@ import { useFeature } from '../../hooks/useFeature';
 import { PLAN_SIZING_FEATURE } from '../../features';
 import { PlanUsage } from './PlanUsage';
 import { PlanViewBar } from './PlanViewBar';
-import { DEFAULT_VIEW, columnsWidth } from './planView';
+import { columnsWidth, initialView } from './planView';
 import { PlanTracking, type TrackingAction } from './PlanTracking';
 import { ZOOMS, Zoom } from './ganttScale';
 
@@ -68,7 +68,7 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
   const [resources, setResources] = useState(false);
   const [tracking, setTracking] = useState(false);
   const [showBaseline, setShowBaseline] = useState(true);
-  const [view, setView] = useState(DEFAULT_VIEW);
+  const [view, setView] = useState(initialView);
   const [mode, setMode] = useState<PlanMode>('gantt');
   const [recalculating, setRecalculating] = useState(false);
   const [onlyLater, setOnlyLater] = useState(false);

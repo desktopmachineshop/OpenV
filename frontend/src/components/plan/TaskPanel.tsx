@@ -103,6 +103,43 @@ const workingDaysText = (days: number[]): string => {
 };
 
 /** A task with sub-tasks: its dates, duration and effort are theirs, read here and set on them. */
+/**
+ * The task's place among its siblings in the outline: the order the rows
+ * are listed in, which is stored and does not follow the dates. Typing a
+ * place moves the task there; the arrows above the chart move it one place.
+ */
+export const OrderField: React.FC<{ task: PlanTask; disabled: boolean; onCommit: (order: number) => void }> = ({ task, disabled, onCommit }) => {
+  const [text, setText] = useState(String(task.order ?? ''));
+  useEffect(() => setText(String(task.order ?? '')), [task.id, task.order]);
+  const commit = () => {
+    const n = Number(text);
+    if (!Number.isInteger(n) || n < 1) setText(String(task.order ?? ''));
+    else if (n !== task.order) onCommit(n);
+  };
+  return (
+    <label style={{ ...fieldStyle, flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 8 }} title="Its place among the tasks beside it in the outline. The outline keeps this order whatever the dates.">
+      Order in the outline
+      <input
+        type="number"
+        min={1}
+        step={1}
+        value={text}
+        disabled={disabled}
+        aria-label="Order in the outline"
+        onChange={(e) => setText(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            commit();
+          }
+        }}
+        style={{ ...inputStyle, width: 72, flex: 'none' }}
+      />
+    </label>
+  );
+};
+
 const FolderSchedule: React.FC<{ task: PlanTask; today: string }> = ({ task, today }) => (
   <div style={sectionStyle} data-help-key="gantt.schedule">
     <h3 style={eyebrowStyle}>Schedule</h3>
@@ -426,6 +463,7 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
           placeholder="Search for a task…"
           onChange={(id) => onSchedule(task, { parent_id: id })}
         />
+        <OrderField task={task} disabled={!editable || busy} onCommit={(order) => onSchedule(task, { order })} />
       </div>
 
       {task.subtasks_total === 0 && <TaskScheduling plan={plan} task={task} editable={editable} busy={busy} onSchedule={onSchedule} />}

@@ -41,8 +41,9 @@ func (s *DefaultService) reorder(projectID, workItemID string, after *string) er
 	}
 	switch {
 	case after == nil:
-		// Siblings nobody has ordered stay in date order, the task among
-		// them: it only loses the place it had under its old parent.
+		// Siblings nobody has ordered stay in the order they were made, the
+		// task among them: it only loses the place it had under its old
+		// parent.
 		ordered := false
 		for _, sc := range in.Schedules {
 			for _, id := range list {
@@ -64,4 +65,41 @@ func (s *DefaultService) reorder(projectID, workItemID string, after *string) er
 		order[id] = i + 1
 	}
 	return s.repo.SetOrder(projectID, order)
+}
+
+// placeAt puts a task at a place among its siblings, counted from 1: the
+// outline's order as a number. A place past the last sibling is the last.
+func (s *DefaultService) placeAt(projectID, workItemID string, position int) error {
+	if position < 1 {
+		return ErrPosition
+	}
+	in, _, _, err := s.inputs(projectID)
+	if err != nil {
+		return err
+	}
+	p := Build(in, time.Now())
+	var moved *Task
+	for _, t := range p.Tasks {
+		if t.ID == workItemID {
+			moved = t
+		}
+	}
+	if moved == nil {
+		return ErrTaskNotFound
+	}
+	// The siblings without the task, in outline order: it goes after the
+	// one before its new place.
+	after := ""
+	n := 1
+	for _, t := range p.Tasks {
+		same := (t.ParentID == nil && moved.ParentID == nil) || (t.ParentID != nil && moved.ParentID != nil && *t.ParentID == *moved.ParentID)
+		if t.ID == workItemID || !same {
+			continue
+		}
+		if n < position {
+			after = t.ID
+		}
+		n++
+	}
+	return s.reorder(projectID, workItemID, &after)
 }

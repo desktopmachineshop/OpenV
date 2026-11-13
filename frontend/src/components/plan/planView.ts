@@ -15,9 +15,32 @@ export interface PlanView {
   sort: PlanSort;
   group: PlanGroup;
   columns: PlanColumn[];
+  /** Leave out the tasks with no dates: what has nothing to draw on the chart. */
+  dated: boolean;
 }
 
-export const DEFAULT_VIEW: PlanView = { search: '', filter: 'all', sort: 'outline', group: 'none', columns: [] };
+export const DEFAULT_VIEW: PlanView = { search: '', filter: 'all', sort: 'outline', group: 'none', columns: [], dated: false };
+
+const DATED_KEY = 'openv-gantt-dated-only';
+
+/** The view the chart opens with: the default, with "Dated only" as it was last left in this browser. */
+export const initialView = (): PlanView => {
+  try {
+    return { ...DEFAULT_VIEW, dated: localStorage.getItem(DATED_KEY) === '1' };
+  } catch {
+    return DEFAULT_VIEW;
+  }
+};
+
+/** Remembers "Dated only" for the next visit. */
+export const rememberDated = (on: boolean): void => {
+  try {
+    if (on) localStorage.setItem(DATED_KEY, '1');
+    else localStorage.removeItem(DATED_KEY);
+  } catch {
+    // It still applies for this visit.
+  }
+};
 
 export const FILTERS: { value: PlanFilter; label: string }[] = [
   { value: 'all', label: 'All tasks' },
@@ -80,6 +103,7 @@ export type PlanRow = { id: string; task: PlanTask; flat: boolean } | { id: stri
 const matches = (t: PlanTask, view: PlanView): boolean => {
   const q = view.search.trim().toLowerCase();
   if (q && !t.title.toLowerCase().includes(q) && !t.wbs.startsWith(q)) return false;
+  if (view.dated && !t.span_start) return false;
   switch (view.filter) {
     case 'incomplete':
       return !t.done;
@@ -121,7 +145,7 @@ const SORTERS: Record<Exclude<PlanSort, 'outline'>, (a: PlanTask, b: PlanTask) =
  * sub-tasks only sums them.
  */
 export const arrange = (plan: ProjectPlan, folded: ReadonlySet<string>, view: PlanView): PlanRow[] => {
-  const filtering = view.search.trim() !== '' || view.filter !== 'all';
+  const filtering = view.search.trim() !== '' || view.filter !== 'all' || view.dated;
   if (isOutline(view)) {
     let tasks = plan.tasks;
     if (filtering) {

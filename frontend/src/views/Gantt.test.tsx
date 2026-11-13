@@ -22,6 +22,7 @@ const task = (id: string, title: string, extra: Partial<PlanTask> = {}): PlanTas
   parent_id: null,
   depth: 0,
   wbs: '1',
+  order: 1,
   start: null,
   end: null,
   span_start: null,
