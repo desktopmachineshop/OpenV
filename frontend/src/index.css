@@ -972,16 +972,14 @@ body.ov-has-rail {
 .ov-topbar-help {
   display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: center;
+  width: 32px;
   height: 32px;
-  padding: 0 8px;
-  border: 1px solid var(--border);
+  padding: 0;
+  border: none;
   border-radius: 6px;
-  background: var(--surface);
+  background: none;
   color: var(--text-secondary);
-  font: inherit;
-  font-size: 13px;
-  font-weight: 600;
   cursor: pointer;
   flex-shrink: 0;
 }
@@ -989,15 +987,6 @@ body.ov-has-rail {
 .ov-topbar-help[aria-expanded='true'] {
   background: var(--surface-hover);
   color: var(--text);
-}
-.ov-topbar-help kbd {
-  font: inherit;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 0 5px;
-  border: 1px solid var(--border);
-  border-radius: 3px;
-  color: var(--text-muted);
 }
 .ov-tabbar {
   flex-shrink: 0;

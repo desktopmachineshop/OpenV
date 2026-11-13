@@ -11,6 +11,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Select several tasks on the Gantt and the Timeline.** **Ctrl**-click
+  (**Cmd** on a Mac) a row or a bar adds a task to those selected, or
+  drops it; **Shift**-click takes every task between. With several
+  selected, the panel beside the chart lists them, assigns them all to a
+  milestone, and moves their dates by a number of days.
+- **Help is the ? in the top bar.** The button that read *Help ?* is now
+  the **?** icon alone, as it already was on a phone, and the small arrow
+  beside your picture in the top bar has gone: the picture opens the
+  account menu.
 - **The Assistant button is on every page, and tucks away.** The
   **✦ Assistant** button now shows on the workspace's pages (Plan, Agents,
   Settings and the rest) as well as inside a project. The small arrow at

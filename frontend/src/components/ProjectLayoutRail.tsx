@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import type { Project } from '../api/client';
 import type { NavGroup, NavSection } from '../pages';
 import { activeNavPath, sectionHasActive } from './navSections';
-import { NavIcon, groupIconPath, pageIconPath } from './ProjectLayoutIcons';
+import { NavIcon, SHELL_ICONS, groupIconPath, pageIconPath } from './ProjectLayoutIcons';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
@@ -179,8 +179,7 @@ export const TopBar: React.FC<TopBarProps> = ({ project, pageLabel, helpOpen, on
       onClick={onHelpToggle}
       title="Help for this page (? or F1)"
     >
-      Help
-      <kbd aria-hidden="true">?</kbd>
+      <NavIcon d={SHELL_ICONS.help} size={20} />
     </button>
     <NotificationBell variant="light" />
     <UserMenu variant="light" />

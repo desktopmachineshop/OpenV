@@ -12,6 +12,7 @@ import { buildScale, buildTicks, openingScroll, shortDate, spanLabel, toDay, tod
 import { useViewport } from '../../hooks/useViewport';
 import { projectRows } from '../ProjectListTree';
 import { barTone, relationshipLabel } from './planModel';
+import type { PickKeys } from './planSelection';
 import { PlanBar } from './PlanBar';
 
 export interface Bar {
@@ -63,8 +64,10 @@ const Band: React.FC<{
   today: string;
   /** Mark the critical bars (the Critical path button); they sit on the top row either way. */
   showCritical: boolean;
-  onBar?: (id: string) => void;
-}> = ({ bars, milestones, scale, today, showCritical, onBar }) => {
+  onBar?: (id: string, e: React.MouseEvent) => void;
+  /** The bars drawn selected. */
+  selected?: readonly string[];
+}> = ({ bars, milestones, scale, today, showCritical, onBar, selected }) => {
   const rows = lanes(bars);
   return (
     <div style={{ position: 'relative', width: scale.width, height: 26 + Math.max(rows.length, 1) * 24 }}>
@@ -88,10 +91,11 @@ const Band: React.FC<{
             progress={b.progress}
             summary={b.summary}
             critical={showCritical && b.critical}
+            selected={selected?.includes(b.id)}
             label={`${b.title}: ${spanLabel(b.start, b.end, today)}, ${b.progress}%${showCritical && b.critical ? ', on the critical path' : ''}${b.external ? ', linked to another project' : ''}`}
             text={b.external ? `⇄ ${b.title}` : b.title}
             cursor={onBar ? 'pointer' : 'default'}
-            button={{ 'data-critical': (showCritical && b.critical) || undefined, 'data-summary': b.summary || undefined, disabled: !onBar, onClick: () => onBar?.(b.id) }}
+            button={{ 'data-critical': (showCritical && b.critical) || undefined, 'data-summary': b.summary || undefined, disabled: !onBar, 'aria-pressed': selected ? selected.includes(b.id) : undefined, onClick: (e) => onBar?.(b.id, e) }}
           />
         )),
       )}
@@ -192,7 +196,7 @@ const LevelSelect: React.FC<{ value: MasterLevels; onChange: (l: MasterLevels) =
   </select>
 );
 
-export const PlanTimeline: React.FC<{ plan: ProjectPlan; onSelectTask: (t: PlanTask) => void } & LinesProps> = ({ plan, onSelectTask, zoom = 'weeks', showCritical = true, todaySignal = 0 }) => {
+export const PlanTimeline: React.FC<{ plan: ProjectPlan; selectedIds?: readonly string[]; onSelectTask: (t: PlanTask, keys?: PickKeys) => void } & LinesProps> = ({ plan, selectedIds, onSelectTask, zoom = 'weeks', showCritical = true, todaySignal = 0 }) => {
   const scale = useMemo(() => buildScale(zoom, plan.start, plan.end, plan.today, viewWidth()), [zoom, plan.start, plan.end, plan.today]);
   const scroller = useScroller(scale, plan.start, plan.end, plan.today, todaySignal);
   // The level All projects was left on: the two charts are one band, and read the same.
@@ -214,7 +218,7 @@ export const PlanTimeline: React.FC<{ plan: ProjectPlan; onSelectTask: (t: PlanT
           <Ticks scale={scale} />
         </div>
         <div style={{ padding: '8px 0 12px', width: scale.width }}>
-          <Band bars={bars} milestones={plan.milestones} scale={scale} today={plan.today} showCritical={showCritical} onBar={(id) => onSelectTask(shown.find((t) => t.id === id)!)} />
+          <Band bars={bars} milestones={plan.milestones} scale={scale} today={plan.today} showCritical={showCritical} selected={selectedIds} onBar={(id, e) => onSelectTask(shown.find((t) => t.id === id)!, e)} />
         </div>
       </div>
     </div>

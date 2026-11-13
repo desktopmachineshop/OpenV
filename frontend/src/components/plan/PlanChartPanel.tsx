@@ -193,7 +193,7 @@ export const PlanChartPanel: React.FC<PlanChartPanelProps> = ({ plan, zoom, onZo
           {mode === 'network' && <PlanNetwork plan={plan} selectedTaskId={chart.selectedTaskId} onSelectTask={chart.onSelectTask} showCritical={showCritical} />}
           {mode === 'calendar' && <PlanMonth plan={plan} selectedTaskId={chart.selectedTaskId} onSelectTask={chart.onSelectTask} zoom={zoom} showCritical={showCritical} todaySignal={todaySignal} />}
           {mode === 'usage' && <PlanUsage plan={plan} zoom={zoom} showCritical={showCritical} />}
-          {mode === 'timeline' && <PlanTimeline plan={plan} onSelectTask={chart.onSelectTask} zoom={zoom} showCritical={showCritical} todaySignal={todaySignal} />}
+          {mode === 'timeline' && <PlanTimeline plan={plan} selectedIds={chart.selectedIds?.length ? chart.selectedIds : chart.selectedTaskId ? [chart.selectedTaskId] : []} onSelectTask={chart.onSelectTask} zoom={zoom} showCritical={showCritical} todaySignal={todaySignal} />}
           {mode === 'master' && <PlanMaster currentProjectId={plan.project_id} zoom={zoom} showCritical={showCritical} todaySignal={todaySignal} />}
           {recalculating && (
             <Modal title="Recalculate the plan" width={440} onClose={() => setRecalculating(false)}>

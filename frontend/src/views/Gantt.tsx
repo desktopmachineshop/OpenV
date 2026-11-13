@@ -34,6 +34,8 @@ import { apiErrorMessage } from '../api/errors';
 import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
 import { Zoom, fitZoom } from '../components/plan/ganttScale';
 import { MilestonePanel } from '../components/plan/MilestonePanel';
+import { PlanPickPanel, assignTasks, shiftTasks } from '../components/plan/PlanPickPanel';
+import { usePlanPicks, type PickKeys } from '../components/plan/planSelection';
 import { AddMilestoneForm, AddTaskForm, ExportControl, NewTask } from '../components/plan/PlanForms';
 import { PlanPhone } from '../components/plan/PlanPhone';
 import { PlanChartPanel } from '../components/plan/PlanChartPanel';
@@ -147,6 +149,20 @@ const PlanFigures: React.FC<{ plan: ProjectPlan }> = ({ plan }) => {
     </div>
   );
 };
+
+/** The one task open beside the chart, or none. */
+const taskSelection = (id: string): Selection => (id ? { kind: 'task', id } : null);
+
+/** What the last action on the plan had to say: an import's count, a levelling's. */
+const PlanNote: React.FC<{ note: string; onDismiss: () => void }> = ({ note, onDismiss }) =>
+  note ? (
+    <div role="status" style={{ ...mutedStyle, display: 'flex', alignItems: 'center', gap: 8 }}>
+      {note}
+      <button type="button" onClick={onDismiss} aria-label="Dismiss" style={buttonStyle('ghost', { compact: true })}>
+        ✕
+      </button>
+    </div>
+  ) : null;
 
 const PlanPage: React.FC = () => {
   const { projectId = '' } = useParams<{ projectId: string }>();
@@ -284,11 +300,15 @@ const PlanPage: React.FC = () => {
     () => (selection?.kind === 'milestone' && plan ? plan.milestones.find((m) => m.key === selection.key) || null : null),
     [selection, plan],
   );
+  const picks = usePlanPicks(plan ? plan.tasks.map((t) => t.id) : [], selectedTask?.id || '');
+  const picked = plan && !selection && picks.ids.length > 1 ? plan.tasks.filter((t) => picks.ids.includes(t.id)) : [];
   const openTask = (t: PlanTask) => setSelection({ kind: 'task', id: t.id });
+  // A click with Ctrl or Shift held picks more than one, which the panel beside the chart then acts on.
+  const pickTask = (t: PlanTask, keys?: PickKeys) => setSelection(taskSelection(picks.pick(t.id, keys)));
   const openMilestone = (m: PlanMilestone) => setSelection({ kind: 'milestone', key: m.key });
   // A milestone's open mark shows it over the page, as a task's does; its name shows it beside the chart.
   const openMilestoneFull = (m: PlanMilestone) => (openMilestone(m), setFullMilestone(true));
-  const close = () => (setSelection(null), setFullMilestone(false));
+  const close = () => (setSelection(null), setFullMilestone(false), picks.clear());
   const openFull = (t: PlanTask) => (setSelection({ kind: 'task', id: t.id }), setFullTaskId(t.id));
 
   const errorBanner = <ErrorBanner message={error} onDismiss={() => setError('')} />;
@@ -322,7 +342,9 @@ const PlanPage: React.FC = () => {
       {adding === 'milestone' && <AddMilestoneForm plan={plan} busy={busy} onSubmit={addMilestone} onCancel={() => setAdding(null)} />}
     </>
   );
-  const panel = selectedTask ? (
+  const panel = picked.length ? (
+    <PlanPickPanel plan={plan} tasks={picked} busy={busy} onAssign={(ts, key) => run(() => assignTasks(ts, key), 'Failed to assign the tasks')} onShift={(ts, days) => run(() => shiftTasks(ts, days), 'Failed to move the tasks')} onOpenTask={openTask} onClose={picks.clear} />
+  ) : selectedTask ? (
     <TaskPanel
       plan={plan}
       task={selectedTask}
@@ -355,6 +377,7 @@ const PlanPage: React.FC = () => {
       onClose={close}
     />
   ) : null;
+  const panelLabel = picked.length ? `${picked.length} tasks selected` : selectedTask ? `Task ${selectedTask.title}` : `Milestone ${selectedMilestone?.name}`;
   const milestoneOver = fullMilestone && selectedMilestone;
 
   const fullTask = fullTaskId ? (
@@ -377,7 +400,7 @@ const PlanPage: React.FC = () => {
       <>
         <PlanPhone plan={plan} head={controls} forms={forms} error={errorBanner} onOpenTask={openTask} onOpenMilestone={openMilestone} />
         {panel && (
-          <Sheet label={selectedTask ? `Task ${selectedTask.title}` : `Milestone ${selectedMilestone?.name}`} onClose={close}>
+          <Sheet label={panelLabel} onClose={close}>
             {panel}
           </Sheet>
         )}
@@ -393,14 +416,7 @@ const PlanPage: React.FC = () => {
         {controls}
       </div>
       {errorBanner}
-      {note && (
-        <div role="status" style={{ ...mutedStyle, display: 'flex', alignItems: 'center', gap: 8 }}>
-          {note}
-          <button type="button" onClick={() => setNote('')} aria-label="Dismiss" style={buttonStyle('ghost', { compact: true })}>
-            ✕
-          </button>
-        </div>
-      )}
+      <PlanNote note={note} onDismiss={() => setNote('')} />
       {forms}
       <div ref={fill} style={{ display: 'flex', gap: 12, alignItems: 'stretch', height: fillHeight }}>
         <PlanChartPanel
@@ -409,8 +425,9 @@ const PlanPage: React.FC = () => {
           onZoom={setZoom}
           outlineWidth={isCompact ? 220 : 320}
           selectedTaskId={selectedTask?.id || ''}
+          selectedIds={picks.ids}
           selectedMilestoneKey={selectedMilestone?.key || ''}
-          onSelectTask={openTask}
+          onSelectTask={pickTask}
           onOpenTask={openFull}
           onSelectMilestone={(m) => (setFullMilestone(false), openMilestone(m))}
           onOpenMilestone={openMilestoneFull}
@@ -433,7 +450,7 @@ const PlanPage: React.FC = () => {
         )}
       </div>
       {panel && isCompact && !milestoneOver && (
-        <Sheet label={selectedTask ? `Task ${selectedTask.title}` : `Milestone ${selectedMilestone?.name}`} onClose={close}>
+        <Sheet label={panelLabel} onClose={close}>
           {panel}
         </Sheet>
       )}
