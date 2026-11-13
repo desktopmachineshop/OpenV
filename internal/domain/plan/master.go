@@ -3,11 +3,14 @@
 
 package plan
 
-// MasterTask is a top-level task of a project on the master plan.
+// MasterTask is a task of a project on the master plan, at the level the
+// reader asked for.
 type MasterTask struct {
-	ID       string  `json:"id"`
-	Title    string  `json:"title"`
-	WBS      string  `json:"wbs"`
+	ID    string `json:"id"`
+	Title string `json:"title"`
+	WBS   string `json:"wbs"`
+	// Depth is how many tasks sit above this one: 0 for a top-level task.
+	Depth    int     `json:"depth"`
 	Start    *string `json:"start"`
 	End      *string `json:"end"`
 	Progress int     `json:"progress"`
@@ -58,14 +61,26 @@ type MasterPlan struct {
 	Links    []MasterLink    `json:"links"`
 }
 
+// MasterAllLevels asks Add for every level of each plan.
+const MasterAllLevels = 0
+
 // Add puts a project's plan on the master plan: its span, its figures,
-// its top-level tasks, its dated milestones, and the links its tasks have
-// from tasks of other projects.
-func (m *MasterPlan) Add(name string, p *Plan) {
+// its tasks down to a level, its dated milestones, and the links its tasks
+// have from tasks of other projects. Level 1 is the top-level tasks; each
+// level further replaces a task that has sub-tasks with those sub-tasks,
+// so a line never draws a task and its sub-tasks over each other.
+// MasterAllLevels goes all the way down.
+func (m *MasterPlan) Add(name string, p *Plan, levels int) {
+	parent := map[string]bool{}
+	for _, t := range p.Tasks {
+		if t.ParentID != nil {
+			parent[*t.ParentID] = true
+		}
+	}
 	line := MasterProject{ProjectID: p.ProjectID, Name: name, Start: p.Start, End: p.End, Summary: p.Summary, Tasks: []MasterTask{}, Milestones: []MasterMilestone{}}
 	for _, t := range p.Tasks {
-		if t.Depth == 0 {
-			line.Tasks = append(line.Tasks, MasterTask{ID: t.ID, Title: t.Title, WBS: t.WBS, Start: t.SpanStart, End: t.SpanEnd, Progress: t.Progress,
+		if shown := !parent[t.ID] || t.Depth == levels-1; shown && (levels == MasterAllLevels || t.Depth < levels) {
+			line.Tasks = append(line.Tasks, MasterTask{ID: t.ID, Title: t.Title, WBS: t.WBS, Depth: t.Depth, Start: t.SpanStart, End: t.SpanEnd, Progress: t.Progress,
 				Done: t.Done, Late: t.Late, Critical: t.Critical || t.CriticalSubtasks})
 		}
 		for _, l := range t.ExternalLinks {

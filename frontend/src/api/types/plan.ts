@@ -128,9 +128,12 @@ export interface MasterProject {
   start: string | null;
   end: string | null;
   summary: ProjectPlan['summary'];
-  tasks: { id: string; title: string; wbs: string; start: string | null; end: string | null; progress: number; done: boolean; late: boolean; critical: boolean }[];
+  tasks: { id: string; title: string; wbs: string; depth: number; start: string | null; end: string | null; progress: number; done: boolean; late: boolean; critical: boolean }[];
   milestones: { key: string; name: string; date: string; progress: number; met: boolean; late: boolean }[];
 }
+
+/** How far down the master plan draws each project's tasks: 1 is the top-level tasks, each level further replaces a task with its sub-tasks. */
+export type MasterLevels = '1' | '2' | '3' | '4' | 'all';
 
 /** The plans of the workspace's projects the reader can see, and the links between their tasks. */
 export interface MasterPlan {
