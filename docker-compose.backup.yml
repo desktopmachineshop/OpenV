@@ -23,6 +23,9 @@
 #   BACKUP_RETENTION_DAYS   prune bundles older than N days (default 7; 0 = keep all)
 #   BACKUP_INTERVAL_SECONDS seconds between runs (default 86400 = daily)
 #   POSTGRES_PASSWORD       DB password (defaults to the dev "postgres")
+#   BACKUP_PASSPHRASE       encrypt every bundle with this passphrase
+#   BACKUP_COPY_HOST_DIR    a second host path each bundle is copied to
+#   BACKUP_POST_HOOK        a command run on each bundle ($BACKUP_FILE)
 
 services:
   backup:
@@ -43,6 +46,11 @@ services:
       BACKUP_DIR: /backups
       BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
       BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      # Set a passphrase to encrypt every bundle (see docs/operations.md).
+      BACKUP_PASSPHRASE: ${BACKUP_PASSPHRASE:-}
+      # A second directory each bundle is copied to, and a command run on it.
+      BACKUP_COPY_DIR: ${BACKUP_COPY_HOST_DIR:+/backups-copy}
+      BACKUP_POST_HOOK: ${BACKUP_POST_HOOK:-}
     volumes:
       # Same data the API sees, read-only — the sidecar only reads it.
       - openv-data:/data:ro
@@ -50,6 +58,9 @@ services:
       # Where bundles are written; defaults to the same ./backups dir the
       # manual make targets use, so make restore finds automated bundles too.
       - ${BACKUP_HOST_DIR:-./backups}:/backups
+      # The off-host copy: mount storage that is not this host's disk. Left
+      # unset, an empty scratch volume takes its place and nothing is copied.
+      - ${BACKUP_COPY_HOST_DIR:-backup-copy-unused}:/backups-copy
       # The shared recipe. Bind-mounted (not baked) so no image build is
       # needed and edits to the script take effect on restart.
       - ./scripts/backup.sh:/usr/local/bin/backup.sh:ro
@@ -58,6 +69,7 @@ services:
     command: ["--loop"]
 
 volumes:
+  backup-copy-unused:
   # Re-declared so this overlay attaches to the SAME named volumes the base
   # file defines (compose merges them; the project prefix keeps them identical).
   openv-data:

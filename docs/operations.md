@@ -937,6 +937,22 @@ BACKUP_RETENTION_DAYS=7
 BACKUP_HOST_DIR=./backups
 ```
 
+```dotenv
+# Encrypt every bundle (automated and `make backup`). Bundles are then named
+# openv-backup-<stamp>.tar.gz.enc. Keep the passphrase somewhere that is not
+# this host: without it a bundle cannot be restored.
+BACKUP_PASSPHRASE=
+
+# A second place each finished bundle is copied to: a host path on storage
+# that is not this machine's disk (a mounted network share, another volume).
+BACKUP_COPY_HOST_DIR=
+
+# A command run after each bundle, with BACKUP_FILE set to its path inside
+# the container, to push it wherever you keep copies. A hook that fails
+# fails the run, which is logged and retried at the next interval.
+BACKUP_POST_HOOK=
+```
+
 The sidecar reads `POSTGRES_PASSWORD` (the same variable the prod overlay
 requires) to authenticate `pg_dump`; on the dev stack it falls back to the dev
 default.
@@ -949,6 +965,48 @@ each run the script deletes bundles last modified more than
 `BACKUP_RETENTION_DAYS` days ago (both automated and manual bundles in that
 directory). `backups/` is gitignored; the directory is still not off-host — copy
 bundles (or point `BACKUP_HOST_DIR` at) durable, off-host storage.
+
+### Encrypting bundles and keeping a copy off the host
+
+A bundle holds the whole database (accounts, password hashes, hashed tokens,
+every workspace's data) and both volumes, the secrets key among them. Left
+as it is written, it is a plain archive on the same disk as the server:
+anyone who can read `backups/` can read everything, and a lost disk loses
+the backups with the data.
+
+- **Encrypt.** With `BACKUP_PASSPHRASE` set, each bundle is encrypted with
+  AES-256 (the key derived from the passphrase with PBKDF2) before it takes
+  its final name; nothing unencrypted is left in `backups/`. The sidecar's
+  stock image has no `openssl` command, so the script installs it with
+  `apk` the first time, which needs the network once; without it the run
+  fails and writes nothing rather than write an unencrypted bundle. To keep
+  the passphrase out of `.env`, mount it as a file and set
+  `BACKUP_PASSPHRASE_FILE` in the sidecar's environment instead.
+- **Copy off the host.** `BACKUP_COPY_HOST_DIR` copies each bundle to a
+  second directory, pruned by the same retention. `BACKUP_POST_HOOK` hands
+  the bundle to a command of yours (`rclone`, `aws s3 cp`, `scp`), for which
+  the sidecar needs an image that has that command.
+- **Restore.** `make restore` takes an encrypted bundle with the passphrase
+  in the environment, and needs `openssl` on the host:
+
+  ```sh
+  BACKUP_PASSPHRASE='…' make restore BACKUP=backups/openv-backup-20260827-020000.tar.gz.enc
+  ```
+
+  By hand: `sh scripts/backup.sh --decrypt <bundle.tar.gz.enc> <bundle.tar.gz>`.
+
+### Proving that a backup restores
+
+A backup nobody has restored is a hope. `make backup-drill` backs up a
+scratch database and scratch volumes with the real recipe, restores them the
+way `make restore` does and compares the two, plain and encrypted; it also
+checks that a wrong passphrase opens nothing, that a run whose dump fails
+writes no bundle, and that retention prunes. It needs a Postgres it may
+create databases on (`OPENV_TEST_DATABASE_URL`, or `DB_HOST`, `DB_PORT` and
+`DB_USER`) and the `pg_dump`, `psql` and `openssl` commands, and touches
+nothing but its own scratch databases. Run it after changing how the server
+is backed up, and restore a real bundle onto a spare machine now and then:
+the drill proves the recipe, not your disks.
 
 ### Restoring from an automated backup
 
