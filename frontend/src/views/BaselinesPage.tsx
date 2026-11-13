@@ -17,9 +17,11 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { Chip, ErrorBanner, FeatureGate, SegmentedControl, mutedStyle, pageType, panelStyle, plainLink, tapTarget } from '../components/ui';
-import { REDESIGN_PAGES_FEATURE } from '../features';
+import { JOINED_BASELINES_FEATURE, REDESIGN_PAGES_FEATURE } from '../features';
+import { useFeature } from '../hooks/useFeature';
 import { useViewport } from '../hooks/useViewport';
 import { ChangeTable, LIVE, TextChange, Timeline } from './BaselinesPageParts';
+import { PlanChange } from './BaselinesPagePlan';
 import { changeRows, filterRows, isStatusOnly, refMap, type ChangeFilter } from './BaselinesPageData';
 
 interface Base {
@@ -39,6 +41,7 @@ const nameOf = (id: string, baselines: Baseline[]) => (id === LIVE ? 'Working co
 const BaselinesContent: React.FC = () => {
   const { projectId = '' } = useParams<{ projectId: string }>();
   const { isPhone } = useViewport();
+  const joined = useFeature(JOINED_BASELINES_FEATURE);
   const [data, setData] = useState<Base | null>(null);
   const [cmp, setCmp] = useState<Comparison | null>(null);
   const [error, setError] = useState('');
@@ -114,7 +117,7 @@ const BaselinesContent: React.FC = () => {
   const statusOnlyCount = rows.filter(isStatusOnly).length;
 
   const timeline = (
-    <Timeline baselines={data.baselines} liveCount={data.live.length} base={base} target={target} onPick={pick} phone={isPhone} />
+    <Timeline plan={joined} baselines={data.baselines} liveCount={data.live.length} base={base} target={target} onPick={pick} phone={isPhone} />
   );
   const header = base && (
     <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }} data-help-key="baselines.compare">
@@ -172,6 +175,7 @@ const BaselinesContent: React.FC = () => {
     <p style={mutedStyle}>Comparing…</p>
   ) : (
     <>
+      {joined && <PlanChange before={cmp.diff.plan_base} after={cmp.diff.plan_target} fromName={nameOf(base, data.baselines)} toName={nameOf(target, data.baselines)} />}
       <ChangeTable rows={shown} selected={row?.key || ''} onSelect={setSelected} phone={isPhone} />
       {row && <TextChange row={row} before={before} after={after} suspect={suspect} bounded={!isPhone} />}
       <Link to={`/projects/${projectId}/baselines/${base}/compare?against=${target}`} style={{ ...plainLink, ...tapTarget, alignSelf: 'flex-start', fontSize: 12 }}>

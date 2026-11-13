@@ -11,10 +11,11 @@
 # only as far as a guard's, a decode's or a lookup's refusal, and the plan's
 # 90% floor counts only the routes with a 2xx or 3xx answer.
 
+DELETE /api/v1/baselines/{id}: 204; plan
 DELETE /api/v1/evidence-bundles/{id}: 204, 403, 404; evidence
 DELETE /api/v1/evidence-files/{id}: 204, 403, 404; evidence
 DELETE /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}: 204, 404; plan
-DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}: 204, 403, 404; plan
+DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}: 400, 403, 404; plan (errors only)
 DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}: 204, 403; plan
 DELETE /api/v1/projects/{id}/releases/{releaseId}: 204, 403, 404, 409; target_releases
 DELETE /api/v1/shared-products/{id}: 204, 403, 404; shared_products
@@ -30,6 +31,7 @@ GET /api/v1/artifacts: 200; guided_sessions
 GET /api/v1/artifacts/{id}: 200; guided_sessions
 GET /api/v1/artifacts/{id}/links: 200; guided_sessions
 GET /api/v1/artifacts/{id}/quality: 200, 400, 404; quality_profile_parties
+GET /api/v1/baselines/{id}/diff: 200; plan
 GET /api/v1/chatter: 200; guided_sessions, test_runs_results, todos, work_items
 GET /api/v1/events: 200; work_items
 GET /api/v1/evidence-bundles/{id}: 200, 404; evidence
@@ -45,6 +47,7 @@ GET /api/v1/orgs/{id}/plan-calendar: 200, 404; plan
 GET /api/v1/orgs/{id}/quality-rules: 200, 404; quality_profile_parties
 GET /api/v1/plan/master: 200, 400; plan
 GET /api/v1/projects/{id}/ai-map: 200; quality_profile_parties
+GET /api/v1/projects/{id}/baselines: 200; plan
 GET /api/v1/projects/{id}/download/docx: 200; vv_coverage_report
 GET /api/v1/projects/{id}/download/pdf: 200; vv_coverage_report
 GET /api/v1/projects/{id}/evidence-bundles: 200, 404; evidence
@@ -141,4 +144,4 @@ PUT /api/v1/work-items/{id}/external-links/{otherId}: 200, 400, 403; plan
 PUT /api/v1/work-items/{id}/relationships/{otherId}: 200, 400, 403; plan
 PUT /api/v1/work-items/{id}/schedule: 200, 400, 403; plan
 
-s5b: 129 of 392 routes reached (32.9%), 129 with a 2xx or 3xx answer (32.9%)
+s5b: 132 of 392 routes reached (33.7%), 131 with a 2xx or 3xx answer (33.4%)

@@ -5,12 +5,14 @@
   <prolog>
     <resourceid appname="openv-web" appid="baselines.timeline"/>
     <resourceid appname="openv-web" appid="baselines.compare"/>
+    <resourceid appname="openv-web" appid="baselines.plan"/>
     <resourceid appname="openv-web" appid="baselines.changes"/>
     <resourceid appname="openv-web" appid="baselines.diff"/>
   </prolog>
   <conbody>
     <p><b>Baselines</b> lists the project's baselines as a timeline, newest first, with the <b>Working copy</b>, the project as it is now, at the top. Select a baseline to compare from it; it is marked <b>from</b>, and what it is compared to is marked <b>to</b>. Choose what to compare to under <b>Compare to</b>: the working copy or another baseline.</p>
     <p>The comparison counts the artifacts <b>added</b>, <b>changed</b> and <b>removed</b>, and lists every change with the fields that changed. <b>Text only</b> narrows the list to changes of title or text, and <b>Links</b> to links added or removed. <b>Hide status-only</b> leaves out the artifacts whose only change is their review status, such as a whole project approved at once; it shows how many there are.</p>
+    <p>A baseline records the project's plan as well as its artifacts, so the comparison also says how far the project got. <b>Plan</b>, above the list of changes, gives the plan's progress, its tasks done, how many were late and its finish date on each side, and names each milestone or release that was met, moved or added between them. The timeline shows the plan's progress at each baseline. A baseline taken before plans were recorded has no plan to show, and the page says so. A baseline saved from the Gantt's <b>Tracking</b> is the same baseline, and is listed here.</p>
     <p>Select a change to read its text word by word: removed words are struck out in red and added words underlined in green. On a computer a long list of changes scrolls on its own, with its column headings kept in view, and the selected change's text stays on screen below it. With a change selected, <b>↑</b> and <b>↓</b> move to the previous and next change, <b>Home</b> and <b>End</b> to the first and last, and the text follows. When you compare to the working copy, the links of that artifact that are suspect now are named under it. <b>Open the full comparison</b> opens the comparison page with every link.</p>
   </conbody>
 </concept>

@@ -186,7 +186,7 @@ SECTION_KEYS = {
     ('project-pages', 'home'): ['home', 'home.figures', 'home.needs', 'home.activity', 'home.projects', 'home.proposals'],
     ('project-pages', 'design'): ['design', 'design.tree', 'design.detail', 'design.attributes', 'design.trace'],
     ('project-pages', 'tests'): ['tests', 'tests.runs', 'tests.cases'],
-    ('project-pages', 'baselines-page'): ['baselines.timeline', 'baselines.compare', 'baselines.changes', 'baselines.diff'],
+    ('project-pages', 'baselines-page'): ['baselines.timeline', 'baselines.compare', 'baselines.plan', 'baselines.changes', 'baselines.diff'],
 }
 
 

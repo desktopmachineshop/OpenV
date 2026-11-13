@@ -1,12 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/plan"
 	"github.com/openv/requirements-platform/internal/domain/snapshot"
 )
 
@@ -74,6 +76,41 @@ func (h *Handler) DiffBaseline(w http.ResponseWriter, r *http.Request) {
 	result := baselines.Diff(base, target)
 	result.Base = baselines.SnapshotRef{ID: baseline.ID, Name: baseline.Name}
 	result.Target = targetRef
+	if !h.diffPlan(w, r, baseline.ProjectID, against, result) {
+		return
+	}
 
 	writeJSONOK(w, result)
+}
+
+// diffPlan puts on a comparison where the project's plan stood on each
+// side: at a baseline, what it recorded; live, the plan as it stands. A
+// side with no plan to show is left out. It answers false after writing an
+// error.
+func (h *Handler) diffPlan(w http.ResponseWriter, r *http.Request, projectID, against string, result *baselines.DiffResult) bool {
+	if h.PlanService == nil {
+		return true
+	}
+	moments, err := h.PlanService.BaselineMoments(projectID)
+	if err != nil {
+		respondInternal(w, r, "failed to load the plan's baselines", err)
+		return false
+	}
+	if m := moments[result.Base.ID]; m != nil {
+		result.PlanBase, _ = json.Marshal(m)
+	}
+	if against != "live" {
+		if m := moments[result.Target.ID]; m != nil {
+			result.PlanTarget, _ = json.Marshal(m)
+		}
+		return true
+	}
+	p, ok := h.loadPlan(w, r, projectID)
+	if !ok {
+		return false
+	}
+	if len(p.Tasks) > 0 || len(p.Milestones) > 0 {
+		result.PlanTarget, _ = json.Marshal(plan.MomentOf(p))
+	}
+	return true
 }

@@ -84,6 +84,7 @@ var Registry = []Feature{
 	{Key: FeaturePlanSizing, ShippedIn: "0.34.0", Summary: "Size a plan before it is staffed: planned resources stand in for people to be chosen later, with a rate and a capacity, and are handed to a person or an agent when one is chosen; and a plan's defaults say how new tasks are scheduled and whether their effort decides their duration"},
 	{Key: FeatureMilestoneLinks, ShippedIn: "0.34.0", Summary: "Milestones that wait for tasks: link tasks to a milestone from its panel or by dragging a link onto its diamond, and date it by the plan, on the day the last of them finishes, or keep its date fixed"},
 	{Key: FeatureWorkspacePlan, ShippedIn: "0.35.0", Summary: "A Plan page for the whole workspace: every project's plan on one chart, a line for each project with its top-level tasks and milestones on a shared time scale"},
+	{Key: FeatureJoinedBaselines, ShippedIn: "0.35.0", Summary: "One baseline for the project: a baseline records the plan with the artifacts, and comparing two shows how far the project got, its dates and its milestones, beside what changed in its definition"},
 }
 
 // Feature keys the code gates on.
@@ -348,6 +349,10 @@ const (
 	// chart of every project's plan, and its entry in the workspace's
 	// menu. Frontend only: it reads the master plan the Gantt already has.
 	FeatureWorkspacePlan = "workspace-plan"
+	// FeatureJoinedBaselines is the plan on the Baselines page: where the
+	// project's plan stood on each side of a comparison. The server records
+	// the plan with every baseline either way; the key gates the page.
+	FeatureJoinedBaselines = "joined-baselines"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

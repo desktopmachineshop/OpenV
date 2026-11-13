@@ -11,6 +11,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### New features
 
+- **One baseline for the project.** A baseline now records the plan
+  with the artifacts, so a key moment is kept once. On the Baselines
+  page, **Plan** shows the plan's progress, tasks done, late tasks and
+  finish date on each side of a comparison, with every milestone or
+  release that was met, moved or added, above what changed in the
+  definition. **Save a baseline** on the Gantt takes the same baseline,
+  and the plan no longer stops at 11. Baselines taken before this keep
+  what they had: artifacts only, or the plan only.
 - **A Plan page for the whole workspace.** **Plan**, in the workspace's
   menu beside Home, shows every project's plan on one chart: a line for
   each project you can see, with its top-level tasks and milestones on a

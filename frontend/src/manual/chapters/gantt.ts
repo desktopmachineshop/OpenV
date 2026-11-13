@@ -432,7 +432,7 @@ A **planned resource** is a placeholder for someone you will choose later: a wel
 
 **Tracking**, above the chart, is where you compare the plan with what was agreed and with what has happened.
 
-**Baselines.** **Save a baseline** records every task's dates, duration, effort and cost as they stand. Save one when the plan is agreed. The chart then draws a thin grey bar under each task where the baseline had it, and the task's panel says how many working days later or earlier it now starts and finishes. A plan keeps up to 11 baselines. Pick the one to measure against in the list; the newest is used until you do. **Show on the chart** hides the grey bars.
+**Baselines.** **Save a baseline** records every task's dates, duration, effort and cost as they stand. Save one when the plan is agreed. The chart then draws a thin grey bar under each task where the baseline had it, and the task's panel says how many working days later or earlier it now starts and finishes. A baseline saved here is a baseline of the project: it records the artifacts with the plan, and the **Baselines** page compares two for progress and for what changed. Pick the one to measure against in the list; the newest is used until you do. **Show on the chart** hides the grey bars.
 
 **What happened.** A task's panel has a **Tracking** section. **Actual start** and **Actual finish** record the days work really began and ended. **% complete** replaces the progress counted from to-dos and sub-tasks with a figure you type; clear it to go back to the counted one. **Actual cost** records what the task has cost so far; left empty, the task is taken to have cost its earned share of the planned cost.
 

@@ -224,6 +224,29 @@ func TestPlanRepositoryRoundTrip(t *testing.T) {
 	if got, err := repo.ListBaselines(project); err != nil || len(got) != 1 || got[0].Name != "As approved" || len(got[0].Tasks) != 1 || *got[0].Tasks[0].Start != start {
 		t.Fatalf("baselines: %+v %v", got, err)
 	}
+	// A baseline that belongs to a project baseline keeps where the plan
+	// stood, is not deleted from the plan, and goes with its owner.
+	var owner string
+	if err := db.QueryRow(`INSERT INTO baselines (id, project_id, name, snapshot) VALUES (gen_random_uuid(), $1, 'Gate 1', '{}') RETURNING id`, project).Scan(&owner); err != nil {
+		t.Fatal(err)
+	}
+	joined := &plan.Baseline{ID: "33333333-3333-4333-8333-333333333333", CreatedAt: time.Date(2027, 3, 2, 9, 0, 0, 0, time.UTC), ProjectID: project, Name: "Gate 1", Tasks: []plan.BaselineTask{},
+		BaselineID: &owner, Moment: &plan.Moment{Progress: 40, Tasks: 2, Done: 1, Milestones: []plan.MomentMilestone{{Key: "m", Name: "Gate", Met: true}}}}
+	if err := repo.CreateBaseline(joined); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := repo.ListBaselines(project); len(got) != 2 || got[1].BaselineID == nil || *got[1].BaselineID != owner || got[1].Moment == nil || got[1].Moment.Progress != 40 || !got[1].Moment.Milestones[0].Met || got[0].Moment != nil {
+		t.Fatalf("a joined baseline: %+v", got)
+	}
+	if err := repo.DeleteBaseline(project, joined.ID); !errors.Is(err, plan.ErrJoinedBaseline) {
+		t.Fatalf("a joined baseline is not deleted from the plan: %v", err)
+	}
+	if _, err := db.Exec(`DELETE FROM baselines WHERE id = $1`, owner); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := repo.ListBaselines(project); len(got) != 1 {
+		t.Fatalf("a joined baseline goes with its project baseline: %+v", got)
+	}
 	status := "2027-03-10"
 	if err := repo.SaveSettings(project, plan.Settings{WorkingDays: []int{1, 2, 3, 4, 5}, Tracking: plan.Tracking{StatusDate: &status, ActiveBaselineID: &base.ID}, Scheduling: plan.Scheduling{Mode: plan.ModeManual, ScheduleFrom: plan.FromStart}}); err != nil {
 		t.Fatal(err)

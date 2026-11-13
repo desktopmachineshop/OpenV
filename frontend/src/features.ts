@@ -123,3 +123,10 @@ export const WORKSPACE_PLAN_FEATURE: FeatureKey = 'workspace-plan';
  * phone's bottom bar as Home and those groups, and a page's name shown once.
  */
 export const UI_REFRESH_FEATURE: FeatureKey = 'ui-refresh';
+
+/**
+ * The plan on the Baselines page: where the project's plan stood on each
+ * side of a comparison, beside what changed in its definition. The server
+ * records the plan with every baseline either way; the key gates the page.
+ */
+export const JOINED_BASELINES_FEATURE: FeatureKey = 'joined-baselines';

@@ -110,6 +110,15 @@ removed. **Hide status-only** leaves out the artifacts whose only change is
 their review status, such as a whole project approved at once; it shows how
 many there are.
 
+A baseline records the project's plan as well as its artifacts, so the
+comparison also says how far the project got. **Plan**, above the list of
+changes, gives the plan's progress, its tasks done, how many were late and
+its finish date on each side, and names each milestone or release that was
+met, moved or added between them. The timeline shows the plan's progress at
+each baseline. A baseline taken before plans were recorded has no plan to
+show, and the page says so. A baseline saved from the Gantt's **Tracking**
+is the same baseline, and is listed here.
+
 Select a change to read its text word by word: removed words are struck out
 in red and added words underlined in green. On a computer a long list of
 changes scrolls on its own, with its column headings kept in view, and the
