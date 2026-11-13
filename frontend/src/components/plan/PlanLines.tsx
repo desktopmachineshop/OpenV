@@ -9,7 +9,8 @@ import { planAPI, type MasterLevels, type MasterPlan, type PlanTask, type Projec
 import { apiErrorMessage } from '../../api/errors';
 import { ellipsis, eyebrowStyle, mutedStyle } from '../ui';
 import { buildScale, buildTicks, openingScroll, shortDate, spanLabel, toDay, todayScroll, type Scale, type Tick, type Zoom } from './ganttScale';
-import { relationshipLabel } from './planModel';
+import { barTone, relationshipLabel } from './planModel';
+import { PlanBar } from './PlanBar';
 
 export interface Bar {
   id: string;
@@ -73,18 +74,21 @@ const Band: React.FC<{
         ))}
       {rows.map((row, i) =>
         row.map((b) => (
-          <button
+          <PlanBar
             key={b.id}
-            type="button"
-            data-critical={(showCritical && b.critical) || undefined}
-            data-summary={b.summary || undefined}
-            disabled={!onBar}
-            onClick={() => onBar?.(b.id)}
-            title={`${b.title}: ${spanLabel(b.start, b.end, today)}, ${b.progress}%${showCritical && b.critical ? ', on the critical path' : ''}`}
-            style={{ ...ellipsis, position: 'absolute', left: scale.x(b.start!), width: Math.max((toDay(b.end!) - toDay(b.start!) + 1) * scale.dayWidth, 6), top: 24 + i * 24, height: 20, boxSizing: 'border-box', padding: '0 6px', fontSize: 12, lineHeight: '18px', textAlign: 'left', cursor: onBar ? 'pointer' : 'default', borderRadius: b.summary ? 2 : 4, fontWeight: b.summary ? 600 : 400, border: showCritical && b.critical ? '2px solid var(--warning)' : `1px solid ${b.late ? 'var(--danger)' : b.summary ? 'var(--text-secondary)' : 'var(--border)'}`, color: 'var(--text)', background: b.summary ? 'var(--neutral-soft)' : `linear-gradient(90deg, ${b.done ? 'var(--success)' : 'var(--accent)'} ${b.progress}%, var(--surface-alt) ${b.progress}%)` }}
-          >
-            <span style={{ background: 'color-mix(in srgb, var(--surface) 70%, transparent)', borderRadius: 2, padding: '0 2px' }}>{b.title}</span>
-          </button>
+            left={scale.x(b.start!)}
+            width={Math.max((toDay(b.end!) - toDay(b.start!) + 1) * scale.dayWidth, 6)}
+            top={24 + i * 24}
+            height={20}
+            tone={barTone({ done: b.done, late: b.late, progress: b.progress, column: '' })}
+            progress={b.progress}
+            summary={b.summary}
+            critical={showCritical && b.critical}
+            label={`${b.title}: ${spanLabel(b.start, b.end, today)}, ${b.progress}%${showCritical && b.critical ? ', on the critical path' : ''}`}
+            text={b.title}
+            cursor={onBar ? 'pointer' : 'default'}
+            button={{ 'data-critical': (showCritical && b.critical) || undefined, 'data-summary': b.summary || undefined, disabled: !onBar, onClick: () => onBar?.(b.id) }}
+          />
         )),
       )}
     </div>

@@ -5,7 +5,8 @@ import React, { useRef, useState } from 'react';
 import type { PlanTask } from '../../api/client';
 import { MONO, ellipsis } from '../ui';
 import { ROW_HEIGHT } from './GanttLinks';
-import { BAR_COLORS, BarEnd, barTone } from './planModel';
+import { BarEnd, barTone } from './planModel';
+import { PlanBar } from './PlanBar';
 import { Scale, addDays, shortDate, spanLabel } from './ganttScale';
 
 const caret: React.CSSProperties = {
@@ -229,7 +230,6 @@ export const TaskBar: React.FC<{
   }
   const left = scale.x(start);
   const width = Math.max(scale.x(end) + scale.dayWidth - left, 6);
-  const colors = BAR_COLORS[barTone(task)];
 
   const begin = (mode: DragMode) => (e: React.PointerEvent) => {
     if (!draggable || e.button !== 0) return;
@@ -266,51 +266,37 @@ export const TaskBar: React.FC<{
   const label = `${task.title}: ${spanLabel(start, end, today)}, ${task.progress}% complete${task.late ? ', late' : ''}${task.critical ? ', critical' : critical ? ', the critical path runs through its sub-tasks' : ''}`;
   return (
     <>
-      <button
-        type="button"
-        aria-label={label}
-        title={label}
-        data-task-bar={task.id}
-        data-task-summary={task.subtasks_total > 0 ? "" : undefined}
-        onClick={() => {
-          if (!dragged.current) onSelect();
-          dragged.current = false;
-        }}
-        onPointerDown={begin('move')}
-        {...pointer}
-        style={{
-          position: 'absolute',
-          left,
-          width,
-          top: summary ? 12 : 8,
-          height: summary ? 10 : ROW_HEIGHT - 16,
-          padding: 0,
-          borderRadius: summary ? 2 : 4,
-          border: `1px solid ${summary ? 'var(--text-secondary)' : colors.border}`,
-          background: summary ? 'var(--neutral-soft)' : colors.track,
-          boxShadow: critical ? '0 0 0 2px var(--warning)' : selected ? '0 0 0 2px var(--tint-blue-border)' : undefined,
-          cursor: draggable ? (drag ? 'grabbing' : 'grab') : 'pointer',
-          overflow: 'visible',
-          touchAction: draggable ? 'none' : undefined,
+      <PlanBar
+        left={left}
+        width={width}
+        top={summary ? 12 : 8}
+        height={summary ? 10 : ROW_HEIGHT - 16}
+        tone={barTone(task)}
+        progress={task.progress}
+        summary={summary}
+        critical={critical}
+        selected={selected}
+        label={label}
+        cursor={draggable ? (drag ? 'grabbing' : 'grab') : 'pointer'}
+        button={{
+          'data-task-bar': task.id,
+          'data-task-summary': summary ? '' : undefined,
+          onClick: () => {
+            if (!dragged.current) onSelect();
+            dragged.current = false;
+          },
+          onPointerDown: begin('move'),
+          ...pointer,
+          style: { touchAction: draggable ? 'none' : undefined },
         }}
       >
-        <span
-          style={{
-            display: 'block',
-            height: '100%',
-            width: `${task.progress}%`,
-            borderRadius: 'inherit',
-            background: summary ? 'var(--text-secondary)' : colors.fill,
-            opacity: summary ? 0.85 : 1,
-          }}
-        />
         {draggable && (
           <>
             <span aria-hidden onPointerDown={begin('start')} {...pointer} style={handle('left')} />
             <span aria-hidden onPointerDown={begin('end')} {...pointer} style={handle('right')} />
           </>
         )}
-      </button>
+      </PlanBar>
       <span
         aria-hidden
         style={{ position: 'absolute', left: left + width + 6, top: 0, lineHeight: `${ROW_HEIGHT}px`, fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap', pointerEvents: 'none' }}
