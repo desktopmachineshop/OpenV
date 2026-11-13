@@ -11,6 +11,16 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **A tidier menu.** With no project open the rail is **Home**, **Plan**,
+  then **Agents**, **Settings** and **Admin**. **Plan** holds every
+  project's plan and two tabs of what is yours across them: **My tasks**,
+  new, and **To-dos** (which was *My to-dos* in the rail). **Agents** is
+  new at this level and holds the workspace's agents with **Runs** as its
+  tab. Inside a project the rail groups the same way: **Plan**,
+  **Define**, **Verify**, then **Agents**, **Activity**, **Settings** and
+  **Admin**. News has left the rail: releases arrive as notifications,
+  and the notes are in your account menu and beside the release in the
+  workspace's settings.
 - **A card opens beside the board.** On a computer, clicking a card opens
   it in a panel at the side that the board makes room for, so the columns
   stay in view and you can go from card to card. Each card, and the open

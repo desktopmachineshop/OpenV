@@ -428,7 +428,8 @@ export const OrgSettings: React.FC = () => {
                   ? 'Stable: new features turn on for this workspace at the monthly release. Fixes arrive with every nightly.'
                   : 'Nightly: every release reaches this workspace the day it ships.'}
                 {org.release_channel_locked && ' This plan always runs the nightly channel.'}
-                {currentRelease && ` The platform is on release ${currentRelease}.`}
+                {currentRelease && ` The platform is on release ${currentRelease}.`}{' '}
+                <Link to="/whats-new">What's new in each release</Link>
               </p>
               {isAdmin && !org.release_channel_locked ? (
                 <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>

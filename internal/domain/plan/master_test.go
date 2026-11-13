@@ -89,3 +89,25 @@ func TestTaskChangesBetweenTwoMoments(t *testing.T) {
 		t.Error("a plan compared with itself has no changes")
 	}
 }
+
+// A person's tasks across plans: the ones assigned to them or that they
+// are a resource of, a parent left to its sub-tasks.
+func TestMyTasksAcrossPlans(t *testing.T) {
+	id := func(s string) *string { return &s }
+	p := &Plan{ProjectID: "p", Today: "2026-11-13", Tasks: []*Task{
+		{ID: "build", Title: "Build", AssigneeType: "user", AssigneeID: id("ann")},
+		{ID: "frame", Title: "Frame", ParentID: id("build"), AssigneeType: "user", AssigneeID: id("ann")},
+		{ID: "wire", Title: "Wire", ParentID: id("build"), Assignments: []Assignment{{Type: "user", ID: "ann"}, {Type: "user", ID: "bob"}}},
+		{ID: "paint", Title: "Paint", AssigneeType: "user", AssigneeID: id("bob")},
+		{ID: "draft", Title: "Draft", AssigneeType: "agent", AssigneeID: id("ann")},
+	}}
+	m := MyTasks{Tasks: []MyTask{}}
+	m.Add("Rig", p, "ann")
+	got := []string{}
+	for _, task := range m.Tasks {
+		got = append(got, task.ID)
+	}
+	if want := []string{"frame", "wire"}; !reflect.DeepEqual(got, want) || m.Tasks[0].ProjectName != "Rig" || m.Today != "2026-11-13" {
+		t.Fatalf("got %v %+v, want %v", got, m, want)
+	}
+}

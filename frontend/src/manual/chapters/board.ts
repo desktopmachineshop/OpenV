@@ -102,8 +102,8 @@ note's artifact.
 
 ### My to-dos
 
-**My to-dos**, in the workspace's rail beside *Runs* (and linked from every
-project's To-dos page), gathers your to-dos across the workspace: every
+**My to-dos**, the **To-dos** tab under **Plan** in the workspace's rail (and
+linked from every project's To-dos page), gathers your to-dos across the workspace: every
 to-do assigned to you in a project you can open, each labelled with its
 project, and your **personal** to-dos. A personal to-do belongs to no
 project and nobody else sees it; the quick add on My to-dos makes one.

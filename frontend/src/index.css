@@ -711,10 +711,14 @@ textarea {
   outline-offset: 1px;
 }
 .ov-rail-rule {
-  width: 32px;
-  height: 1px;
-  margin: 6px 0;
-  background: var(--sidebar-border);
+  /* A rule that reads against the dark rail: wider, two pixels, and in the
+     rail's faint text color rather than its border, which all but vanished. */
+  width: 44px;
+  height: 2px;
+  margin: 8px 0;
+  border-radius: 1px;
+  background: var(--sidebar-text-faint);
+  opacity: 0.55;
 }
 .ov-rail-flyout {
   position: absolute;
