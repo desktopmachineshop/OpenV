@@ -175,7 +175,7 @@ const BaselinesContent: React.FC = () => {
     <p style={mutedStyle}>Comparing…</p>
   ) : (
     <>
-      {joined && <PlanChange before={cmp.diff.plan_base} after={cmp.diff.plan_target} fromName={nameOf(base, data.baselines)} toName={nameOf(target, data.baselines)} />}
+      {joined && <PlanChange before={cmp.diff.plan_base} after={cmp.diff.plan_target} tasks={cmp.diff.plan_tasks} fromName={nameOf(base, data.baselines)} toName={nameOf(target, data.baselines)} />}
       <ChangeTable rows={shown} selected={row?.key || ''} onSelect={setSelected} phone={isPhone} />
       {row && <TextChange row={row} before={before} after={after} suspect={suspect} bounded={!isPhone} />}
       <Link to={`/projects/${projectId}/baselines/${base}/compare?against=${target}`} style={{ ...plainLink, ...tapTarget, alignSelf: 'flex-start', fontSize: 12 }}>

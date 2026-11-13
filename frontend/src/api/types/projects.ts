@@ -231,6 +231,30 @@ export interface BaselineDiff {
   /** Where the plan stood on each side; absent for a side that has no plan recorded. */
   plan_base?: BaselinePlan;
   plan_target?: BaselinePlan;
+  /** The tasks of the plan that differ between the two sides, when both recorded it. */
+  plan_tasks?: BaselineTaskChange[];
+}
+
+/** A task of the plan as a baseline recorded it. */
+export interface BaselineTaskMoment {
+  id: string;
+  start: string | null;
+  end: string | null;
+  title?: string;
+  progress?: number;
+  done?: boolean;
+}
+
+/** What happened to one task between the two sides of a comparison. */
+export interface BaselineTaskChange {
+  id: string;
+  title: string;
+  change: 'added' | 'removed' | 'finished' | 'reopened' | 'moved' | 'progress';
+  before: BaselineTaskMoment | null;
+  after: BaselineTaskMoment | null;
+  /** Calendar days later (negative: earlier) the task starts and ends; 0 when a date did not move. */
+  start_shift_days: number;
+  finish_shift_days: number;
 }
 
 export interface ArtifactTypeDef {

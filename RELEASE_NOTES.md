@@ -11,6 +11,22 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **All projects follows the project hierarchy.** On the workspace's
+  Plan page and a Gantt's All projects view, a project that belongs under
+  another is listed beneath it, indented, and a parent folds its projects
+  away.
+- **A baseline comparison names the tasks that changed.** Under
+  **Plan** on the Baselines page, **Tasks that changed** lists each task
+  that was added, removed, finished or moved between the two sides, with
+  how many days later or earlier it now ends, the ones that slipped
+  furthest first. Baselines taken from now on also keep each task's name,
+  so a task deleted since is still named.
+- **The full comparison page shows the plan too**, with the same figures
+  and task list as the Baselines page.
+- **All projects remembers its level.** The level of detail you choose on
+  the workspace's Plan page or a Gantt's All projects view is kept in your
+  browser for the next visit, and the page's controls are thumb-sized on
+  a phone.
 - **Encrypted, off-host backups for a self-hosted server.** Set
   `BACKUP_PASSPHRASE` and every backup bundle is encrypted; `make restore`
   decrypts it with the same passphrase. `BACKUP_COPY_HOST_DIR` copies each

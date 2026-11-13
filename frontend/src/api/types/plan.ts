@@ -124,6 +124,8 @@ export interface PlanExternalLink {
 /** A project's line of the master plan. */
 export interface MasterProject {
   project_id: string;
+  /** The project this one belongs under, '' for none. */
+  parent_project_id: string;
   name: string;
   start: string | null;
   end: string | null;

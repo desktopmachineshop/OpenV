@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAppStore } from '../state/store';
 import { useFeature } from '../hooks/useFeature';
+import { useViewport } from '../hooks/useViewport';
 import { GANTT_PLAN_FEATURE, WORKSPACE_PLAN_FEATURE } from '../features';
 import { Navbar } from '../components/Navbar';
 import { PanelHeader, SegmentedControl, buttonStyle, panelStyle } from '../components/ui';
@@ -29,6 +30,7 @@ export const GanttWorkspace: React.FC = () => {
   const [zoom, setZoom] = useState<Zoom>('months');
   const [showCritical, setShowCritical] = useState(true);
   const [todaySignal, setTodaySignal] = useState(0);
+  const { isPhone } = useViewport();
   if ((gatesSettled && !on) || noWorkspace) return <Navigate to="/projects" replace />;
   return (
     <div className="app-shell" style={{ background: 'var(--bg-app)', display: 'flex', flexDirection: 'column' }}>
@@ -47,13 +49,13 @@ export const GanttWorkspace: React.FC = () => {
                     onClick={() => setShowCritical((v) => !v)}
                     title="Mark each project's critical path, which is the top row of its line"
                     style={{
-                      ...buttonStyle('secondary', { compact: true }),
+                      ...buttonStyle('secondary', { compact: !isPhone }),
                       ...(showCritical ? { background: 'var(--tint-yellow)', borderColor: 'var(--tint-yellow-border)', color: 'var(--warning-text)' } : {}),
                     }}
                   >
                     Critical path
                   </button>
-                  <button type="button" onClick={() => setTodaySignal((n) => n + 1)} style={buttonStyle('secondary', { compact: true })}>
+                  <button type="button" onClick={() => setTodaySignal((n) => n + 1)} style={buttonStyle('secondary', { compact: !isPhone })}>
                     Today
                   </button>
                   <SegmentedControl aria-label="Zoom" options={ZOOMS} value={zoom} onChange={setZoom} style={{ fontSize: 12 }} />

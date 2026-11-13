@@ -2,9 +2,9 @@
 // each side, so the same two moments answer how far the project got as
 // well as what changed in its definition. A baseline records the plan when
 // it is taken; the working copy's side is the plan as it stands.
-import React from 'react';
-import type { BaselinePlan } from '../api/client';
-import { Chip, eyebrowStyle, mutedStyle, panelStyle } from '../components/ui';
+import React, { useState } from 'react';
+import type { BaselinePlan, BaselineTaskChange } from '../api/client';
+import { Chip, buttonStyle, eyebrowStyle, mutedStyle, panelStyle } from '../components/ui';
 import { shortDate, toDay } from '../components/plan/ganttScale';
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -47,6 +47,54 @@ export const milestoneChanges = (before: BaselinePlan, after: BaselinePlan, now 
   return out;
 };
 
+const days = (n: number) => `${Math.abs(n)} ${Math.abs(n) === 1 ? 'day' : 'days'} ${n > 0 ? 'later' : 'earlier'}`;
+
+export interface TaskLine {
+  id: string;
+  title: string;
+  /** What happened, in words. */
+  change: string;
+  tone: 'success' | 'danger' | 'info' | 'neutral';
+}
+
+/**
+ * The tasks that changed, as lines to read: the ones that finish later
+ * first, by how much, then the rest in the order the plan has them.
+ */
+export const taskLines = (changes: BaselineTaskChange[], now = today()): TaskLine[] => {
+  const line = (c: BaselineTaskChange): TaskLine => {
+    const title = c.title || 'A task since deleted';
+    const moved = () => {
+      const parts: string[] = [];
+      if (c.finish_shift_days) parts.push(`ends ${days(c.finish_shift_days)} (${shortDate(c.before?.end ?? null, now)} → ${shortDate(c.after?.end ?? null, now)})`);
+      if (c.start_shift_days && c.start_shift_days !== c.finish_shift_days) parts.push(`starts ${days(c.start_shift_days)}`);
+      return parts.join(', ') || 'dates changed';
+    };
+    switch (c.change) {
+      case 'added':
+        return { id: c.id, title, change: 'added', tone: 'info' };
+      case 'removed':
+        return { id: c.id, title, change: 'removed', tone: 'danger' };
+      case 'finished':
+        return { id: c.id, title, change: c.finish_shift_days ? `done, ${moved()}` : 'done', tone: 'success' };
+      case 'reopened':
+        return { id: c.id, title, change: 'reopened', tone: 'danger' };
+      case 'moved':
+        return { id: c.id, title, change: moved(), tone: c.finish_shift_days > 0 ? 'danger' : c.finish_shift_days < 0 ? 'success' : 'neutral' };
+      default:
+        return { id: c.id, title, change: `${c.before?.progress ?? 0}% → ${c.after?.progress ?? 0}%`, tone: 'neutral' };
+    }
+  };
+  const order = (c: BaselineTaskChange) => (c.change === 'moved' && c.finish_shift_days > 0 ? -c.finish_shift_days : 0);
+  return changes
+    .map((c, i) => ({ c, i }))
+    .sort((a, b) => order(a.c) - order(b.c) || a.i - b.i)
+    .map(({ c }) => line(c));
+};
+
+/** How many changed tasks the page lists before it folds the rest away. */
+const TASKS_SHOWN = 8;
+
 const figure: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: 2, minWidth: 110 };
 
 const Figure: React.FC<{ label: string; before?: string; after: string; note?: string; bad?: boolean }> = ({ label, before, after, note, bad }) => (
@@ -72,7 +120,8 @@ const Figure: React.FC<{ label: string; before?: string; after: string; note?: s
  * (the earlier baseline was taken before plans were recorded) it shows
  * that side alone, and says so. Nothing when neither side has a plan.
  */
-export const PlanChange: React.FC<{ before?: BaselinePlan; after?: BaselinePlan; fromName: string; toName: string }> = ({ before, after, fromName, toName }) => {
+export const PlanChange: React.FC<{ before?: BaselinePlan; after?: BaselinePlan; tasks?: BaselineTaskChange[]; fromName: string; toName: string }> = ({ before, after, tasks, fromName, toName }) => {
+  const [allTasks, setAllTasks] = useState(false);
   const at = after || before;
   if (!at) return null;
   const now = today();
@@ -81,6 +130,7 @@ export const PlanChange: React.FC<{ before?: BaselinePlan; after?: BaselinePlan;
   const shift = both ? dateShift(before.end, after.end) : '';
   const moved = both ? milestoneChanges(before, after, now).filter((m) => m.change) : [];
   const count = (p: BaselinePlan) => `${p.done}/${p.tasks}`;
+  const lines = taskLines(tasks || [], now);
   return (
     <section aria-label="Plan" data-help-key="baselines.plan" style={{ ...panelStyle, padding: 12, display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: 8 }}>
@@ -111,6 +161,30 @@ export const PlanChange: React.FC<{ before?: BaselinePlan; after?: BaselinePlan;
         </ul>
       )}
       {both && moved.length === 0 && after.milestones.length > 0 && <span style={mutedStyle}>No milestone moved.</span>}
+      {both && tasks && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <h3 style={eyebrowStyle}>
+            Tasks that changed <span style={{ fontWeight: 400 }}>{lines.length}</span>
+          </h3>
+          {lines.length === 0 ? (
+            <span style={mutedStyle}>Every task reads as it did.</span>
+          ) : (
+            <ul aria-label="Tasks that changed" style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
+              {(allTasks ? lines : lines.slice(0, TASKS_SHOWN)).map((t) => (
+                <li key={t.id} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+                  <span>{t.title}</span>
+                  <Chip tone={t.tone}>{t.change}</Chip>
+                </li>
+              ))}
+            </ul>
+          )}
+          {lines.length > TASKS_SHOWN && (
+            <button type="button" aria-expanded={allTasks} onClick={() => setAllTasks((v) => !v)} style={{ ...buttonStyle('ghost', { compact: true }), alignSelf: 'flex-start' }}>
+              {allTasks ? 'Show fewer' : `Show all ${lines.length}`}
+            </button>
+          )}
+        </div>
+      )}
     </section>
   );
 };
