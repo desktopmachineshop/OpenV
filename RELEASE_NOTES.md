@@ -21,6 +21,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **One bar on every chart of the plan.** The Timeline and All projects
+  now draw a task's bar exactly as the Gantt does: green when done, red
+  when late, filled as far as the work has gone, with a parent in grey
+  and the critical path ringed in amber.
 - **Choose how much detail All projects shows.** A level menu beside the
   Project heading, on the workspace's Plan page and in a Gantt's All
   projects view, sets how far down each project's tasks are drawn. It
