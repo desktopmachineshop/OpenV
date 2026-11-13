@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.35.0 — 2026-11-13
+
 ### New features
 
 - **One baseline for the project.** A baseline now records the plan
