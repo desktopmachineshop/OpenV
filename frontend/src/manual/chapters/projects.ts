@@ -152,6 +152,14 @@ a two-step wizard.
   actually holds are offered. Ticking any makes the download a **.zip**: the
   document plus an \`attachments/\` folder, each file named by its figure
   reference where it has one.
+- **Plan and tasks** — tick **The plan and its tasks** to bring the
+  project's plan along: every task with its dates, effort, progress and who
+  it is assigned to, and the milestones. It travels as a file in a
+  \`plan/\` folder beside the document, in the format nearest the one you
+  chose: JSON, CSV or a workbook beside those, a PDF beside a PDF or Word
+  specification, and Microsoft Project XML beside ReqIF. It also makes the
+  download a **.zip**. It is offered for the project as it stands, when it
+  has a task or a milestone, and not for a baseline.
 
 The line at the foot of the wizard says what you are about to get — "1 of 3
 sections, no headings, with figures" — and the button refuses to download a

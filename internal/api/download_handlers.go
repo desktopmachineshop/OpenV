@@ -12,6 +12,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/plan"
 )
 
 // Taking a project away used to mean four separate things: a JSON export, a
@@ -52,7 +53,31 @@ func (h *Handler) DownloadOptions(w http.ResponseWriter, r *http.Request) {
 		respondInternal(w, r, "failed to read download options", err)
 		return
 	}
-	writeJSONOK(w, opts)
+	// A live project with a task or a milestone can take its plan along.
+	out := downloadOptions{Options: opts}
+	if id := r.URL.Query().Get("baseline_id"); h.PlanService != nil && (id == "" || id == "live") {
+		p, ok := h.loadPlan(w, r, projectID)
+		if !ok {
+			return
+		}
+		if len(p.Tasks) > 0 || len(p.Milestones) > 0 {
+			out.Plan = &downloadPlanOption{Tasks: len(p.Tasks), Milestones: len(p.Milestones)}
+		}
+	}
+	writeJSONOK(w, out)
+}
+
+// downloadOptions is what a download form is offered: what the project
+// holds, and its plan when it has one to take along.
+type downloadOptions struct {
+	*downloads.Options
+	Plan *downloadPlanOption `json:"plan,omitempty"`
+}
+
+// downloadPlanOption counts what the plan would add to a download.
+type downloadPlanOption struct {
+	Tasks      int `json:"tasks"`
+	Milestones int `json:"milestones"`
 }
 
 // DownloadJSON serves the project as the JSON an import reads back.
@@ -94,12 +119,26 @@ func (h *Handler) serveDownload(w http.ResponseWriter, r *http.Request, format d
 		return
 	}
 
+	// ?plan=1 takes the project's plan and its tasks with the document, as
+	// a file beside it in the format nearest the document's. The plan is
+	// the one that stands, so a baseline's download has none.
+	var extra []downloads.ExtraFile
+	baselineID := r.URL.Query().Get("baseline_id")
+	if wantsPlan(r) && h.PlanService != nil && (baselineID == "" || baselineID == "live") {
+		out, ok := h.renderPlan(w, r, projectID, planFormatFor(format))
+		if !ok {
+			return
+		}
+		extra = append(extra, downloads.ExtraFile{Name: "plan/" + out.Filename, Data: out.Data})
+	}
+
 	result, err := h.DownloadService.Download(downloads.Request{
 		ProjectID:  projectID,
-		BaselineID: r.URL.Query().Get("baseline_id"),
+		BaselineID: baselineID,
 		Format:     format,
 		Selection:  selectionFromQuery(r),
 		Coverage:   h.flowDownCoverage,
+		Extra:      extra,
 	})
 	if err != nil {
 		if errors.Is(err, downloads.ErrUnsupportedFormat) || errors.Is(err, exports.ErrUnsupportedFormat) {
@@ -122,6 +161,30 @@ func (h *Handler) serveDownload(w http.ResponseWriter, r *http.Request, format d
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", result.Filename))
 	w.WriteHeader(http.StatusOK)
 	w.Write(result.Data)
+}
+
+// wantsPlan reports whether a download asks for the plan beside it.
+func wantsPlan(r *http.Request) bool {
+	v := strings.TrimSpace(r.URL.Query().Get("plan"))
+	return v != "" && v != "0" && !strings.EqualFold(v, "false")
+}
+
+// planFormatFor is the plan's format beside a document of a format: data
+// beside data, a PDF beside a document a person reads, and Microsoft
+// Project's XML beside ReqIF, each the interchange format of its kind.
+func planFormatFor(format downloads.Format) string {
+	switch format {
+	case downloads.FormatJSON:
+		return plan.FormatJSON
+	case downloads.FormatCSV:
+		return plan.FormatCSV
+	case downloads.FormatExcel:
+		return plan.FormatExcel
+	case downloads.FormatReqIF:
+		return plan.FormatMSProject
+	default:
+		return plan.FormatPDF
+	}
 }
 
 // selectionFromQuery reads a download's filters off the query string.

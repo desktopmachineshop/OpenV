@@ -151,7 +151,7 @@ GET /api/v1/projects/{id}/download/csv: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/projects/{id}/download/docx: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
 GET /api/v1/projects/{id}/download/excel: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/projects/{id}/download/json: s5a, s5e; 2xx or 3xx in s5a, s5e
-GET /api/v1/projects/{id}/download/options: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/download/options: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
 GET /api/v1/projects/{id}/download/pdf: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
 GET /api/v1/projects/{id}/download/reqif: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/projects/{id}/duplicates: s5a, s5e; 2xx or 3xx in s5a, s5e

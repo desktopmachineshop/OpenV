@@ -125,26 +125,8 @@ func (h *Handler) ExportPlan(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, fmt.Sprintf("%s: %s", plan.ErrUnsupportedFormat, format))
 		return
 	}
-	p, ok := h.loadPlan(w, r, projectID)
+	out, ok := h.renderPlan(w, r, projectID, format)
 	if !ok {
-		return
-	}
-	// Only whoever a task is assigned to is named, not the whole project.
-	names, assignees := h.planAssignees(projectID), map[string]string{}
-	for _, t := range p.Tasks {
-		if t.AssigneeID != nil && names[*t.AssigneeID] != "" {
-			assignees[*t.AssigneeID] = names[*t.AssigneeID]
-		}
-	}
-	doc := plan.Document{ExportedAt: time.Now().UTC(), Plan: p, Assignees: assignees}
-	if h.ProjectService != nil {
-		if project, err := h.ProjectService.GetProject(projectID); err == nil && project != nil {
-			doc.ProjectName = project.Name
-		}
-	}
-	out, err := plan.Render(doc, format)
-	if err != nil {
-		respondInternal(w, r, "failed to export the plan", err)
 		return
 	}
 	w.Header().Set("Content-Type", out.ContentType)
@@ -152,31 +134,6 @@ func (h *Handler) ExportPlan(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=%q", out.Filename))
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(out.Data)
-}
-
-// planAssignees names whoever a task can be assigned to, by id: the
-// project's people and the workspace's agents. A lookup that fails leaves
-// its names out; the export then shows the id.
-func (h *Handler) planAssignees(projectID string) map[string]string {
-	names := map[string]string{}
-	if h.MemberService != nil {
-		if list, err := h.MemberService.ListMembers(projectID); err == nil {
-			for _, m := range list {
-				names[m.UserID] = m.UserName
-				if strings.TrimSpace(m.UserName) == "" {
-					names[m.UserID] = m.UserEmail
-				}
-			}
-		}
-	}
-	if h.AgentService != nil {
-		if list, err := h.AgentService.List(h.orgIDForProject(projectID)); err == nil {
-			for _, a := range list {
-				names[a.ID] = a.Name
-			}
-		}
-	}
-	return names
 }
 
 // projectMilestone loads a stored milestone of the project, answering 404

@@ -301,6 +301,28 @@ func TestDownloadWithoutAttachmentsIsThePlainFile(t *testing.T) {
 	}
 }
 
+// The plan travels beside the document: with it, a download is an archive
+// even when no attachment file was asked for.
+func TestDownloadWithThePlanIsAnArchive(t *testing.T) {
+	s, _ := newService(t)
+	res, err := s.Download(Request{
+		ProjectID: "p1",
+		Format:    FormatCSV,
+		Selection: exports.Selection{IncludeHeadings: true},
+		Extra:     []ExtraFile{{Name: "plan/plan-widget.csv", Data: []byte("task,start\nBuild,2027-03-01\n")}},
+	})
+	if err != nil {
+		t.Fatalf("Download: %v", err)
+	}
+	if res.ContentType != "application/zip" {
+		t.Fatalf("got %s / %s, want a zip", res.Filename, res.ContentType)
+	}
+	entries := zipEntries(t, res.Data)
+	if len(entries) != 2 || entries["plan/plan-widget.csv"] != "task,start\nBuild,2027-03-01\n" {
+		t.Errorf("the archive holds the document and the plan: %v", keys(entries))
+	}
+}
+
 func TestDownloadWithAttachmentsIsAnArchive(t *testing.T) {
 	s, _ := newService(t)
 	res, err := s.Download(Request{
