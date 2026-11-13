@@ -85,6 +85,10 @@ var Registry = []Feature{
 	{Key: FeatureMilestoneLinks, ShippedIn: "0.34.0", Summary: "Milestones that wait for tasks: link tasks to a milestone from its panel or by dragging a link onto its diamond, and date it by the plan, on the day the last of them finishes, or keep its date fixed"},
 	{Key: FeatureWorkspacePlan, ShippedIn: "0.35.0", Summary: "A Plan page for the whole workspace: every project's plan on one chart, a line for each project with its top-level tasks and milestones on a shared time scale"},
 	{Key: FeatureJoinedBaselines, ShippedIn: "0.35.0", Summary: "One baseline for the project: a baseline records the plan with the artifacts, and comparing two shows how far the project got, its dates and its milestones, beside what changed in its definition"},
+	// A runner key has no session, so no channel gates what it does
+	// (featureEnabled): the key is registered so the features endpoint and
+	// What's new list it, and the create itself is unconditional.
+	{Key: FeatureKeyProjects, ShippedIn: "0.36.0", Summary: "Create a project with a runner key: scripts, and AI clients connected through the openv MCP server's new create_project tool, make projects and file them under a parent"},
 }
 
 // Feature keys the code gates on.
@@ -353,6 +357,12 @@ const (
 	// project's plan stood on each side of a comparison. The server records
 	// the plan with every baseline either way; the key gates the page.
 	FeatureJoinedBaselines = "joined-baselines"
+	// FeatureKeyProjects is a project created with a runner key (POST
+	// /projects, a template's project, an import) and the MCP server's
+	// create_project tool. Nothing reads the key: a runner key acts for a
+	// workspace whose members may be on either channel, so the creates are
+	// unconditional.
+	FeatureKeyProjects = "key-projects"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

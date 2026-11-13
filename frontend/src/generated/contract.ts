@@ -65,6 +65,7 @@ export const FEATURE_KEYS = [
   'milestone-links',
   'workspace-plan',
   'joined-baselines',
+  'key-projects',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

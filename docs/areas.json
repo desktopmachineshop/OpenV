@@ -589,6 +589,7 @@
         "docs/plans/mobile-support.md",
         "docs/plans/opend-help.md",
         "docs/plans/search-and-ai-visibility.md",
+        "docs/plans/website-refresh.md",
         "docs/research/**",
         "e2e/*",
         "e2e/tests/desktop.spec.ts",

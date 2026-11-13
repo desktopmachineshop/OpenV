@@ -227,7 +227,8 @@
     "plan-sizing",
     "milestone-links",
     "workspace-plan",
-    "joined-baselines"
+    "joined-baselines",
+    "key-projects"
   ],
   "event_types": [
     "artifact.created",

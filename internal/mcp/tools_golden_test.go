@@ -114,6 +114,7 @@ func toolGoldenIDs() map[string]bool {
 func toolGoldenArgs() map[string]map[string]interface{} {
 	return map[string]map[string]interface{}{
 		"list_projects":           {},
+		"create_project":          {"name": "Brake assembly", "description": "The brake assembly under the landing gear.", "parent_project_id": goldenProjectID},
 		"list_artifacts":          {"project_id": goldenProjectID, "type": "requirement", "owner": "QA"},
 		"get_artifact":            {"id": goldenArtifactRef, "project_id": goldenProjectID},
 		"get_project_map":         {"project_id": goldenProjectID, "baseline_id": goldenBaselineID},
@@ -186,6 +187,7 @@ func toolStubBodies() map[string]string {
 			`","attributes":{"priority":"must","target_release":"old"}}`,
 		"GET /api/v1/work-items/{id}":             `{"id":"` + goldenWorkItemID + `","activity":[]}`,
 		"GET /api/v1/projects/{id}/quality-rules": `{"effective":{},"summary":"shall"}`,
+		"POST /api/v1/projects":                   `{"id":"` + goldenProjectID + `","name":"Brake assembly"}`,
 	}
 }
 

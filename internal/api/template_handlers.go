@@ -214,11 +214,11 @@ func (h *Handler) CreateProjectFromTemplate(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusCreated, project)
 }
 
-// addProjectCreatorAsOwner grants the requesting user owner membership on a
-// freshly created project (mirrors CreateProject).
+// addProjectCreatorAsOwner grants the request's creator (projectCreator)
+// owner membership on a freshly created project (mirrors CreateProject).
 func (h *Handler) addProjectCreatorAsOwner(r *http.Request, projectID string) {
-	if user := CurrentUser(r); user != nil && h.MemberService != nil {
-		if err := h.MemberService.AddMember(projectID, user.ID, members.RoleOwner); err != nil {
+	if creator := projectCreator(r); creator != "" && h.MemberService != nil {
+		if err := h.MemberService.AddMember(projectID, creator, members.RoleOwner); err != nil {
 			slog.Warn("api: failed to add creator as project owner", "project_id", projectID, "error", err)
 		}
 	}
