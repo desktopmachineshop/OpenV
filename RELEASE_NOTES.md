@@ -29,6 +29,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Export the plan with the project.** The download wizard has a
+  **Plan and tasks** section: tick **The plan and its tasks** to take
+  every task with its dates, effort, progress and assignee, and the
+  milestones, as a file beside the document in a .zip. The plan comes in
+  the format nearest the one you chose: JSON, CSV or a workbook, a PDF
+  beside a PDF or Word specification, and Microsoft Project XML beside
+  ReqIF.
 - **The phone's plan groups tasks by the milestone they are assigned
   to.** A task is listed under a milestone only when it is assigned to
   it, not because it happens to be due before the milestone's date, and

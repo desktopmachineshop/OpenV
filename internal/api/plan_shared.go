@@ -7,6 +7,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -143,4 +144,58 @@ func (h *Handler) workspaceAdmin(r *http.Request, orgID string) bool {
 	}
 	role, err := h.OrgService.RoleInOrg(orgID, user.ID)
 	return err == nil && role == orgs.RoleAdmin
+}
+
+// renderPlan answers the project's plan as a file in a format of
+// plan.Formats, with whoever a task is assigned to named. It answers false
+// after writing the error.
+func (h *Handler) renderPlan(w http.ResponseWriter, r *http.Request, projectID, format string) (*plan.Rendered, bool) {
+	p, ok := h.loadPlan(w, r, projectID)
+	if !ok {
+		return nil, false
+	}
+	// Only whoever a task is assigned to is named, not the whole project.
+	names, assignees := h.planAssignees(projectID), map[string]string{}
+	for _, t := range p.Tasks {
+		if t.AssigneeID != nil && names[*t.AssigneeID] != "" {
+			assignees[*t.AssigneeID] = names[*t.AssigneeID]
+		}
+	}
+	doc := plan.Document{ExportedAt: time.Now().UTC(), Plan: p, Assignees: assignees}
+	if h.ProjectService != nil {
+		if project, err := h.ProjectService.GetProject(projectID); err == nil && project != nil {
+			doc.ProjectName = project.Name
+		}
+	}
+	out, err := plan.Render(doc, format)
+	if err != nil {
+		respondInternal(w, r, "failed to export the plan", err)
+		return nil, false
+	}
+	return out, true
+}
+
+// planAssignees names whoever a task can be assigned to, by id: the
+// project's people and the workspace's agents. A lookup that fails leaves
+// its names out; the export then shows the id.
+func (h *Handler) planAssignees(projectID string) map[string]string {
+	names := map[string]string{}
+	if h.MemberService != nil {
+		if list, err := h.MemberService.ListMembers(projectID); err == nil {
+			for _, m := range list {
+				names[m.UserID] = m.UserName
+				if strings.TrimSpace(m.UserName) == "" {
+					names[m.UserID] = m.UserEmail
+				}
+			}
+		}
+	}
+	if h.AgentService != nil {
+		if list, err := h.AgentService.List(h.orgIDForProject(projectID)); err == nil {
+			for _, a := range list {
+				names[a.ID] = a.Name
+			}
+		}
+	}
+	return names
 }

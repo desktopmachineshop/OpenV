@@ -105,6 +105,8 @@ export interface DownloadOptions {
   templates?: DownloadTemplate[];
   /** What the document holds when no switch is sent. */
   defaults?: DownloadContent;
+  /** The project's plan, when it has a task or a milestone to take along; never for a baseline. */
+  plan?: { tasks: number; milestones: number };
 }
 
 export interface DownloadSection {
@@ -176,6 +178,8 @@ export interface DownloadSelection {
   vvStatus: boolean;
   /** The attribute keys to show. Undefined means every one of them. */
   fields?: string[];
+  /** Take the plan and its tasks beside the document, which makes the download an archive. */
+  plan?: boolean;
 }
 
 export type DownloadFormat = 'json' | 'csv' | 'excel' | 'reqif' | 'pdf' | 'docx';

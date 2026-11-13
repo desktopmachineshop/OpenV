@@ -126,6 +126,8 @@ export interface FormSelection {
    */
   template: string;
   content: ContentSwitches;
+  /** The plan and its tasks travel beside the document. Off until asked for. */
+  plan: boolean;
   /** Every attribute shows, whatever `fields` holds. */
   allFields: boolean;
   /** Ticked attribute keys, honoured when `allFields` is off. */
@@ -175,6 +177,7 @@ export const selectAll = (options: DownloadOptions | null): FormSelection => {
     attachments: [],
     template: opening ? opening.key : '',
     content: contentSwitches(defaults),
+    plan: false,
     allFields: true,
     fields: (options?.fields || []).map((f) => f.key),
   };
@@ -265,6 +268,8 @@ export const toWire = (
     testResults: selection.content.testResults,
     vvStatus: selection.content.vvStatus,
     fields: selection.allFields ? undefined : selection.fields,
+    // Only a project that has a plan to take is asked for one.
+    plan: selection.plan && Boolean(options?.plan),
   };
 };
 
@@ -292,6 +297,7 @@ export const downloadQuery = (selection: DownloadSelection, baselineId?: string)
   if (!selection.includeHeadings) params.set('headings', '0');
   if (selection.attachments.length > 0) params.set('attachments', selection.attachments.join(','));
   if (baselineId && baselineId !== 'live') params.set('baseline_id', baselineId);
+  if (selection.plan) params.set('plan', '1');
 
   const preset = Boolean(selection.template);
   if (preset) params.set('template', selection.template);
@@ -311,8 +317,8 @@ export const downloadQuery = (selection: DownloadSelection, baselineId?: string)
   return params.toString();
 };
 
-/** Whether files travel with the document, which makes the download an archive. */
-export const isArchive = (selection: FormSelection): boolean => selection.attachments.length > 0;
+/** Whether files, or the plan, travel with the document, which makes the download an archive. */
+export const isArchive = (selection: FormSelection): boolean => selection.attachments.length > 0 || selection.plan;
 
 /**
  * The selection in a sentence, for the button that acts on it — what a reader
@@ -340,6 +346,7 @@ export const describeSelection = (
   if (selection.attachments.length > 0) {
     parts.push(`with ${selection.attachments.map(attachmentLabel).join(' and ').toLowerCase()}`);
   }
+  if (selection.plan && options?.plan) parts.push('with the plan and its tasks');
 
   // The document switches are worth a word only where they left the defaults:
   // what was added reads as "with …", what was taken away as "without …".

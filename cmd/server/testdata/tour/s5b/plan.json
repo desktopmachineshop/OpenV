@@ -3921,6 +3921,145 @@
     },
     {
       "n": 64,
+      "title": "a download of the project is offered its plan",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{id}/download/options",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<p>/download/options"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 1850,
+      "kind": "json",
+      "body": [
+        "{\"sections\":[],\"types\":[{\"type\":\"user-need\",\"count\":2},{\"type\":\"requirement\",\"count\":1}],\"attachments\":[],\"fields\":[{\"key\":\"status\",\"label\":\"Status\",\"count\":3,\"custom\":false}],\"owners\":[],\"templates\":[{\"key\":\"standard\",\"name\":\"Specification\",\"description\":\"The whole project as a specification: every artifact with its fields, figures and traceability, and each requirement's V\\u0026V status.\",\"content\":{\"traceability\":true,\"figures\":true,\"toc\":true,\"all_fields\":true,\"test_results\":false,\"vv_status\":true}},{\"key\":\"requirements-review\",\"name\":\"Requirements review\",\"description\":\"Needs and requirements with their priority, status and verification method, traced to what they derive from, for a review board.\",\"types\":[\"user-need\",\"requirement\"],\"content\":{\"traceability\":true,\"figures\":true,\"toc\":true,\"all_fields\":false,\"fields\":[\"priority\",\"status\",\"verification_method\"],\"test_results\":false,\"vv_status\":false}},{\"key\":\"test-planning\",\"name\":\"Test planning\",\"description\":\"Requirements and the test cases that verify them, with verification and execution methods, no results yet.\",\"types\":[\"requirement\",\"test-case\"],\"content\":{\"traceability\":true,\"figures\":false,\"toc\":true,\"all_fields\":false,\"fields\":[\"priority\",\"status\",\"verification_method\",\"execution_method\"],\"test_results\":false,\"vv_status\":false}},{\"key\":\"vv\",\"name\":\"Verification \\u0026 Validation\",\"description\":\"Requirements, tests and hazards with every field, each requirement's verification rollup, the latest test results, the coverage summary and gaps.\",\"types\":[\"user-need\",\"requirement\",\"test-case\",\"hazard\"],\"content\":{\"traceability\":true,\"figures\":false,\"toc\":true,\"all_fields\":true,\"test_results\":true,\"vv_status\":true}}],\"defaults\":{\"traceability\":true,\"figures\":true,\"toc\":true,\"all_fields\":true,\"test_results\":false,\"vv_status\":true},\"plan\":{\"tasks\":4,\"milestones\":1}}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "sections": [],
+        "types": [
+          {
+            "type": "user-need",
+            "count": 2
+          },
+          {
+            "type": "requirement",
+            "count": 1
+          }
+        ],
+        "attachments": [],
+        "fields": [
+          {
+            "key": "status",
+            "label": "Status",
+            "count": 3,
+            "custom": false
+          }
+        ],
+        "owners": [],
+        "templates": [
+          {
+            "key": "standard",
+            "name": "Specification",
+            "description": "The whole project as a specification: every artifact with its fields, figures and traceability, and each requirement's V\u0026V status.",
+            "content": {
+              "traceability": true,
+              "figures": true,
+              "toc": true,
+              "all_fields": true,
+              "test_results": false,
+              "vv_status": true
+            }
+          },
+          {
+            "key": "requirements-review",
+            "name": "Requirements review",
+            "description": "Needs and requirements with their priority, status and verification method, traced to what they derive from, for a review board.",
+            "types": [
+              "user-need",
+              "requirement"
+            ],
+            "content": {
+              "traceability": true,
+              "figures": true,
+              "toc": true,
+              "all_fields": false,
+              "fields": [
+                "priority",
+                "status",
+                "verification_method"
+              ],
+              "test_results": false,
+              "vv_status": false
+            }
+          },
+          {
+            "key": "test-planning",
+            "name": "Test planning",
+            "description": "Requirements and the test cases that verify them, with verification and execution methods, no results yet.",
+            "types": [
+              "requirement",
+              "test-case"
+            ],
+            "content": {
+              "traceability": true,
+              "figures": false,
+              "toc": true,
+              "all_fields": false,
+              "fields": [
+                "priority",
+                "status",
+                "verification_method",
+                "execution_method"
+              ],
+              "test_results": false,
+              "vv_status": false
+            }
+          },
+          {
+            "key": "vv",
+            "name": "Verification \u0026 Validation",
+            "description": "Requirements, tests and hazards with every field, each requirement's verification rollup, the latest test results, the coverage summary and gaps.",
+            "types": [
+              "user-need",
+              "requirement",
+              "test-case",
+              "hazard"
+            ],
+            "content": {
+              "traceability": true,
+              "figures": false,
+              "toc": true,
+              "all_fields": true,
+              "test_results": true,
+              "vv_status": true
+            }
+          }
+        ],
+        "defaults": {
+          "traceability": true,
+          "figures": true,
+          "toc": true,
+          "all_fields": true,
+          "test_results": false,
+          "vv_status": true
+        },
+        "plan": {
+          "tasks": 4,
+          "milestones": 1
+        }
+      },
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "application/json",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 65,
       "title": "it belongs to a project baseline, so the plan does not delete it: 400",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}",
@@ -3945,7 +4084,7 @@
       "events": []
     },
     {
-      "n": 65,
+      "n": 66,
       "title": "the project's baselines say where the plan stood",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/baselines",
@@ -3995,7 +4134,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 66,
+      "n": 67,
       "title": "compared with the project as it is: the plan on both sides",
       "actor": "owner",
       "route": "GET /api/v1/baselines/{id}/diff",
@@ -4068,7 +4207,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 67,
+      "n": 68,
       "title": "the project baseline deleted",
       "actor": "owner",
       "route": "DELETE /api/v1/baselines/{id}",
@@ -4096,7 +4235,7 @@
       ]
     },
     {
-      "n": 68,
+      "n": 69,
       "title": "and the plan's with it: 404",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}",
@@ -4121,7 +4260,7 @@
       "events": []
     },
     {
-      "n": 69,
+      "n": 70,
       "title": "dates on Build, which has sub-tasks: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -4150,7 +4289,7 @@
       "events": []
     },
     {
-      "n": 70,
+      "n": 71,
       "title": "the plan works Monday to Saturday",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4198,7 +4337,7 @@
       "events": []
     },
     {
-      "n": 71,
+      "n": 72,
       "title": "holidays, and a critical threshold of two days",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4255,7 +4394,7 @@
       "events": []
     },
     {
-      "n": 72,
+      "n": 73,
       "title": "an automatic plan from 1 January 2099, a path per chain, to finish by 2100",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4322,7 +4461,7 @@
       ]
     },
     {
-      "n": 73,
+      "n": 74,
       "title": "a mode that is neither: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4351,7 +4490,7 @@
       "events": []
     },
     {
-      "n": 74,
+      "n": 75,
       "title": "costs in pounds against a budget",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4408,7 +4547,7 @@
       "events": []
     },
     {
-      "n": 75,
+      "n": 76,
       "title": "a currency of four letters: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4437,7 +4576,7 @@
       "events": []
     },
     {
-      "n": 76,
+      "n": 77,
       "title": "a holiday that is not a date: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4466,7 +4605,7 @@
       "events": []
     },
     {
-      "n": 77,
+      "n": 78,
       "title": "a threshold over a year: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4495,7 +4634,7 @@
       "events": []
     },
     {
-      "n": 78,
+      "n": 79,
       "title": "no working days: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4524,7 +4663,7 @@
       "events": []
     },
     {
-      "n": 79,
+      "n": 80,
       "title": "a day 8: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4553,7 +4692,7 @@
       "events": []
     },
     {
-      "n": 80,
+      "n": 81,
       "title": "the viewer may not set them: 403",
       "actor": "viewer",
       "route": "PUT /api/v1/projects/{id}/plan/settings",
@@ -4582,7 +4721,7 @@
       "events": []
     },
     {
-      "n": 81,
+      "n": 82,
       "title": "the viewer may not schedule: 403",
       "actor": "viewer",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -4611,7 +4750,7 @@
       "events": []
     },
     {
-      "n": 82,
+      "n": 83,
       "title": "a to-do on Wiring",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -4630,7 +4769,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 82>\",\"updated_at\":\"<time@step 82>\"}"
+        "{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 83>\",\"updated_at\":\"<time@step 83>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4647,14 +4786,14 @@
         "source_chatter_id": null,
         "promoted_work_item_id": null,
         "created_by": "<owner>",
-        "created_at": "<time@step 82>",
-        "updated_at": "<time@step 82>"
+        "created_at": "<time@step 83>",
+        "updated_at": "<time@step 83>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 83,
+      "n": 84,
       "title": "a second to-do on Wiring, with its deadline",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -4673,7 +4812,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 83>\",\"updated_at\":\"<time@step 83>\"}"
+        "{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 84>\",\"updated_at\":\"<time@step 84>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4690,14 +4829,14 @@
         "source_chatter_id": null,
         "promoted_work_item_id": null,
         "created_by": "<owner>",
-        "created_at": "<time@step 83>",
-        "updated_at": "<time@step 83>"
+        "created_at": "<time@step 84>",
+        "updated_at": "<time@step 84>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 84,
+      "n": 85,
       "title": "a deadline not written YYYY-MM-DD: 400",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -4726,7 +4865,7 @@
       "events": []
     },
     {
-      "n": 85,
+      "n": 86,
       "title": "no text: 400",
       "actor": "owner",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -4755,7 +4894,7 @@
       "events": []
     },
     {
-      "n": 86,
+      "n": 87,
       "title": "the viewer may not add one: 403",
       "actor": "viewer",
       "route": "POST /api/v1/work-items/{id}/todos",
@@ -4784,7 +4923,7 @@
       "events": []
     },
     {
-      "n": 87,
+      "n": 88,
       "title": "Wiring's to-dos, to the viewer: both open",
       "actor": "viewer",
       "route": "GET /api/v1/work-items/{id}/todos",
@@ -4799,7 +4938,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 83>\",\"updated_at\":\"<time@step 83>\"},{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 82>\",\"updated_at\":\"<time@step 82>\"}]"
+        "[{\"id\":\"<t2>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Label the loom\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":\"<time>\",\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 84>\",\"updated_at\":\"<time@step 84>\"},{\"id\":\"<t1>\",\"org_id\":\"<owner.workspace>\",\"project_id\":\"<p>\",\"text\":\"Crimp the connectors\",\"done\":false,\"done_at\":null,\"done_note\":\"\",\"assignee_id\":null,\"due_date\":null,\"source_artifact_id\":null,\"source_chatter_id\":null,\"promoted_work_item_id\":null,\"created_by\":\"<owner>\",\"created_at\":\"<time@step 83>\",\"updated_at\":\"<time@step 83>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -4817,8 +4956,8 @@
           "source_chatter_id": null,
           "promoted_work_item_id": null,
           "created_by": "<owner>",
-          "created_at": "<time@step 83>",
-          "updated_at": "<time@step 83>"
+          "created_at": "<time@step 84>",
+          "updated_at": "<time@step 84>"
         },
         {
           "id": "<t1>",
@@ -4834,14 +4973,14 @@
           "source_chatter_id": null,
           "promoted_work_item_id": null,
           "created_by": "<owner>",
-          "created_at": "<time@step 82>",
-          "updated_at": "<time@step 82>"
+          "created_at": "<time@step 83>",
+          "updated_at": "<time@step 83>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 88,
+      "n": 89,
       "title": "Frame has none: []",
       "actor": "owner",
       "route": "GET /api/v1/work-items/{id}/todos",
@@ -4863,7 +5002,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 89,
+      "n": 90,
       "title": "a milestone: every user need addressed by 1 February 2020",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -4882,7 +5021,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<m1>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[{\"metric\":\"needs_addressed\",\"target\":100},{\"metric\":\"tasks_done\",\"target\":100}],\"created_at\":\"<time@step 89>\",\"updated_at\":\"<time@step 89>\",\"date_mode\":\"fixed\",\"waits_for\":[]}"
+        "{\"id\":\"<m1>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Definition complete\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[{\"metric\":\"needs_addressed\",\"target\":100},{\"metric\":\"tasks_done\",\"target\":100}],\"created_at\":\"<time@step 90>\",\"updated_at\":\"<time@step 90>\",\"date_mode\":\"fixed\",\"waits_for\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4902,8 +5041,8 @@
             "target": 100
           }
         ],
-        "created_at": "<time@step 89>",
-        "updated_at": "<time@step 89>",
+        "created_at": "<time@step 90>",
+        "updated_at": "<time@step 90>",
         "date_mode": "fixed",
         "waits_for": []
       },
@@ -4911,7 +5050,7 @@
       "events": []
     },
     {
-      "n": 90,
+      "n": 91,
       "title": "a milestone with no date and no criteria",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -4930,7 +5069,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 90>\",\"updated_at\":\"<time@step 90>\",\"date_mode\":\"fixed\",\"waits_for\":[]}"
+        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 91>\",\"updated_at\":\"<time@step 91>\",\"date_mode\":\"fixed\",\"waits_for\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4941,8 +5080,8 @@
         "description": "",
         "target_date": null,
         "criteria": [],
-        "created_at": "<time@step 90>",
-        "updated_at": "<time@step 90>",
+        "created_at": "<time@step 91>",
+        "updated_at": "<time@step 91>",
         "date_mode": "fixed",
         "waits_for": []
       },
@@ -4950,7 +5089,7 @@
       "events": []
     },
     {
-      "n": 91,
+      "n": 92,
       "title": "Q's milestone",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -4969,7 +5108,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<q_m>\",\"project_id\":\"<q>\",\"release_id\":null,\"name\":\"Elsewhere\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 91>\",\"updated_at\":\"<time@step 91>\",\"date_mode\":\"fixed\",\"waits_for\":[]}"
+        "{\"id\":\"<q_m>\",\"project_id\":\"<q>\",\"release_id\":null,\"name\":\"Elsewhere\",\"description\":\"\",\"target_date\":null,\"criteria\":[],\"created_at\":\"<time@step 92>\",\"updated_at\":\"<time@step 92>\",\"date_mode\":\"fixed\",\"waits_for\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4980,8 +5119,8 @@
         "description": "",
         "target_date": null,
         "criteria": [],
-        "created_at": "<time@step 91>",
-        "updated_at": "<time@step 91>",
+        "created_at": "<time@step 92>",
+        "updated_at": "<time@step 92>",
         "date_mode": "fixed",
         "waits_for": []
       },
@@ -4989,7 +5128,7 @@
       "events": []
     },
     {
-      "n": 92,
+      "n": 93,
       "title": "no name: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -5018,7 +5157,7 @@
       "events": []
     },
     {
-      "n": 93,
+      "n": 94,
       "title": "an unknown metric: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -5047,7 +5186,7 @@
       "events": []
     },
     {
-      "n": 94,
+      "n": 95,
       "title": "a target of 0: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -5076,7 +5215,7 @@
       "events": []
     },
     {
-      "n": 95,
+      "n": 96,
       "title": "the viewer may not add one: 403",
       "actor": "viewer",
       "route": "POST /api/v1/projects/{id}/plan/milestones",
@@ -5105,7 +5244,7 @@
       "events": []
     },
     {
-      "n": 96,
+      "n": 97,
       "title": "Kick-off gets a date; its name stays",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -5124,7 +5263,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[],\"created_at\":\"<time@step 90>\",\"updated_at\":\"<time@step 96>\",\"date_mode\":\"fixed\",\"waits_for\":[]}"
+        "{\"id\":\"<m2>\",\"project_id\":\"<p>\",\"release_id\":null,\"name\":\"Kick-off\",\"description\":\"\",\"target_date\":\"<date>\",\"criteria\":[],\"created_at\":\"<time@step 91>\",\"updated_at\":\"<time@step 97>\",\"date_mode\":\"fixed\",\"waits_for\":[]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -5135,8 +5274,8 @@
         "description": "",
         "target_date": "<date>",
         "criteria": [],
-        "created_at": "<time@step 90>",
-        "updated_at": "<time@step 96>",
+        "created_at": "<time@step 91>",
+        "updated_at": "<time@step 97>",
         "date_mode": "fixed",
         "waits_for": []
       },
@@ -5144,7 +5283,7 @@
       "events": []
     },
     {
-      "n": 97,
+      "n": 98,
       "title": "Q's milestone through P: 404",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -5173,7 +5312,7 @@
       "events": []
     },
     {
-      "n": 98,
+      "n": 99,
       "title": "Wiring assigned to Definition complete",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -5293,7 +5432,7 @@
       "events": []
     },
     {
-      "n": 99,
+      "n": 100,
       "title": "Order assigned to MVP, a release's milestone",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -5400,7 +5539,7 @@
       "events": []
     },
     {
-      "n": 100,
+      "n": 101,
       "title": "Q's milestone: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -5429,7 +5568,7 @@
       "events": []
     },
     {
-      "n": 101,
+      "n": 102,
       "title": "Q's release: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -5458,7 +5597,7 @@
       "events": []
     },
     {
-      "n": 102,
+      "n": 103,
       "title": "Frame assigned and taken off again",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/schedule",
@@ -5577,7 +5716,7 @@
       "events": []
     },
     {
-      "n": 103,
+      "n": 104,
       "title": "the plan with MVP on its default criteria, and each milestone counting its tasks",
       "actor": "viewer",
       "route": "GET /api/v1/projects/{id}/plan",
@@ -6292,7 +6431,7 @@
       }
     },
     {
-      "n": 104,
+      "n": 105,
       "title": "MVP's own criteria: requirements approved, 80%",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}",
@@ -6311,7 +6450,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<mvp_m>\",\"project_id\":\"<p>\",\"release_id\":\"<mvp>\",\"name\":\"\",\"description\":\"\",\"target_date\":null,\"criteria\":[{\"metric\":\"requirements_approved\",\"target\":80}],\"created_at\":\"<time@step 104>\",\"updated_at\":\"<time@step 104>\",\"date_mode\":\"\",\"waits_for\":null}"
+        "{\"id\":\"<mvp_m>\",\"project_id\":\"<p>\",\"release_id\":\"<mvp>\",\"name\":\"\",\"description\":\"\",\"target_date\":null,\"criteria\":[{\"metric\":\"requirements_approved\",\"target\":80}],\"created_at\":\"<time@step 105>\",\"updated_at\":\"<time@step 105>\",\"date_mode\":\"\",\"waits_for\":null}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -6327,8 +6466,8 @@
             "target": 80
           }
         ],
-        "created_at": "<time@step 104>",
-        "updated_at": "<time@step 104>",
+        "created_at": "<time@step 105>",
+        "updated_at": "<time@step 105>",
         "date_mode": "",
         "waits_for": null
       },
@@ -6336,7 +6475,7 @@
       "events": []
     },
     {
-      "n": 105,
+      "n": 106,
       "title": "Q's release through P: 404",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}",
@@ -6365,7 +6504,7 @@
       "events": []
     },
     {
-      "n": 106,
+      "n": 107,
       "title": "a release milestone's name is the release's: 400",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -6394,7 +6533,7 @@
       "events": []
     },
     {
-      "n": 107,
+      "n": 108,
       "title": "the plan: MVP now carries its own criterion",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan",
@@ -7099,7 +7238,7 @@
       }
     },
     {
-      "n": 108,
+      "n": 109,
       "title": "the plan as CSV",
       "actor": "viewer",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -7323,7 +7462,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 109,
+      "n": 110,
       "title": "the plan as JSON",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -7343,7 +7482,7 @@
       "body": [
         "{",
         "  \"project_name\": \"Tour plan\",",
-        "  \"exported_at\": \"<time@step 109>\",",
+        "  \"exported_at\": \"<time@step 110>\",",
         "  \"plan\": {",
         "    \"project_id\": \"<p>\",",
         "    \"working_days\": [",
@@ -7999,7 +8138,7 @@
       }
     },
     {
-      "n": 110,
+      "n": 111,
       "title": "the plan as Excel",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -9085,7 +9224,7 @@
       }
     },
     {
-      "n": 111,
+      "n": 112,
       "title": "the plan as PDF, the default",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -9130,7 +9269,7 @@
       }
     },
     {
-      "n": 112,
+      "n": 113,
       "title": "the plan as Microsoft Project XML",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -9319,7 +9458,7 @@
       }
     },
     {
-      "n": 113,
+      "n": 114,
       "title": "ReqIF is not a plan format: 400",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan/export",
@@ -9344,7 +9483,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 114,
+      "n": 115,
       "title": "the viewer may not delete one: 403",
       "actor": "viewer",
       "route": "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -9369,7 +9508,7 @@
       "events": []
     },
     {
-      "n": 115,
+      "n": 116,
       "title": "Kick-off deleted: 204",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -9387,7 +9526,7 @@
       "events": []
     },
     {
-      "n": 116,
+      "n": 117,
       "title": "Kick-off after the delete: 404",
       "actor": "owner",
       "route": "PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -9416,7 +9555,7 @@
       "events": []
     },
     {
-      "n": 117,
+      "n": 118,
       "title": "MVP's stored milestone deleted: its criteria are the defaults again",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}",
@@ -9434,7 +9573,7 @@
       "events": []
     },
     {
-      "n": 118,
+      "n": 119,
       "title": "the plan after the deletes",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/plan",
@@ -10130,7 +10269,7 @@
       }
     },
     {
-      "n": 119,
+      "n": 120,
       "title": "the workspace's plan calendar",
       "actor": "owner",
       "route": "GET /api/v1/orgs/{id}/plan-calendar",
@@ -10162,7 +10301,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 120,
+      "n": 121,
       "title": "the workspace works Monday to Friday",
       "actor": "owner",
       "route": "PUT /api/v1/orgs/{id}/plan-calendar",
@@ -10198,7 +10337,7 @@
       "events": []
     },
     {
-      "n": 121,
+      "n": 122,
       "title": "a workspace that works no days: 400",
       "actor": "owner",
       "route": "PUT /api/v1/orgs/{id}/plan-calendar",
@@ -10227,7 +10366,7 @@
       "events": []
     },
     {
-      "n": 122,
+      "n": 123,
       "title": "she is away for a fortnight",
       "actor": "owner",
       "route": "POST /api/v1/orgs/{id}/plan-calendar/time-off",
@@ -10261,7 +10400,7 @@
       "events": []
     },
     {
-      "n": 123,
+      "n": 124,
       "title": "time off that ends before it starts: 400",
       "actor": "owner",
       "route": "POST /api/v1/orgs/{id}/plan-calendar/time-off",
@@ -10290,7 +10429,7 @@
       "events": []
     },
     {
-      "n": 124,
+      "n": 125,
       "title": "the viewer, who is not of the workspace, may not read it",
       "actor": "viewer",
       "route": "GET /api/v1/orgs/{id}/plan-calendar",
@@ -10314,7 +10453,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 125,
+      "n": 126,
       "title": "the time off removed",
       "actor": "owner",
       "route": "DELETE /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}",
@@ -10332,7 +10471,7 @@
       "events": []
     },
     {
-      "n": 126,
+      "n": 127,
       "title": "removed again: 404",
       "actor": "owner",
       "route": "DELETE /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}",
@@ -10357,7 +10496,7 @@
       "events": []
     },
     {
-      "n": 127,
+      "n": 128,
       "title": "Order waits on Q's task, of another project",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/external-links/{otherId}",
@@ -10479,7 +10618,7 @@
       "events": []
     },
     {
-      "n": 128,
+      "n": 129,
       "title": "two tasks of one project: 400",
       "actor": "owner",
       "route": "PUT /api/v1/work-items/{id}/external-links/{otherId}",
@@ -10508,7 +10647,7 @@
       "events": []
     },
     {
-      "n": 129,
+      "n": 130,
       "title": "the viewer may not link them: 403",
       "actor": "viewer",
       "route": "PUT /api/v1/work-items/{id}/external-links/{otherId}",
@@ -10537,7 +10676,7 @@
       "events": []
     },
     {
-      "n": 130,
+      "n": 131,
       "title": "the master plan: P and Q, and the link from Q to P",
       "actor": "owner",
       "route": "GET /api/v1/plan/master",
@@ -10675,7 +10814,7 @@
       }
     },
     {
-      "n": 131,
+      "n": 132,
       "title": "the master plan a level down: sub-tasks under their parents",
       "actor": "owner",
       "route": "GET /api/v1/plan/master",
@@ -10840,7 +10979,7 @@
       }
     },
     {
-      "n": 132,
+      "n": 133,
       "title": "a level that is not one: 400",
       "actor": "owner",
       "route": "GET /api/v1/plan/master",
@@ -10865,7 +11004,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 133,
+      "n": 134,
       "title": "the link removed",
       "actor": "owner",
       "route": "DELETE /api/v1/work-items/{id}/external-links/{otherId}",
@@ -10883,7 +11022,7 @@
       "events": []
     },
     {
-      "n": 134,
+      "n": 135,
       "title": "removed again: 404",
       "actor": "owner",
       "route": "DELETE /api/v1/work-items/{id}/external-links/{otherId}",
@@ -10908,7 +11047,7 @@
       "events": []
     },
     {
-      "n": 135,
+      "n": 136,
       "title": "a Microsoft Project file imported: two tasks, a milestone and a relationship",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/import",
@@ -10978,7 +11117,7 @@
       ]
     },
     {
-      "n": 136,
+      "n": 137,
       "title": "a file that is not one: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/import",
@@ -11007,7 +11146,7 @@
       "events": []
     },
     {
-      "n": 137,
+      "n": 138,
       "title": "the viewer may not import: 403",
       "actor": "viewer",
       "route": "POST /api/v1/projects/{id}/plan/import",

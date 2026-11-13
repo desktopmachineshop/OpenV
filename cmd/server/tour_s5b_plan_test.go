@@ -211,6 +211,7 @@ func planTour(tr *tour) {
 		jsonBody(`{"status_date":"","active_baseline_id":""}`))
 	baseline := "DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}"
 	tr.step("the viewer may not delete the baseline: 403", viewer, baseline, at("id", "{{p}}", "baselineId", "{{bl}}"))
+	tr.step("a download of the project is offered its plan", o, "GET /api/v1/projects/{id}/download/options", at("id", "{{p}}"))
 	// A baseline saved from the plan is a baseline of the project: it
 	// records the definition with it, and belongs to the Baselines page.
 	tr.step("it belongs to a project baseline, so the plan does not delete it: 400", o, baseline, at("id", "{{p}}", "baselineId", "{{bl}}"))

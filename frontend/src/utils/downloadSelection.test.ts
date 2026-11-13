@@ -109,6 +109,7 @@ describe('selectAll', () => {
       attachments: [],
       template: '',
       content: { traceability: true, figures: true, toc: true, testResults: false, vvStatus: true },
+      plan: false,
       allFields: true,
       fields: [],
     });
@@ -435,6 +436,19 @@ describe('isArchive', () => {
   it('is an archive exactly when files travel with the document', () => {
     expect(isArchive(selectAll(options))).toBe(false);
     expect(isArchive({ ...selectAll(options), attachments: ['figures'] })).toBe(true);
+  });
+
+  it('takes the plan beside the document only when asked, and only from a project that has one', () => {
+    const planned = { ...options, plan: { tasks: 4, milestones: 2 } };
+    const open = selectAll(planned);
+    expect(open.plan).toBe(false);
+    expect(downloadQuery(toWire(open, planned))).not.toContain('plan');
+    const taken = { ...open, plan: true };
+    expect(isArchive(taken)).toBe(true);
+    expect(new URLSearchParams(downloadQuery(toWire(taken, planned))).get('plan')).toBe('1');
+    expect(describeSelection(taken, planned)).toContain('with the plan and its tasks');
+    // A baseline's options offer no plan, so none is asked for.
+    expect(downloadQuery(toWire(taken, options))).not.toContain('plan');
   });
 });
 

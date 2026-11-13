@@ -18,6 +18,16 @@ import {
   toggle,
 } from '../utils/downloadSelection';
 
+/** The file the plan travels as beside a document of each format. */
+const PLAN_BESIDE: Record<DownloadFormat, string> = {
+  json: 'A JSON file beside the project',
+  csv: 'A CSV file beside the artifacts',
+  excel: 'A workbook beside the artifacts',
+  reqif: 'A Microsoft Project XML file beside the ReqIF',
+  pdf: 'A PDF beside the specification',
+  docx: 'A PDF beside the specification',
+};
+
 interface DownloadWizardProps {
   projectId: string;
   /** Which snapshot to take: a baseline id, or 'live'/undefined for the project as it stands. */
@@ -402,12 +412,27 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
                     `${cat.count} file${cat.count === 1 ? '' : 's'}, ${formatBytes(cat.bytes)}`
                   )
                 )}
-                {isArchive(selection) && (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
-                    The files travel with the document, so this download is a .zip.
-                  </div>
-                )}
               </section>
+
+              {options.plan && (
+                <section style={{ marginTop: 14 }}>
+                  <SectionHeading title="Plan and tasks" />
+                  {checkbox(
+                    selection.plan,
+                    'The plan and its tasks',
+                    () => setSelection((s) => ({ ...s, plan: !s.plan })),
+                    `${options.plan.tasks} task${options.plan.tasks === 1 ? '' : 's'}, ${options.plan.milestones} milestone${options.plan.milestones === 1 ? '' : 's'}`
+                  )}
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {PLAN_BESIDE[format]}, with every task's dates, effort, progress and who it is assigned to, and the milestones.
+                  </div>
+                </section>
+              )}
+              {isArchive(selection) && (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 10 }}>
+                  {selection.plan && selection.attachments.length === 0 ? 'The plan travels' : 'The files travel'} with the document, so this download is a .zip.
+                </div>
+              )}
             </>
           )}
         </div>

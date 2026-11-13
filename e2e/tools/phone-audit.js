@@ -244,7 +244,7 @@ const routes = [
     ],
   }],
   [/\/api\/v1\/orgs\/[^/]+\/worker-status/, { workers: [{ id: 'wk1', name: 'Sam laptop', personal: true, hosted: false, user_name: 'Sam Example', online: true, revoked: false, last_used_at: now }], queue: { queued: 1, oldest_queued_seconds: 40, queued_repo_access: 0 } }],
-  [/\/api\/v1\/projects\/p1\/download\/options/, { sections: [{ id: 'hdg-2', ref: 'HDG-2', number: '2', title: 'Functional requirements', artifacts: 2 }], types: [{ type: 'requirement', count: 2 }, { type: 'user-need', count: 1 }], attachments: [] }],
+  [/\/api\/v1\/projects\/p1\/download\/options/, { plan: { tasks: 4, milestones: 2 }, sections: [{ id: 'hdg-2', ref: 'HDG-2', number: '2', title: 'Functional requirements', artifacts: 2 }], types: [{ type: 'requirement', count: 2 }, { type: 'user-need', count: 1 }], attachments: [] }],
   [/\/api\/v1\/baselines\/b1\/diff/, { base: { id: 'b1', name: 'Release candidate 1' }, target: { id: 'live', name: 'Live project' }, added: [{ id: 'req-1', type: 'requirement', title: 'Work envelope' }], removed: [], modified: [{ id: 'req-2', type: 'requirement', old_title: 'Positioning accuracy', new_title: 'Positioning accuracy (tightened)', title_changed: true, body_changed: true, type_changed: false, status_changed: false, parent_changed: false }], links_added: [], links_removed: [] }],
   // Hosted runners on, none provisioned: the Runners tab draws the
   // admin's provider-key enable form.
@@ -532,6 +532,7 @@ const SCREENS = [
   // On a phone the toolbar folds into an action sheet; a desktop has the
   // Download button in the toolbar itself.
   { tag: 'requirements-download', path: '/projects/p1/requirements', open: async (p) => { await press(p.getByRole('button', { name: 'Requirements actions' })); await press(p.getByRole('button', { name: /Download/ }).first()); }, openDesktop: async (p) => { const menu = p.getByRole('button', { name: /^(Working copy|Baseline)/ }); if (await menu.count()) await press(menu.first()); await press(p.getByRole('button', { name: /Download/ }).first()); } },
+  { tag: 'requirements-download-content', path: '/projects/p1/requirements', open: async (p) => { await press(p.getByRole('button', { name: 'Requirements actions' })); await press(p.getByRole('button', { name: /Download/ }).first()); await press(p.getByRole('button', { name: 'Next' })); }, openDesktop: async (p) => { const menu = p.getByRole('button', { name: /^(Working copy|Baseline)/ }); if (await menu.count()) await press(menu.first()); await press(p.getByRole('button', { name: /Download/ }).first()); await press(p.getByRole('button', { name: 'Next' })); } },
   { tag: 'requirements-menu', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await press(ex.first()); await press(p.getByRole('button', { name: /Actions for Positioning/ })); } },
   // The tree and the layers (a phone's outline and its drill-down by level).
   { tag: 'requirements-tree', path: '/projects/p1/requirements?view=tree&artifact=req-2' },
