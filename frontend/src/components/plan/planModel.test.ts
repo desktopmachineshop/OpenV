@@ -251,25 +251,29 @@ describe('the plan model', () => {
     expect(barTone(task('t'))).toBe('idle');
   });
 
-  it('groups the phone schedule under the milestone each task leads to', () => {
+  it('groups the phone schedule under the milestone each task is assigned to', () => {
     const groups = phoneGroups(
       [
-        task('early', { span_end: '2027-02-01' }),
-        task('on-the-day', { span_end: '2027-03-01' }),
+        task('early', { span_end: '2027-02-01', milestone: 'm1' }),
         task('sub', { depth: 1, parent_id: 'early', span_end: '2027-06-01' }),
-        task('mid', { span_end: '2027-03-02' }),
+        // Due before m1, but assigned to none: it is not m1's.
+        task('due-before', { span_end: '2027-02-10' }),
+        task('mid', { span_end: '2027-09-01', milestone: 'm2' }),
+        task('floating', { milestone: 'undated' }),
         task('late', { span_end: '2027-09-01' }),
         task('loose'),
       ],
-      [milestone('m1', '2027-03-01'), milestone('m2', '2027-06-01'), milestone('undated', null)],
+      [milestone('m1', '2027-03-01'), milestone('m2', '2027-06-01'), milestone('undated', null), milestone('empty-undated', null)],
     );
     expect(groups.map((g) => [g.key, g.tasks.map((t) => t.id)])).toEqual([
-      ['m1', ['early', 'on-the-day']],
+      ['m1', ['early']],
       ['m2', ['mid']],
-      ['later', ['late']],
+      ['undated', ['floating']],
+      ['unassigned', ['due-before', 'late']],
       ['unscheduled', ['loose']],
     ]);
-    // A milestone with nothing due before it still shows; an empty tail does not.
+    expect(groups[3].title).toBe('Not assigned to a milestone');
+    // A dated milestone with no task still shows; an empty tail does not.
     expect(phoneGroups([], [milestone('m1', '2027-03-01')]).map((g) => g.key)).toEqual(['m1']);
     expect(phoneGroups([task('x', { span_end: '2027-01-01' })], [])[0].title).toBe('Scheduled');
   });

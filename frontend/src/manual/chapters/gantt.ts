@@ -586,8 +586,8 @@ A task can wait on a task of another project of the same workspace. In the task'
 
 A timeline needs more width than a phone has, so the phone shows the same
 plan as a schedule. Four tiles give the figures. Under **Schedule**, the
-tasks are grouped by the milestone they are assigned to, or else the one
-they are due before, each with its
+tasks are grouped by the milestone they are assigned to, with the rest
+under **Not assigned to a milestone**, each with its
 dates, duration and a progress bar, and **Critical** on a task with no
 float; **Milestones** lists the milestones with their
 progress. Tap a task or a milestone to open it and make the same edits as

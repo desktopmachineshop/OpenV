@@ -21,6 +21,11 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **The phone's plan groups tasks by the milestone they are assigned
+  to.** A task is listed under a milestone only when it is assigned to
+  it, not because it happens to be due before the milestone's date, and
+  the rest are under **Not assigned to a milestone** in place of *After
+  the last milestone*.
 - **One bar on every chart of the plan.** The Timeline and All projects
   now draw a task's bar exactly as the Gantt does: green when done, red
   when late, filled as far as the work has gone, with a parent in grey
