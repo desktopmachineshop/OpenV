@@ -130,6 +130,7 @@ GET /api/v1/orgs/{id}/usage
 GET /api/v1/orgs/{id}/worker-keys
 GET /api/v1/orgs/{id}/worker-status
 GET /api/v1/plan/master
+GET /api/v1/plan/mine
 GET /api/v1/projects
 GET /api/v1/projects/{id}
 GET /api/v1/projects/{id}/ai-map

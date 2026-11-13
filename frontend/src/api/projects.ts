@@ -22,6 +22,7 @@ import type {
   PlanMilestoneInput,
   MasterLevels,
   MasterPlan,
+  MyPlanTasks,
   PlanBaselineInfo,
   PlanTimeOff,
   WorkspacePlanCalendar,
@@ -247,6 +248,8 @@ export const planAPI = {
   removeTimeOff: (orgId: string, id: string) => client.delete(`/api/v1/orgs/${orgId}/plan-calendar/time-off/${id}`),
   /** The plans of every project of the workspace the reader can see, each down to a level: 1 is the top-level tasks. */
   master: (levels: MasterLevels = '1') => client.get<MasterPlan>('/api/v1/plan/master', { params: { levels } }),
+  /** The tasks the caller works on, across the plans of the workspace's projects they can read. */
+  mine: () => client.get<MyPlanTasks>('/api/v1/plan/mine'),
   /** Makes a task driven by a task of another project. */
   relateExternal: (workItemId: string, otherId: string, type: PlanRelationshipType, lagDays = 0, lagUnit: PlanLagUnit = 'd') =>
     client.put<PlanTask>(`/api/v1/work-items/${workItemId}/external-links/${otherId}`, { type, lag_days: lagDays, lag_unit: lagUnit }),

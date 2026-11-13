@@ -105,3 +105,59 @@ func (m *MasterPlan) Add(name, parentProjectID string, p *Plan, levels int) {
 	m.Today = p.Today
 	m.Projects = append(m.Projects, line)
 }
+
+// MyTask is a task of some project's plan that a person works on.
+type MyTask struct {
+	ProjectID   string  `json:"project_id"`
+	ProjectName string  `json:"project_name"`
+	ID          string  `json:"id"`
+	Title       string  `json:"title"`
+	Column      string  `json:"column"`
+	Start       *string `json:"start"`
+	End         *string `json:"end"`
+	Progress    int     `json:"progress"`
+	Done        bool    `json:"done"`
+	Late        bool    `json:"late"`
+	Critical    bool    `json:"critical"`
+}
+
+// MyTasks is one person's tasks across the plans they can read.
+type MyTasks struct {
+	Today string   `json:"today"`
+	Tasks []MyTask `json:"tasks"`
+}
+
+// Add puts on the list the tasks of a project's plan that the user works
+// on: the ones assigned to them on the board, and the ones they are a
+// resource of. A task with sub-tasks is left to its sub-tasks, which are
+// the work.
+func (m *MyTasks) Add(name string, p *Plan, userID string) {
+	parent := map[string]bool{}
+	for _, t := range p.Tasks {
+		if t.ParentID != nil {
+			parent[*t.ParentID] = true
+		}
+	}
+	m.Today = p.Today
+	for _, t := range p.Tasks {
+		if parent[t.ID] || !worksOn(t, userID) {
+			continue
+		}
+		m.Tasks = append(m.Tasks, MyTask{ProjectID: p.ProjectID, ProjectName: name, ID: t.ID, Title: t.Title, Column: t.Column,
+			Start: t.SpanStart, End: t.SpanEnd, Progress: t.Progress, Done: t.Done, Late: t.Late, Critical: t.Critical})
+	}
+}
+
+// worksOn reports whether the user is the task's assignee or one of its
+// resources.
+func worksOn(t *Task, userID string) bool {
+	if t.AssigneeType == "user" && t.AssigneeID != nil && *t.AssigneeID == userID {
+		return true
+	}
+	for _, a := range t.Assignments {
+		if a.Type == "user" && a.ID == userID {
+			return true
+		}
+	}
+	return false
+}

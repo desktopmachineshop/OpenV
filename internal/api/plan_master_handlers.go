@@ -21,6 +21,7 @@ const maxMasterLevels = 20
 // tasks of two projects.
 func (h *Handler) registerPlanMasterRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/plan/master", h.GetMasterPlan).Methods("GET")
+	router.HandleFunc("/api/v1/plan/mine", h.GetMyPlanTasks).Methods("GET")
 	router.HandleFunc("/api/v1/work-items/{id}/external-links/{otherId}", h.RelateExternalWorkItems).Methods("PUT")
 	router.HandleFunc("/api/v1/work-items/{id}/external-links/{otherId}", h.UnrelateExternalWorkItems).Methods("DELETE")
 }
@@ -81,6 +82,39 @@ func (h *Handler) GetMasterPlan(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	out.Links = links
+	writeJSONOK(w, out)
+}
+
+// GetMyPlanTasks answers the tasks the caller works on, across the plans of
+// the active workspace's projects they can read: the ones assigned to them
+// and the ones they are a resource of. An account only: a key has no tasks.
+func (h *Handler) GetMyPlanTasks(w http.ResponseWriter, r *http.Request) {
+	out := plan.MyTasks{Tasks: []plan.MyTask{}}
+	org, user := ActiveOrg(r), CurrentUserID(r)
+	if h.PlanService == nil || org == "" || user == nil {
+		writeJSONOK(w, out)
+		return
+	}
+	list, err := h.ProjectService.ListProjectsByOrg(org)
+	if err != nil {
+		respondInternal(w, r, "failed to list projects", err)
+		return
+	}
+	read := 0
+	for _, project := range list {
+		if read >= maxMasterProjects {
+			break
+		}
+		if !h.hasProjectRole(r, project.ID, members.RoleViewer) {
+			continue
+		}
+		p, ok := h.loadPlan(w, r, project.ID)
+		if !ok {
+			return
+		}
+		read++
+		out.Add(project.Name, p, *user)
+	}
 	writeJSONOK(w, out)
 }
 

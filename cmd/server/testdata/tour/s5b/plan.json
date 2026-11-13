@@ -11020,6 +11020,31 @@
     },
     {
       "n": 133,
+      "title": "the owner's own tasks across the workspace's plans",
+      "actor": "owner",
+      "route": "GET /api/v1/plan/mine",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/plan/mine"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 34,
+      "kind": "json",
+      "body": [
+        "{\"today\":\"<date>\",\"tasks\":[]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "today": "<date>",
+        "tasks": []
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 134,
       "title": "a level that is not one: 400",
       "actor": "owner",
       "route": "GET /api/v1/plan/master",
@@ -11044,7 +11069,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 134,
+      "n": 135,
       "title": "the link removed",
       "actor": "owner",
       "route": "DELETE /api/v1/work-items/{id}/external-links/{otherId}",
@@ -11062,7 +11087,7 @@
       "events": []
     },
     {
-      "n": 135,
+      "n": 136,
       "title": "removed again: 404",
       "actor": "owner",
       "route": "DELETE /api/v1/work-items/{id}/external-links/{otherId}",
@@ -11087,7 +11112,7 @@
       "events": []
     },
     {
-      "n": 136,
+      "n": 137,
       "title": "a Microsoft Project file imported: two tasks, a milestone and a relationship",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/import",
@@ -11157,7 +11182,7 @@
       ]
     },
     {
-      "n": 137,
+      "n": 138,
       "title": "a file that is not one: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/plan/import",
@@ -11186,7 +11211,7 @@
       "events": []
     },
     {
-      "n": 138,
+      "n": 139,
       "title": "the viewer may not import: 403",
       "actor": "viewer",
       "route": "POST /api/v1/projects/{id}/plan/import",

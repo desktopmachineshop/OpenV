@@ -76,6 +76,12 @@ const BaselineCompare = lazy(() =>
 );
 // The workspace's runs with no project, a low-traffic view.
 const MyTodosPage = lazy(() => import('./views/MyTodos').then((m) => ({ default: m.MyTodosPage })));
+const GanttWorkspaceTasks = lazy(() =>
+  import('./views/GanttWorkspaceTasks').then((m) => ({ default: m.GanttWorkspaceTasks }))
+);
+const AgentsWorkspace = lazy(() =>
+  import('./views/AgentsWorkspace').then((m) => ({ default: m.AgentsWorkspace }))
+);
 const GanttWorkspace = lazy(() =>
   import('./views/GanttWorkspace').then((m) => ({ default: m.GanttWorkspace }))
 );
@@ -303,6 +309,10 @@ function App() {
         {/* The workspace's plan, every project on one chart: gated on
             workspace-plan by the page itself, as Runs is. */}
         <Route path="/org/plan" element={<GanttWorkspace />} />
+        {/* The reader's own tasks across the workspace's plans: a tab of the workspace's Plan, gated as it is. */}
+        <Route path="/org/plan/tasks" element={<GanttWorkspaceTasks />} />
+        {/* The workspace's agents, outside any project: Runs is the tab beside it. */}
+        <Route path="/org/agents" element={<AgentsWorkspace />} />
         {/* My to-dos: gated on todos by the page itself, as Runs is. */}
         <Route path="/org/todos" element={<MyTodosPage />} />
         <Route path="/manual" element={<ManualView />} />

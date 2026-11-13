@@ -377,6 +377,7 @@ POST /api/v1/projects/{id}/plan/recalculate -> RecalculatePlan
 POST /api/v1/projects/{id}/plan/level -> LevelPlan
 POST /api/v1/projects/{id}/plan/import -> ImportPlan
 GET /api/v1/plan/master -> GetMasterPlan
+GET /api/v1/plan/mine -> GetMyPlanTasks
 PUT /api/v1/work-items/{id}/external-links/{otherId} -> RelateExternalWorkItems
 DELETE /api/v1/work-items/{id}/external-links/{otherId} -> UnrelateExternalWorkItems
 GET /api/v1/orgs/{id}/plan-calendar -> GetWorkspacePlanCalendar

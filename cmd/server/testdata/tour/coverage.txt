@@ -142,6 +142,7 @@ GET /api/v1/orgs/{id}/usage: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/orgs/{id}/worker-keys: s5c, s5d, s5e; 2xx or 3xx in s5c, s5d, s5e
 GET /api/v1/orgs/{id}/worker-status: s5c, s5e; 2xx or 3xx in s5c, s5e
 GET /api/v1/plan/master: s5b, s5e; 2xx or 3xx in s5b, s5e
+GET /api/v1/plan/mine: s5b, s5e; 2xx or 3xx in s5b, s5e
 GET /api/v1/projects: s5a, s5d, s5e; 2xx or 3xx in s5a, s5d, s5e
 GET /api/v1/projects/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/projects/{id}/ai-map: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
@@ -403,4 +404,4 @@ PUT /api/v1/work-items/{id}/external-links/{otherId}: s5b, s5e; 2xx or 3xx in s5
 PUT /api/v1/work-items/{id}/relationships/{otherId}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}/schedule: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 392 of 392 routes reached (100.0%), 377 with a 2xx or 3xx answer (96.2%); the floor is 90%, 353 routes
+the tour: 393 of 393 routes reached (100.0%), 378 with a 2xx or 3xx answer (96.2%); the floor is 90%, 354 routes

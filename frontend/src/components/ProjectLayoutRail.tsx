@@ -10,6 +10,7 @@ import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
 import { ProjectSwitcher } from './ProjectLayoutSwitcher';
 import { GroupTabs } from './ProjectLayoutGroupTabs';
+import { useAppStore } from '../state/store';
 import { activeGroup } from './ProjectLayoutNav';
 
 // The compact project layout on a wide screen (the compact-layout feature
@@ -38,6 +39,7 @@ interface RailProps {
 const Rail: React.FC<RailProps> = ({ sections, activePath }) => {
   const location = useLocation();
   const [openGroup, setOpenGroup] = useState<NavGroup | null>(null);
+  const isAdmin = useAppStore((st) => Boolean(st.currentUser?.is_admin));
   const railRef = useRef<HTMLElement | null>(null);
 
   // Arriving somewhere is the commonest reason to be done with the flyout.
@@ -70,13 +72,16 @@ const Rail: React.FC<RailProps> = ({ sections, activePath }) => {
         <span>Home</span>
       </NavLink>
       <nav className="ov-rail-nav" aria-label="Project pages" data-help-key="start.navigation">
-        {grouped.map((section) => {
+        <span className="ov-rail-rule" aria-hidden="true" />
+        {grouped.map((section, index) => {
           const label = section.label as NavGroup;
           const expanded = openGroup === label;
           const current = sectionHasActive(section.items, activePath);
           return (
+            <React.Fragment key={label}>
+            {/* Plan, Define and Verify are the project's work; Agents sits with the settings below the rule. */}
+            {label === 'Agents' && index > 0 && <span className="ov-rail-rule" aria-hidden="true" />}
             <button
-              key={label}
               type="button"
               className={`ov-rail-item${current ? ' is-current' : ''}`}
               aria-expanded={expanded}
@@ -86,15 +91,22 @@ const Rail: React.FC<RailProps> = ({ sections, activePath }) => {
               <NavIcon d={groupIconPath(label)} />
               <span>{label}</span>
             </button>
+            </React.Fragment>
           );
         })}
-        <span className="ov-rail-rule" aria-hidden="true" />
+        {!grouped.some((g) => g.label === 'Agents') && <span className="ov-rail-rule" aria-hidden="true" />}
         {tail.map((item) => (
           <NavLink key={item.to} to={item.to} end={item.end} className="ov-rail-item">
             <NavIcon d={pageIconPath(item.to)} />
             <span>{item.label}</span>
           </NavLink>
         ))}
+        {isAdmin && (
+          <NavLink to="/admin" className="ov-rail-item">
+            <NavIcon d="M10 2l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V5z" />
+            <span>Admin</span>
+          </NavLink>
+        )}
         {flyout && (
           <div
             id="ov-rail-flyout"
