@@ -2,6 +2,49 @@
  "_comment": "Generated from RELEASE_NOTES.md by `python3 scripts/release_notes.py site`; do not edit.",
  "releases": [
   {
+   "version": "0.36.0",
+   "date": "2026-11-14",
+   "stableSince": "",
+   "groups": [
+    {
+     "name": "New features",
+     "notes": [
+      "**Create projects with a runner key or from a connected AI app.** A script holding a runner key can now create a project, import one or start one from a template, and the MCP tools gain **create_project**, which also files the new project under a parent. So Claude, Cursor or another connected app can set up a project, or a whole programme of sub-projects, when you ask it to. A project made by a connected app or with your personal runner key is yours; one made with a workspace key has no owner of its own and is managed by the workspace's admins. Agent runs still work only inside their own project."
+     ]
+    },
+    {
+     "name": "Maintenance updates",
+     "notes": [
+      "**A shorter zoom control.** The plan's time scale buttons read **D**, **W**, **M** and **Q**, for days, weeks, months and quarters; pointing at one names it.",
+      "**Every Gantt view, for every project at once.** The workspace's **Plan** page has a **View** menu: beside the timeline of a line per project it now draws all the projects as a **Gantt** (a row per project, its tasks beneath it), a **Network**, a **Calendar** and **Resource usage**, which adds up each person's work across the projects. They read the plans; a task's open mark leads to its own project's Gantt.",
+      "**Download a project with the projects under it.** The download form of a project that has projects beneath it offers **Child projects**: tick it and each one you can read, every level down, travels in the same archive as its own download, in a folder of its name under `projects/`, with the same format and choices, and its own plan if you asked for the plan.",
+      "**Open an artifact in full.** The open mark beside an artifact's title shows it over the page, as a task opens, with its **History** in a card of its own beside it.",
+      "**A task's activity is its History.** A card's activity feed is now the same **History** an artifact has, with **Comments**, **Changes** and **All** to choose what it lists; with the card opened in full it sits in a card of its own under the card's fields.",
+      "**Select several tasks on the Gantt and the Timeline.** **Ctrl**-click (**Cmd** on a Mac) a row or a bar adds a task to those selected, or drops it; **Shift**-click takes every task between. With several selected, the panel beside the chart lists them, assigns them all to a milestone, and moves their dates by a number of days.",
+      "**Help is the ? in the top bar.** The button that read *Help ?* is now the **?** icon alone, as it already was on a phone, and the small arrow beside your picture in the top bar has gone: the picture opens the account menu.",
+      "**The Assistant button is on every page, and tucks away.** The **✦ Assistant** button now shows on the workspace's pages (Plan, Agents, Settings and the rest) as well as inside a project. The small arrow at its side folds it into a tab on the edge of the window; the tab brings it back, and your browser remembers which. **Alt+A** opens the assistant either way.",
+      "**A tidier menu.** With no project open the rail is **Home**, **Plan**, then **Agents**, **Settings** and **Admin**. **Plan** holds every project's plan and two tabs of what is yours across them: **My tasks**, new, and **To-dos** (which was *My to-dos* in the rail). **Agents** is new at this level and holds the workspace's agents with **Runs** as its tab. Inside a project the rail groups the same way: **Plan**, **Define**, **Verify**, then **Agents**, **Activity**, **Settings** and **Admin**. News has left the rail: releases arrive as notifications, and the notes are in your account menu and beside the release in the workspace's settings.",
+      "**A card opens beside the board.** On a computer, clicking a card opens it in a panel at the side that the board makes room for, so the columns stay in view and you can go from card to card. Each card, and the open card's header, has an open mark that shows the card in full.",
+      "**Tasks linked to another project are marked.** A task that waits on, or drives, a task of another project's plan has two joined rings beside its name on the Gantt and the phone's schedule, red when the dates break the link, and ⇄ before its name on the Timeline and All projects. Pointing at the mark names the other task and its project.",
+      "**The Timeline has a level of detail.** A project's Timeline view has the same **Level** menu as All projects: Level 1 is the top-level tasks, each level further adds the sub-tasks on rows beneath their parents, whose bars stay, and **All levels** goes all the way down. The two views share the choice.",
+      "**All projects follows the project hierarchy.** On the workspace's Plan page and a Gantt's All projects view, a project that belongs under another is listed beneath it, indented, and a parent folds its projects away.",
+      "**A baseline comparison names the tasks that changed.** Under **Plan** on the Baselines page, **Tasks that changed** lists each task that was added, removed, finished or moved between the two sides, with how many days later or earlier it now ends, the ones that slipped furthest first. Baselines taken from now on also keep each task's name, so a task deleted since is still named.",
+      "**The full comparison page shows the plan too**, with the same figures and task list as the Baselines page.",
+      "**All projects remembers its level.** The level of detail you choose on the workspace's Plan page or a Gantt's All projects view is kept in your browser for the next visit, and the page's controls are thumb-sized on a phone.",
+      "**Encrypted, off-host backups for a self-hosted server.** Set `BACKUP_PASSPHRASE` and every backup bundle is encrypted; `make restore` decrypts it with the same passphrase. `BACKUP_COPY_HOST_DIR` copies each bundle to a second place, such as a mounted network disk, and `BACKUP_POST_HOOK` runs a command of yours on it, to push it wherever you keep copies. `make backup-drill` proves on a scratch database that a backup restores. See *Backup and restore* in the operations guide."
+     ]
+    },
+    {
+     "name": "Bug fixes",
+     "notes": [
+      "**A milestone's open mark opens it in full.** On the Gantt the mark beside a milestone's name did what the name did. The name now opens the milestone beside the chart and the mark opens it over the page, as for a task.",
+      "**A chat with an agent no longer puts a card on the board.** Typing a prompt to an agent with **Launch run** made an *Agent run* card for it. A chat is not a task, so it now makes none: the run is on the Runs page. A card you assign to an agent still launches it, and work an automation, a schedule or a script calling the API starts is still tracked on the board. Cards already made this way stay until you delete them.",
+      "**A scheduled backup whose database dump failed still wrote a bundle.** On a self-hosted server with the backup sidecar, a run that could not reach the database went on to write a bundle with no database in it, which looked like any other. It now writes nothing and tries again at the next interval. Manual `make backup` was not affected. If you rely on scheduled backups, check that a recent bundle holds a non-empty `openv-db.sql`."
+     ]
+    }
+   ]
+  },
+  {
    "version": "0.35.0",
    "date": "2026-11-13",
    "stableSince": "",

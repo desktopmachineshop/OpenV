@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.36.0 — 2026-11-14
+
 ### New features
 
 - **Create projects with a runner key or from a connected AI app.** A
