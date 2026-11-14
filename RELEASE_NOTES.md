@@ -23,6 +23,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Every Gantt view, for every project at once.** The workspace's
+  **Plan** page has a **View** menu: beside the timeline of a line per
+  project it now draws all the projects as a **Gantt** (a row per
+  project, its tasks beneath it), a **Network**, a **Calendar** and
+  **Resource usage**, which adds up each person's work across the
+  projects. They read the plans; a task's open mark leads to its own
+  project's Gantt.
 - **Download a project with the projects under it.** The download form
   of a project that has projects beneath it offers **Child projects**:
   tick it and each one you can read, every level down, travels in the
