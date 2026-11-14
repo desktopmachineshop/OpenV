@@ -23,6 +23,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Download a project with the projects under it.** The download form
+  of a project that has projects beneath it offers **Child projects**:
+  tick it and each one you can read, every level down, travels in the
+  same archive as its own download, in a folder of its name under
+  `projects/`, with the same format and choices, and its own plan if you
+  asked for the plan.
 - **Open an artifact in full.** The open mark beside an artifact's title
   shows it over the page, as a task opens, with its **History** in a card
   of its own beside it.
