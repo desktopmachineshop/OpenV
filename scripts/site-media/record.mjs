@@ -21,8 +21,11 @@ const [specPath, outDir, baseURL, flag] = process.argv.slice(2);
 const check = flag === '--check';
 const spec = JSON.parse(fs.readFileSync(specPath, 'utf8'));
 const phone = spec.viewport === 'phone';
+// Playwright records the page at the viewport's size and does not scale it
+// to a larger frame: a bigger "size" only pads the picture. So the
+// recording is the viewport's size, and site_media.py scales it up.
 const size = phone ? { width: 390, height: 844 } : { width: 1280, height: 720 };
-const video = phone ? { width: 780, height: 1688 } : { width: 1920, height: 1080 };
+const video = size;
 
 fs.mkdirSync(path.join(outDir, 'shots'), { recursive: true });
 const browser = await chromium.launch();
@@ -42,13 +45,23 @@ const login = await context.request.post('/api/v1/auth/login', {
 });
 if (!login.ok()) throw new Error(`sign-in failed: ${login.status()}`);
 
+// A path may name a project as {Project name}: the recording looks its id
+// up, since ids differ between the machines a video is recorded on.
+const projects = await (await context.request.get('/api/v1/projects')).json();
+const resolve = (to) =>
+  to.replace(/\{([^}]+)\}/g, (_, name) => {
+    const found = projects.find((p) => p.name === name);
+    if (!found) throw new Error(`no project named ${name}`);
+    return found.id;
+  });
+
 const page = await context.newPage();
 const started = Date.now();
 const now = () => (Date.now() - started) / 1000;
 
 // One action is [name, ...arguments]; selectors are Playwright's.
 const actions = {
-  goto: (to) => page.goto(to, { waitUntil: 'networkidle' }),
+  goto: (to) => page.goto(resolve(to), { waitUntil: 'networkidle' }),
   click: (sel) => page.locator(sel).first().click(),
   dblclick: (sel) => page.locator(sel).first().dblclick(),
   hover: (sel) => page.locator(sel).first().hover(),

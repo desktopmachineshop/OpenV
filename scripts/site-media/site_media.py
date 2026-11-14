@@ -135,7 +135,7 @@ def cut(folder, spec, name, only=None):
             run(
                 ["ffmpeg", "-y", *source, "-i", wav, "-filter_complex",
                  # hold the last frame if the voice outlasts the picture; pad the voice with quiet to the end
-                 f"[0:v]fps=30,scale=1920:-2:flags=lanczos,tpad=stop_mode=clone:stop_duration=30,trim=duration={length:.3f},setpts=PTS-STARTPTS[v];"
+                 f"[0:v]fps=30,scale={1080 if spec.get('viewport') == 'phone' else 1920}:-2:flags=lanczos,tpad=stop_mode=clone:stop_duration=30,trim=duration={length:.3f},setpts=PTS-STARTPTS[v];"
                  f"[1:a]aresample=48000,apad,atrim=duration={length:.3f}[a]",
                  "-map", "[v]", "-map", "[a]", "-c:v", "libx264", "-preset", "slow", "-crf", "26", "-pix_fmt", "yuv420p",
                  "-c:a", "aac", "-b:a", "96k", clip]
