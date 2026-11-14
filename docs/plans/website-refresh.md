@@ -1,6 +1,13 @@
 # Website refresh plan
 
-Status: draft for the maintainer, 2026-11-13. Nothing here is built.
+Status, 2026-11-14: in progress. Built, awaiting review:
+desktopmachineshop/OpenV-hosted#40 (wording, industries, news, the
+features page, five new videos, search titles and descriptions) and
+desktopmachineshop/OpenV#796 (the recording tooling, and a gap-list fix
+the videos needed). The sample programme is loaded in the Desktop Machine
+Shop workspace. Open: phone, agents and interviews videos, the rest of
+section 10, and removing the old desktop videos from OpenV's own
+`frontend/public/videos` once openv.app no longer links to them.
 
 Starts once the UI changes land on master (the open one today is
 [#789](https://github.com/desktopmachineshop/OpenV/pull/789), the Timeline's
