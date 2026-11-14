@@ -170,7 +170,14 @@ def cut(folder, spec, name, only=None):
     for shot in sorted(os.listdir(shots)) if os.path.isdir(shots) else []:
         if shot.endswith(".png") and not shot.startswith("FAILED-"):
             os.makedirs(os.path.join(out_dir, "screenshots"), exist_ok=True)
-            run(["ffmpeg", "-y", "-i", os.path.join(shots, shot), "-c:v", "libwebp", "-quality", "82", os.path.join(out_dir, "screenshots", shot[:-4] + ".webp")])
+            src, dst = os.path.join(shots, shot), os.path.join(out_dir, "screenshots", shot[:-4])
+            run(["ffmpeg", "-y", "-i", src, "-c:v", "libwebp", "-quality", "82", dst + ".webp"])
+            # The copy a phone downloads instead (openv.app's /features, srcset):
+            # 1280 wide, for a shot wider than that. A PNG's width is bytes 16-19.
+            with open(src, "rb") as f:
+                width = int.from_bytes(f.read(24)[16:20], "big")
+            if width > 1280:
+                run(["ffmpeg", "-y", "-i", src, "-vf", "scale=1280:-2", "-c:v", "libwebp", "-quality", "80", dst + "-1280.webp"])
     size = os.path.getsize(mp4) / 1e6
     print(f"{name}: {at:.0f} s, {size:.1f} MB, {len(parts)} steps -> {mp4}")
     if size > 50:

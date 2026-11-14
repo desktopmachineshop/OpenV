@@ -6,5 +6,7 @@
   <prolog>
     <resourceid appname="openv-web" appid="start"/>
   </prolog>
-  <conbody/>
+  <conbody>
+    <p>To watch a project go from nothing to its first baseline, see the <xref href="https://openv.app/demos#getting-started" scope="external" format="html">getting-started video</xref> on openv.app: two minutes, with captions and a transcript.</p>
+  </conbody>
 </concept>

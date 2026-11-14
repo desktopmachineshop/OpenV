@@ -9,6 +9,20 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **An agent's proposal shows only what it changes.** A proposal to
+  reword a requirement listed the requirement's other fields as though it
+  would clear them, though approving it left them as they were. Review now
+  shows the new wording alone.
+
+### Maintenance updates
+
+- **The manual links to the getting-started video.** The Getting started
+  chapter points to the two-minute walk-through on openv.app.
+- **A lighter logo.** The OpenV logo at the top of every page is 5 KB
+  instead of 177 KB, so a page shows sooner on a slow connection.
+
 ## 0.36.2 — 2026-11-14
 
 ### Bug fixes
