@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.36.2 — 2026-11-14
+
 ### Bug fixes
 
 - **A phase shows under its milestone on a phone.** On a phone, the
