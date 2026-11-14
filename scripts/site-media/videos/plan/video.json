@@ -1,0 +1,52 @@
+{
+  "title": "The plan, the Timeline and All projects",
+  "description": "The Desktop CNC Mill's plan in OpenV: phases and milestones on the Gantt, the Timeline, and every project of the programme on one chart with the links between them.",
+  "viewport": "desktop",
+  "steps": [
+    {
+      "id": "intro",
+      "do": [["goto", "/projects/{Desktop CNC Mill}/gantt"], ["click", "button:has-text('Months')"], ["click", "button:has-text('Today')"], ["wait", 800], ["shot", "plan-gantt"]],
+      "say": "Every project in OpenV has a plan. This is the Desktop CNC Mill's: six phases, from the first requirements in January 2026 to the production release in December 2027."
+    },
+    {
+      "id": "today",
+      "do": [["hover", "text=System design and interface control"]],
+      "say": "The red line is today. The phases before it are done, the detailed design is part way through, and the bars show how far each task has got."
+    },
+    {
+      "id": "milestones",
+      "do": [["hover", "button:has-text('Critical design review')"], ["wait", 600]],
+      "say": "Each phase ends at a milestone. A milestone can wait for more than its tasks: the critical design review counts as met only when every requirement has a design item that satisfies it."
+    },
+    {
+      "id": "timeline",
+      "do": [["select", "select[aria-label='View']", "timeline"], ["wait", 1200], ["shot", "plan-timeline"]],
+      "say": "The Timeline draws the same plan as a line of phases, which is the view to show at a review."
+    },
+    {
+      "id": "all",
+      "do": [["goto", "/org/plan"], ["click", "button:has-text('Months')"], ["click", "button:has-text('Today')"], ["wait", 1000], ["shot", "plan-all-projects"]],
+      "say": "The mill is one of fifteen projects. Its frame, motion, control, enclosure and safety system each have a project, and so do their parts. The workspace's Plan page puts every one of them on one chart."
+    },
+    {
+      "id": "hierarchy",
+      "do": [["hover", "text=Mill frame & structure"]],
+      "say": "A project that belongs under another is listed beneath it, so the chart reads as the product does: the mill, its assemblies, and their parts."
+    },
+    {
+      "id": "level",
+      "do": [["select", "select[aria-label='Level of detail']", "2"], ["wait", 1200]],
+      "say": "Choose a level of detail to show each project's tasks as well as its phases."
+    },
+    {
+      "id": "links",
+      "do": [["scroll", "text=Links between projects"], ["wait", 800], ["shot", "plan-links"]],
+      "say": "Below the chart are the links between projects. The motion project cannot integrate its parts until each motor and drive has been handed over, and the mill's alpha build waits for every assembly."
+    },
+    {
+      "id": "close",
+      "do": [["select", "select[aria-label='Level of detail']", "1"], ["wait", 800]],
+      "say": "When a part slips, the link shows it in red, and you can see which assembly and which milestone it puts at risk."
+    }
+  ]
+}
