@@ -47,13 +47,20 @@ if (!login.ok()) throw new Error(`sign-in failed: ${login.status()}`);
 
 // A path may name a project as {Project name}: the recording looks its id
 // up, since ids differ between the machines a video is recorded on.
-const projects = await (await context.request.get('/api/v1/projects')).json();
-const resolve = (to) =>
-  to.replace(/\{([^}]+)\}/g, (_, name) => {
+// The list is read again when a name is missing, for a project the video
+// itself has just created.
+let projects = await (await context.request.get('/api/v1/projects')).json();
+const resolve = async (to) => {
+  const names = [...to.matchAll(/\{([^}]+)\}/g)].map((m) => m[1]);
+  if (names.some((n) => !projects.find((p) => p.name === n))) {
+    projects = await (await context.request.get('/api/v1/projects')).json();
+  }
+  return to.replace(/\{([^}]+)\}/g, (_, name) => {
     const found = projects.find((p) => p.name === name);
     if (!found) throw new Error(`no project named ${name}`);
     return found.id;
   });
+};
 
 const page = await context.newPage();
 const started = Date.now();
@@ -61,7 +68,7 @@ const now = () => (Date.now() - started) / 1000;
 
 // One action is [name, ...arguments]; selectors are Playwright's.
 const actions = {
-  goto: (to) => page.goto(resolve(to), { waitUntil: 'networkidle' }),
+  goto: async (to) => page.goto(await resolve(to), { waitUntil: 'networkidle' }),
   click: (sel) => page.locator(sel).first().click(),
   dblclick: (sel) => page.locator(sel).first().dblclick(),
   hover: (sel) => page.locator(sel).first().hover(),
