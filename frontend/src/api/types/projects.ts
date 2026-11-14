@@ -107,6 +107,8 @@ export interface DownloadOptions {
   defaults?: DownloadContent;
   /** The project's plan, when it has a task or a milestone to take along; never for a baseline. */
   plan?: { tasks: number; milestones: number };
+  /** How many projects under this one a download can take along; never for a baseline. */
+  children?: number;
 }
 
 export interface DownloadSection {
@@ -180,6 +182,8 @@ export interface DownloadSelection {
   fields?: string[];
   /** Take the plan and its tasks beside the document, which makes the download an archive. */
   plan?: boolean;
+  /** Take the projects under this one along, each as its own download in a folder of its name. */
+  children?: boolean;
 }
 
 export type DownloadFormat = 'json' | 'csv' | 'excel' | 'reqif' | 'pdf' | 'docx';

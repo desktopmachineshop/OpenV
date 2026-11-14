@@ -4,11 +4,12 @@
 
 export type Zoom = 'days' | 'weeks' | 'months' | 'quarters';
 
-export const ZOOMS: { value: Zoom; label: string }[] = [
-  { value: 'days', label: 'Days' },
-  { value: 'weeks', label: 'Weeks' },
-  { value: 'months', label: 'Months' },
-  { value: 'quarters', label: 'Quarters' },
+// One letter each: the control sits in a header with little room, and its tooltip spells the scale out.
+export const ZOOMS: { value: Zoom; label: string; title: string }[] = [
+  { value: 'days', label: 'D', title: 'Days' },
+  { value: 'weeks', label: 'W', title: 'Weeks' },
+  { value: 'months', label: 'M', title: 'Months' },
+  { value: 'quarters', label: 'Q', title: 'Quarters' },
 ];
 
 /** Pixels one day takes at each zoom. */
