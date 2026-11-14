@@ -20,6 +20,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 - **The manual links to the getting-started video.** The Getting started
   chapter points to the two-minute walk-through on openv.app.
+- **A lighter logo.** The OpenV logo at the top of every page is 5 KB
+  instead of 177 KB, so a page shows sooner on a slow connection.
 
 ## 0.36.2 — 2026-11-14
 

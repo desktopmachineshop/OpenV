@@ -50,7 +50,8 @@ The account signs in to an OpenV with the sample programme loaded
 `build/out/`: `<video>.mp4`, a poster `<video>.jpg`, captions
 `<video>.vtt`, `<video>.json` (title, description, length and each step's
 line with its start and end, for the transcript on the page and the
-upload's chapters) and `screenshots/*.webp`.
+upload's chapters) and `screenshots/*.webp`, with a 1280-wide `-1280.webp`
+copy of each shot wider than that for phones.
 
 The voice is Kokoro, an open speech model that runs offline
 (`pip install kokoro-onnx soundfile`; the model files are on the
