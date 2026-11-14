@@ -1,0 +1,183 @@
+{
+  "title": "Baselines, changes and documents",
+  "description": "A baseline of the Desktop CNC Mill before a review, a changed requirement and the links it flags, the comparison of the two, and a specification downloaded from the baseline.",
+  "viewport": "desktop",
+  "steps": [
+    {
+      "id": "intro",
+      "do": [
+        [
+          "goto",
+          "/projects/{Desktop CNC Mill}/requirements"
+        ],
+        [
+          "see",
+          "text=Parts that measure right"
+        ]
+      ],
+      "say": "Before a design review, freeze the project as it stands, so everyone reviews the same thing and you can see later what changed."
+    },
+    {
+      "id": "capture",
+      "do": [
+        [
+          "click",
+          "button:has-text('Working copy')"
+        ],
+        [
+          "click",
+          "button:has-text('Capture Baseline')"
+        ],
+        [
+          "type",
+          "input[placeholder*='Design freeze']",
+          "Critical design review"
+        ],
+        [
+          "click",
+          "button:has-text('OK')"
+        ],
+        [
+          "wait",
+          800
+        ]
+      ],
+      "say": "That is a baseline: every requirement, link and attribute, as they were at that moment. Nobody can change it afterwards."
+    },
+    {
+      "id": "edit",
+      "do": [
+        [
+          "click",
+          "text=Noise"
+        ],
+        [
+          "click",
+          "button:has-text('Edit')"
+        ],
+        [
+          "fill",
+          "textarea",
+          "The mill shall emit no more than 72 dB(A) at 1 m while cutting 6061 aluminium with the door closed."
+        ],
+        [
+          "wait",
+          600
+        ]
+      ],
+      "say": "After the review, the noise limit comes down from seventy-five decibels to seventy-two."
+    },
+    {
+      "id": "suspect",
+      "do": [
+        [
+          "click",
+          "button:has-text('Update')"
+        ],
+        [
+          "wait",
+          1000
+        ],
+        [
+          "shot",
+          "suspect-links"
+        ]
+      ],
+      "say": "The change flags every link from that requirement as suspect: the need it comes from, the enclosure and motion requirements that refine it, the design that meets it and the test that checks it. Someone confirms each one, or changes it to match."
+    },
+    {
+      "id": "compare",
+      "do": [
+        [
+          "goto",
+          "/projects/{Desktop CNC Mill}/baselines"
+        ],
+        [
+          "wait",
+          1000
+        ],
+        [
+          "shot",
+          "baselines"
+        ]
+      ],
+      "say": "The Baselines page compares the review's baseline with the project now: one requirement changed, its old and new wording side by side, and the links it left suspect."
+    },
+    {
+      "id": "diff",
+      "do": [
+        [
+          "click",
+          "text=Open the full comparison"
+        ],
+        [
+          "see",
+          "text=No milestone moved"
+        ],
+        [
+          "wait",
+          800
+        ],
+        [
+          "shot",
+          "baseline-compare"
+        ]
+      ],
+      "say": "The full comparison covers the whole project, artifacts, links and the plan, so a review can see exactly what moved since it last met."
+    },
+    {
+      "id": "download",
+      "do": [
+        [
+          "goto",
+          "/projects/{Desktop CNC Mill}/requirements"
+        ],
+        [
+          "click",
+          "button:has-text('Working copy')"
+        ],
+        [
+          "click",
+          "button:has-text('Download')"
+        ],
+        [
+          "wait",
+          800
+        ],
+        [
+          "shot",
+          "download-wizard"
+        ]
+      ],
+      "say": "A specification downloads as a PDF or a Word document, from the live project or from any baseline. JSON, CSV, Excel and ReqIF are there too, for a spreadsheet or another requirements tool."
+    },
+    {
+      "id": "content",
+      "do": [
+        [
+          "click",
+          "button:has-text('Next')"
+        ],
+        [
+          "wait",
+          1000
+        ]
+      ],
+      "say": "Choose what goes in, such as which sections, artifact types and fields, then download it."
+    },
+    {
+      "id": "close",
+      "do": [
+        [
+          "press",
+          "Escape"
+        ],
+        [
+          "wait",
+          600
+        ]
+      ],
+      "say": "Every format is available on every plan. Your data is never behind a paywall."
+    }
+  ]
+}
