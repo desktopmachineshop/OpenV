@@ -74,6 +74,25 @@ p = Project(
     "enclosure and safety projects and on to their parts, and their verification rolls back up here.",
 )
 
+PROFILE = {
+    "vision": "A metal-cutting CNC mill that fits on a bench and through a house door, runs from a wall socket, and makes parts that measure right in aluminium and mild steel, for a workshop, a school or a garage.",
+    "problem_statement": "Small shops, schools and makers who need accurate metal parts either send the work out and wait, or buy a floor-standing machine that needs a three-phase supply, a forklift and a trained operator. Hobby machines are cheap but flex, lose position and leave guarding to the owner.",
+    "target_users": "Two-person job shops making fixtures and short runs; makers who have outgrown a 3D printer; school and university workshops where students run the machine under a technician's eye.",
+    "constraints": [
+        {"title": "Single-phase supply", "description": "Runs from a 230 V wall socket at no more than 10 A, with no three-phase supply and no compressor."},
+        {"title": "Two people can move it", "description": "No more than 95 kg assembled, and through a 760 mm door."},
+        {"title": "Safe for a student", "description": "Guarding, interlocks and the emergency stop work without relying on software, and a single fault does not lose the stop."},
+        {"title": "Bought-in spindle", "description": "The spindle and its drive come from a supplier, built to the mill's requirements in their own project."},
+    ],
+    # name, target, current value and unit: the Overview's metric table.
+    "success_metrics": [
+        {"name": "New operators making the sample bracket within tolerance in 30 minutes", "target": "80", "current": "", "unit": "%"},
+        {"name": "Requirements verified at the production release", "target": "100", "current": "0", "unit": "%"},
+        {"name": "Noise at 1 m cutting aluminium, door shut", "target": "75", "current": "", "unit": "dB(A)"},
+        {"name": "Pilot machines built", "target": "10", "current": "0", "unit": "machines"},
+    ],
+}
+
 p.heading("H-PERS", "Personas")
 p.persona("P-OWNER", "Workshop owner", "Runs a two-person job shop. Buys the mill to make fixtures and short runs of aluminium parts without sending them out. Judges it on whether parts measure right and whether it earns its bench space.")
 p.persona("P-MAKER", "Maker", "Has used a 3D printer and a router and wants to cut metal at home. Works in a garage or spare room, alone, in the evening.")
