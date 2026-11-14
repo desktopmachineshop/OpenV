@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.36.1 — 2026-11-14
+
 ### Bug fixes
 
 - **A validation test is no longer listed as a gap.** A test case that
