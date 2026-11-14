@@ -291,6 +291,7 @@ export const ProjectList: React.FC = () => {
   // that is told exactly what to fix rather than being quietly accepted.
   const runInvention = async (agentSlug: string, rejected: string[]): Promise<RandomProduct | null> => {
     const launched = await agentsAPI.launchRun(agentSlug, {
+      conversation: true,
       prompt: inventProductPrompt(shownProductsRef.current, rejected),
     });
 

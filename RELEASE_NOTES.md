@@ -23,6 +23,52 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Open an artifact in full.** The open mark beside an artifact's title
+  shows it over the page, as a task opens, with its **History** in a card
+  of its own beside it.
+- **A task's activity is its History.** A card's activity feed is now the
+  same **History** an artifact has, with **Comments**, **Changes** and
+  **All** to choose what it lists; with the card opened in full it sits
+  in a card of its own under the card's fields.
+- **Select several tasks on the Gantt and the Timeline.** **Ctrl**-click
+  (**Cmd** on a Mac) a row or a bar adds a task to those selected, or
+  drops it; **Shift**-click takes every task between. With several
+  selected, the panel beside the chart lists them, assigns them all to a
+  milestone, and moves their dates by a number of days.
+- **Help is the ? in the top bar.** The button that read *Help ?* is now
+  the **?** icon alone, as it already was on a phone, and the small arrow
+  beside your picture in the top bar has gone: the picture opens the
+  account menu.
+- **The Assistant button is on every page, and tucks away.** The
+  **✦ Assistant** button now shows on the workspace's pages (Plan, Agents,
+  Settings and the rest) as well as inside a project. The small arrow at
+  its side folds it into a tab on the edge of the window; the tab brings
+  it back, and your browser remembers which. **Alt+A** opens the
+  assistant either way.
+- **A tidier menu.** With no project open the rail is **Home**, **Plan**,
+  then **Agents**, **Settings** and **Admin**. **Plan** holds every
+  project's plan and two tabs of what is yours across them: **My tasks**,
+  new, and **To-dos** (which was *My to-dos* in the rail). **Agents** is
+  new at this level and holds the workspace's agents with **Runs** as its
+  tab. Inside a project the rail groups the same way: **Plan**,
+  **Define**, **Verify**, then **Agents**, **Activity**, **Settings** and
+  **Admin**. News has left the rail: releases arrive as notifications,
+  and the notes are in your account menu and beside the release in the
+  workspace's settings.
+- **A card opens beside the board.** On a computer, clicking a card opens
+  it in a panel at the side that the board makes room for, so the columns
+  stay in view and you can go from card to card. Each card, and the open
+  card's header, has an open mark that shows the card in full.
+- **Tasks linked to another project are marked.** A task that waits on,
+  or drives, a task of another project's plan has two joined rings beside
+  its name on the Gantt and the phone's schedule, red when the dates
+  break the link, and ⇄ before its name on the Timeline and All projects.
+  Pointing at the mark names the other task and its project.
+- **The Timeline has a level of detail.** A project's Timeline view has
+  the same **Level** menu as All projects: Level 1 is the top-level
+  tasks, each level further adds the sub-tasks on rows beneath their
+  parents, whose bars stay, and **All levels** goes all the way down. The
+  two views share the choice.
 - **All projects follows the project hierarchy.** On the workspace's
   Plan page and a Gantt's All projects view, a project that belongs under
   another is listed beneath it, indented, and a parent folds its projects
@@ -49,6 +95,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A milestone's open mark opens it in full.** On the Gantt the mark beside a
+  milestone's name did what the name did. The name now opens the milestone
+  beside the chart and the mark opens it over the page, as for a task.
+- **A chat with an agent no longer puts a card on the board.** Typing a
+  prompt to an agent with **Launch run** made an *Agent run* card for it.
+  A chat is not a task, so it now makes none: the run is on the Runs page.
+  A card you assign to an agent still launches it, and work an automation,
+  a schedule or a script calling the API starts is still tracked on the
+  board. Cards already made this way stay until you delete them.
 - **A scheduled backup whose database dump failed still wrote a
   bundle.** On a self-hosted server with the backup sidecar, a run that
   could not reach the database went on to write a bundle with no

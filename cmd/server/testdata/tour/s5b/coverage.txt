@@ -46,6 +46,7 @@ GET /api/v1/interviews/{id}/sessions: 200, 404; interviews
 GET /api/v1/orgs/{id}/plan-calendar: 200, 404; plan
 GET /api/v1/orgs/{id}/quality-rules: 200, 404; quality_profile_parties
 GET /api/v1/plan/master: 200, 400; plan
+GET /api/v1/plan/mine: 200; plan
 GET /api/v1/projects/{id}/ai-map: 200; quality_profile_parties
 GET /api/v1/projects/{id}/baselines: 200; plan
 GET /api/v1/projects/{id}/download/docx: 200; vv_coverage_report
@@ -145,4 +146,4 @@ PUT /api/v1/work-items/{id}/external-links/{otherId}: 200, 400, 403; plan
 PUT /api/v1/work-items/{id}/relationships/{otherId}: 200, 400, 403; plan
 PUT /api/v1/work-items/{id}/schedule: 200, 400, 403; plan
 
-s5b: 133 of 392 routes reached (33.9%), 132 with a 2xx or 3xx answer (33.7%)
+s5b: 134 of 393 routes reached (34.1%), 133 with a 2xx or 3xx answer (33.8%)

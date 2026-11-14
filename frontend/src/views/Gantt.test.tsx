@@ -700,6 +700,70 @@ describe('Plan page', () => {
     expect(vi.mocked(planAPI.setReleaseCriteria)).toHaveBeenCalledWith('p1', 'r1', [{ metric: 'needs_addressed', target: 100 }]);
   });
 
+  it('opens a milestone beside the chart from its name, and over the page from its open mark', async () => {
+    await mount();
+    await click(container.querySelector('[data-milestone="m1"]'));
+    expect(container.querySelector('[data-plan-side] aside')?.getAttribute('aria-label')).toContain('Milestone');
+    expect(document.body.querySelector('[data-milestone-full]')).toBeNull();
+    // The open mark is a control of its own, not part of the name.
+    const mark = container.querySelector<HTMLButtonElement>('[data-milestone-open="m1"]')!;
+    expect(mark.getAttribute('aria-label')).toMatch(/^Open .* in full$/);
+    await click(mark);
+    expect(document.body.querySelector('[data-milestone-full] aside')?.getAttribute('aria-label')).toContain('Milestone');
+    expect(container.querySelector('[data-plan-side]')).toBeNull();
+    // Its name brings it back beside the chart.
+    await click(container.querySelector('[data-milestone="m1"]'));
+    expect(document.body.querySelector('[data-milestone-full]')).toBeNull();
+    expect(container.querySelector('[data-plan-side] aside')).not.toBeNull();
+  });
+
+  it('picks several tasks with Ctrl and Shift, and assigns and moves them together', async () => {
+    await mount();
+    const row = (title: string) => container.querySelector<HTMLButtonElement>(`[role="rowheader"] button[title="${title}"]`)!;
+    const press = async (el: Element, keys: MouseEventInit) => {
+      await act(async () => {
+        el.dispatchEvent(new MouseEvent('click', { bubbles: true, ...keys }));
+      });
+      await flush();
+    };
+    await click(row('Weld the frame'));
+    expect(container.querySelector('aside[aria-label="Task Weld the frame"]')).toBeTruthy();
+    // Ctrl adds a task: the panel is now about both.
+    await press(row('Packaging concept'), { ctrlKey: true });
+    const picks = () => container.querySelector('[data-plan-picks]');
+    expect(picks()?.getAttribute('aria-label')).toBe('2 tasks selected');
+    expect(row('Weld the frame').getAttribute('aria-current')).toBe('true');
+    expect(row('Packaging concept').getAttribute('aria-current')).toBe('true');
+    expect(row('Wire the rig').getAttribute('aria-current')).toBeNull();
+    // Shift takes the run from the last one picked, in outline order.
+    await press(row('Weld the frame'), { shiftKey: true });
+    expect(picks()?.getAttribute('aria-label')).toBe('3 tasks selected');
+    expect(Array.from(picks()!.querySelectorAll('li')).map((li) => li.textContent)).toEqual(expect.arrayContaining([expect.stringContaining('Wire the rig')]));
+    // A bar takes the same keys as its row: Ctrl drops one.
+    await press(container.querySelector('[data-task-bar="wiring"]')!, { ctrlKey: true });
+    expect(picks()?.getAttribute('aria-label')).toBe('2 tasks selected');
+
+    vi.mocked(planAPI.schedule).mockClear();
+    await click(Array.from(picks()!.querySelectorAll('button')).find((b) => b.textContent === 'Assign'));
+    expect(vi.mocked(planAPI.schedule).mock.calls.map((c) => c[0])).toEqual(['frame', 'loose']);
+    expect(vi.mocked(planAPI.schedule)).toHaveBeenCalledWith('frame', { milestone: '' });
+
+    // Only a task with dates of its own moves.
+    vi.mocked(planAPI.schedule).mockClear();
+    const days = picks()!.querySelector<HTMLInputElement>('input[type="number"]')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!.call(days, '3');
+      days.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await click(Array.from(picks()!.querySelectorAll('button')).find((b) => b.textContent === 'Move dates'));
+    expect(vi.mocked(planAPI.schedule).mock.calls.map((c) => c[0])).toEqual(['frame']);
+
+    // A plain click goes back to one task.
+    await click(row('Wire the rig'));
+    expect(picks()).toBeNull();
+    expect(container.querySelector('aside[aria-label="Task Wire the rig"]')).toBeTruthy();
+  });
+
   it('is a schedule list on a phone, grouped by milestone, with no timeline', async () => {
     await mount(390);
     expect(container.querySelector('[role="table"]')).toBeNull();

@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 282; members of exported objects: 352
+exports: 283; members of exported objects: 353
 
 interface AdminUsage
 interface AdminUser
@@ -85,6 +85,7 @@ type      MasterLevels
 interface MasterPlan
 interface MasterProject
 interface MatrixRow
+interface MyPlanTasks
 interface NoteMention
 interface NoteTodo
 interface NotificationList
@@ -474,6 +475,7 @@ const     planAPI
             .level
             .listTodos
             .master
+            .mine
             .recalculate
             .relate
             .relateExternal

@@ -130,7 +130,7 @@ export interface MasterProject {
   start: string | null;
   end: string | null;
   summary: ProjectPlan['summary'];
-  tasks: { id: string; title: string; wbs: string; depth: number; summary: boolean; start: string | null; end: string | null; progress: number; done: boolean; late: boolean; critical: boolean }[];
+  tasks: { id: string; title: string; wbs: string; depth: number; summary: boolean; start: string | null; end: string | null; progress: number; done: boolean; late: boolean; critical: boolean; external?: boolean }[];
   milestones: { key: string; name: string; date: string; progress: number; met: boolean; late: boolean }[];
 }
 
@@ -144,6 +144,12 @@ export interface MasterPlan {
   end: string | null;
   projects: MasterProject[];
   links: { from_project_id: string; from_title: string; to_project_id: string; to_title: string; type: PlanRelationshipType; conflict: boolean }[];
+}
+
+/** One person's tasks across the plans they can read: the ones assigned to them, and the ones they are a resource of. */
+export interface MyPlanTasks {
+  today: string;
+  tasks: { project_id: string; project_name: string; id: string; title: string; column: string; start: string | null; end: string | null; progress: number; done: boolean; late: boolean; critical: boolean }[];
 }
 
 /** A task as a baseline recorded it. */

@@ -39,6 +39,7 @@ import { ToolbarMenu } from './moduleView/ToolbarMenu';
 import { BackToList, NewArtifactButton, PushedScreen, ToolsButton } from './moduleView/HeaderBits';
 import { useUiRefresh } from '../hooks/useUiRefresh';
 import { ArtifactStatement } from '../components/ArtifactStatement';
+import { ArtifactFull } from '../components/ArtifactFull';
 import { TracePanels } from './DesignItemsParts';
 import { DESIGN_TYPE, traceOf } from './DesignItemsTree';
 import { ListChipSearch } from './moduleView/ListChipSearch';
@@ -65,6 +66,7 @@ export const ModuleView: React.FC = () => {
   const treeViews = useFeature(REQUIREMENTS_TREE_FEATURE);
   // #725, #726: History in the artifact's pane, the assistant floating; no Notes column.
   const historyInPane = useFeature(FLOATING_ASSISTANT_FEATURE);
+  const [fullArtifact, setFullArtifact] = useState(false);
   const refresh = useUiRefresh();
   const drafting = useState(false);
   const [searchText, setSearchText] = useState<string>('');
@@ -841,6 +843,8 @@ export const ModuleView: React.FC = () => {
   // With History in the pane, a request for the Notes pane (?notes=1) shows the document.
   const shownPane = historyInPane && stackedPane === 'notes' ? 'document' : stackedPane;
   const detailAttachments = isBaselineView ? [] : attachments;
+  // What the pane and the full view both show of an artifact. A link write versions both artifacts server-side, so both are refetched.
+  const detailsOf = (artifact: Artifact) => ({ artifact, links: activeLinks, linked: linkedArtifacts, artifacts: activeArtifacts, attachments: detailAttachments, onSelectArtifact: handleSelectArtifact, onReferenceClick: handleReferenceClick, allowLinkDelete: !isBaselineView && artifact !== archived, liveLinks: !isBaselineView && artifact !== archived, projectId: projectId || undefined, onLinksChanged: () => (loadArtifacts(), loadLinks()) });
 
   // Requirements the "Draft test cases" action will cover: the selected
   // requirement if one is selected, otherwise every requirement in view. Only
@@ -1149,6 +1153,7 @@ export const ModuleView: React.FC = () => {
               }}
               hideTransitions={viewport.isPhone}
               statementFirst={refresh}
+              onOpen={isBaselineView || viewport.isPhone ? undefined : () => setFullArtifact(true)}
             >
               <ArtifactStatement artifact={selectedArtifact} onReferenceClick={handleReferenceClick} />
             </ArtifactHeader>
@@ -1164,28 +1169,8 @@ export const ModuleView: React.FC = () => {
             {refresh && selectedArtifact.type === DESIGN_TYPE && projectId && (
               <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}><TracePanels {...traceOf(selectedArtifact.id, activeArtifacts, activeLinks, { entries: coverage })} projectId={projectId} /></div>
             )}
-            <ArtifactDetails
-              artifact={selectedArtifact} 
-              links={activeLinks} 
-              linked={linkedArtifacts}
-              artifacts={activeArtifacts}
-              attachments={detailAttachments}
-              onSelectArtifact={handleSelectArtifact}
-              onReferenceClick={handleReferenceClick}
-              previewVersion={previewVersion}
-              onClosePreview={() => setPreviewVersion(null)}
-              allowLinkDelete={!isBaselineView && selectedArtifact !== archived}
-              liveLinks={!isBaselineView && selectedArtifact !== archived}
-              showHistory={historyInPane}
-              hideDescription={refresh && !previewVersion}
-              projectId={projectId || undefined}
-              onLinksChanged={() => {
-                // Link writes auto-version both artifacts server-side;
-                // refetch so displayed versions and link lists stay current.
-                loadArtifacts();
-                loadLinks();
-              }}
-            />
+            <ArtifactDetails {...detailsOf(selectedArtifact)} previewVersion={previewVersion} onClosePreview={() => setPreviewVersion(null)} showHistory={historyInPane} hideDescription={refresh && !previewVersion} />
+            {fullArtifact && <ArtifactFull {...detailsOf(selectedArtifact)} onClose={() => setFullArtifact(false)} />}
           </>
         )}
 

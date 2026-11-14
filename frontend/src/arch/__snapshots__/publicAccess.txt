@@ -19,6 +19,8 @@ PUBLIC_SEGMENTS: /login, /manual, /interview, /verify-email, /reset-password, /s
   session  /org/settings
   session  /org/runs
   session  /org/plan
+  session  /org/plan/tasks
+  session  /org/agents
   session  /org/todos
   public   /manual
   public   /manual/:chapterSlug

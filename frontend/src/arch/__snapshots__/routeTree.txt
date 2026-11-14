@@ -1,8 +1,8 @@
 # UI routes declared in src/App.tsx (invariant I19).
 # Regenerate: npx vitest run src/arch -u
 
-<Route> elements: 49
-  rendering a lazy() component: 24
+<Route> elements: 51
+  rendering a lazy() component: 26
   rendering an eagerly imported component: 21
   redirects only: 4
 index routes: 1
@@ -31,28 +31,30 @@ index routes: 1
   ./index.css  (side effect)
 
 ## lazy() components, in declaration order
-  ModuleView          ./views/ModuleView#ModuleView
-  ManualView          ./views/ManualView#ManualView
-  WhatsNew            ./views/WhatsNew#WhatsNew
-  OAuthConsent        ./views/OAuthConsent#OAuthConsent
-  PlatformAdmin       ./views/PlatformAdmin#PlatformAdmin
-  TestRunView         ./views/TestRunView#TestRunView
-  TraceabilityMatrix  ./views/TraceabilityMatrix#TraceabilityMatrix
-  FloatingAssistant   ./components/wizard/FloatingAssistant#FloatingAssistant
-  ImpactView          ./views/ImpactView#ImpactView
-  ActivityLog         ./views/ActivityLog#ActivityLog
-  BaselineCompare     ./views/BaselineCompare#BaselineCompare
-  MyTodosPage         ./views/MyTodos#MyTodosPage
-  GanttWorkspace      ./views/GanttWorkspace#GanttWorkspace
-  WorkspaceRunsPage   ./views/WorkspaceRunsPage#WorkspaceRunsPage
-  SharedProjectView   ./views/SharedProjectView#SharedProjectView
-  ReviewQueue         ./views/ReviewQueue#ReviewQueue
-  Releases            ./views/Releases#Releases
-  ProjectHome         ./views/ProjectHome#ProjectHome
-  DesignItems         ./views/DesignItems#DesignItems
-  TestsPage           ./views/TestsPage#TestsPage
-  BaselinesPage       ./views/BaselinesPage#BaselinesPage
-  Gantt               ./views/Gantt#Gantt
+  ModuleView           ./views/ModuleView#ModuleView
+  ManualView           ./views/ManualView#ManualView
+  WhatsNew             ./views/WhatsNew#WhatsNew
+  OAuthConsent         ./views/OAuthConsent#OAuthConsent
+  PlatformAdmin        ./views/PlatformAdmin#PlatformAdmin
+  TestRunView          ./views/TestRunView#TestRunView
+  TraceabilityMatrix   ./views/TraceabilityMatrix#TraceabilityMatrix
+  FloatingAssistant    ./components/wizard/FloatingAssistant#FloatingAssistant
+  ImpactView           ./views/ImpactView#ImpactView
+  ActivityLog          ./views/ActivityLog#ActivityLog
+  BaselineCompare      ./views/BaselineCompare#BaselineCompare
+  MyTodosPage          ./views/MyTodos#MyTodosPage
+  GanttWorkspaceTasks  ./views/GanttWorkspaceTasks#GanttWorkspaceTasks
+  AgentsWorkspace      ./views/AgentsWorkspace#AgentsWorkspace
+  GanttWorkspace       ./views/GanttWorkspace#GanttWorkspace
+  WorkspaceRunsPage    ./views/WorkspaceRunsPage#WorkspaceRunsPage
+  SharedProjectView    ./views/SharedProjectView#SharedProjectView
+  ReviewQueue          ./views/ReviewQueue#ReviewQueue
+  Releases             ./views/Releases#Releases
+  ProjectHome          ./views/ProjectHome#ProjectHome
+  DesignItems          ./views/DesignItems#DesignItems
+  TestsPage            ./views/TestsPage#TestsPage
+  BaselinesPage        ./views/BaselinesPage#BaselinesPage
+  Gantt                ./views/Gantt#Gantt
 
 ## Route tree
   /login                           <Login>  [eager ./views/Login#Login]
@@ -68,6 +70,8 @@ index routes: 1
   /org/settings                    <OrgSettings>  [eager ./views/OrgSettings#OrgSettings]  when !walled
   /org/runs                        <WorkspaceRunsPage>  [lazy ./views/WorkspaceRunsPage#WorkspaceRunsPage]  when !walled
   /org/plan                        <GanttWorkspace>  [lazy ./views/GanttWorkspace#GanttWorkspace]  when !walled
+  /org/plan/tasks                  <GanttWorkspaceTasks>  [lazy ./views/GanttWorkspaceTasks#GanttWorkspaceTasks]  when !walled
+  /org/agents                      <AgentsWorkspace>  [lazy ./views/AgentsWorkspace#AgentsWorkspace]  when !walled
   /org/todos                       <MyTodosPage>  [lazy ./views/MyTodos#MyTodosPage]  when !walled
   /manual                          <ManualView>  [lazy ./views/ManualView#ManualView]  when !walled
   /manual/:chapterSlug             <ManualView>  [lazy ./views/ManualView#ManualView]  when !walled
@@ -119,6 +123,8 @@ index routes: 1
   /org/settings                                       when !walled
   /org/runs                                           when !walled
   /org/plan                                           when !walled
+  /org/plan/tasks                                     when !walled
+  /org/agents                                         when !walled
   /org/todos                                          when !walled
   /manual                                             when !walled
   /manual/:chapterSlug                                when !walled

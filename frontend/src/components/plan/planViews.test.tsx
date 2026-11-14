@@ -2,6 +2,7 @@ import React, { act } from 'react';
 import { createRoot, Root } from 'react-dom/client';
 import type { PlanTask, ProjectPlan } from '../../api/client';
 import { lanes, PlanTimeline, type Bar } from './PlanLines';
+import { externalLinksText } from './GanttRows';
 import { calendarRange, PlanMonth } from './PlanMonth';
 import { PlanNetwork } from './PlanNetwork';
 import { buildScale, buildTicks, isoWeek } from './ganttScale';
@@ -24,6 +25,7 @@ const mount = async (ui: React.ReactElement) => {
 };
 
 afterEach(() => {
+  localStorage.clear();
   // The pure tests mount nothing.
   if (!container?.isConnected) return;
   act(() => root.unmount());
@@ -48,6 +50,7 @@ const task = (id: string, title: string, start: string, end: string, extra: Part
     late: false,
     critical: false,
     critical_subtasks: false,
+    external_links: [],
     subtasks_total: 0,
     float_days: null,
     elapsed: false,
@@ -97,8 +100,60 @@ describe('lanes', () => {
   });
 });
 
+describe('a task linked to another project', () => {
+  const link = (direction: 'driven_by' | 'drives', title: string, project: string, conflict = false) => ({ direction, title, project_name: project, conflict }) as never;
+
+  it('says which tasks it waits on and drives, and when the dates break a link', () => {
+    expect(externalLinksText({ external_links: [link('driven_by', 'Order steel', 'Supply')] })).toBe('Waits on Order steel (Supply), in another project');
+    expect(externalLinksText({ external_links: [link('driven_by', 'Order steel', 'Supply'), link('drives', 'Fit out', 'Site', true)] })).toBe(
+      'Waits on Order steel (Supply); drives Fit out (Site), in other projects. The dates break a link',
+    );
+    expect(externalLinksText({ external_links: [link('drives', 'Fit out', 'Site')] })).toBe('Drives Fit out (Site), in another project');
+  });
+
+  it('is marked on the Timeline with the others drawn as they were', async () => {
+    const linked = { ...plan, tasks: plan.tasks.map((t) => (t.title === 'Paint' ? { ...t, external_links: [link('driven_by', 'Order steel', 'Supply')] } : t)) } as unknown as ProjectPlan;
+    await mount(<PlanTimeline plan={linked} onSelectTask={() => {}} />);
+    const names = Array.from(container.querySelectorAll('[data-plan-view="timeline"] button')).map((b) => b.textContent);
+    expect(names).toContain('⇄ Paint');
+    expect(names).toContain('Weld');
+    expect(container.querySelector('button[aria-label*="linked to another project"]')?.textContent).toBe('⇄ Paint');
+  });
+});
+
 describe('PlanTimeline', () => {
   const tops = () => Array.from(container.querySelectorAll<HTMLElement>('[data-plan-view="timeline"] button')).map((b) => [b.textContent, b.style.top]);
+
+  it('opens on the top-level tasks and digs down a level, the parent kept above its sub-tasks', async () => {
+    const nested = {
+      ...plan,
+      tasks: [
+        task('1', 'Build', '2026-11-02', '2026-11-20', { subtasks_total: 2 } as never),
+        task('1.1', 'Cut', '2026-11-02', '2026-11-06', { depth: 1 }),
+        task('1.2', 'Join', '2026-11-09', '2026-11-20', { depth: 1 }),
+        task('2', 'Ship', '2026-11-23', '2026-11-27'),
+      ],
+    } as unknown as ProjectPlan;
+    await mount(<PlanTimeline plan={nested} onSelectTask={() => {}} />);
+    const level = container.querySelector<HTMLSelectElement>('select[aria-label="Level of detail"]')!;
+    expect(level.value).toBe('1');
+    expect(tops().map(([name]) => name)).toEqual(['Build', 'Ship']);
+    expect(container.querySelectorAll('[data-summary]')).toHaveLength(0);
+    await act(async () => {
+      level.value = '2';
+      level.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    // Build and Ship share the top row; Cut and Join the one beneath.
+    expect(tops()).toEqual([
+      ['Build', '24px'],
+      ['Ship', '24px'],
+      ['Cut', '48px'],
+      ['Join', '48px'],
+    ]);
+    expect(container.querySelector('[data-summary]')?.textContent).toBe('Build');
+    // The level is the one All projects opens on too.
+    expect(localStorage.getItem('openv-plan-master-levels')).toBe('2');
+  });
 
   it('draws the critical tasks on the first row and marks them only while Critical path is on', async () => {
     await mount(<PlanTimeline plan={plan} onSelectTask={() => {}} showCritical />);

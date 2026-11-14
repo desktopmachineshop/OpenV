@@ -226,8 +226,9 @@ admin); only the rail's buttons change.
     it at its Overview; **All projects** opens the Projects page and **+ New
     project** starts a project from wherever you are.
 - **The rail inside a project** has a button for each part of the project,
-  in the order the work runs — **Plan**, **Define**, **Verify** and
-  **Agents** — and links to **Activity** and **Settings**. Click a group to
+  in the order the work runs — **Plan**, **Define** and **Verify** — then,
+  below a rule, **Agents** and links to **Activity**, **Settings** and, for
+  platform admins, **Admin**. Click a group to
   open its pages beside the rail (Plan holds Overview, Board, Gantt
   and Releases, for example), then click the page. The group holding the
   page you are on is marked. The list closes when you arrive, or with
@@ -236,9 +237,14 @@ admin); only the rail's buttons change.
   with the one you are reading underlined, so the page next door is one
   click away. It is where a page is named: the page itself does not repeat
   its name. Activity and Settings belong to no group, so they have no row.
-- **The rail on a workspace page** lists the workspace's own pages:
-  **Home**, **Runs** (where the workspace has them), **News** (What's
-  new), **Admin** for platform admins, and **Settings**.
+- **The rail on a workspace page** is laid out the same way: **Home**;
+  **Plan**, which holds every project's plan (**All projects**) and what is
+  yours across them (**My tasks** and **To-dos**); then **Agents**, which
+  holds the workspace's agents and their **Runs**, **Settings**, and
+  **Admin** for platform admins. The row under the top bar lists the pages
+  of the group you are in, as inside a project. What's new is not in the
+  rail: a release reaches you as a notification, and its notes are in your
+  account menu and beside the release in the workspace's settings.
 - **Home** is at the top of the rail on every page and opens the
   workspace's Home: what needs you across every project, the workspace's
   activity, and its projects to choose from.
@@ -281,7 +287,7 @@ Every page keeps the same margin from the edge of the screen.
 
 ## Help on every page
 
-Press **Help** in the top bar, or the **?** or **F1** key, to open the help
+Press the **?** button in the top bar, or the **?** or **F1** key, to open the help
 panel (on a phone, tap **?** in the top bar). Outside a project — the
 projects list, workspace settings, workspace runs, platform admin and
 *What's new* — the **?** sits beside the notification bell, and the keys work

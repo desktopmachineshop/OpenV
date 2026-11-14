@@ -12,6 +12,7 @@ import { buildScale, buildTicks, openingScroll, shortDate, spanLabel, toDay, tod
 import { useViewport } from '../../hooks/useViewport';
 import { projectRows } from '../ProjectListTree';
 import { barTone, relationshipLabel } from './planModel';
+import type { PickKeys } from './planSelection';
 import { PlanBar } from './PlanBar';
 
 export interface Bar {
@@ -27,6 +28,8 @@ export interface Bar {
   depth?: number;
   /** The bar spans sub-tasks the band also draws: it is drawn as the Gantt draws a parent. */
   summary?: boolean;
+  /** The task waits on, or drives, a task of another project's plan. */
+  external?: boolean;
 }
 
 /** Bars packed onto as few lanes as will hold them without overlapping. */
@@ -61,8 +64,10 @@ const Band: React.FC<{
   today: string;
   /** Mark the critical bars (the Critical path button); they sit on the top row either way. */
   showCritical: boolean;
-  onBar?: (id: string) => void;
-}> = ({ bars, milestones, scale, today, showCritical, onBar }) => {
+  onBar?: (id: string, e: React.MouseEvent) => void;
+  /** The bars drawn selected. */
+  selected?: readonly string[];
+}> = ({ bars, milestones, scale, today, showCritical, onBar, selected }) => {
   const rows = lanes(bars);
   return (
     <div style={{ position: 'relative', width: scale.width, height: 26 + Math.max(rows.length, 1) * 24 }}>
@@ -86,10 +91,11 @@ const Band: React.FC<{
             progress={b.progress}
             summary={b.summary}
             critical={showCritical && b.critical}
-            label={`${b.title}: ${spanLabel(b.start, b.end, today)}, ${b.progress}%${showCritical && b.critical ? ', on the critical path' : ''}`}
-            text={b.title}
+            selected={selected?.includes(b.id)}
+            label={`${b.title}: ${spanLabel(b.start, b.end, today)}, ${b.progress}%${showCritical && b.critical ? ', on the critical path' : ''}${b.external ? ', linked to another project' : ''}`}
+            text={b.external ? `⇄ ${b.title}` : b.title}
             cursor={onBar ? 'pointer' : 'default'}
-            button={{ 'data-critical': (showCritical && b.critical) || undefined, 'data-summary': b.summary || undefined, disabled: !onBar, onClick: () => onBar?.(b.id) }}
+            button={{ 'data-critical': (showCritical && b.critical) || undefined, 'data-summary': b.summary || undefined, disabled: !onBar, 'aria-pressed': selected ? selected.includes(b.id) : undefined, onClick: (e) => onBar?.(b.id, e) }}
           />
         )),
       )}
@@ -151,24 +157,6 @@ interface LinesProps {
 }
 
 /** The project's top-level tasks and milestones on one band. */
-export const PlanTimeline: React.FC<{ plan: ProjectPlan; onSelectTask: (t: PlanTask) => void } & LinesProps> = ({ plan, onSelectTask, zoom = 'weeks', showCritical = true, todaySignal = 0 }) => {
-  const scale = useMemo(() => buildScale(zoom, plan.start, plan.end, plan.today, viewWidth()), [zoom, plan.start, plan.end, plan.today]);
-  const scroller = useScroller(scale, plan.start, plan.end, plan.today, todaySignal);
-  const top = plan.tasks.filter((t) => t.depth === 0);
-  const bars = top.map((t) => ({ id: t.id, title: t.title, start: t.span_start, end: t.span_end, progress: t.progress, done: t.done, late: t.late, critical: t.critical || t.critical_subtasks }));
-  if (!plan.start) return <p style={{ ...mutedStyle, padding: 16, margin: 0 }}>Nothing is scheduled yet.</p>;
-  return (
-    <div ref={scroller} data-plan-view="timeline" data-plan-scale={zoom} data-pan-surface="" data-help-key="gantt.views" style={{ flex: 1, minHeight: 120, overflow: 'auto' }}>
-      <div style={{ position: 'sticky', top: 0, zIndex: 1, width: scale.width }}>
-        <Ticks scale={scale} />
-      </div>
-      <div style={{ padding: '8px 0 12px', width: scale.width }}>
-        <Band bars={bars} milestones={plan.milestones} scale={scale} today={plan.today} showCritical={showCritical} onBar={(id) => onSelectTask(top.find((t) => t.id === id)!)} />
-      </div>
-    </div>
-  );
-};
-
 const MASTER_LEVELS: MasterLevels[] = ['1', '2', '3', '4', 'all'];
 const toggled = (set: ReadonlySet<string>, id: string): ReadonlySet<string> => {
   const next = new Set(set);
@@ -195,6 +183,46 @@ const rememberLevels = (levels: MasterLevels): void => {
   } catch {
     // A browser that keeps nothing still shows the level chosen for this visit.
   }
+};
+
+/** The level menu of a band chart: Level 1 is the top-level tasks, each level further adds the sub-tasks beneath their parents. The choice is the browser's. */
+const LevelSelect: React.FC<{ value: MasterLevels; onChange: (l: MasterLevels) => void; phone: boolean; title: string }> = ({ value, onChange, phone, title }) => (
+  <select value={value} aria-label="Level of detail" title={title} onChange={(e) => (rememberLevels(e.target.value as MasterLevels), onChange(e.target.value as MasterLevels))} style={{ padding: '2px 6px', minHeight: phone ? 40 : 26, width: 'auto', boxSizing: 'border-box', fontSize: phone ? 16 : 12, fontWeight: 400 }}>
+    {MASTER_LEVELS.map((l) => (
+      <option key={l} value={l}>
+        {l === 'all' ? 'All levels' : `Level ${l}`}
+      </option>
+    ))}
+  </select>
+);
+
+export const PlanTimeline: React.FC<{ plan: ProjectPlan; selectedIds?: readonly string[]; onSelectTask: (t: PlanTask, keys?: PickKeys) => void } & LinesProps> = ({ plan, selectedIds, onSelectTask, zoom = 'weeks', showCritical = true, todaySignal = 0 }) => {
+  const scale = useMemo(() => buildScale(zoom, plan.start, plan.end, plan.today, viewWidth()), [zoom, plan.start, plan.end, plan.today]);
+  const scroller = useScroller(scale, plan.start, plan.end, plan.today, todaySignal);
+  // The level All projects was left on: the two charts are one band, and read the same.
+  const [levels, setLevels] = useState<MasterLevels>(rememberedLevels);
+  const { isPhone } = useViewport();
+  const shown = plan.tasks.filter((t) => levels === 'all' || t.depth < Number(levels));
+  // A task whose sub-tasks are drawn too is drawn as a parent, on a row above theirs.
+  const deepest = shown.reduce((d, t) => Math.max(d, t.depth), 0);
+  const bars = shown.map((t) => ({ id: t.id, title: t.title, start: t.span_start, end: t.span_end, progress: t.progress, done: t.done, late: t.late, critical: t.critical || t.critical_subtasks, depth: t.depth, summary: t.subtasks_total > 0 && t.depth < deepest, external: t.external_links.length > 0 }));
+  if (!plan.start) return <p style={{ ...mutedStyle, padding: 16, margin: 0 }}>Nothing is scheduled yet.</p>;
+  return (
+    <div style={{ flex: 1, minHeight: 120, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', borderBottom: '1px solid var(--border-soft)', fontSize: 12, color: 'var(--text-muted)' }}>
+        Tasks
+        <LevelSelect value={levels} onChange={setLevels} phone={isPhone} title="How far down the tasks are drawn. Milestones always show." />
+      </div>
+      <div ref={scroller} data-plan-view="timeline" data-plan-scale={zoom} data-pan-surface="" data-help-key="gantt.views" style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
+        <div style={{ position: 'sticky', top: 0, zIndex: 1, width: scale.width }}>
+          <Ticks scale={scale} />
+        </div>
+        <div style={{ padding: '8px 0 12px', width: scale.width }}>
+          <Band bars={bars} milestones={plan.milestones} scale={scale} today={plan.today} showCritical={showCritical} selected={selectedIds} onBar={(id, e) => onSelectTask(shown.find((t) => t.id === id)!, e)} />
+        </div>
+      </div>
+    </div>
+  );
 };
 
 /** The width of the column that names each project, which stays put while the bands scroll. */
@@ -240,13 +268,7 @@ export const PlanMaster: React.FC<{ currentProjectId: string } & LinesProps> = (
           <div style={{ position: 'sticky', top: 0, zIndex: 3, display: 'flex', width: NAME_WIDTH + scale.width }}>
             <div style={{ ...nameCell, zIndex: 4, background: 'var(--surface-alt)', borderBottom: '1px solid var(--border-soft)', fontWeight: 600, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
               Project
-              <select value={levels} aria-label="Level of detail" title="How far down each project's tasks are drawn. Milestones always show." onChange={(e) => (rememberLevels(e.target.value as MasterLevels), setLevels(e.target.value as MasterLevels))} style={{ padding: '2px 6px', minHeight: isPhone ? 40 : 26, boxSizing: 'border-box', fontSize: isPhone ? 16 : 12, fontWeight: 400 }}>
-                {MASTER_LEVELS.map((l) => (
-                  <option key={l} value={l}>
-                    {l === 'all' ? 'All levels' : `Level ${l}`}
-                  </option>
-                ))}
-              </select>
+              <LevelSelect value={levels} onChange={setLevels} phone={isPhone} title="How far down each project's tasks are drawn. Milestones always show." />
             </div>
             <Ticks scale={scale} />
           </div>

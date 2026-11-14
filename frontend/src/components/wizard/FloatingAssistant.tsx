@@ -6,6 +6,7 @@ import { useViewport } from '../../hooks/useViewport';
 import { useVisualViewport } from '../../hooks/useVisualViewport';
 import { lastProject } from '../../appShortcuts';
 import { FloatingAssistantChat } from './FloatingAssistantChat';
+import { FloatingAssistantLauncher } from './FloatingAssistantLauncher';
 import { assistantRoute } from './floatingAssistantRoute';
 import { FLOATING_ASSISTANT_FEATURE, useAssistantStore } from './assistantStore';
 import { isAssistantShortcut, loadPanelLayout, savePanelLayout, useResizeFromCorner } from './floatingAssistantLayout';
@@ -24,7 +25,9 @@ const iconButton: React.CSSProperties = {
 
 /**
  * The V&V Assistant as a floating chat (#726): a button in the bottom
- * corner of every project page and the workspace Home, opening a panel
+ * corner of every page of the app (the project's pages and the
+ * workspace's), which the reader can tuck into a tab on the edge of the
+ * window (FloatingAssistantLauncher), opening a panel
  * docked over the page that can be resized, expanded, moved to the other
  * corner and minimised back to the button. It is mounted above the routes,
  * so the conversation and its stream live on while the reader moves
@@ -234,35 +237,7 @@ export const FloatingAssistant: React.FC = () => {
           )}
         </div>
       </div>
-      {!open && (
-        <button
-          ref={launcherRef}
-          type="button"
-          onClick={() => setPanel('open')}
-          aria-label="Open the V&V Assistant"
-          title="Open the V&V Assistant (Alt+A)"
-          aria-keyshortcuts="Alt+A"
-          data-help-key="guided.assistant"
-          style={{
-            position: 'fixed',
-            [left ? 'left' : 'right']: 16,
-            bottom: bottomOffset,
-            minHeight: 44,
-            padding: '0 16px',
-            borderRadius: 22,
-            border: 'none',
-            background: 'var(--accent)',
-            color: 'var(--accent-fg)',
-            fontSize: 14,
-            fontWeight: 600,
-            boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-            cursor: 'pointer',
-            zIndex: 940,
-          }}
-        >
-          <span aria-hidden="true">✦</span> Assistant
-        </button>
-      )}
+      {!open && <FloatingAssistantLauncher left={left} bottom={bottomOffset} onOpen={() => setPanel('open')} launcherRef={launcherRef} />}
     </>
   );
 };

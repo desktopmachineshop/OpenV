@@ -136,6 +136,7 @@ GET /api/v1/orgs/{id}/usage: org:member
 GET /api/v1/orgs/{id}/worker-keys: org:admin
 GET /api/v1/orgs/{id}/worker-status: org:member
 GET /api/v1/plan/master: project:viewer
+GET /api/v1/plan/mine: project:viewer
 GET /api/v1/projects: -
 GET /api/v1/projects/{id}: project:viewer
 GET /api/v1/projects/{id}/ai-map: project:viewer

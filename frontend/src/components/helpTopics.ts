@@ -225,7 +225,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'Tick a to-do off to complete it: completed ones collapse under Completed, and unticking one opens it again.',
       'Promote to board task makes a card of a to-do that grew, carrying its text, and ticks the to-do off.',
       'Raise a to-do from a note with + Add to-do: the person named and the note’s first paragraph are filled in.',
-      'My to-dos, in the workspace rail, gathers yours across every project.',
+      'To-dos, under Plan in the workspace menu, gathers yours across every project.',
     ],
     chapter: { slug: 'board', title: 'Kanban board' },
   },
@@ -368,8 +368,24 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     ],
     chapter: { slug: 'gantt', title: 'The plan (Gantt)' },
   },
+  'org/plan/tasks': {
+    title: 'My tasks',
+    summary: 'The tasks you work on, across every project of the workspace you can read: the ones assigned to you on a board, and the ones you are a resource of on a plan.',
+    tips: [
+      'Open tasks come first: the late ones, then by the day they end.',
+      "A task's name opens its project's Gantt, where it is scheduled.",
+      'Show done lists the finished ones too.',
+    ],
+    chapter: { slug: 'gantt', title: 'The plan (Gantt)' },
+  },
+  'org/agents': {
+    title: 'Agents',
+    summary: "The workspace's agents, outside any project: who they are, what they may do, and a way to talk to one.",
+    tips: ['Runs, the tab beside it, lists the runs that belong to no project.', 'A chat with an agent from here puts no card on a board.'],
+    chapter: { slug: 'agents', title: 'Agents' },
+  },
   'org/todos': {
-    title: 'My to-dos',
+    title: 'To-dos',
     summary:
       'Your to-dos across the workspace: those assigned to you in its projects, and your personal ones, which nobody else sees.',
     tips: [
