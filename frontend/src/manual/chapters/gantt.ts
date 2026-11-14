@@ -589,8 +589,7 @@ plan as a schedule. Four tiles give the figures. Under **Schedule**, the
 tasks are grouped by the milestone they are assigned to (a task with
 sub-tasks and no milestone of its own goes under its sub-tasks'), with the rest
 under **Not assigned to a milestone** and those with no dates folded under **Not scheduled** until you tap **Show**, each with its
-dates, duration and a progress bar, and **Critical** on a task with no
-float; **Milestones** lists the milestones with their
+dates, duration and a progress bar, and **Critical** on a task with no float; **Milestones** lists the milestones with their
 progress. Tap a task or a milestone to open it and make the same edits as
 on a computer, by setting dates rather than dragging.
 
