@@ -58,7 +58,7 @@ milestone, with its name and progress. The thin band leading up to a
 diamond, from the milestone before it, fills as that milestone's criteria
 are met. The red vertical line is today.
 
-**Days**, **Weeks**, **Months** and **Quarters** change the scale (**Weeks** numbers each week, as in *9 (W46)*). The page
+**D**, **W**, **M** and **Q** (the **Days**, **Weeks**, **Months** and **Quarters** scales) change the scale (**Weeks** numbers each week, as in *9 (W46)*). The page
 opens at the scale that shows the whole plan, on the whole plan. A plan too
 long to fit opens with today a third of the way in from the left, so that
 most of what you see is ahead of you.

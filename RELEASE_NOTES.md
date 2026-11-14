@@ -23,6 +23,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **A shorter zoom control.** The plan's time scale buttons read **D**,
+  **W**, **M** and **Q**, for days, weeks, months and quarters; pointing
+  at one names it.
 - **Every Gantt view, for every project at once.** The workspace's
   **Plan** page has a **View** menu: beside the timeline of a line per
   project it now draws all the projects as a **Gantt** (a row per
