@@ -1,0 +1,160 @@
+{
+  "title": "Verification: test runs, coverage and flow-up",
+  "description": "A test run recorded in the mill's control software project, and its failing result showing on the requirements of the control and of the mill above it.",
+  "viewport": "desktop",
+  "steps": [
+    {
+      "id": "intro",
+      "do": [
+        [
+          "goto",
+          "/projects/{Mill control software}/vv"
+        ],
+        [
+          "see",
+          "text=Coverage by section"
+        ],
+        [
+          "shot",
+          "vv-dashboard"
+        ]
+      ],
+      "say": "This is the V and V page of the mill's control software. It shows how many requirements are traced to a test, how many have passed, and what is still missing."
+    },
+    {
+      "id": "new",
+      "do": [
+        [
+          "click",
+          "button:has-text('New test run')"
+        ],
+        [
+          "type",
+          "input[placeholder*='Design verification']",
+          "Host build, nightly suites"
+        ],
+        [
+          "click",
+          "button:has-text('Create run')"
+        ]
+      ],
+      "say": "The software team runs its automated suites every night on a host build. Each night is a test run."
+    },
+    {
+      "id": "open",
+      "do": [
+        [
+          "click",
+          "text=Continue run"
+        ],
+        [
+          "see",
+          "text=G-code conformance suite"
+        ],
+        [
+          "shot",
+          "test-run"
+        ]
+      ],
+      "say": "The run lists every test case of the project, with the requirements each one verifies and the version of the test that is being run."
+    },
+    {
+      "id": "pass",
+      "do": [
+        [
+          "select",
+          "select[aria-label='Result of G-code conformance suite']",
+          "pass"
+        ],
+        [
+          "wait",
+          600
+        ]
+      ],
+      "say": "The G-code conformance suite passed: four hundred programs, each parsed and planned as the reference says."
+    },
+    {
+      "id": "fail",
+      "do": [
+        [
+          "select",
+          "select[aria-label='Result of Planner unit tests']",
+          "fail"
+        ],
+        [
+          "wait",
+          600
+        ]
+      ],
+      "say": "The planner's unit tests failed. A corner was cut more than three microns inside the programmed path."
+    },
+    {
+      "id": "complete",
+      "do": [
+        [
+          "click",
+          "button:has-text('Complete run')"
+        ],
+        [
+          "wait",
+          800
+        ],
+        [
+          "click",
+          "text=Back to V&V"
+        ],
+        [
+          "wait",
+          800
+        ]
+      ],
+      "say": "Complete the run, and the page counts the result against the requirement it verifies. Look-ahead is now failing."
+    },
+    {
+      "id": "control",
+      "do": [
+        [
+          "goto",
+          "/projects/{Mill control}/vv"
+        ],
+        [
+          "wait",
+          800
+        ],
+        [
+          "shot",
+          "vv-flow-up"
+        ]
+      ],
+      "say": "One level up, in the Mill control project, path accuracy is failing too. Its own contouring test has not been run yet, so its result comes from the requirement that refines it, and that one failed."
+    },
+    {
+      "id": "mill",
+      "do": [
+        [
+          "goto",
+          "/projects/{Desktop CNC Mill}/vv"
+        ],
+        [
+          "wait",
+          800
+        ]
+      ],
+      "say": "And at the top, the mill's own positioning accuracy requirement, and the one for running standard G-code, show the same failure, two projects away from the test that found it."
+    },
+    {
+      "id": "close",
+      "do": [
+        [
+          "click",
+          "button:has-text('Show all requirements')"
+        ],
+        [
+          "wait",
+          800
+        ]
+      ],
+      "say": "So a review of the mill sees a problem in the firmware as soon as the nightly run records it, and can follow it down to the test."
+    }
+  ]
+}

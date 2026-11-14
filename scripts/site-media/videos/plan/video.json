@@ -5,7 +5,7 @@
   "steps": [
     {
       "id": "intro",
-      "do": [["goto", "/projects/{Desktop CNC Mill}/gantt"], ["click", "button:has-text('Months')"], ["click", "button:has-text('Today')"], ["wait", 800], ["shot", "plan-gantt"]],
+      "do": [["goto", "/projects/{Desktop CNC Mill}/gantt"], ["click", "button[title='Months']"], ["click", "button:has-text('Today')"], ["wait", 800], ["shot", "plan-gantt"]],
       "say": "Every project in OpenV has a plan. This is the Desktop CNC Mill's: six phases, from the first requirements in January 2026 to the production release in December 2027."
     },
     {
@@ -25,7 +25,7 @@
     },
     {
       "id": "all",
-      "do": [["goto", "/org/plan"], ["click", "button:has-text('Months')"], ["click", "button:has-text('Today')"], ["wait", 1000], ["shot", "plan-all-projects"]],
+      "do": [["goto", "/org/plan"], ["click", "button[title='Months']"], ["click", "button:has-text('Today')"], ["wait", 1000], ["shot", "plan-all-projects"]],
       "say": "The mill is one of fifteen projects. Its frame, motion, control, enclosure and safety system each have a project, and so do their parts. The workspace's Plan page puts every one of them on one chart."
     },
     {
