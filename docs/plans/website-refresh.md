@@ -1,13 +1,19 @@
 # Website refresh plan
 
-Status, 2026-11-14: in progress. Built, awaiting review:
-desktopmachineshop/OpenV-hosted#40 (wording, industries, news, the
-features page, five new videos, search titles and descriptions) and
-desktopmachineshop/OpenV#796 (the recording tooling, and a gap-list fix
-the videos needed). The sample programme is loaded in the Desktop Machine
-Shop workspace. Open: phone, agents and interviews videos, the rest of
-section 10, and removing the old desktop videos from OpenV's own
-`frontend/public/videos` once openv.app no longer links to them.
+Status, 2026-11-14: mostly built. Live on openv.app: the wording, industries,
+news, features page, seven narrated videos with captions and transcripts,
+and search titles and descriptions. Built and merged, waiting for the next
+release: breadcrumbs (on screen and as BreadcrumbList), sitemap dates and
+the videos in the sitemap, a share image per page, a test that every page
+is linked, comparisons with Codebeamer and with StrictDoc and Doorstop,
+screenshots of agents and interviews on /features, lighter screenshots and
+posters for phones, and a 5 KB logo. OpenV's own old videos stay for its
+copy of the site; openv.app no longer serves them. Requirements REQ-207 to
+REQ-212 in OpenV - Hosted, verified by TC-201 to TC-206. Open: narrated
+agents and interviews videos, HowTo data (dropped: Google no longer shows
+it), and Lighthouse after the next release. On a phone profile before:
+front page 1.6 s to the largest paint, /features 4.9 s, /demos 6.9 s,
+against a 2.5 s budget.
 
 Starts once the UI changes land on master (the open one today is
 [#789](https://github.com/desktopmachineshop/OpenV/pull/789), the Timeline's
