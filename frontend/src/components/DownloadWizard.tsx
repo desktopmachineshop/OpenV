@@ -428,9 +428,16 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
                   </div>
                 </section>
               )}
+              {Boolean(options.children) && (
+                <section style={{ marginTop: 14 }}>
+                  <SectionHeading title="Child projects" />
+                  {checkbox(selection.children, 'The projects under this one', () => setSelection((s) => ({ ...s, children: !s.children })), `${options.children} project${options.children === 1 ? '' : 's'}`)}
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Each travels as its own download, with the same choices as this one, in a folder of its name under projects/.</div>
+                </section>
+              )}
               {isArchive(selection) && (
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 10 }}>
-                  {selection.plan && selection.attachments.length === 0 ? 'The plan travels' : 'The files travel'} with the document, so this download is a .zip.
+                  {selection.children ? 'The projects travel' : selection.plan && selection.attachments.length === 0 ? 'The plan travels' : 'The files travel'} with the document, so this download is a .zip.
                 </div>
               )}
             </>

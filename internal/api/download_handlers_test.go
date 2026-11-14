@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/openv/requirements-platform/internal/domain/exports"
+	"github.com/openv/requirements-platform/internal/domain/projects"
 )
 
 func queryRequest(t *testing.T, query string) *http.Request {
@@ -166,5 +167,32 @@ func TestSelectionFromQueryTypesAllWinsOverTheTemplate(t *testing.T) {
 	got := selectionFromQuery(queryRequest(t, "template=requirements-review&types=all,test-case"))
 	if len(got.Types) != 2 || got.Types[0] != "all" || got.Types[1] != "test-case" {
 		t.Errorf("types = %v, want the explicit list as sent", got.Types)
+	}
+}
+
+// A child project's download sits in a folder of its name: a name that
+// would leave the folder is made safe, and two of one name are told apart.
+func TestChildFolderIsASafeNameToldApart(t *testing.T) {
+	used := map[string]bool{}
+	cases := []struct{ name, want string }{
+		{"Pump controller", "Pump controller"},
+		{"pump controller", "pump controller (2)"},
+		{"../etc/passwd", "-etc-passwd"},
+		{`a\b:c`, "a-b-c"},
+		{"  ", "project"},
+		{"..", "project (2)"},
+	}
+	for _, c := range cases {
+		if got := childFolder(&projects.Project{Name: c.name}, used); got != c.want {
+			t.Errorf("childFolder(%q) = %q, want %q", c.name, got, c.want)
+		}
+	}
+}
+
+func TestWantsFlagReadsASwitch(t *testing.T) {
+	for query, want := range map[string]bool{"": false, "children=0": false, "children=false": false, "children=1": true, "children=yes": true, "plan=1": false} {
+		if got := wantsFlag(queryRequest(t, query), "children"); got != want {
+			t.Errorf("wantsFlag(%q) = %v, want %v", query, got, want)
+		}
 	}
 }
