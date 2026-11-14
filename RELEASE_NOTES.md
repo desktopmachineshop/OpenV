@@ -9,6 +9,14 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **A phase shows under its milestone on a phone.** On a phone, the
+  plan's schedule grouped only the top-level tasks, by their own
+  milestone, so a plan of phases whose sub-tasks lead to each review
+  showed every milestone with no task. A phase now goes under the
+  milestone its sub-tasks are assigned to.
+
 ## 0.36.1 — 2026-11-14
 
 ### Bug fixes
