@@ -23,6 +23,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **Open an artifact in full.** The open mark beside an artifact's title
+  shows it over the page, as a task opens, with its **History** in a card
+  of its own beside it.
+- **A task's activity is its History.** A card's activity feed is now the
+  same **History** an artifact has, with **Comments**, **Changes** and
+  **All** to choose what it lists; with the card opened in full it sits
+  in a card of its own under the card's fields.
 - **Select several tasks on the Gantt and the Timeline.** **Ctrl**-click
   (**Cmd** on a Mac) a row or a bar adds a task to those selected, or
   drops it; **Shift**-click takes every task between. With several
