@@ -95,6 +95,9 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Bug fixes
 
+- **A validation test is no longer listed as a gap.** A test case that
+  validates a user need, rather than verifying a requirement, was counted
+  on the gap list as a test that checks nothing. It now counts as linked.
 - **A milestone's open mark opens it in full.** On the Gantt the mark beside a
   milestone's name did what the name did. The name now opens the milestone
   beside the chart and the mark opens it over the page, as for a task.
