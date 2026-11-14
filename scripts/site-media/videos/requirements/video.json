@@ -1,0 +1,127 @@
+{
+  "title": "Requirements and the project tree",
+  "description": "The Desktop CNC Mill's requirements in OpenV: the table and the tree, a requirement with its reference, attributes and links, and the wording check.",
+  "viewport": "desktop",
+  "steps": [
+    {
+      "id": "intro",
+      "do": [
+        [
+          "goto",
+          "/projects/{Desktop CNC Mill}/requirements"
+        ],
+        [
+          "see",
+          "text=Parts that measure right"
+        ],
+        [
+          "shot",
+          "requirements-table"
+        ]
+      ],
+      "say": "This is the Desktop CNC Mill, a sample product in OpenV. Its requirements, user needs, hazards, design items and tests all live in one project."
+    },
+    {
+      "id": "counts",
+      "do": [
+        [
+          "hover",
+          "text=traced"
+        ]
+      ],
+      "say": "The line along the top counts them: how many are traced, how many are verified, and how many have a wording problem."
+    },
+    {
+      "id": "need",
+      "do": [
+        [
+          "click",
+          "text=Parts that measure right"
+        ],
+        [
+          "wait",
+          800
+        ],
+        [
+          "shot",
+          "requirement-detail"
+        ]
+      ],
+      "say": "Open a user need, and the panel on the right shows its text, its reference, and every requirement that derives from it."
+    },
+    {
+      "id": "requirement",
+      "do": [
+        [
+          "click",
+          "text=Positioning accuracy"
+        ],
+        [
+          "wait",
+          800
+        ]
+      ],
+      "say": "This requirement says how accurately the mill must position the tool. Its reference, R E Q two, stays the same however often the text changes."
+    },
+    {
+      "id": "flowdown",
+      "do": [
+        [
+          "hover",
+          "text=Path accuracy"
+        ],
+        [
+          "wait",
+          600
+        ]
+      ],
+      "say": "Further down are its links: the need it comes from, the test that verifies it, and six requirements in the frame, motion and control projects that refine it."
+    },
+    {
+      "id": "quality",
+      "do": [
+        [
+          "click",
+          "text=From a file to cutting without a sp"
+        ],
+        [
+          "wait",
+          800
+        ]
+      ],
+      "say": "The coloured score is the wording check. It reads each requirement against the shall convention and marks weak words and anything that cannot be tested."
+    },
+    {
+      "id": "tree",
+      "do": [
+        [
+          "click",
+          "button:has-text('Tree')"
+        ],
+        [
+          "wait",
+          1200
+        ],
+        [
+          "shot",
+          "requirements-tree"
+        ]
+      ],
+      "say": "Switch to the tree to see the same project as an outline, heading by heading."
+    },
+    {
+      "id": "close",
+      "do": [
+        [
+          "click",
+          "button:has-text('Table')"
+        ],
+        [
+          "wait",
+          800
+        ]
+      ],
+      "say": "Everything here is versioned, so you can see what each requirement said at any point, and compare two baselines of the whole project."
+    }
+  ]
+}

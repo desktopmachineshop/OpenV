@@ -9,6 +9,12 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **A validation test is no longer listed as a gap.** A test case that
+  validates a user need, rather than verifying a requirement, was counted
+  on the gap list as a test that checks nothing. It now counts as linked.
+
 ## 0.36.0 — 2026-11-14
 
 ### New features
