@@ -542,7 +542,7 @@ export const RunDetailPanel: React.FC<RunDetailPanelProps> = ({ runId, onSelectR
             minHeight: 120,
           }}
         >
-          {logs.length === 0 && <div style={{ color: 'var(--neutral-mid)', fontSize: 12 }}>No log output yet…</div>}
+          {logs.length === 0 && <div style={{ color: 'var(--text-muted)', fontSize: 12 }}>No log output yet…</div>}
           {logs.map((entry, idx) => logLine(entry, idx))}
           <div ref={logsEndRef} />
         </div>

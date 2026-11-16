@@ -214,7 +214,7 @@ export const TestRunStepper: React.FC<Props> = ({ run, rows, index, onIndex, rea
                     borderRadius: 8,
                     border: on ? `2px solid ${t.fg}` : `1px solid ${t.border}`,
                     background: on ? t.fg : s === 'not-run' ? 'var(--surface)' : t.bg,
-                    color: on ? '#fff' : t.fg,
+                    color: on ? 'var(--surface)' : t.fg,
                     fontSize: 16,
                     fontWeight: 700,
                     cursor: readOnly ? 'default' : 'pointer',
