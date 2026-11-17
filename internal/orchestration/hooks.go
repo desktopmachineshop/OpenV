@@ -180,9 +180,16 @@ var statusToColumn = map[string]string{
 func (h *Hooks) syncWorkItem(run *agentruns.Run) {
 	actor := "agent:" + run.ID
 
-	// Auto-create a tracking card for root, non-interview, project-scoped runs.
+	// Auto-create a tracking card for root, project-scoped runs an
+	// automation, a schedule or a job of the app started. A conversation is
+	// not a task: an interview, the assistant's guided chat, or a prompt a
+	// person typed to an agent in the app gets no card (the retry of a run
+	// that had none is launched as a conversation too).
 	if run.WorkItemID == nil {
 		if run.Status != agentruns.StatusQueued || run.ParentRunID != nil || run.InterviewSessionID != nil || run.GuidedSessionID != nil || run.ProjectID == nil {
+			return
+		}
+		if run.Conversation {
 			return
 		}
 		title := "Agent run: " + run.AgentName

@@ -39,8 +39,8 @@ func (h *Handler) registerLinkedArtifactRoutes(router *mux.Router) {
 
 // CreateProject creates a new project
 func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
-	// A person, in the workspace it acts in, past its plan gate and project
-	// maximum (requireProjectCreate): a run or a runner key creates none.
+	// A person or a runner key, in the workspace it acts in, past its plan
+	// gate and project maximum (requireProjectCreate): a run creates none.
 	orgID, ok := h.requireProjectCreate(w, r)
 	if !ok {
 		return
@@ -62,8 +62,8 @@ func (h *Handler) CreateProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Creator becomes the project owner.
-	if user := CurrentUser(r); user != nil && h.MemberService != nil {
-		if err := h.MemberService.AddMember(project.ID, user.ID, members.RoleOwner); err != nil {
+	if creator := projectCreator(r); creator != "" && h.MemberService != nil {
+		if err := h.MemberService.AddMember(project.ID, creator, members.RoleOwner); err != nil {
 			slog.Warn("api: failed to add creator as project owner", "project_id", project.ID, "error", err)
 		}
 	}

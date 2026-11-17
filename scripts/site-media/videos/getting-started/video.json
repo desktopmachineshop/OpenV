@@ -1,0 +1,337 @@
+{
+  "title": "Getting started: a new project, start to finish",
+  "description": "A coolant system added to the Desktop CNC Mill: a project filed under the mill, its first requirement, the link to the mill requirement it refines, then the test, the plan and a baseline.",
+  "viewport": "desktop",
+  "steps": [
+    {
+      "id": "welcome",
+      "do": [
+        [
+          "goto",
+          "/projects"
+        ],
+        [
+          "see",
+          "text=Desktop CNC Mill"
+        ],
+        [
+          "shot",
+          "projects"
+        ]
+      ],
+      "say": "This is OpenV. Each product, and each part of a product, is a project. Here is the Desktop CNC Mill: fifteen projects, from the whole machine down to its motors and its software."
+    },
+    {
+      "id": "overview",
+      "do": [
+        [
+          "goto",
+          "/projects/{Desktop CNC Mill}"
+        ],
+        [
+          "see",
+          "text=Product definition"
+        ],
+        [
+          "shot",
+          "overview"
+        ]
+      ],
+      "say": "A project opens on its overview: what the product is for, who it is for, the limits it has to work within, and how you will know it has succeeded."
+    },
+    {
+      "id": "why",
+      "do": [
+        [
+          "wheel",
+          500
+        ],
+        [
+          "wait",
+          800
+        ]
+      ],
+      "say": "In this video we add something the mill does not have yet: a coolant system, with a project of its own under the mill."
+    },
+    {
+      "id": "new",
+      "do": [
+        [
+          "goto",
+          "/projects"
+        ],
+        [
+          "click",
+          "button:has-text('+ New Project')"
+        ],
+        [
+          "select",
+          "#new-project-parent",
+          "Desktop CNC Mill"
+        ],
+        [
+          "type",
+          "input[placeholder='Enter project name']",
+          "Mill coolant system"
+        ]
+      ],
+      "say": "Create a project, and file it under the mill. Its requirements can then refine the mill's, and its test results will count toward them."
+    },
+    {
+      "id": "describe",
+      "do": [
+        [
+          "type",
+          "textarea",
+          "The pump, tank, nozzles and returns that cool the cut and carry the chips away."
+        ],
+        [
+          "click",
+          "button:has-text('Create Project')"
+        ],
+        [
+          "see",
+          "text=Product definition"
+        ]
+      ],
+      "say": "A line of description, and the project is ready."
+    },
+    {
+      "id": "requirements",
+      "do": [
+        [
+          "goto",
+          "/projects/{Mill coolant system}/requirements"
+        ],
+        [
+          "click",
+          "button:has-text('+ New Artifact')"
+        ],
+        [
+          "wait",
+          600
+        ]
+      ],
+      "say": "Its first requirement. Each one is an artifact: a requirement, a user need, a design item, a hazard or a test case."
+    },
+    {
+      "id": "write",
+      "do": [
+        [
+          "type",
+          "input[placeholder='Enter artifact title']",
+          "Coolant kept inside"
+        ],
+        [
+          "type",
+          "textarea",
+          "The coolant system shall return all coolant to the tank and shall leak none outside the enclosure at a flow of 2 litres a minute."
+        ]
+      ],
+      "say": "Give it a title and say what the system shall do, in a way somebody could test."
+    },
+    {
+      "id": "create",
+      "do": [
+        [
+          "click",
+          "button:has-text('Create') >> nth=-1"
+        ],
+        [
+          "wait",
+          800
+        ],
+        [
+          "click",
+          "text=Coolant kept inside"
+        ],
+        [
+          "wait",
+          800
+        ],
+        [
+          "shot",
+          "first-requirement"
+        ]
+      ],
+      "say": "It gets a reference that never changes, R E Q one, and a wording score. One hundred: it uses shall, names a number, and has nothing vague in it."
+    },
+    {
+      "id": "link",
+      "do": [
+        [
+          "click",
+          "button[title^='Tuck away']"
+        ],
+        [
+          "click",
+          "button:has-text('Edit')"
+        ],
+        [
+          "scroll",
+          "text=Manage Links"
+        ],
+        [
+          "click",
+          "button:has-text('+ Add Link')"
+        ],
+        [
+          "select",
+          "select:has(option[value='refines'])",
+          "refines"
+        ],
+        [
+          "type",
+          "input[placeholder='Type to search by title or UID...']",
+          "Chips and coolant"
+        ],
+        [
+          "wait",
+          1000
+        ],
+        [
+          "shot",
+          "link-search"
+        ]
+      ],
+      "say": "Now link it to the mill requirement it refines. The search reaches the parent project, so pick the mill's requirement that keeps chips and coolant inside."
+    },
+    {
+      "id": "pick",
+      "do": [
+        [
+          "click",
+          "text=Chips and coolant stay inside >> nth=-1"
+        ],
+        [
+          "wait",
+          1000
+        ],
+        [
+          "click",
+          "button:has-text('Create') >> nth=-1"
+        ],
+        [
+          "wait",
+          800
+        ],
+        [
+          "click",
+          "button:has-text('Update')"
+        ],
+        [
+          "wait",
+          1200
+        ],
+        [
+          "goto",
+          "/projects/{Mill coolant system}/requirements"
+        ],
+        [
+          "click",
+          "text=Coolant kept inside"
+        ],
+        [
+          "wait",
+          1000
+        ],
+        [
+          "shot",
+          "first-link"
+        ]
+      ],
+      "say": "Add the link and save. The trace now shows one link up, to the mill's requirement number twelve, in the Desktop CNC Mill project."
+    },
+    {
+      "id": "parent",
+      "do": [
+        [
+          "goto",
+          "/projects/{Desktop CNC Mill}/requirements"
+        ],
+        [
+          "click",
+          "text=Chips and coolant stay inside"
+        ],
+        [
+          "wait",
+          1000
+        ]
+      ],
+      "say": "And in the mill's project, that requirement now lists the coolant system's among the requirements that refine it. When the coolant tests pass, the mill's requirement will count them."
+    },
+    {
+      "id": "verify",
+      "do": [
+        [
+          "goto",
+          "/projects/{Mill coolant system}/vv"
+        ],
+        [
+          "wait",
+          1000
+        ]
+      ],
+      "say": "The next steps are the same in every project. Add a test case that verifies the requirement, and record its results in a test run on the V and V page."
+    },
+    {
+      "id": "plan",
+      "do": [
+        [
+          "goto",
+          "/projects/{Mill coolant system}/gantt"
+        ],
+        [
+          "wait",
+          1000
+        ]
+      ],
+      "say": "Plan the work on the Gantt: tasks, milestones and the reviews they lead to, and link a task to the mill's plan where the mill is waiting for it."
+    },
+    {
+      "id": "baseline",
+      "do": [
+        [
+          "goto",
+          "/projects/{Mill coolant system}/requirements"
+        ],
+        [
+          "click",
+          "button:has-text('Working copy')"
+        ],
+        [
+          "click",
+          "button:has-text('Capture Baseline')"
+        ],
+        [
+          "type",
+          "input[placeholder*='Design freeze']",
+          "Requirements agreed"
+        ],
+        [
+          "click",
+          "button:has-text('OK')"
+        ],
+        [
+          "wait",
+          800
+        ]
+      ],
+      "say": "And when the requirements are agreed, capture a baseline, so you can show later exactly what was agreed and what has changed since."
+    },
+    {
+      "id": "close",
+      "do": [
+        [
+          "goto",
+          "/org/plan"
+        ],
+        [
+          "wait",
+          1000
+        ]
+      ],
+      "say": "That is the whole loop: define, link, verify, plan and baseline. The short videos on the demos page go into each one in turn."
+    }
+  ]
+}

@@ -41,6 +41,8 @@ interface ListToolbarProps {
    * quick filters, which are its chips.
    */
   chipSearch?: React.ReactNode;
+  /** What ends the bar on a wide screen in the refreshed page: the toolbar's menu and the create button. */
+  trailing?: React.ReactNode;
 }
 
 const segment = (on: boolean, first: boolean, phone: boolean): React.CSSProperties => ({
@@ -283,8 +285,12 @@ export const ListToolbar: React.FC<ListToolbarProps> = (p) => {
           flexShrink: 0,
         }}
       >
-        <div style={{ flex: 1, minWidth: 0, display: 'flex' }}>{p.chipSearch}</div>
+        {/* Alone, the search takes the row; beside the page's actions it
+            keeps a field's width and the room between goes to a spacer. */}
+        <div style={{ flex: p.trailing ? '0 1 520px' : 1, minWidth: 0, display: 'flex' }}>{p.chipSearch}</div>
+        {p.trailing && <div style={{ flex: 1 }} />}
         {tail}
+        {p.trailing}
       </div>
     );
   }
@@ -336,6 +342,7 @@ export const ListToolbar: React.FC<ListToolbarProps> = (p) => {
         {filterButton}
         {activeChip}
         {tail}
+        {p.trailing}
       </div>
     </div>
   );

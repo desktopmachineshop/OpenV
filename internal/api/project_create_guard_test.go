@@ -44,6 +44,13 @@ func (f *createImports) ImportProjectWithOverrides(data []byte, name, desc, orgI
 // proj-1 to proj-<held>), where "owner" and "member" are members, behind the
 // registered routes; the template tpl-1 is the workspace's own.
 func projectCreateFixture(held int) (http.Handler, *fakeProjectService, *fakeOrgService) {
+	router, store, org, _ := projectCreateFixtureWithMembers(held)
+	return router, store, org
+}
+
+// projectCreateFixtureWithMembers is projectCreateFixture with the project
+// roles its creates grant.
+func projectCreateFixtureWithMembers(held int) (http.Handler, *fakeProjectService, *fakeOrgService, *fakeMemberService) {
 	store := &fakeProjectService{byID: map[string]*projects.Project{}}
 	for i := 1; i <= held; i++ {
 		id := fmt.Sprintf("proj-%d", i)
@@ -51,6 +58,7 @@ func projectCreateFixture(held int) (http.Handler, *fakeProjectService, *fakeOrg
 	}
 	imports := &createImports{store: store}
 	org := &fakeOrgService{roles: map[string]map[string]string{"org-1": {"owner": orgs.RoleAdmin, "member": orgs.RoleMember}}}
+	projectMembers := &fakeMemberService{}
 	h := NewHandler(HandlerDeps{
 		ProjectService: store,
 		ExportService:  imports,
@@ -58,11 +66,11 @@ func projectCreateFixture(held int) (http.Handler, *fakeProjectService, *fakeOrg
 			"tpl-1": {ID: "tpl-1", OrgID: "org-1", Snapshot: []byte(`{}`)},
 		}}, imports),
 		OrgService:    org,
-		MemberService: &fakeMemberService{},
+		MemberService: projectMembers,
 	})
 	router := mux.NewRouter()
 	h.RegisterRoutes(router)
-	return router, store, org
+	return router, store, org, projectMembers
 }
 
 // projectCreates are the three routes that create a project, each with a
@@ -82,45 +90,76 @@ func createAs(router http.Handler, path, body string, ctx func(context.Context) 
 	return w
 }
 
-// TestRunnerKeysCreateNoProject is the regression test for a runner key
-// that created projects: POST /projects asked a caller for nothing but an
-// active workspace and that it was no run, so a workspace's runner key made
-// a project in it that no one owned, since only a person is made the
-// creator-owner; the template and import routes answered a key the 401 of a
-// request with no person behind it. Every project create now refuses a
-// runner key, a workspace's or a member's own, with 403 before it reads the
-// body, and creates nothing; a person still creates the project and owns it.
-func TestRunnerKeysCreateNoProject(t *testing.T) {
-	const refused = `{"error":"runner keys cannot create projects"}`
-	keys := []struct {
-		name string
-		ctx  func(context.Context) context.Context
-	}{
-		{"a workspace runner key", func(ctx context.Context) context.Context {
-			return context.WithValue(ctx, ctxWorkerOrg, "org-1")
-		}},
-		{"a member's personal runner key", func(ctx context.Context) context.Context {
-			return context.WithValue(context.WithValue(ctx, ctxWorkerOrg, "org-1"), ctxWorkerUser, "member")
-		}},
+// TestRunnerKeysCreateProjects covers a runner key's project create on the
+// three routes. A workspace's key creates the project in its workspace and
+// no one is made its owner: its workspace's admins hold an owner's rights on
+// it, as on every project there. A member's personal key is its holder
+// acting, so the holder owns the project, as when they create it signed in;
+// a holder who is no longer a member of the workspace is refused with 403
+// and nothing is created. (Before, every runner key was refused: the first
+// version of POST /projects let a workspace key make a project that the
+// code then treated as a person's, with no owner row and no rule for who
+// held it.)
+func TestRunnerKeysCreateProjects(t *testing.T) {
+	workspaceKey := func(ctx context.Context) context.Context {
+		return context.WithValue(ctx, ctxWorkerOrg, "org-1")
+	}
+	personalKey := func(holder string) func(context.Context) context.Context {
+		return func(ctx context.Context) context.Context {
+			return context.WithValue(context.WithValue(ctx, ctxWorkerOrg, "org-1"), ctxWorkerUser, holder)
+		}
+	}
+	// owners lists who holds a role on the one project the request created.
+	owners := func(t *testing.T, h http.Handler, store *fakeProjectService, roles map[string]map[string]string) map[string]string {
+		t.Helper()
+		if len(store.created) != 1 {
+			t.Fatalf("created %d projects, want one", len(store.created))
+		}
+		return roles[store.created[0].ID]
 	}
 	for _, c := range projectCreates {
-		for _, key := range keys {
-			t.Run(c.route+" by "+key.name, func(t *testing.T) {
-				router, store, _ := projectCreateFixture(1)
-				w := createAs(router, c.path, c.body, key.ctx)
-				if w.Code != http.StatusForbidden || strings.TrimSpace(w.Body.String()) != refused {
-					t.Fatalf("status = %d, body %q: want 403 %s", w.Code, w.Body.String(), refused)
-				}
-				if len(store.created) != 0 {
-					t.Fatalf("a runner key created %d projects", len(store.created))
-				}
-			})
-		}
+		t.Run(c.route+" by a workspace runner key, which no one owns", func(t *testing.T) {
+			router, store, _, membersOf := projectCreateFixtureWithMembers(1)
+			w := createAs(router, c.path, c.body, workspaceKey)
+			if w.Code != http.StatusCreated {
+				t.Fatalf("status = %d, body %q: want 201", w.Code, w.Body.String())
+			}
+			if got := owners(t, router, store, membersOf.roles); len(got) != 0 {
+				t.Fatalf("project members = %v, want none", got)
+			}
+			if store.created[0].OrgID != "org-1" {
+				t.Fatalf("created in workspace %q, want the key's, org-1", store.created[0].OrgID)
+			}
+		})
+		t.Run(c.route+" by a member's personal runner key, whose holder owns it", func(t *testing.T) {
+			router, store, _, membersOf := projectCreateFixtureWithMembers(1)
+			w := createAs(router, c.path, c.body, personalKey("member"))
+			if w.Code != http.StatusCreated {
+				t.Fatalf("status = %d, body %q: want 201", w.Code, w.Body.String())
+			}
+			if got := owners(t, router, store, membersOf.roles); len(got) != 1 || got["member"] != members.RoleOwner {
+				t.Fatalf("project members = %v, want the holder as owner", got)
+			}
+		})
+		t.Run(c.route+" by the personal runner key of someone who left the workspace", func(t *testing.T) {
+			router, store, _, _ := projectCreateFixtureWithMembers(1)
+			w := createAs(router, c.path, c.body, personalKey("gone"))
+			const refused = `{"error":"this runner key's holder is not a member of the workspace"}`
+			if w.Code != http.StatusForbidden || strings.TrimSpace(w.Body.String()) != refused {
+				t.Fatalf("status = %d, body %q: want 403 %s", w.Code, w.Body.String(), refused)
+			}
+			if len(store.created) != 0 {
+				t.Fatalf("created %d projects, want none", len(store.created))
+			}
+		})
 		t.Run(c.route+" by a member, who owns the project", func(t *testing.T) {
-			router, store, _ := projectCreateFixture(1)
+			router, store, _, membersOf := projectCreateFixtureWithMembers(1)
 			w := createAs(router, c.path, c.body, asPerson("member", "org-1"))
-			if w.Code != http.StatusCreated || len(store.created) != 1 {
-				t.Fatalf("status = %d, created %d: want 201 and one project (body %q)", w.Code, len(store.created), w.Body.String())
+			if w.Code != http.StatusCreated {
+				t.Fatalf("status = %d, body %q: want 201", w.Code, w.Body.String())
+			}
+			if got := owners(t, router, store, membersOf.roles); got["member"] != members.RoleOwner {
+				t.Fatalf("project members = %v, want the member as owner", got)
 			}
 		})
 	}

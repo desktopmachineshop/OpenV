@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="automatic-scheduling-and-constraints">
+  <title>Automatic scheduling and constraints</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt.scheduling"/>
+  </prolog>
+  <conbody>
+    <p><b>Calendar</b>, above the chart, also says how the plan is scheduled.</p>
+    <simpletable>
+      <sthead><stentry>Setting</stentry><stentry>What it does</stentry></sthead>
+      <strow><stentry><b>Tasks are scheduled</b> manually</stentry><stentry>Tasks stay where they are put until you recalculate. This is how every plan starts</stentry></strow>
+      <strow><stentry><b>Tasks are scheduled</b> automatically</stentry><stentry>After every change, each task is placed from its relationships and its constraint</stentry></strow>
+      <strow><stentry><b>Plan starts</b></stentry><stentry>An automatic task starts no earlier than this day</stentry></strow>
+      <strow><stentry><b>Must finish by</b></stentry><stentry>Float is counted to this day, and goes negative for work that runs past it</stentry></strow>
+      <strow><stentry><b>Schedule from</b> the finish</stentry><stentry>Automatic tasks go as late as their float allows, not as early</stentry></strow>
+    </simpletable>
+    <p>A task can go its own way: under <b>Scheduling</b> in its panel, set its <b>Mode</b> to manual in an automatic plan, or automatic in a manual one.</p>
+    <p>An automatic task goes straight after the tasks that drive it. A task that nothing drives stays where you put it: type a start, or drag its bar, and it is held to <b>start no earlier than</b> that day, so the next change does not put it back.</p>
+    <p>A <b>constraint</b> holds a task to a date:</p>
+    <simpletable>
+      <sthead><stentry>Constraint</stentry><stentry>The task</stentry></sthead>
+      <strow><stentry>As soon as possible</stentry><stentry>Has no constraint</stentry></strow>
+      <strow><stentry>As late as possible</stentry><stentry>Goes as late as its float allows</stentry></strow>
+      <strow><stentry>Start no earlier than, finish no earlier than</stentry><stentry>Cannot be placed before the date</stentry></strow>
+      <strow><stentry>Start no later than, finish no later than</stentry><stentry>Loses float as it nears the date, and is flagged past it</stentry></strow>
+      <strow><stentry>Must start on, must finish on</stentry><stentry>Is placed on the date, whatever drives it</stentry></strow>
+    </simpletable>
+    <p>A manual task is not moved by its constraint until you recalculate; until then its panel says when its dates do not keep to it.</p>
+    <p>The same section shows what the plan works out for the task: the <b>earliest</b> it can run (after the tasks that drive it, the plan's start and its constraint), the <b>latest</b> it can run before the plan ends later, and its <b>float</b>. Float is <b>negative</b>, shown as <i>N working days behind</i>, when a task runs past its deadline, a "no later than" constraint or the plan's finish date, or when a relationship it drives is broken; such a task is critical.</p>
+    <p>Tick <b>A critical path for each chain of tasks</b> in the calendar to give every independent chain its own path, to its own last task, where the default is one path to the end of the plan.</p>
+  </conbody>
+</concept>

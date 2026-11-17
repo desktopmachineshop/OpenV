@@ -774,6 +774,168 @@ table password_resets rows 0
   index idx_password_resets_token CREATE UNIQUE INDEX idx_password_resets_token ON public.password_resets USING btree (token_hash)
   index idx_password_resets_user CREATE INDEX idx_password_resets_user ON public.password_resets USING btree (user_id)
   index password_resets_pkey CREATE UNIQUE INDEX password_resets_pkey ON public.password_resets USING btree (id)
+table plan_assignments rows 0
+  column work_item_id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column assignee_type character varying(8) NOT NULL
+  column assignee_id uuid NOT NULL
+  column units integer NOT NULL DEFAULT 100
+  constraint plan_assignments_pkey PRIMARY KEY (work_item_id, assignee_type, assignee_id)
+  constraint plan_assignments_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  constraint plan_assignments_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES work_items(id) ON DELETE CASCADE
+  index idx_plan_assignments_project CREATE INDEX idx_plan_assignments_project ON public.plan_assignments USING btree (project_id)
+  index plan_assignments_pkey CREATE UNIQUE INDEX plan_assignments_pkey ON public.plan_assignments USING btree (work_item_id, assignee_type, assignee_id)
+table plan_baselines rows 0
+  column id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column name text NOT NULL
+  column tasks jsonb NOT NULL DEFAULT '[]'::jsonb
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column baseline_id uuid
+  column moment jsonb
+  constraint plan_baselines_baseline_id_fkey FOREIGN KEY (baseline_id) REFERENCES baselines(id) ON DELETE CASCADE
+  constraint plan_baselines_pkey PRIMARY KEY (id)
+  constraint plan_baselines_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  index idx_plan_baselines_baseline CREATE INDEX idx_plan_baselines_baseline ON public.plan_baselines USING btree (baseline_id)
+  index idx_plan_baselines_project CREATE INDEX idx_plan_baselines_project ON public.plan_baselines USING btree (project_id)
+  index plan_baselines_pkey CREATE UNIQUE INDEX plan_baselines_pkey ON public.plan_baselines USING btree (id)
+table plan_dependencies rows 0
+  column work_item_id uuid NOT NULL
+  column depends_on_id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column kind character varying(2) NOT NULL DEFAULT 'FS'::character varying
+  column lag_days integer NOT NULL DEFAULT 0
+  column lag_unit character varying(2) NOT NULL DEFAULT 'd'::character varying
+  constraint plan_dependencies_depends_on_id_fkey FOREIGN KEY (depends_on_id) REFERENCES work_items(id) ON DELETE CASCADE
+  constraint plan_dependencies_pkey PRIMARY KEY (work_item_id, depends_on_id)
+  constraint plan_dependencies_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  constraint plan_dependencies_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES work_items(id) ON DELETE CASCADE
+  index idx_plan_dependencies_depends_on CREATE INDEX idx_plan_dependencies_depends_on ON public.plan_dependencies USING btree (depends_on_id)
+  index idx_plan_dependencies_project CREATE INDEX idx_plan_dependencies_project ON public.plan_dependencies USING btree (project_id)
+  index plan_dependencies_pkey CREATE UNIQUE INDEX plan_dependencies_pkey ON public.plan_dependencies USING btree (work_item_id, depends_on_id)
+table plan_external_links rows 0
+  column work_item_id uuid NOT NULL
+  column depends_on_id uuid NOT NULL
+  column kind character varying(2) NOT NULL DEFAULT 'FS'::character varying
+  column lag_days integer NOT NULL DEFAULT 0
+  column lag_unit character varying(2) NOT NULL DEFAULT 'd'::character varying
+  constraint plan_external_links_depends_on_id_fkey FOREIGN KEY (depends_on_id) REFERENCES work_items(id) ON DELETE CASCADE
+  constraint plan_external_links_pkey PRIMARY KEY (work_item_id, depends_on_id)
+  constraint plan_external_links_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES work_items(id) ON DELETE CASCADE
+  index idx_plan_external_links_depends_on CREATE INDEX idx_plan_external_links_depends_on ON public.plan_external_links USING btree (depends_on_id)
+  index plan_external_links_pkey CREATE UNIQUE INDEX plan_external_links_pkey ON public.plan_external_links USING btree (work_item_id, depends_on_id)
+table plan_holidays rows 0
+  column project_id uuid NOT NULL
+  column day date NOT NULL
+  column name text NOT NULL DEFAULT ''::text
+  constraint plan_holidays_pkey PRIMARY KEY (project_id, day)
+  constraint plan_holidays_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  index plan_holidays_pkey CREATE UNIQUE INDEX plan_holidays_pkey ON public.plan_holidays USING btree (project_id, day)
+table plan_milestones rows 0
+  column id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column release_id uuid
+  column name character varying(200) NOT NULL DEFAULT ''::character varying
+  column description text NOT NULL DEFAULT ''::text
+  column target_date date
+  column criteria jsonb NOT NULL DEFAULT '[]'::jsonb
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column date_mode character varying(8) NOT NULL DEFAULT 'fixed'::character varying
+  column waits_for jsonb NOT NULL DEFAULT '[]'::jsonb
+  constraint plan_milestones_pkey PRIMARY KEY (id)
+  constraint plan_milestones_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  constraint plan_milestones_release_id_fkey FOREIGN KEY (release_id) REFERENCES target_releases(id) ON DELETE CASCADE
+  index idx_plan_milestones_project CREATE INDEX idx_plan_milestones_project ON public.plan_milestones USING btree (project_id)
+  index idx_plan_milestones_release CREATE UNIQUE INDEX idx_plan_milestones_release ON public.plan_milestones USING btree (release_id) WHERE (release_id IS NOT NULL)
+  index plan_milestones_pkey CREATE UNIQUE INDEX plan_milestones_pkey ON public.plan_milestones USING btree (id)
+table plan_org_calendar rows 0
+  column org_id uuid NOT NULL
+  column working_days integer NOT NULL
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint plan_org_calendar_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint plan_org_calendar_pkey PRIMARY KEY (org_id)
+  index plan_org_calendar_pkey CREATE UNIQUE INDEX plan_org_calendar_pkey ON public.plan_org_calendar USING btree (org_id)
+table plan_resources rows 0
+  column project_id uuid NOT NULL
+  column assignee_type character varying(8) NOT NULL
+  column assignee_id uuid NOT NULL
+  column daily_rate numeric(12,2) NOT NULL DEFAULT 0
+  column capacity integer NOT NULL DEFAULT 100
+  column name character varying(120) NOT NULL DEFAULT ''::character varying
+  constraint plan_resources_pkey PRIMARY KEY (project_id, assignee_type, assignee_id)
+  constraint plan_resources_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  index plan_resources_pkey CREATE UNIQUE INDEX plan_resources_pkey ON public.plan_resources USING btree (project_id, assignee_type, assignee_id)
+table plan_settings rows 0
+  column project_id uuid NOT NULL
+  column working_days smallint NOT NULL DEFAULT 31
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column critical_slack_days integer NOT NULL DEFAULT 0
+  column scheduling_mode character varying(8) NOT NULL DEFAULT 'manual'::character varying
+  column project_start date
+  column project_finish date
+  column schedule_from character varying(8) NOT NULL DEFAULT 'start'::character varying
+  column multiple_critical_paths boolean NOT NULL DEFAULT false
+  column currency character varying(3) NOT NULL DEFAULT ''::character varying
+  column budget numeric(14,2)
+  column status_date date
+  column active_baseline_id uuid
+  column effort_driven_default boolean NOT NULL DEFAULT false
+  constraint plan_settings_pkey PRIMARY KEY (project_id)
+  constraint plan_settings_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  index plan_settings_pkey CREATE UNIQUE INDEX plan_settings_pkey ON public.plan_settings USING btree (project_id)
+table plan_task_todos rows 0
+  column todo_id uuid NOT NULL
+  column work_item_id uuid NOT NULL
+  column project_id uuid NOT NULL
+  constraint plan_task_todos_pkey PRIMARY KEY (todo_id)
+  constraint plan_task_todos_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  constraint plan_task_todos_todo_id_fkey FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE
+  constraint plan_task_todos_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES work_items(id) ON DELETE CASCADE
+  index idx_plan_task_todos_project CREATE INDEX idx_plan_task_todos_project ON public.plan_task_todos USING btree (project_id)
+  index idx_plan_task_todos_work_item CREATE INDEX idx_plan_task_todos_work_item ON public.plan_task_todos USING btree (work_item_id)
+  index plan_task_todos_pkey CREATE UNIQUE INDEX plan_task_todos_pkey ON public.plan_task_todos USING btree (todo_id)
+table plan_tasks rows 0
+  column work_item_id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column start_date date
+  column parent_id uuid
+  column updated_at timestamp without time zone NOT NULL DEFAULT now()
+  column duration_days integer
+  column effort_days numeric(9,2)
+  column milestone_key text
+  column elapsed boolean NOT NULL DEFAULT false
+  column deadline date
+  column mode character varying(8) NOT NULL DEFAULT ''::character varying
+  column constraint_type character varying(8) NOT NULL DEFAULT 'asap'::character varying
+  column constraint_date date
+  column fixed_cost numeric(14,2) NOT NULL DEFAULT 0
+  column effort_driven boolean NOT NULL DEFAULT false
+  column actual_start date
+  column actual_finish date
+  column percent_complete integer
+  column actual_cost numeric(14,2)
+  column sort_order integer
+  constraint plan_tasks_parent_id_fkey FOREIGN KEY (parent_id) REFERENCES work_items(id) ON DELETE SET NULL
+  constraint plan_tasks_pkey PRIMARY KEY (work_item_id)
+  constraint plan_tasks_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  constraint plan_tasks_work_item_id_fkey FOREIGN KEY (work_item_id) REFERENCES work_items(id) ON DELETE CASCADE
+  index idx_plan_tasks_parent CREATE INDEX idx_plan_tasks_parent ON public.plan_tasks USING btree (parent_id) WHERE (parent_id IS NOT NULL)
+  index idx_plan_tasks_project CREATE INDEX idx_plan_tasks_project ON public.plan_tasks USING btree (project_id)
+  index plan_tasks_pkey CREATE UNIQUE INDEX plan_tasks_pkey ON public.plan_tasks USING btree (work_item_id)
+table plan_time_off rows 0
+  column id uuid NOT NULL
+  column org_id uuid NOT NULL
+  column assignee_type character varying(16) NOT NULL DEFAULT 'user'::character varying
+  column assignee_id uuid NOT NULL
+  column start_date date NOT NULL
+  column end_date date NOT NULL
+  column name text NOT NULL DEFAULT ''::text
+  column created_at timestamp without time zone NOT NULL DEFAULT now()
+  constraint plan_time_off_org_id_fkey FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+  constraint plan_time_off_pkey PRIMARY KEY (id)
+  index idx_plan_time_off_org CREATE INDEX idx_plan_time_off_org ON public.plan_time_off USING btree (org_id)
+  index plan_time_off_pkey CREATE UNIQUE INDEX plan_time_off_pkey ON public.plan_time_off USING btree (id)
 table product_profiles rows 0
   column project_id uuid NOT NULL
   column vision text NOT NULL DEFAULT ''::text
@@ -971,7 +1133,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 74
+table schema_migrations rows 90
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1331,3 +1493,19 @@ ledger 0071 todos
 ledger 0072 workspace_notices
 ledger 0073 comment_reads
 ledger 0074 agents_archived
+ledger 0075 plan
+ledger 0076 plan_relationship_types
+ledger 0077 plan_duration_effort
+ledger 0078 plan_settings
+ledger 0079 plan_task_milestone
+ledger 0080 plan_dependency_lag
+ledger 0081 plan_scheduling_basics
+ledger 0082 plan_scheduling_engine
+ledger 0083 plan_resources
+ledger 0084 plan_tracking
+ledger 0085 plan_task_order
+ledger 0086 plan_external_links
+ledger 0087 plan_workspace_calendar
+ledger 0088 plan_sizing
+ledger 0089 plan_milestone_links
+ledger 0090 joined_baselines

@@ -126,9 +126,9 @@ describe('a workspace page in the compact layout', () => {
     await mount(<Navbar title="Workspace Settings" showWorkspaceControls />, '/org/settings');
     const rail = container.querySelector('aside[aria-label="Workspace navigation"]')!;
     expect(rail).not.toBeNull();
-    expect(Array.from(rail.querySelectorAll('a')).map((a) => a.getAttribute('href'))).toEqual(
-      expect.arrayContaining(['/projects', '/whats-new', '/org/settings'])
-    );
+    // Home, then the Agents group and the settings; News is in the account
+    // menu and beside the release in the settings, not a rail entry.
+    expect(Array.from(rail.querySelectorAll('a')).map((a) => a.getAttribute('href'))).toEqual(['/projects', '/org/agents', '/org/settings']);
     expect(document.body.classList.contains('ov-has-rail')).toBe(true);
     const bar = container.querySelector('header.ov-topbar')!;
     expect(bar.querySelector('button[title="Switch workspace"]')).not.toBeNull();

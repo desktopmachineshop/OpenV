@@ -18,9 +18,26 @@ import type {
   DownloadSelection,
   LinkTypeRule,
   Party,
+  PlanExportFormat,
+  PlanMilestoneInput,
+  MasterLevels,
+  MasterPlan,
+  MyPlanTasks,
+  PlanBaselineInfo,
+  PlanTimeOff,
+  WorkspacePlanCalendar,
+  PlanLagUnit,
+  PlanRelationshipDirection,
+  PlanResourceType,
+  PlanSettings,
+  PlanRelationshipType,
+  PlanScheduleInput,
+  PlanTask,
   ProductProfile,
   Project,
   ProjectExport,
+  ProjectPlan,
+  StoredPlanMilestone,
   Template,
   Todo,
   TodoInput,
@@ -192,4 +209,89 @@ export const todosAPI = {
   promote: (id: string) =>
     client.post<{ todo: Todo; work_item: WorkItem }>(`/api/v1/todos/${id}/promote`),
   remove: (id: string) => client.delete(`/api/v1/todos/${id}`),
+};
+
+const PLAN_EXTENSION: Record<PlanExportFormat, string> = { pdf: 'pdf', excel: 'xlsx', csv: 'csv', msproject: 'xml', json: 'json' };
+
+/** The project plan, the Gantt over the board: its read, edits and export. */
+export const planAPI = {
+  get: (projectId: string) => client.get<ProjectPlan>(`/api/v1/projects/${projectId}/plan`),
+  /** A task's dates, parent and dependencies; answers its row of the plan. */
+  schedule: (workItemId: string, payload: PlanScheduleInput) =>
+    client.put<PlanTask>(`/api/v1/work-items/${workItemId}/schedule`, payload),
+  /** A relationship between two tasks, made from either one; it replaces any the pair has. */
+  relate: (workItemId: string, otherId: string, type: PlanRelationshipType, direction: PlanRelationshipDirection, lagDays = 0, lagUnit: PlanLagUnit = 'd') =>
+    client.put<PlanTask>(`/api/v1/work-items/${workItemId}/relationships/${otherId}`, { type, direction, lag_days: lagDays, lag_unit: lagUnit }),
+  /** Moves each task another drives to the dates its relationships ask for; answers how many moved. */
+  recalculate: (projectId: string, onlyLater = false) =>
+    client.post<{ moved: number }>(`/api/v1/projects/${projectId}/plan/recalculate`, { only_later: onlyLater }),
+  /** Removes the relationship between two tasks, whichever way round it runs. */
+  unrelate: (workItemId: string, otherId: string) => client.delete(`/api/v1/work-items/${workItemId}/relationships/${otherId}`),
+  /** The days of the week the plan works: ISO weekday numbers, Monday is 1. */
+  setWorkingDays: (projectId: string, workingDays: number[]) =>
+    client.put<PlanSettings>(`/api/v1/projects/${projectId}/plan/settings`, { working_days: workingDays }),
+  /** Delays tasks until nobody is asked for more than their capacity; answers how many moved. */
+  level: (projectId: string) => client.post<{ moved: number }>(`/api/v1/projects/${projectId}/plan/level`),
+  /** What a day of a person's or an agent's time costs, and the share of a day they can give. */
+  setResource: (projectId: string, type: PlanResourceType, id: string, change: { daily_rate: number; capacity: number; planned_name?: string }) =>
+    client.put(`/api/v1/projects/${projectId}/plan/resources/${id}`, { type, ...change }),
+  /** Drops a planned resource and takes it off every task. */
+  removePlanned: (projectId: string, id: string) => client.put(`/api/v1/projects/${projectId}/plan/resources/${id}`, { type: 'planned', remove: true }),
+  /** Gives a planned resource's tasks to a person or an agent, who takes its place. */
+  staffPlanned: (projectId: string, id: string, withType: 'user' | 'agent', withId: string) =>
+    client.put(`/api/v1/projects/${projectId}/plan/resources/${id}`, { type: 'planned', staff_with: { type: withType, id: withId } }),
+  /** The workspace's plan calendar: its working days and its people's time off. */
+  workspaceCalendar: (orgId: string) => client.get<WorkspacePlanCalendar>(`/api/v1/orgs/${orgId}/plan-calendar`),
+  setWorkspaceWorkingDays: (orgId: string, workingDays: number[]) => client.put<WorkspacePlanCalendar>(`/api/v1/orgs/${orgId}/plan-calendar`, { working_days: workingDays }),
+  addTimeOff: (orgId: string, payload: { assignee_id: string; start: string; end: string; name?: string; type?: 'user' | 'agent' }) =>
+    client.post<PlanTimeOff>(`/api/v1/orgs/${orgId}/plan-calendar/time-off`, payload),
+  removeTimeOff: (orgId: string, id: string) => client.delete(`/api/v1/orgs/${orgId}/plan-calendar/time-off/${id}`),
+  /** The plans of every project of the workspace the reader can see, each down to a level: 1 is the top-level tasks. */
+  master: (levels: MasterLevels = '1') => client.get<MasterPlan>('/api/v1/plan/master', { params: { levels } }),
+  /** The tasks the caller works on, across the plans of the workspace's projects they can read. */
+  mine: () => client.get<MyPlanTasks>('/api/v1/plan/mine'),
+  /** Makes a task driven by a task of another project. */
+  relateExternal: (workItemId: string, otherId: string, type: PlanRelationshipType, lagDays = 0, lagUnit: PlanLagUnit = 'd') =>
+    client.put<PlanTask>(`/api/v1/work-items/${workItemId}/external-links/${otherId}`, { type, lag_days: lagDays, lag_unit: lagUnit }),
+  unrelateExternal: (workItemId: string, otherId: string) => client.delete(`/api/v1/work-items/${workItemId}/external-links/${otherId}`),
+  /** Adds the tasks of a Microsoft Project XML file to the board and the plan; answers what it added. */
+  importMSProject: (projectId: string, file: Blob) =>
+    client.post<{ tasks: number; milestones: number; relationships: number }>(`/api/v1/projects/${projectId}/plan/import`, file, { headers: { 'Content-Type': 'application/xml' } }),
+  /** Records the plan as it stands, to measure against later. */
+  saveBaseline: (projectId: string, name = '') => client.post<PlanBaselineInfo>(`/api/v1/projects/${projectId}/plan/baselines`, { name }),
+  deleteBaseline: (projectId: string, baselineId: string) => client.delete(`/api/v1/projects/${projectId}/plan/baselines/${baselineId}`),
+  /** Moves the work that should have started by the status day and has not to that day; answers how many moved. */
+  rescheduleRemaining: (projectId: string) => client.post<{ moved: number }>(`/api/v1/projects/${projectId}/plan/reschedule-remaining`),
+  /** The plan's holidays and critical threshold, whichever the change names. */
+  setSettings: (projectId: string, change: Partial<Omit<PlanSettings, 'project_start' | 'project_finish' | 'budget' | 'status_date' | 'active_baseline_id'>> & { project_start?: string; project_finish?: string; budget?: number; status_date?: string; active_baseline_id?: string }) =>
+    client.put<PlanSettings>(`/api/v1/projects/${projectId}/plan/settings`, change),
+  /** A to-do raised on a task, which counts toward its progress. */
+  addTodo: (workItemId: string, text: string, dueDate?: string) =>
+    client.post<Todo>(`/api/v1/work-items/${workItemId}/todos`, { text, ...(dueDate ? { due_date: dueDate } : {}) }),
+  /** The to-dos on a task, open ones first: what its board card lists. */
+  listTodos: (workItemId: string) => client.get<Todo[]>(`/api/v1/work-items/${workItemId}/todos`),
+  createMilestone: (projectId: string, payload: PlanMilestoneInput) =>
+    client.post<StoredPlanMilestone>(`/api/v1/projects/${projectId}/plan/milestones`, payload),
+  updateMilestone: (projectId: string, milestoneId: string, payload: PlanMilestoneInput) =>
+    client.put<StoredPlanMilestone>(`/api/v1/projects/${projectId}/plan/milestones/${milestoneId}`, payload),
+  removeMilestone: (projectId: string, milestoneId: string) =>
+    client.delete(`/api/v1/projects/${projectId}/plan/milestones/${milestoneId}`),
+  /** The completion criteria of a release's milestone. */
+  setReleaseCriteria: (projectId: string, releaseId: string, criteria: PlanMilestoneInput['criteria']) =>
+    client.put<StoredPlanMilestone>(`/api/v1/projects/${projectId}/plan/release-milestones/${releaseId}`, { criteria }),
+  /** The tasks a release's milestone waits for. */
+  setReleaseWaitsFor: (projectId: string, releaseId: string, waitsFor: string[]) =>
+    client.put<StoredPlanMilestone>(`/api/v1/projects/${projectId}/plan/release-milestones/${releaseId}`, { waits_for: waitsFor }),
+  /** Saves the plan as a file in the chosen format. */
+  export: async (projectId: string, format: PlanExportFormat) => {
+    const response = await client.get(`/api/v1/projects/${projectId}/plan/export`, {
+      params: { format },
+      responseType: 'blob',
+    });
+    const filename =
+      filenameFromContentDisposition(response.headers['content-disposition']) ||
+      `plan-${new Date().toISOString().slice(0, 10)}.${PLAN_EXTENSION[format]}`;
+    saveBlob(response.data, filename);
+    return response;
+  },
 };

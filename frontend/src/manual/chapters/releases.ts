@@ -3,7 +3,7 @@ const content = `
 # Target releases
 
 A **release** is a milestone you plan requirements for, such as *MVP*,
-*V1.0* or *V2.0*. The **Releases** page, under **Verify** in the project
+*V1.0* or *V2.0*. The **Releases** page, under **Plan** in the project
 menu, lists a project's releases in order and shows how far each one has
 come: how many of its requirements are approved, how many are verified, and
 a burn-up of verification over time.
@@ -90,6 +90,12 @@ release was released:
 
 A target date inside the span is marked on the chart. A long span is shown
 as one point every few days.
+
+## Releases on the plan
+
+Each release is also a milestone on the **Gantt** page, at its target date,
+where its progress is measured against criteria you can set. See
+[The plan (Gantt)](/manual/gantt).
 `;
 
 export default content;

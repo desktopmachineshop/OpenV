@@ -176,7 +176,10 @@ export const ArtifactTreeRow: React.FC<ArtifactTreeRowProps> = ({
         height: touch ? 44 : 28,
         border: '1px solid transparent',
         borderRadius: 4,
-        background: 'transparent',
+        // Kept in view where the table is wider than its pane, as in TableView.
+        position: 'sticky',
+        right: 0,
+        background: 'inherit',
         color: 'var(--text-muted)',
         fontSize: 16,
         lineHeight: 1,

@@ -44,14 +44,21 @@ of the rail on every page.
   verification stands behind them) and the share verified (their tests
   pass, or they are verified by hand). A project with no requirements yet
   says so instead. The project you opened last is marked with a blue edge.
-  Each row carries its action buttons:
+  A project that has a parent (set on its **Overview**) is listed under
+  it, indented, and the arrow before a parent's name folds its children
+  away; the fold is remembered in this browser.
+  The **⋯** button at the end of a row opens its actions by name:
 
-| Icon | Action |
+| Action | What it does |
 | --- | --- |
-| ⧉ | **Save as template** — snapshot this project as a reusable template |
-| ✎ | **Edit project** — rename it or change the description |
-| ↓ | **Download** — opens the download wizard (format, sections, attachments) |
-| ✕ | **Delete project** — removes the project and all its artifacts |
+| **New child project** | start a project under this one: the form opens with this project as its parent |
+| **Edit project** | rename it or change the description |
+| **Download** | opens the download wizard (format, sections, attachments) |
+| **Save as template** | snapshot this project as a reusable template |
+| **Delete project** | removes the project and all its artifacts |
+
+A workspace with no activity yet shows no Activity panel: **Needs you**
+takes the width until there is something to report.
 
 Click anywhere else on the row to open the project.
 
@@ -63,7 +70,7 @@ short window, or a form open below the list, scrolls the page as before.
 
 ## Creating a project
 
-Click **+ New Project**. The form offers a **Project Type**:
+Click **+ New Project**. **Parent project** places the new project in the hierarchy: leave it at *None* for a top-level project, or choose the project it belongs under. **New child project**, in a project's **⋯** menu, opens the form with that project already chosen. The form then offers a **Project Type**:
 
 - **Blank Project** — start empty; enter a name and optional description.
 - **Templates** — start from a template you previously saved with ⧉.
@@ -145,6 +152,20 @@ a two-step wizard.
   actually holds are offered. Ticking any makes the download a **.zip**: the
   document plus an \`attachments/\` folder, each file named by its figure
   reference where it has one.
+- **Plan and tasks** — tick **The plan and its tasks** to bring the
+  project's plan along: every task with its dates, effort, progress and who
+  it is assigned to, and the milestones. It travels as a file in a
+  \`plan/\` folder beside the document, in the format nearest the one you
+  chose: JSON, CSV or a workbook beside those, a PDF beside a PDF or Word
+  specification, and Microsoft Project XML beside ReqIF. It also makes the
+  download a **.zip**. It is offered for the project as it stands, when it
+  has a task or a milestone, and not for a baseline.
+- **Child projects** — tick **The projects under this one** to take them
+  along: each project beneath this one that you can read, every level
+  down, travels as its own download with the same format and choices, in
+  a folder of its name under \`projects/\` in the **.zip**, with its own
+  plan if you ticked the plan. It is offered for a project that has
+  projects under it, and not for a baseline.
 
 The line at the foot of the wizard says what you are about to get — "1 of 3
 sections, no headings, with figures" — and the button refuses to download a
@@ -173,7 +194,7 @@ the live project.
 ## Inside a project
 
 Opening a project shows the project menu with its pages, grouped under
-**Define**, **Verify**, **Plan** and **Agents** on the rail down the left (see
+**Plan**, **Define**, **Verify** and **Agents** on the rail down the left (see
 *Getting started* → *Finding your way around*):
 
 | Entry | What it is |
@@ -202,7 +223,7 @@ Requirements chapter). It is off until an editor turns it on.
 
 **Projects** at the top of the rail takes you back to all projects. The
 account menu at the right end of the top bar (on a phone, your name at the
-foot of the project menu) opens **Settings** (personal runner and agent
+foot of **More**) opens **Settings** (personal runner and agent
 sign-ins) and **Sign out**.
 
 ## Project access (members)

@@ -14,7 +14,13 @@
 //   - on desktop profiles only: text blocks running wider than a readable
 //     measure, form fields stretched across the screen, and raster images
 //     drawn larger than their pixels (blur on HiDPI),
-//   - page errors.
+//   - page errors,
+//   - how much of the window is chrome: the height above the element a page
+//     marks data-page-content (where its own content starts) plus the tab
+//     bar below, in pixels and as a share of the window. A page with no
+//     marker is measured from the shell's <main>. Printed beside the
+//     screen's flags; a screen over CHROME_BUDGET percent of the window
+//     (default 35) fails the run.
 // It is the regression tool for the class of defect fixed in the phone
 // polish pass (docs/plans/mobile-support.md §8): run it after any layout
 // change and compare the summary with the previous run.
@@ -31,12 +37,17 @@
 //                  desktop:<profile+...> restricts the desktop pass, e.g.
 //                  desktop:laptop-1366+fhd-1920 (see DESKTOP_PROFILES)
 //   TAGS           comma list of screen tags to restrict the run
+//   CHROME_BUDGET  the most of the window chrome may take, in percent (default 35)
 //   CHROMIUM_PATH  executablePath override for Chromium
 //   SHOT_SIZE      exact-size screenshot mode for the PWA manifest's
 //                  screenshots, which must declare fixed pixel dimensions:
 //                  <cssWidth>x<cssHeight>@<dpr> replaces the phone profile's
 //                  viewport (e.g. 360x640@3 => 1080x1920 PNGs)
-//   COLOR_SCHEME   dark renders every screen in the dark scheme (default light)
+//   COLOR_SCHEME   dark renders every screen in the dark scheme (default light),
+//                  and adds two findings: light:N, surfaces painted light on
+//                  the dark theme (a hard-coded white, a third-party default),
+//                  and faint:N, text under 2.1:1 against what is behind it (text
+//                  left on a surface of the other scheme)
 //   SHOT_FULLPAGE  0 clips each screenshot to the viewport instead of the
 //                  full page, which is what a fixed size needs
 // Exit code is 1 when a screen fails to render or throws a page error;
@@ -46,6 +57,7 @@ const { chromium, webkit, devices } = require('playwright');
 const fs = require('fs');
 const path = require('path');
 const OUT = process.env.OUT || path.join(__dirname, '..', 'test-results', 'phone-audit');
+const CHROME_BUDGET = Number(process.env.CHROME_BUDGET) || 35;
 const BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:5000';
 const COLOR_SCHEME = process.env.COLOR_SCHEME === 'dark' ? 'dark' : 'light';
 fs.mkdirSync(OUT, { recursive: true });
@@ -153,7 +165,7 @@ const rdCoverage = { project_id: 'p1', entries: [
 ], summary: { total: 2, covered: 2, uncovered: 0, verified: 1, pass: 1, fail: 1 } };
 const rdResult = (id, run, tc, status) => ({ id, run_id: run, test_case_id: tc, test_case_version: 2, status, notes: '', evidence: [], executed_at: now });
 const rdEvent = (id, type, who, entity, payload, kind) => ({ id, event_type: type, project_id: 'p1', actor: `user:${who}`, actor_kind: kind || 'user', actor_name: who, entity_name: entity, payload, created_at: now });
-const rdBaseline0 = { id: 'b0', project_id: 'p1', name: 'Concept review', created_at: '2026-08-02T09:00:00Z', created_by: 'u1', created_by_name: 'Sam Example' };
+const rdBaseline0 = { id: 'b0', project_id: 'p1', name: 'Concept review', created_at: '2026-08-02T09:00:00Z', created_by: 'u1', created_by_name: 'Sam Example', plan: { progress: 5, tasks: 2, done: 0, late: 0, start: '2026-10-01', end: '2026-10-28', milestones: [] } };
 const rdRoutes = [
   [/\/api\/v1\/artifacts\?/, rdArtifacts],
   [/\/api\/v1\/links/, rdLinks],
@@ -172,7 +184,7 @@ const rdRoutes = [
   ]],
   [/\/api\/v1\/proposals/, [{ id: 'pr1', project_id: 'p1', run_id: 'r1', op: 'update_artifact', target_id: 'req-2', payload: { title: 'Positioning accuracy' }, status: 'pending', review_note: '', created_at: now }, { id: 'pr2', project_id: 'p1', run_id: 'r1', op: 'create_artifact', payload: { title: 'Spindle runout test' }, status: 'pending', review_note: '', created_at: now }]],
   [/\/api\/v1\/projects\/p1\/baselines/, [baseline, rdBaseline0]],
-  [/\/api\/v1\/baselines\/[^/]+\/diff/, { base: { id: 'b1', name: 'Release candidate 1' }, target: { id: 'live', name: 'Live project' },
+  [/\/api\/v1\/baselines\/[^/]+\/diff/, { base: { id: 'b1', name: 'Release candidate 1' }, target: { id: 'live', name: 'Live project' }, plan_base: { progress: 12, tasks: 3, done: 0, late: 0, start: '2026-10-01', end: '2026-11-03', milestones: [{ key: 'ms-1', name: 'Definition complete', kind: 'custom', date: '2026-10-15', progress: 60, met: false }, { key: 'release:rel-2', name: 'V1.0', kind: 'release', date: '2026-11-24', progress: 0, met: false }] }, plan_target: { progress: 34, tasks: 4, done: 1, late: 1, start: '2026-10-01', end: '2026-11-10', milestones: [{ key: 'ms-1', name: 'Definition complete', kind: 'custom', date: '2026-10-15', progress: 100, met: true }, { key: 'release:rel-2', name: 'V1.0', kind: 'release', date: '2026-12-01', progress: 50, met: false }] },
     added: [{ id: 'tc-2', type: 'test-case', title: 'Repeatability over 50 moves' }, { id: 'des-3', type: 'design-item', title: 'X axis drive' }],
     removed: [{ id: 'req-9', type: 'requirement', title: 'Manual lubrication schedule' }],
     modified: [
@@ -236,7 +248,7 @@ const routes = [
     ],
   }],
   [/\/api\/v1\/orgs\/[^/]+\/worker-status/, { workers: [{ id: 'wk1', name: 'Sam laptop', personal: true, hosted: false, user_name: 'Sam Example', online: true, revoked: false, last_used_at: now }], queue: { queued: 1, oldest_queued_seconds: 40, queued_repo_access: 0 } }],
-  [/\/api\/v1\/projects\/p1\/download\/options/, { sections: [{ id: 'hdg-2', ref: 'HDG-2', number: '2', title: 'Functional requirements', artifacts: 2 }], types: [{ type: 'requirement', count: 2 }, { type: 'user-need', count: 1 }], attachments: [] }],
+  [/\/api\/v1\/projects\/p1\/download\/options/, { plan: { tasks: 4, milestones: 2 }, sections: [{ id: 'hdg-2', ref: 'HDG-2', number: '2', title: 'Functional requirements', artifacts: 2 }], types: [{ type: 'requirement', count: 2 }, { type: 'user-need', count: 1 }], attachments: [] }],
   [/\/api\/v1\/baselines\/b1\/diff/, { base: { id: 'b1', name: 'Release candidate 1' }, target: { id: 'live', name: 'Live project' }, added: [{ id: 'req-1', type: 'requirement', title: 'Work envelope' }], removed: [], modified: [{ id: 'req-2', type: 'requirement', old_title: 'Positioning accuracy', new_title: 'Positioning accuracy (tightened)', title_changed: true, body_changed: true, type_changed: false, status_changed: false, parent_changed: false }], links_added: [], links_removed: [] }],
   // Hosted runners on, none provisioned: the Runners tab draws the
   // admin's provider-key enable form.
@@ -251,7 +263,7 @@ const routes = [
   // The workspace's feature gates, ahead of the org catch-all below, which
   // would otherwise answer {} and crash every useFeature on the page. All
   // on, so gated cards and controls render with their buttons.
-  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true, 'redesign-pages': true, 'review-queue-decisions': true, 'project-review-round': true, 'editor-pickers': true } }],
+  [/\/api\/v1\/orgs\/[^/]+\/features/, { channel: 'nightly', stable_release: '', preview: false, features: { 'flow-down': true, 'artifact-owners': true, 'assistant-project-edits': true, 'default-workspace': true, 'figure-titles': true, 'artifact-stepping': true, 'workspace-runs': true, 'compact-layout': true, 'target-releases': true, 'redesign-pages': true, 'review-queue-decisions': true, 'project-review-round': true, 'editor-pickers': true, 'gantt-plan': true, 'floating-assistant': true, 'ui-refresh': true, 'plan-sizing': true, 'milestone-links': true, 'workspace-plan': true, 'joined-baselines': true, 'chip-search': true, 'requirements-tree': true } }],
   [/\/api\/v1\/orgs\/org1$/, org],
   [/\/api\/v1\/orgs\//, {}],
   [/\/api\/v1\/meta\/artifact-types/, [{ type: 'requirement', label: 'Requirement' }, { type: 'heading', label: 'Heading' }, { type: 'user-need', label: 'User Need' }, { type: 'test-case', label: 'Test Case' }]],
@@ -295,6 +307,9 @@ const routes = [
   // Releases: MVP released, V1.0 in progress with one requirement carried
   // over and one introduced, and a burn-up of a few days.
   [/\/api\/v1\/projects\/[^/]+\/priority-detection/, { enabled: true }],
+  [/\/api\/v1\/plan\/mine/, { today: '2026-10-20', tasks: [{ project_id: 'p1', project_name: 'Benchtop CNC Mill Product Definition', id: 'wi-3', title: 'Fit the linear bearings and square the gantry to the bed', column: 'todo', start: '2026-10-15', end: '2026-11-10', progress: 33, done: false, late: false, critical: true }, { project_id: 'p1', project_name: 'Benchtop CNC Mill Product Definition', id: 'wi-4', title: 'Order the spindle', column: 'todo', start: '2026-10-10', end: '2026-10-10', progress: 0, done: false, late: true, critical: false }, { project_id: 'p1', project_name: 'Benchtop CNC Mill Product Definition', id: 'wi-2', title: 'Machine the rails', column: 'done', start: '2026-10-01', end: '2026-10-14', progress: 100, done: true, late: false, critical: false }] }],
+  [/\/api\/v1\/plan\/master/, { today: '2026-10-20', start: '2026-10-01', end: '2026-12-01', links: [], projects: [{ project_id: 'p1', name: 'Benchtop CNC Mill Product Definition', start: '2026-10-01', end: '2026-11-10', summary: { progress: 34, tasks: 4, done: 1, late: 1 }, milestones: [], tasks: [{ id: 'a', title: 'Order the spindle', wbs: '2', start: '2026-10-01', end: '2026-10-12', progress: 0, done: false, late: true, critical: false }, { id: 'b', title: 'Build the gantry', wbs: '1', depth: 0, summary: true, start: '2026-10-05', end: '2026-11-10', progress: 67, done: false, late: false, critical: true }, { id: 'b1', title: 'Cut the rails', wbs: '1.1', depth: 1, summary: false, start: '2026-10-05', end: '2026-10-23', progress: 100, done: true, late: false, critical: false }, { id: 'b2', title: 'Assemble', wbs: '1.2', depth: 1, summary: false, start: '2026-10-24', end: '2026-11-10', progress: 20, done: false, late: false, critical: true }] }, { project_id: 'p2', parent_project_id: 'p1', name: 'Gantry sub-assembly', start: '2026-10-15', end: '2026-12-01', summary: { progress: 10, tasks: 2, done: 0, late: 0 }, milestones: [], tasks: [{ id: 'c', title: 'Survey', wbs: '1', start: '2026-10-15', end: '2026-11-05', progress: 10, done: false, late: false, critical: false }, { id: 'd', title: 'Report', wbs: '2', start: '2026-10-20', end: '2026-12-01', progress: 0, done: false, late: false, critical: true }] }] }],
+  [/\/api\/v1\/projects\/p1\/plan$/, { project_id: 'p1', working_days: [1, 2, 3, 4, 5], holidays: [], critical_slack_days: 0, scheduling_mode: 'manual', project_start: null, project_finish: null, schedule_from: 'start', multiple_critical_paths: false, effort_driven_default: false, currency: '', budget: null, status_date: null, active_baseline_id: null, status_day: '2026-10-20', baseline_id: null, baselines: [], earned_value: { bac: 0, pv: 0, ev: 0, ac: 0, sv: 0, cv: 0, spi: 0, cpi: 0, eac: 0 }, resources: [{ type: 'user', id: 'u1', name: 'Sam Example', daily_rate: 500, capacity: 100, tasks: 2, work_days: 8, cost: 4000, peak: 100, overallocations: [], time_off: [] }, { type: 'planned', id: 'pl1', name: 'Welder', planned_name: 'Welder', daily_rate: 400, capacity: 100, tasks: 1, work_days: 5, cost: 2000, peak: 100, overallocations: [], time_off: [] }], people: [{ type: 'user', id: 'u1', name: 'Sam Example' }, { type: 'planned', id: 'pl1', name: 'Welder' }, { type: 'agent', id: 'ag1', name: 'Requirements Analyst' }], today: '2026-10-20', start: '2026-10-01', end: '2026-12-01', tasks: [{ id: 'wi-1', title: 'Build the gantry', column: 'in-progress', assignee_type: 'user', assignee_id: null, parent_id: null, depth: 0, wbs: '1', start: null, end: null, span_start: '2026-10-01', span_end: '2026-11-10', duration_days: 10, effort_days: null, float_days: 5, critical: false, critical_subtasks: true, float_until: null, elapsed: false, deadline: null, deadline_missed: false, mode: 'manual', mode_own: '', constraint_type: 'asap', constraint_date: null, constraint_violated: false, early_start: null, early_finish: null, late_start: null, late_finish: null, free_float_days: null, assignments: [], fixed_cost: 0, cost: 0, effort_driven: false, overallocated: false, actual_start: null, actual_finish: null, percent_complete: null, actual_cost: null, baseline: null, start_variance_days: null, finish_variance_days: null, earned_value: null, behind_schedule: false, progress: 67, done: false, late: false, todos_done: 0, todos_total: 0, subtasks_done: 1, subtasks_total: 2, milestone: null, milestone_inherited: false, todos: [], depends_on: [], relationships: [], drives: [], conflicts: [], external_links: [] }, { id: 'wi-2', title: 'Machine the rails', column: 'done', assignee_type: 'user', assignee_id: null, parent_id: 'wi-1', depth: 1, wbs: '1.1', start: '2026-10-01', end: '2026-10-14', span_start: '2026-10-01', span_end: '2026-10-14', duration_days: 10, effort_days: null, float_days: 5, critical: true, critical_subtasks: false, float_until: null, elapsed: false, deadline: null, deadline_missed: false, mode: 'manual', mode_own: '', constraint_type: 'asap', constraint_date: null, constraint_violated: false, early_start: null, early_finish: null, late_start: null, late_finish: null, free_float_days: null, assignments: [], fixed_cost: 0, cost: 0, effort_driven: false, overallocated: false, actual_start: null, actual_finish: null, percent_complete: null, actual_cost: null, baseline: null, start_variance_days: null, finish_variance_days: null, earned_value: null, behind_schedule: false, progress: 100, done: true, late: false, todos_done: 0, todos_total: 0, subtasks_done: 0, subtasks_total: 0, milestone: null, milestone_inherited: false, todos: [], depends_on: [], relationships: [], drives: [], conflicts: [], external_links: [] }, { id: 'wi-3', title: 'Fit the linear bearings and square the gantry to the bed', column: 'todo', assignee_type: 'user', assignee_id: null, parent_id: 'wi-1', depth: 1, wbs: '1.2', start: '2026-10-15', end: '2026-11-10', span_start: '2026-10-15', span_end: '2026-11-10', duration_days: 10, effort_days: null, float_days: 5, critical: true, critical_subtasks: false, float_until: null, elapsed: false, deadline: null, deadline_missed: false, mode: 'manual', mode_own: '', constraint_type: 'asap', constraint_date: null, constraint_violated: false, early_start: null, early_finish: null, late_start: null, late_finish: null, free_float_days: null, assignments: [], fixed_cost: 0, cost: 0, effort_driven: false, overallocated: false, actual_start: null, actual_finish: null, percent_complete: null, actual_cost: null, baseline: null, start_variance_days: null, finish_variance_days: null, earned_value: null, behind_schedule: false, progress: 33, done: false, late: false, todos_done: 1, todos_total: 3, subtasks_done: 0, subtasks_total: 0, milestone: null, milestone_inherited: false, todos: [{ id: 'td-1', text: 'Shim the left rail', done: false, due_date: '2026-10-22' }, { id: 'td-2', text: 'Check squareness with the granite square', done: false, due_date: null }, { id: 'td-3', text: 'Clean the bearing blocks', done: true, due_date: null }], depends_on: ['wi-2'], relationships: [{ task_id: 'wi-2', type: 'FS', lag_days: 0, lag_unit: 'd', conflict: false }], drives: [], conflicts: [], external_links: [] }, { id: 'wi-4', title: 'Order the spindle', column: 'todo', assignee_type: 'user', assignee_id: null, parent_id: null, depth: 0, wbs: '2', start: null, end: '2026-10-10', span_start: '2026-10-10', span_end: '2026-10-10', duration_days: 10, effort_days: null, float_days: 5, critical: false, critical_subtasks: false, float_until: null, elapsed: false, deadline: null, deadline_missed: false, mode: 'manual', mode_own: '', constraint_type: 'asap', constraint_date: null, constraint_violated: false, early_start: null, early_finish: null, late_start: null, late_finish: null, free_float_days: null, assignments: [], fixed_cost: 0, cost: 0, effort_driven: false, overallocated: false, actual_start: null, actual_finish: null, percent_complete: null, actual_cost: null, baseline: null, start_variance_days: null, finish_variance_days: null, earned_value: null, behind_schedule: false, progress: 0, done: false, late: true, todos_done: 0, todos_total: 0, subtasks_done: 0, subtasks_total: 0, milestone: null, milestone_inherited: false, todos: [], depends_on: [], relationships: [], drives: [], conflicts: [], external_links: [] }], milestones: [{ key: 'ms-1', kind: 'custom', id: 'ms-1', release_id: null, name: 'Definition complete', description: '', date: '2026-10-15', date_mode: 'fixed', fixed_date: null, conflict: false, waits_for: ['wi-2'], default_criteria: false, criteria: [{ metric: 'needs_addressed', label: 'User needs addressed', target: 100, actual: 100, count: 3, total: 3, met: true, percent: 100 }], progress: 100, met: true, late: false, tasks: [] }, { key: 'release:rel-2', kind: 'release', id: '', release_id: 'rel-2', name: 'V1.0', description: 'The first release for customers', date: '2026-12-01', release_status: 'in_progress', date_mode: 'fixed', fixed_date: null, conflict: false, waits_for: [], default_criteria: true, criteria: [{ metric: 'requirements_approved', label: 'Requirements approved', target: 100, actual: 50, count: 1, total: 2, met: false, percent: 50 }, { metric: 'requirements_verified', label: 'Requirements verified', target: 100, actual: 50, count: 1, total: 2, met: false, percent: 50 }], progress: 50, met: false, late: false, tasks: [] }], dependencies: [{ work_item_id: 'wi-3', depends_on_id: 'wi-2', type: 'FS' }], metrics: [{ metric: 'needs_addressed', label: 'User needs addressed', count: 3, total: 3, percent: 100 }], metric_catalogue: [{ key: 'needs_addressed', label: 'User needs addressed', description: 'User needs that at least one requirement derives from.' }], summary: { tasks: 4, done: 1, late: 1, unscheduled: 0, progress: 34, critical: 0, effort_days: 0, cost: 0, overallocated: 0 } }],
   [/\/api\/v1\/projects\/p1\/vv\/releases\/[^/]+$/, { release: { id: 'rel-2', project_id: 'p1', name: 'V1.0', description: 'The first release for customers', target_date: '2026-12-01', status: 'in_progress', position: 1, released_at: null, created_at: '2026-10-01T09:00:00Z', updated_at: '2026-10-01T09:00:00Z' }, summary: { total: 2, introduced: 1, approved: 1, verified: 1, ready: 1, by_status: { approved: 1, draft: 1 }, by_rollup: { pass: 1, uncovered: 1 } }, entries: [{ requirement_id: 'req-1', ref: 'REQ-1', title: 'Work envelope of at least 300 by 200 by 100 millimetres', status: 'approved', rollup: 'pass', range: { from: 'rel-1' }, introduced: false, test_case_ids: ['tc-1'], latest_results: { 'tc-1': 'pass' } }, { requirement_id: 'req-2', ref: 'REQ-2', title: 'Positioning accuracy', status: 'draft', rollup: 'uncovered', range: { from: 'rel-2', until: 'rel-2' }, introduced: true, test_case_ids: [], latest_results: {} }], burn_up: [{ date: '2026-10-01', scope: 1, verified: 0 }, { date: '2026-10-08', scope: 2, verified: 0 }, { date: '2026-10-15', scope: 2, verified: 1 }, { date: '2026-10-22', scope: 2, verified: 1 }] }],
   [/\/api\/v1\/projects\/p1\/vv\/releases/, { releases: [{ release: { id: 'rel-1', project_id: 'p1', name: 'MVP', description: '', target_date: '2026-10-15', status: 'released', position: 0, released_at: '2026-10-15T12:00:00Z', created_at: '2026-09-01T09:00:00Z', updated_at: '2026-10-15T12:00:00Z' }, summary: { total: 1, introduced: 1, approved: 1, verified: 1, ready: 1, by_status: { approved: 1 }, by_rollup: { pass: 1 } } }, { release: { id: 'rel-2', project_id: 'p1', name: 'V1.0', description: 'The first release for customers', target_date: '2026-12-01', status: 'in_progress', position: 1, released_at: null, created_at: '2026-10-01T09:00:00Z', updated_at: '2026-10-01T09:00:00Z' }, summary: { total: 2, introduced: 1, approved: 1, verified: 1, ready: 1, by_status: { approved: 1, draft: 1 }, by_rollup: { pass: 1, uncovered: 1 } } }], unassigned: 0, unassigned_ids: [] }],
   [/\/api\/v1\/projects\/p1\/vv\/coverage/, { project_id: 'p1', entries: [{ requirement_id: 'req-1', title: 'Work envelope of at least 300 by 200 by 100 millimetres', verification_method: 'inspection', verification_status: 'verified', test_case_ids: ['tc-1'], latest_results: { 'tc-1': 'pass' }, rollup: 'pass' }, { requirement_id: 'req-2', title: 'Positioning accuracy', verification_method: 'test', verification_status: '', test_case_ids: [], latest_results: {}, rollup: 'uncovered' }], summary: { pass: 1, uncovered: 1 } }],
@@ -314,7 +329,9 @@ const routes = [
   [/\/api\/v1\/test-runs\/tr1/, testRun],
   [/\/api\/v1\/projects\/p1\/test-runs/, [openTestRun, testRun]],
   [/\/api\/v1\/projects\/p1\/work-items/, workItems],
-  [/\/api\/v1\/work-items\/w1/, { ...workItems[0], activity: [{ id: 'act1', work_item_id: 'w1', kind: 'comment', actor: 'Sam Example', content: 'Started drafting.', payload: {}, created_at: now }] }],
+  // A card's own to-do list, ahead of the card itself, whose pattern it also matches.
+  [/\/api\/v1\/work-items\/w1\/todos/, []],
+  [/\/api\/v1\/work-items\/w1/, { item: workItems[0], activity: [{ id: 'act1', work_item_id: 'w1', kind: 'comment', actor: 'Sam Example', content: 'Started drafting.', payload: {}, created_at: now }] }],
   [/\/api\/v1\/projects\/p1\/members/, [{ user_id: 'u1', email: user.email, name: user.name, role: 'owner' }]],
   [/\/api\/v1\/projects\/p1\/team-access/, []],
   [/\/api\/v1\/projects\/p1\/repo-connections/, [{ id: 'rc1', project_id: 'p1', name: 'openv', remote_url: 'https://github.com/desktopmachineshop/OpenV.git', default_branch: 'master', credential_strategy: 'host', created_at: now, updated_at: now }]],
@@ -323,7 +340,7 @@ const routes = [
   [/\/api\/v1\/projects\/p1\/review-queue/, { suspect_links: [{ ...links[1], from_title: 'Positioning accuracy', from_type: 'requirement', to_title: 'Cut aluminium parts without a machinist', to_type: 'user-need' }], in_review_artifacts: [artifacts[4], artifacts.find((a) => a.type === 'requirement' && a !== artifacts[4]) || artifacts[5]] }],
   [/\/api\/v1\/projects\/p1$/, project],
   [/\/api\/v1\/projects\/p1\//, []],
-  [/\/api\/v1\/projects$/, [project, { ...project, id: 'p2', name: 'Second project' }]],
+  [/\/api\/v1\/projects$/, [project, { ...project, id: 'p2', name: 'Second project', parent_project_id: 'p1' }, { ...project, id: 'p3', name: 'Spindle drive', parent_project_id: 'p2' }]],
   [/\/api\/v1\/artifacts\?/, (url) => { const t = new URL(url).searchParams.get('type'); return t ? artifacts.filter((a) => a.type === t) : artifacts; }],
   [/\/api\/v1\/artifacts\/[^/]+\/versions/, (url) => [byId[url.match(/artifacts\/([^/]+)\/versions/)[1]]]],
   [/\/api\/v1\/artifacts\/[^/]+\/quality/, { score: 96, band: 'good', findings: [] }],
@@ -381,6 +398,36 @@ async function mockScreen(page, extra) {
 const AUDIT = (opts) => {
   const vw = window.innerWidth;
   const desktop = !!(opts && opts.desktop);
+  const dark = !!(opts && opts.dark);
+  // Colours, for the dark-scheme findings. A canvas resolves any CSS colour
+  // (named, hex, color-mix) to the pixel it paints.
+  const cv = document.createElement('canvas'); cv.width = cv.height = 1;
+  const cx = cv.getContext('2d', { willReadFrequently: true });
+  const rgbaCache = new Map();
+  const rgba = (c) => {
+    if (rgbaCache.has(c)) return rgbaCache.get(c);
+    cx.clearRect(0, 0, 1, 1); cx.fillStyle = '#000'; cx.fillStyle = c; cx.fillRect(0, 0, 1, 1);
+    const d = cx.getImageData(0, 0, 1, 1).data;
+    const v = [d[0], d[1], d[2], d[3] / 255];
+    rgbaCache.set(c, v); return v;
+  };
+  const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const over = (top, under) => { const a = top[3]; return [0, 1, 2].map((i) => top[i] * a + under[i] * (1 - a)).concat(1); };
+  // What is painted behind an element: its own and its ancestors'
+  // background colours composited, down to the page. null where an image or
+  // gradient is in the way, since its colour cannot be read from styles.
+  const backdrop = (el) => {
+    const layers = [];
+    for (let p = el; p; p = p.parentElement) {
+      const s = getComputedStyle(p);
+      if (s.backgroundImage !== 'none') return null;
+      const c = rgba(s.backgroundColor);
+      if (c[3] > 0) { layers.push(c); if (c[3] >= 0.99) break; }
+    }
+    let acc = rgba(getComputedStyle(document.documentElement).colorScheme.includes('dark') ? '#121212' : '#fff');
+    for (let i = layers.length - 1; i >= 0; i--) acc = over(layers[i], acc);
+    return acc;
+  };
   const inScroller = (el) => {
     for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
       const o = getComputedStyle(p).overflowX;
@@ -391,7 +438,7 @@ const AUDIT = (opts) => {
   };
   const vis = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
   const desc = (el) => `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : ''} "${(el.getAttribute('aria-label') || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40)}"`;
-  const out = { overflow: [], clipped: [], small: [], tiny: [], lines: [], stretched: [], blurry: [], scrollWidth: document.documentElement.scrollWidth, vw, dpr: window.devicePixelRatio, coarse: matchMedia('(hover: none) and (pointer: coarse)').matches };
+  const out = { overflow: [], clipped: [], small: [], tiny: [], lines: [], stretched: [], blurry: [], light: [], faint: [], scrollWidth: document.documentElement.scrollWidth, vw, dpr: window.devicePixelRatio, coarse: matchMedia('(hover: none) and (pointer: coarse)').matches };
   // Desktop-only measures: a text block wider than this is hard to read; a
   // field wider than this is a form stretched across the screen.
   const MEASURE = 900;
@@ -406,9 +453,10 @@ const AUDIT = (opts) => {
     // ag-grid viewport): those are reachable by a swipe.
     if (r.right > vw + 1 && r.left < vw && !inScroller(el)) out.overflow.push({ el: desc(el), right: Math.round(r.right), left: Math.round(r.left) });
     // A clipped container is a defect unless it is a scroller, a deliberate
-    // one-line ellipsis, a text field with a long value, or ag-grid's
-    // virtualised viewports.
-    if (/(hidden|clip)/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 2 && cs.textOverflow !== 'ellipsis' && !el.matches('input') && !el.closest('pre, code, .table-scroll, .tab-strip, textarea, svg, canvas, .ag-root-wrapper')) {
+    // one-line ellipsis, a text field with a long value, ag-grid's
+    // virtualised viewports, or a surface that is panned by dragging (a
+    // diagram marks itself data-pan-surface).
+    if (/(hidden|clip)/.test(cs.overflowX) && el.scrollWidth > el.clientWidth + 2 && cs.textOverflow !== 'ellipsis' && !el.matches('input') && !el.closest('pre, code, .table-scroll, .tab-strip, textarea, svg, canvas, .ag-root-wrapper, [data-pan-surface]')) {
       out.clipped.push({ el: desc(el), scrollWidth: el.scrollWidth, clientWidth: el.clientWidth, ellipsis: cs.textOverflow === 'ellipsis' });
     }
     // Tap targets: 32 px is the floor for a control; a checkbox or radio
@@ -440,8 +488,59 @@ const AUDIT = (opts) => {
         if (r.width > cssPixelsAvailable * 1.05) out.blurry.push({ el: desc(el), rendered: Math.round(r.width), natural: el.naturalWidth, dpr: window.devicePixelRatio, src: (el.currentSrc || el.src || '').split('/').pop() });
       }
     }
+    // A light shape in a drawing: a chart's or diagram's hard-coded fill.
+    if (dark && el.ownerSVGElement && el.matches('rect, path, circle, ellipse, polygon') && r.width >= 40 && r.height >= 20) {
+      const fill = rgba(cs.fill);
+      if (cs.fill !== 'none' && fill[3] * parseFloat(cs.fillOpacity || '1') * parseFloat(cs.opacity || '1') > 0.5 && lum(fill) > 0.55) out.light.push({ el: desc(el), bg: cs.fill, w: Math.round(r.width), h: Math.round(r.height) });
+    }
+    if (dark && !el.closest('svg, img, canvas, video, [data-light-surface]')) {
+      // A surface painted light on the dark theme. Small marks (a toggle's
+      // knob, a status dot) are allowed to be bright; a surface is not.
+      const bg = rgba(cs.backgroundColor);
+      if (bg[3] > 0.5 && lum(bg) > 0.55 && r.width >= 40 && r.height >= 20) out.light.push({ el: desc(el), bg: cs.backgroundColor, w: Math.round(r.width), h: Math.round(r.height) });
+      // Text that barely separates from what is behind it.
+      const ownText = Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (ownText && parseFloat(cs.opacity) > 0.5) {
+        const back = backdrop(el);
+        if (back) {
+          const fg = over(rgba(cs.color), back);
+          const a = lum(fg), b = lum(back);
+          const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+          if (ratio < 2.1) out.faint.push({ el: desc(el), color: cs.color, on: `rgb(${back.slice(0, 3).map(Math.round).join(', ')})`, ratio: Math.round(ratio * 100) / 100 });
+        }
+      }
+    }
     const fs = parseFloat(cs.fontSize);
     if (fs < 12 && el.childNodes.length && Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())) out.tiny.push({ el: desc(el), fontSize: fs });
+  }
+  // Chrome: what stands between the top of the window and the page's own
+  // content, plus the tab bar under it.
+  // A page that marks no content start, or whose mark is pushed off the
+  // window by a form open above it, is measured from the shell's <main>.
+  const content = Array.from(document.querySelectorAll('[data-page-content]')).find((el) => vis(el) && el.getBoundingClientRect().top < window.innerHeight) || Array.from(document.querySelectorAll('main')).find(vis);
+  if (content) {
+    const bar = document.querySelector('.ov-tabbar');
+    const top = Math.max(0, Math.round(content.getBoundingClientRect().top));
+    const bottom = bar && vis(bar) ? Math.round(bar.getBoundingClientRect().height) : 0;
+    out.chrome = { top, bottom, share: Math.round(((top + bottom) / window.innerHeight) * 100) };
+  }
+  // Gutter: how far the page's own content sits from the left and top edges
+  // of the shell's <main>, so pages can be held to one margin.
+  const mainEl = Array.from(document.querySelectorAll('main')).find(vis);
+  if (mainEl) {
+    const mr = mainEl.getBoundingClientRect();
+    let left = Infinity, top = Infinity, right = -Infinity;
+    for (const el of mainEl.querySelectorAll('*')) {
+      if (!vis(el)) continue;
+      const hasText = Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (!hasText && !el.matches('input, select, textarea, button, img, svg')) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width === 0 || r.bottom < mr.top || r.top > window.innerHeight || r.right <= mr.left || r.left >= mr.right) continue;
+      left = Math.min(left, r.left - mr.left);
+      top = Math.min(top, r.top - mr.top);
+      if (r.right <= mr.right + 1) right = Math.max(right, r.right);
+    }
+    if (left !== Infinity) out.gutter = { left: Math.round(left), top: Math.round(top), right: Math.round(mr.right - right) };
   }
   const dedupe = (arr, key) => { const seen = new Set(); return arr.filter((x) => { const k = key(x); if (seen.has(k)) return false; seen.add(k); return true; }); };
   out.overflow = dedupe(out.overflow, (x) => x.el).slice(0, 12);
@@ -451,6 +550,8 @@ const AUDIT = (opts) => {
   out.lines = dedupe(out.lines, (x) => x.el).slice(0, 12);
   out.stretched = dedupe(out.stretched, (x) => x.el).slice(0, 12);
   out.blurry = dedupe(out.blurry, (x) => x.el).slice(0, 12);
+  out.light = dedupe(out.light, (x) => x.el).slice(0, 25);
+  out.faint = dedupe(out.faint, (x) => x.el).slice(0, 25);
   return out;
 };
 // press taps on a touch context and clicks elsewhere, so one screen list
@@ -459,29 +560,38 @@ const press = async (locator) => {
   if (locator.page().context()._options.hasTouch) return locator.tap();
   return locator.click();
 };
+// The project menu on a phone: the More tab of the bottom bar in the
+// refreshed shell, the header's menu button before it.
+const openMenu = async (p) => {
+  const more = p.getByRole('button', { name: 'More', exact: true });
+  await press((await more.count()) ? more : p.getByRole('button', { name: 'Project menu' }));
+};
 const SCREENS = [
   { tag: 'login', path: '/login' },
   { tag: 'register', path: '/login?mode=register' },
   { tag: 'projects', path: '/projects' },
   { tag: 'projects-switcher', path: '/projects', open: async (p) => { const b = p.getByRole('button', { name: /Space|workspace/i }).first(); if (await b.count()) await press(b); } },
+  { tag: 'projects-menu', path: '/projects', open: async (p) => { await press(p.getByRole('button', { name: /^Actions for Benchtop/ })); await p.waitForTimeout(300); } },
+  { tag: 'projects-new-child', path: '/projects', open: async (p) => { await press(p.getByRole('button', { name: /^Actions for Benchtop/ })); await p.waitForTimeout(200); await press(p.getByRole('menuitem', { name: 'New child project' })); await p.waitForTimeout(400); } },
   { tag: 'projects-new', path: '/projects', open: async (p) => press(p.getByRole('button', { name: '+ New Project' }).first()) },
   // Random-product mode with a Top 5 leaderboard open: a vote control, a
   // segmented filter and a five-row list, all inside the create form.
   { tag: 'projects-random-top', path: '/projects', open: async (p) => { await press(p.getByRole('button', { name: '+ New Project' }).first()); await p.waitForTimeout(200); await p.selectOption('#mode', 'random'); await p.waitForTimeout(400); await press(p.getByRole('button', { name: 'Top 5 all time' })); await p.waitForTimeout(400); } },
   { tag: 'user-menu', path: '/projects', open: async (p) => { await press(p.locator('[title="Sam Example"]').first()); } },
-  { tag: 'user-settings', path: '/projects', open: async (p) => { await press(p.locator('[title="Sam Example"]').first()); await p.waitForTimeout(300); await press(p.getByText('Settings', { exact: true }).first()); } },
-  { tag: 'drawer-user-settings', phone: true, path: '/projects/p1', open: async (p) => { await press(p.getByRole('button', { name: 'Project menu' })); await p.waitForTimeout(300); await press(p.getByText('Sam Example').last()); } },
+  { tag: 'user-settings', path: '/projects', open: async (p) => { await press(p.locator('[title="Sam Example"]').first()); await p.waitForTimeout(300); await press(p.getByRole('button', { name: 'Settings', exact: true }).first()); } },
+  { tag: 'drawer-user-settings', phone: true, path: '/projects/p1', open: async (p) => { await openMenu(p); await p.waitForTimeout(300); await press(p.getByText('Sam Example').last()); } },
   { tag: 'overview', path: '/projects/p1' },
-  { tag: 'drawer', phone: true, path: '/projects/p1', open: async (p) => press(p.getByRole('button', { name: 'Project menu' })) },
+  { tag: 'drawer', phone: true, path: '/projects/p1', open: async (p) => openMenu(p) },
   { tag: 'notifications', path: '/projects/p1', open: async (p) => press(p.getByRole('button', { name: /notifications/i }).first()) },
-  { tag: 'help', path: '/projects/p1', open: async (p) => press(p.getByRole('button', { name: 'Help' }).first()) },
+  { tag: 'help', path: '/projects/p1', open: async (p) => { const help = p.getByRole('button', { name: 'Help' }); if (!(await help.count())) { await openMenu(p); await p.waitForTimeout(300); } await press(help.first()); } },
   { tag: 'requirements', path: '/projects/p1/requirements' },
   { tag: 'requirements-doc', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await press(ex.first()); await press(p.getByText('Positioning accuracy').first()); await p.waitForTimeout(600); } },
   { tag: 'requirements-new', path: '/projects/p1/requirements', open: async (p) => press(p.getByRole('button', { name: '+ New Artifact' })) },
   { tag: 'requirements-edit', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await press(ex.first()); await press(p.getByText('Positioning accuracy').first()); await p.waitForTimeout(500); await press(p.getByRole('button', { name: 'Edit', exact: true }).first()); } },
   // On a phone the toolbar folds into an action sheet; a desktop has the
   // Download button in the toolbar itself.
-  { tag: 'requirements-download', path: '/projects/p1/requirements', open: async (p) => { await press(p.getByRole('button', { name: 'Requirements actions' })); await press(p.getByRole('button', { name: /Download/ }).first()); }, openDesktop: async (p) => press(p.getByRole('button', { name: /Download/ }).first()) },
+  { tag: 'requirements-download', path: '/projects/p1/requirements', open: async (p) => { await press(p.getByRole('button', { name: 'Requirements actions' })); await press(p.getByRole('button', { name: /Download/ }).first()); }, openDesktop: async (p) => { const menu = p.getByRole('button', { name: /^(Working copy|Baseline)/ }); if (await menu.count()) await press(menu.first()); await press(p.getByRole('button', { name: /Download/ }).first()); } },
+  { tag: 'requirements-download-content', path: '/projects/p1/requirements', open: async (p) => { await press(p.getByRole('button', { name: 'Requirements actions' })); await press(p.getByRole('button', { name: /Download/ }).first()); await press(p.getByRole('button', { name: 'Next' })); }, openDesktop: async (p) => { const menu = p.getByRole('button', { name: /^(Working copy|Baseline)/ }); if (await menu.count()) await press(menu.first()); await press(p.getByRole('button', { name: /Download/ }).first()); await press(p.getByRole('button', { name: 'Next' })); } },
   { tag: 'requirements-menu', path: '/projects/p1/requirements', open: async (p) => { const ex = p.getByRole('button', { name: 'Expand all' }); if (await ex.count()) await press(ex.first()); await press(p.getByRole('button', { name: /Actions for Positioning/ })); } },
   // The tree and the layers (a phone's outline and its drill-down by level).
   { tag: 'requirements-tree', path: '/projects/p1/requirements?view=tree&artifact=req-2' },
@@ -492,6 +602,17 @@ const SCREENS = [
   { tag: 'interviews', path: '/projects/p1/interviews' },
   { tag: 'vv', path: '/projects/p1/vv' },
   { tag: 'releases', path: '/projects/p1/releases' },
+  { tag: 'gantt', path: '/projects/p1/gantt' },
+  { tag: 'gantt-task', wide: true, path: '/projects/p1/gantt', open: async (p) => { await press(p.locator('[data-task-bar]').nth(1)); await p.waitForTimeout(400); } },
+  { tag: 'gantt-milestone', wide: true, path: '/projects/p1/gantt', open: async (p) => { await press(p.locator('[data-milestone]').first()); await p.waitForTimeout(400); } },
+  { tag: 'gantt-milestone-full', wide: true, path: '/projects/p1/gantt', open: async (p) => { await press(p.locator('[data-milestone-open]').first()); await p.waitForTimeout(400); } },
+  { tag: 'gantt-resources', wide: true, path: '/projects/p1/gantt', open: async (p) => { await press(p.getByRole('button', { name: /^Plan tools/ })); await p.waitForTimeout(200); await press(p.getByRole('menuitem', { name: /^Resources/ })); await p.waitForTimeout(300); } },
+  { tag: 'gantt-defaults', wide: true, path: '/projects/p1/gantt', open: async (p) => { await press(p.getByRole('button', { name: /^Plan tools/ })); await p.waitForTimeout(200); await press(p.getByRole('menuitem', { name: /^Defaults/ })); await p.waitForTimeout(300); } },
+  { tag: 'gantt-network', wide: true, path: '/projects/p1/gantt', open: async (p) => { await p.selectOption('select[aria-label="View"]', 'network'); await p.waitForTimeout(400); } },
+  { tag: 'gantt-calendar', wide: true, path: '/projects/p1/gantt', open: async (p) => { await p.selectOption('select[aria-label="View"]', 'calendar'); await p.waitForTimeout(400); } },
+  { tag: 'gantt-usage', wide: true, path: '/projects/p1/gantt', open: async (p) => { await p.selectOption('select[aria-label="View"]', 'usage'); await p.waitForTimeout(400); } },
+  { tag: 'gantt-timeline', wide: true, path: '/projects/p1/gantt', open: async (p) => { await p.selectOption('select[aria-label="View"]', 'timeline'); await p.waitForTimeout(400); } },
+  { tag: 'gantt-master', wide: true, path: '/projects/p1/gantt', open: async (p) => { await p.selectOption('select[aria-label="View"]', 'master'); await p.waitForTimeout(400); } },
   { tag: 'home', path: '/projects/p1/home', routes: rdRoutes },
   { tag: 'design', path: '/projects/p1/design', routes: rdRoutes },
   { tag: 'tests', path: '/projects/p1/tests', routes: rdRoutes },
@@ -502,7 +623,7 @@ const SCREENS = [
   { tag: 'evidence-new', path: '/projects/p1/evidence', open: async (p) => press(p.getByRole('button', { name: 'Record a capture' }).first()) },
   { tag: 'test-run-evidence', path: '/projects/p1/vv/runs/tr2', open: async (p) => { const b = p.getByRole('button', { name: /EVD-1|\+ evidence/ }).first(); if (await b.count()) await press(b); await p.waitForTimeout(400); } },
   { tag: 'matrix', path: '/projects/p1/matrix' },
-  { tag: 'matrix-row', path: '/projects/p1/matrix', open: async (p) => { await press(p.getByRole('button', { name: /Repeatability under thermal drift/ })); } },
+  { tag: 'matrix-row', phone: true, path: '/projects/p1/matrix', open: async (p) => { await press(p.getByRole('button', { name: /Repeatability under thermal drift/ })); } },
   { tag: 'impact', path: '/projects/p1/impact?artifact=req-2' },
   { tag: 'review', path: '/projects/p1/review' },
   { tag: 'board', path: '/projects/p1/board' },
@@ -520,7 +641,7 @@ const SCREENS = [
   { tag: 'activity', path: '/projects/p1/activity' },
   { tag: 'settings', path: '/projects/p1/settings' },
   { tag: 'settings-agents', path: '/projects/p1/settings?tab=agents' },
-  { tag: 'settings-access', path: '/projects/p1/settings?tab=access' },
+  { tag: 'settings-access', path: '/projects/p1/settings?tab=members' },
   // The assistant beside the project, showing the three project-mode cards
   // (edit, move, new artifact) with their buttons: the floating panel (a
   // bottom sheet on a phone) where the floating-assistant gate is on, else
@@ -534,6 +655,9 @@ const SCREENS = [
     if (await tab.count()) { await press(tab); await p.waitForTimeout(800); }
   } },
   { tag: 'whats-new', path: '/whats-new' },
+  { tag: 'org-plan', path: '/org/plan' },
+  { tag: 'org-plan-tasks', path: '/org/plan/tasks' },
+  { tag: 'org-agents', path: '/org/agents' },
   { tag: 'org-settings', path: '/org/settings' },
   // The workspace's runs with no project, and one open: a sheet on a phone.
   { tag: 'org-runs', path: '/org/runs' },
@@ -554,7 +678,7 @@ const SCREENS = [
     open: async (p) => {
       await press(p.locator('[title="Sam Example"]').first());
       await p.waitForTimeout(300);
-      await press(p.getByText('Settings', { exact: true }).first());
+      await press(p.getByRole('button', { name: 'Settings', exact: true }).first());
       await p.waitForTimeout(600);
       // The panel is a fixed full-screen sheet, so the card has to be
       // scrolled to before the screenshot shows it.
@@ -569,7 +693,7 @@ const SCREENS = [
     open: async (p) => {
       await press(p.locator('[title="Sam Example"]').first());
       await p.waitForTimeout(300);
-      await press(p.getByText('Settings', { exact: true }).first());
+      await press(p.getByRole('button', { name: 'Settings', exact: true }).first());
       await p.waitForTimeout(600);
       const connect = p.getByRole('button', { name: 'Connect', exact: true }).first();
       await connect.scrollIntoViewIfNeeded();
@@ -608,6 +732,7 @@ async function runEngine(engine, device, name, desktop = false) {
     if (only.length && !only.includes(s.tag)) continue;
     // Phone-only screens (the drawer) have no desktop counterpart.
     if (desktop && s.phone) continue;
+    if (!desktop && s.wide) continue;
     const open = desktop && s.openDesktop ? s.openDesktop : s.open;
     // A fresh context per screen: Chromium flips its hover/pointer media
     // flags after a synthetic mouse event, which real phones never see.
@@ -621,7 +746,7 @@ async function runEngine(engine, device, name, desktop = false) {
     try {
       await page.goto(s.path); await page.waitForTimeout(900);
       if (open) { try { await open(page); } catch (e) { openErr = String(e).split('\n')[0].slice(0, 120); } await page.waitForTimeout(500); }
-      const audit = await page.evaluate(AUDIT, { desktop });
+      const audit = await page.evaluate(AUDIT, { desktop, dark: COLOR_SCHEME === 'dark' });
       await page.screenshot({ path: `${OUT}/${name}-${s.tag}.png`, fullPage: process.env.SHOT_FULLPAGE !== '0' });
       report.push({ tag: s.tag, url: page.url().replace(BASE_URL, ''), openErr, errors, ...audit });
     } catch (e) {
@@ -680,9 +805,13 @@ const desktopDevice = (p) => ({
       if (r.lines && r.lines.length) flags.push(`lines:${r.lines.length}`);
       if (r.stretched && r.stretched.length) flags.push(`stretched:${r.stretched.length}`);
       if (r.blurry && r.blurry.length) flags.push(`blurry:${r.blurry.length}`);
+      if (r.light && r.light.length) flags.push(`light:${r.light.length}`);
+      if (r.faint && r.faint.length) flags.push(`faint:${r.faint.length}`);
       if (r.errors && r.errors.length) { flags.push(`errors:${r.errors.length}`); failed = true; }
       if (r.openErr) flags.push('open-failed');
-      console.log(`${eng} ${r.tag.padEnd(22)} ${flags.join(' ') || 'ok'}`);
+      if (r.chrome && r.chrome.share > CHROME_BUDGET) { flags.push(`CHROME ${r.chrome.share}%>${CHROME_BUDGET}%`); failed = true; }
+      const chrome = r.chrome ? `  chrome ${r.chrome.top}+${r.chrome.bottom}px (${r.chrome.share}%)` : '';
+      console.log(`${eng} ${r.tag.padEnd(22)} ${flags.join(' ') || 'ok'}${chrome}`);
     }
   }
   console.log(`report: ${OUT}/audit.json`);

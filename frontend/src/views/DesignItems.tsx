@@ -5,7 +5,9 @@
 // tree instead: a path, the item, what it contains and its siblings. Gated by
 // redesign-pages; it reads artifacts, links and V&V coverage.
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, Navigate, useParams } from 'react-router-dom';
+import { writeSearchParams } from '../components/search/searchValue';
+import { useUiRefresh } from '../hooks/useUiRefresh';
 import { artifactAPI, linkAPI, vvAPI, type Artifact, type CoverageReport, type Link as TraceLink } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { Chip, ErrorBanner, FeatureGate, PanelHeader, ellipsis, mutedStyle, pageType, panelStyle, refStyle } from '../components/ui';
@@ -90,7 +92,7 @@ const DesignContent: React.FC = () => {
   if (!current || !trace) {
     return (
       <div style={{ padding: 16 }} data-help-pane="design">
-        <h1 style={{ margin: '0 0 8px', fontSize: 20 }}>Design</h1>
+        <h1 className="ov-page-title" style={{ margin: '0 0 8px', fontSize: 20 }}>Design</h1>
         <p style={mutedStyle}>
           This project has no design items yet. Add a <b>Design Item</b> on the{' '}
           <Link to={`/projects/${projectId}/requirements`}>Requirements</Link> page, and link it to the requirements it
@@ -183,8 +185,21 @@ const DesignContent: React.FC = () => {
   );
 };
 
-export const DesignItems: React.FC = () => (
-  <FeatureGate feature={REDESIGN_PAGES_FEATURE} name="Design">
-    <DesignContent />
-  </FeatureGate>
-);
+/** Where the Design page's address leads in the refreshed interface: Requirements, filtered to design items. */
+export const DESIGN_IN_REQUIREMENTS = `../requirements?${writeSearchParams(new URLSearchParams(), {
+  chips: [{ kind: 'filter', field: 'type', values: [DESIGN_TYPE], match: 'is' }],
+  text: '',
+}).toString()}`;
+
+export const DesignItems: React.FC = () => {
+  // The refreshed interface (ui-refresh) has no Design page: a design item is
+  // read in Requirements, whose pane shows what this page showed of it. Old
+  // links and bookmarks land there.
+  const refresh = useUiRefresh();
+  if (refresh) return <Navigate to={DESIGN_IN_REQUIREMENTS} replace />;
+  return (
+    <FeatureGate feature={REDESIGN_PAGES_FEATURE} name="Design">
+      <DesignContent />
+    </FeatureGate>
+  );
+};

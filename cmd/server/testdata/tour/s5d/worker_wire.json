@@ -372,6 +372,55 @@
     },
     {
       "n": 10,
+      "title": "a chat with tour-worker in P is not a task: 201, queued, and no card on the board",
+      "actor": "owner",
+      "acting_in": "<w>",
+      "route": "POST /api/v1/agents/{slug}/runs",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/agents/tour-worker/runs",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"project_id\":\"<p>\",\"prompt\":\"What is in P?\",\"conversation\":true}"
+      },
+      "status": 201,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<chat>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"What is in P?\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<chat>",
+        "org_id": "<w>",
+        "agent_id": "<agent>",
+        "project_id": "<p>",
+        "status": "queued",
+        "cancel_requested": false,
+        "priority": 0,
+        "prompt": "What is in P?",
+        "final_text": "",
+        "error": "",
+        "attempt_count": 1,
+        "max_attempts": 3,
+        "tokens_in": 0,
+        "tokens_out": 0,
+        "artifacts_touched": [],
+        "launched_by": "<owner>",
+        "created_at": "<time@step 10>",
+        "agent_content_hash": "<hex64:1>",
+        "agent_name": "Tour Worker",
+        "agent_provider": "claude-code"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 11,
       "title": "launch tour-worker in P: 201, queued, attempt 1 of 3, the agent's snapshot, and the board's tracking card, which the hooks create inside the request",
       "actor": "owner",
       "acting_in": "<w>",
@@ -394,7 +443,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -415,7 +464,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 10>",
+        "created_at": "<time@step 11>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -435,7 +484,7 @@
       ]
     },
     {
-      "n": 11,
+      "n": 12,
       "title": "run1 is queued; a claim for another provider only: 204",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
@@ -457,7 +506,7 @@
       "events": []
     },
     {
-      "n": 12,
+      "n": 13,
       "title": "a claim naming no provider: 204, an empty list matches none",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
@@ -479,7 +528,7 @@
       "events": []
     },
     {
-      "n": 13,
+      "n": 14,
       "title": "a claim for priority 10 and up: 204, a manual launch is priority 0",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
@@ -501,7 +550,7 @@
       "events": []
     },
     {
-      "n": 14,
+      "n": 15,
       "title": "the member's runner key claims: 204, a personal key takes only its member's runs and ownerless ones its member could see",
       "actor": "runner",
       "route": "POST /api/v1/agent-runs/claim",
@@ -523,7 +572,7 @@
       "events": []
     },
     {
-      "n": 15,
+      "n": 16,
       "title": "the box key claims run1: the agent, how it authenticates, the run and a run token, keys sorted (a Go map), auth an object",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
@@ -545,7 +594,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 15>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<run1.token>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 16>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<run1.token>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -593,7 +642,7 @@
           "priority": 0,
           "prompt": "Summarise P.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 15>",
+          "heartbeat_at": "<time@step 16>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -602,7 +651,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@step 10>",
+          "created_at": "<time@step 11>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -625,7 +674,7 @@
       ]
     },
     {
-      "n": 16,
+      "n": 17,
       "title": "run1's token on the claim route: the handler's 403, a run token is no worker",
       "actor": "run1",
       "route": "POST /api/v1/agent-runs/claim",
@@ -654,7 +703,7 @@
       "events": []
     },
     {
-      "n": 17,
+      "n": 18,
       "title": "a key of another workspace starts run1: 404, as if it did not exist",
       "actor": "elsewhere",
       "route": "POST /api/v1/agent-runs/{id}/start",
@@ -679,7 +728,7 @@
       "events": []
     },
     {
-      "n": 18,
+      "n": 19,
       "title": "the member's runner key starts run1, which the owner launched: 404 too",
       "actor": "runner",
       "route": "POST /api/v1/agent-runs/{id}/start",
@@ -704,7 +753,7 @@
       "events": []
     },
     {
-      "n": 19,
+      "n": 20,
       "title": "run1's token starts run1: the handler's 403",
       "actor": "run1",
       "route": "POST /api/v1/agent-runs/{id}/start",
@@ -729,7 +778,7 @@
       "events": []
     },
     {
-      "n": 20,
+      "n": 21,
       "title": "the box key starts run1, with no body as a runner sends it: 204, and the card moves again",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/start",
@@ -759,7 +808,7 @@
       ]
     },
     {
-      "n": 21,
+      "n": 22,
       "title": "start run1 again: 409",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/start",
@@ -784,7 +833,7 @@
       "events": []
     },
     {
-      "n": 22,
+      "n": 23,
       "title": "start a run no one has: 404",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/start",
@@ -809,7 +858,7 @@
       "events": []
     },
     {
-      "n": 23,
+      "n": 24,
       "title": "push a log batch as the bare array older runners send: 200, whether a cancel is requested",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/logs",
@@ -839,7 +888,7 @@
       "events": []
     },
     {
-      "n": 24,
+      "n": 25,
       "title": "push the object runners send now: an entry with no created_at, one with no payload either, and the answer so far",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/logs",
@@ -869,7 +918,7 @@
       "events": []
     },
     {
-      "n": 25,
+      "n": 26,
       "title": "run1: running, with the partial text and the log push's heartbeat",
       "actor": "owner",
       "acting_in": "<w>",
@@ -885,7 +934,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"running\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 24>\",\"started_at\":\"<time@step 20>\",\"final_text\":\"\",\"partial_text\":\"P holds\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"running\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 25>\",\"started_at\":\"<time@step 21>\",\"final_text\":\"\",\"partial_text\":\"P holds\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -899,8 +948,8 @@
         "priority": 0,
         "prompt": "Summarise P.",
         "worker_id": "tour-box",
-        "heartbeat_at": "<time@step 24>",
-        "started_at": "<time@step 20>",
+        "heartbeat_at": "<time@step 25>",
+        "started_at": "<time@step 21>",
         "final_text": "",
         "partial_text": "P holds",
         "error": "",
@@ -910,7 +959,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 10>",
+        "created_at": "<time@step 11>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -918,7 +967,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 26,
+      "n": 27,
       "title": "push null: a heartbeat only",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/logs",
@@ -948,7 +997,7 @@
       "events": []
     },
     {
-      "n": 27,
+      "n": 28,
       "title": "push {}: a heartbeat only, the partial text unchanged",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/logs",
@@ -978,7 +1027,7 @@
       "events": []
     },
     {
-      "n": 28,
+      "n": 29,
       "title": "push a body that does not decode",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/logs",
@@ -1007,7 +1056,7 @@
       "events": []
     },
     {
-      "n": 29,
+      "n": 30,
       "title": "push seq 1 again with other text: 200, and the first write stands",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/logs",
@@ -1037,7 +1086,7 @@
       "events": []
     },
     {
-      "n": 30,
+      "n": 31,
       "title": "run1's log, in seq order: the first entry as the tour dated it, the second stamped by the server, the third's missing payload read back as {}, not null",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1053,7 +1102,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"run_id\":\"<run1>\",\"seq\":1,\"kind\":\"text\",\"payload\":{\"text\":\"Reading P.\"},\"created_at\":\"2026-01-02T03:04:05.5Z\"},{\"run_id\":\"<run1>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"R-1\"},\"name\":\"get_artifact\"},\"created_at\":\"<time@step 24>\"},{\"run_id\":\"<run1>\",\"seq\":3,\"kind\":\"system\",\"payload\":{},\"created_at\":\"<time@step 24>\"}]"
+        "[{\"run_id\":\"<run1>\",\"seq\":1,\"kind\":\"text\",\"payload\":{\"text\":\"Reading P.\"},\"created_at\":\"2026-01-02T03:04:05.5Z\"},{\"run_id\":\"<run1>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"R-1\"},\"name\":\"get_artifact\"},\"created_at\":\"<time@step 25>\"},{\"run_id\":\"<run1>\",\"seq\":3,\"kind\":\"system\",\"payload\":{},\"created_at\":\"<time@step 25>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1076,20 +1125,20 @@
             },
             "name": "get_artifact"
           },
-          "created_at": "<time@step 24>"
+          "created_at": "<time@step 25>"
         },
         {
           "run_id": "<run1>",
           "seq": 3,
           "kind": "system",
           "payload": {},
-          "created_at": "<time@step 24>"
+          "created_at": "<time@step 25>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 31,
+      "n": 32,
       "title": "run1's log after seq 1",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1106,7 +1155,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"run_id\":\"<run1>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"R-1\"},\"name\":\"get_artifact\"},\"created_at\":\"<time@step 24>\"},{\"run_id\":\"<run1>\",\"seq\":3,\"kind\":\"system\",\"payload\":{},\"created_at\":\"<time@step 24>\"}]"
+        "[{\"run_id\":\"<run1>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"R-1\"},\"name\":\"get_artifact\"},\"created_at\":\"<time@step 25>\"},{\"run_id\":\"<run1>\",\"seq\":3,\"kind\":\"system\",\"payload\":{},\"created_at\":\"<time@step 25>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1120,20 +1169,20 @@
             },
             "name": "get_artifact"
           },
-          "created_at": "<time@step 24>"
+          "created_at": "<time@step 25>"
         },
         {
           "run_id": "<run1>",
           "seq": 3,
           "kind": "system",
           "payload": {},
-          "created_at": "<time@step 24>"
+          "created_at": "<time@step 25>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 32,
+      "n": 33,
       "title": "run1's log after seq abc: read as 0, the whole log",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1150,7 +1199,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"run_id\":\"<run1>\",\"seq\":1,\"kind\":\"text\",\"payload\":{\"text\":\"Reading P.\"},\"created_at\":\"2026-01-02T03:04:05.5Z\"},{\"run_id\":\"<run1>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"R-1\"},\"name\":\"get_artifact\"},\"created_at\":\"<time@step 24>\"},{\"run_id\":\"<run1>\",\"seq\":3,\"kind\":\"system\",\"payload\":{},\"created_at\":\"<time@step 24>\"}]"
+        "[{\"run_id\":\"<run1>\",\"seq\":1,\"kind\":\"text\",\"payload\":{\"text\":\"Reading P.\"},\"created_at\":\"2026-01-02T03:04:05.5Z\"},{\"run_id\":\"<run1>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"R-1\"},\"name\":\"get_artifact\"},\"created_at\":\"<time@step 25>\"},{\"run_id\":\"<run1>\",\"seq\":3,\"kind\":\"system\",\"payload\":{},\"created_at\":\"<time@step 25>\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -1173,20 +1222,20 @@
             },
             "name": "get_artifact"
           },
-          "created_at": "<time@step 24>"
+          "created_at": "<time@step 25>"
         },
         {
           "run_id": "<run1>",
           "seq": 3,
           "kind": "system",
           "payload": {},
-          "created_at": "<time@step 24>"
+          "created_at": "<time@step 25>"
         }
       ],
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 33,
+      "n": 34,
       "title": "the box key reads run1's log: the handler's 401, a key is no user",
       "actor": "box",
       "route": "GET /api/v1/agent-runs/{id}/logs",
@@ -1210,7 +1259,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 34,
+      "n": 35,
       "title": "the member reads run1's log: P's guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -1235,7 +1284,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 35,
+      "n": 36,
       "title": "stream run1: each log frame in seq order, the payload-less entry's payload {}, then the status",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1262,10 +1311,10 @@
         "data: {\"run_id\":\"<run1>\",\"seq\":1,\"kind\":\"text\",\"payload\":{\"text\":\"Reading P.\"},\"created_at\":\"2026-01-02T03:04:05.5Z\"}",
         "",
         "event: log",
-        "data: {\"run_id\":\"<run1>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"R-1\"},\"name\":\"get_artifact\"},\"created_at\":\"<time@step 24>\"}",
+        "data: {\"run_id\":\"<run1>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"R-1\"},\"name\":\"get_artifact\"},\"created_at\":\"<time@step 25>\"}",
         "",
         "event: log",
-        "data: {\"run_id\":\"<run1>\",\"seq\":3,\"kind\":\"system\",\"payload\":{},\"created_at\":\"<time@step 24>\"}",
+        "data: {\"run_id\":\"<run1>\",\"seq\":3,\"kind\":\"system\",\"payload\":{},\"created_at\":\"<time@step 25>\"}",
         "",
         "event: status",
         "data: {\"run_id\":\"<run1>\",\"status\":\"running\"}",
@@ -1275,7 +1324,7 @@
       "gzip": "not sent: an event stream, read once and then closed by the tour"
     },
     {
-      "n": 36,
+      "n": 37,
       "title": "stream run1 after seq 1",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1300,10 +1349,10 @@
       "kind": "text",
       "body": [
         "event: log",
-        "data: {\"run_id\":\"<run1>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"R-1\"},\"name\":\"get_artifact\"},\"created_at\":\"<time@step 24>\"}",
+        "data: {\"run_id\":\"<run1>\",\"seq\":2,\"kind\":\"tool_call\",\"payload\":{\"input\":{\"id\":\"R-1\"},\"name\":\"get_artifact\"},\"created_at\":\"<time@step 25>\"}",
         "",
         "event: log",
-        "data: {\"run_id\":\"<run1>\",\"seq\":3,\"kind\":\"system\",\"payload\":{},\"created_at\":\"<time@step 24>\"}",
+        "data: {\"run_id\":\"<run1>\",\"seq\":3,\"kind\":\"system\",\"payload\":{},\"created_at\":\"<time@step 25>\"}",
         "",
         "event: status",
         "data: {\"run_id\":\"<run1>\",\"status\":\"running\"}",
@@ -1313,7 +1362,7 @@
       "gzip": "not sent: an event stream, read once and then closed by the tour"
     },
     {
-      "n": 37,
+      "n": 38,
       "title": "stream a run no one has: a JSON 404, not a stream",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1341,7 +1390,7 @@
       "gzip": "not sent: an event stream, read once and then closed by the tour"
     },
     {
-      "n": 38,
+      "n": 39,
       "title": "the box key streams run1: the handler's 401",
       "actor": "box",
       "route": "GET /api/v1/agent-runs/{id}/stream",
@@ -1368,7 +1417,7 @@
       "gzip": "not sent: an event stream, read once and then closed by the tour"
     },
     {
-      "n": 39,
+      "n": 40,
       "title": "the member cancels run1: P's guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -1394,7 +1443,7 @@
       "events": []
     },
     {
-      "n": 40,
+      "n": 41,
       "title": "the owner cancels run1 while it runs: 200, cancel_requested, still running",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1410,7 +1459,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"running\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 29>\",\"started_at\":\"<time@step 20>\",\"final_text\":\"\",\"partial_text\":\"P holds\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"running\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 30>\",\"started_at\":\"<time@step 21>\",\"final_text\":\"\",\"partial_text\":\"P holds\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1424,8 +1473,8 @@
         "priority": 0,
         "prompt": "Summarise P.",
         "worker_id": "tour-box",
-        "heartbeat_at": "<time@step 29>",
-        "started_at": "<time@step 20>",
+        "heartbeat_at": "<time@step 30>",
+        "started_at": "<time@step 21>",
         "final_text": "",
         "partial_text": "P holds",
         "error": "",
@@ -1435,7 +1484,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 10>",
+        "created_at": "<time@step 11>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -1456,7 +1505,7 @@
       ]
     },
     {
-      "n": 41,
+      "n": 42,
       "title": "the next log push hears it",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/logs",
@@ -1486,7 +1535,7 @@
       "events": []
     },
     {
-      "n": 42,
+      "n": 43,
       "title": "the box key finishes run1 as cancelled: agentrun.finished, as the run",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
@@ -1505,7 +1554,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 41>\",\"started_at\":\"<time@step 20>\",\"finished_at\":\"<time@step 42>\",\"final_text\":\"\",\"error\":\"cancelled on request\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 42>\",\"started_at\":\"<time@step 21>\",\"finished_at\":\"<time@step 43>\",\"final_text\":\"\",\"error\":\"cancelled on request\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1519,9 +1568,9 @@
         "priority": 0,
         "prompt": "Summarise P.",
         "worker_id": "tour-box",
-        "heartbeat_at": "<time@step 41>",
-        "started_at": "<time@step 20>",
-        "finished_at": "<time@step 42>",
+        "heartbeat_at": "<time@step 42>",
+        "started_at": "<time@step 21>",
+        "finished_at": "<time@step 43>",
         "final_text": "",
         "error": "cancelled on request",
         "attempt_count": 1,
@@ -1530,7 +1579,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 10>",
+        "created_at": "<time@step 11>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -1562,7 +1611,7 @@
       ]
     },
     {
-      "n": 43,
+      "n": 44,
       "title": "finish run1 again: 409",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
@@ -1591,7 +1640,7 @@
       "events": []
     },
     {
-      "n": 44,
+      "n": 45,
       "title": "finish run1 with a status no run has: 409, before the run is read",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
@@ -1620,7 +1669,7 @@
       "events": []
     },
     {
-      "n": 45,
+      "n": 46,
       "title": "finish with a body that does not decode",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
@@ -1649,7 +1698,7 @@
       "events": []
     },
     {
-      "n": 46,
+      "n": 47,
       "title": "run1's token, revoked by the finish: the middleware's 401",
       "actor": "run1",
       "route": "POST /api/v1/agent-runs/claim",
@@ -1678,7 +1727,7 @@
       "events": []
     },
     {
-      "n": 47,
+      "n": 48,
       "title": "cancel the cancelled run1: 200, the run as it is",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1694,7 +1743,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 41>\",\"started_at\":\"<time@step 20>\",\"finished_at\":\"<time@step 42>\",\"final_text\":\"\",\"error\":\"cancelled on request\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 42>\",\"started_at\":\"<time@step 21>\",\"finished_at\":\"<time@step 43>\",\"final_text\":\"\",\"error\":\"cancelled on request\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1708,9 +1757,9 @@
         "priority": 0,
         "prompt": "Summarise P.",
         "worker_id": "tour-box",
-        "heartbeat_at": "<time@step 41>",
-        "started_at": "<time@step 20>",
-        "finished_at": "<time@step 42>",
+        "heartbeat_at": "<time@step 42>",
+        "started_at": "<time@step 21>",
+        "finished_at": "<time@step 43>",
         "final_text": "",
         "error": "cancelled on request",
         "attempt_count": 1,
@@ -1719,7 +1768,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 10>",
+        "created_at": "<time@step 11>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -1728,7 +1777,7 @@
       "events": []
     },
     {
-      "n": 48,
+      "n": 49,
       "title": "the member retries run1: P's guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -1754,7 +1803,7 @@
       "events": []
     },
     {
-      "n": 49,
+      "n": 50,
       "title": "retry a run no one has: 404",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1780,7 +1829,7 @@
       "events": []
     },
     {
-      "n": 50,
+      "n": 51,
       "title": "retry run1: 201, a new run with its agent, project and prompt, launched by the owner, and a card of its own",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1796,7 +1845,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<retry1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry1.card>\",\"retried_from_run_id\":\"<run1>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 50>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<retry1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry1.card>\",\"retried_from_run_id\":\"<run1>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 51>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1818,7 +1867,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 50>",
+        "created_at": "<time@step 51>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -1838,7 +1887,7 @@
       ]
     },
     {
-      "n": 51,
+      "n": 52,
       "title": "start retry1 while it is queued: 409",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/start",
@@ -1863,7 +1912,7 @@
       "events": []
     },
     {
-      "n": 52,
+      "n": 53,
       "title": "stream retry1: no log, so the status frame alone",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1894,7 +1943,7 @@
       "gzip": "not sent: an event stream, read once and then closed by the tour"
     },
     {
-      "n": 53,
+      "n": 54,
       "title": "retry1's log: [], never null",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1917,7 +1966,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 54,
+      "n": 55,
       "title": "cancel retry1 while it is queued: cancelled at once; workitem.moved and no agentrun.finished (Q10)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -1936,7 +1985,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<retry1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry1.card>\",\"retried_from_run_id\":\"<run1>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"finished_at\":\"<time@step 54>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 50>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<retry1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry1.card>\",\"retried_from_run_id\":\"<run1>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"finished_at\":\"<time@step 55>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 51>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1950,7 +1999,7 @@
         "cancel_requested": true,
         "priority": 0,
         "prompt": "Summarise P.",
-        "finished_at": "<time@step 54>",
+        "finished_at": "<time@step 55>",
         "final_text": "",
         "error": "",
         "attempt_count": 1,
@@ -1959,7 +2008,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 50>",
+        "created_at": "<time@step 51>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -1980,7 +2029,7 @@
       ]
     },
     {
-      "n": 55,
+      "n": 56,
       "title": "release run2 with {}: 204, but no worker id matches the claimer's, so nothing is released",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/release",
@@ -2002,7 +2051,7 @@
       "events": []
     },
     {
-      "n": 56,
+      "n": 57,
       "title": "run2: still running, still tour-box's, with its answer so far",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2018,7 +2067,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"running\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 55>\",\"started_at\":\"<time@before step 55>\",\"final_text\":\"\",\"partial_text\":\"P has\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 55>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"running\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 56>\",\"started_at\":\"<time@before step 56>\",\"final_text\":\"\",\"partial_text\":\"P has\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 56>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2032,8 +2081,8 @@
         "priority": 0,
         "prompt": "Summarise P again.",
         "worker_id": "tour-box",
-        "heartbeat_at": "<time@before step 55>",
-        "started_at": "<time@before step 55>",
+        "heartbeat_at": "<time@before step 56>",
+        "started_at": "<time@before step 56>",
         "final_text": "",
         "partial_text": "P has",
         "error": "",
@@ -2043,7 +2092,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@before step 55>",
+        "created_at": "<time@before step 56>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -2051,7 +2100,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 57,
+      "n": 58,
       "title": "release run2 with no body: 400, the worker id is required",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/release",
@@ -2076,7 +2125,7 @@
       "events": []
     },
     {
-      "n": 58,
+      "n": 59,
       "title": "release run2 as tour-box, as a runner shutting down sends it: 204, queued again",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/release",
@@ -2110,7 +2159,7 @@
       ]
     },
     {
-      "n": 59,
+      "n": 60,
       "title": "run2: queued, with no worker, heartbeat, start or answer so far",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2126,7 +2175,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 55>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 56>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2147,7 +2196,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@before step 55>",
+        "created_at": "<time@before step 56>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -2155,7 +2204,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 60,
+      "n": 61,
       "title": "run2's first token, revoked by the release: the middleware's 401",
       "actor": "run2",
       "route": "POST /api/v1/agent-runs/claim",
@@ -2184,7 +2233,7 @@
       "events": []
     },
     {
-      "n": 61,
+      "n": 62,
       "title": "the box key claims run2 again: the same run, a new token",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
@@ -2203,7 +2252,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 61>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 55>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<run2.again.token>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 62>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 56>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<run2.again.token>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2251,7 +2300,7 @@
           "priority": 0,
           "prompt": "Summarise P again.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 61>",
+          "heartbeat_at": "<time@step 62>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -2260,7 +2309,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@before step 55>",
+          "created_at": "<time@before step 56>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -2283,7 +2332,7 @@
       ]
     },
     {
-      "n": 62,
+      "n": 63,
       "title": "run2's first token after the new claim: still the middleware's 401",
       "actor": "run2",
       "route": "POST /api/v1/agent-runs/claim",
@@ -2312,7 +2361,7 @@
       "events": []
     },
     {
-      "n": 63,
+      "n": 64,
       "title": "finish run2 as succeeded, with its exit code, answer, tokens and cost",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
@@ -2331,7 +2380,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 63>\",\"started_at\":\"<time@before step 63>\",\"finished_at\":\"<time@step 63>\",\"exit_code\":0,\"final_text\":\"P holds two requirements.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":1200,\"tokens_out\":340,\"cost_usd\":0.0125,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 55>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 64>\",\"started_at\":\"<time@before step 64>\",\"finished_at\":\"<time@step 64>\",\"exit_code\":0,\"final_text\":\"P holds two requirements.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":1200,\"tokens_out\":340,\"cost_usd\":0.0125,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 56>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2345,9 +2394,9 @@
         "priority": 0,
         "prompt": "Summarise P again.",
         "worker_id": "tour-box",
-        "heartbeat_at": "<time@before step 63>",
-        "started_at": "<time@before step 63>",
-        "finished_at": "<time@step 63>",
+        "heartbeat_at": "<time@before step 64>",
+        "started_at": "<time@before step 64>",
+        "finished_at": "<time@step 64>",
         "exit_code": 0,
         "final_text": "P holds two requirements.",
         "error": "",
@@ -2358,7 +2407,7 @@
         "cost_usd": 0.0125,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@before step 55>",
+        "created_at": "<time@before step 56>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -2390,7 +2439,7 @@
       ]
     },
     {
-      "n": 64,
+      "n": 65,
       "title": "retry run2: 409, only a failed, cancelled or timed-out run is retried",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2416,7 +2465,7 @@
       "events": []
     },
     {
-      "n": 65,
+      "n": 66,
       "title": "launch on a card id no card has: 201, stored as sent (no foreign key), and no card is created or moved",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2436,7 +2485,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run3>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<phantom>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P for card zero.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run3>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<phantom>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P for card zero.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 66>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2457,7 +2506,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 65>",
+        "created_at": "<time@step 66>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -2466,7 +2515,7 @@
       "events": []
     },
     {
-      "n": 66,
+      "n": 67,
       "title": "finish run3, which no worker claimed: 409, only a run a worker holds finishes",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
@@ -2495,7 +2544,7 @@
       "events": []
     },
     {
-      "n": 67,
+      "n": 68,
       "title": "the box key launches with no project: 201, in the key's workspace, with no launched_by",
       "actor": "box",
       "route": "POST /api/v1/agents/{slug}/runs",
@@ -2514,7 +2563,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run_b>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy W.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 67>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run_b>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy W.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 68>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2532,7 +2581,7 @@
         "tokens_in": 0,
         "tokens_out": 0,
         "artifacts_touched": [],
-        "created_at": "<time@step 67>",
+        "created_at": "<time@step 68>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -2541,7 +2590,7 @@
       "events": []
     },
     {
-      "n": 68,
+      "n": 69,
       "title": "the member reads run_b, unscoped and not its own: 404, as for a run no row has",
       "actor": "member",
       "acting_in": "<w>",
@@ -2566,7 +2615,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 69,
+      "n": 70,
       "title": "run_b's token launches in P: 404, the run is not scoped to P",
       "actor": "run_b",
       "route": "POST /api/v1/agents/{slug}/runs",
@@ -2595,7 +2644,7 @@
       "events": []
     },
     {
-      "n": 70,
+      "n": 71,
       "title": "run_b's token launches with no project: 201, in the run's workspace, with no launched_by and run_b as its parent",
       "actor": "run_b",
       "route": "POST /api/v1/agents/{slug}/runs",
@@ -2614,7 +2663,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run_t>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"parent_run_id\":\"<run_b>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Help with W.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 70>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run_t>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"parent_run_id\":\"<run_b>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Help with W.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 71>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2633,7 +2682,7 @@
         "tokens_in": 0,
         "tokens_out": 0,
         "artifacts_touched": [],
-        "created_at": "<time@step 70>",
+        "created_at": "<time@step 71>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -2642,7 +2691,7 @@
       "events": []
     },
     {
-      "n": 71,
+      "n": 72,
       "title": "finish run4 as failed with worker_error, a retryable class: attempt 2 is queued with a card of its own",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
@@ -2661,7 +2710,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run4.card>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 71>\",\"finished_at\":\"<time@step 71>\",\"final_text\":\"\",\"error\":\"the provider hung up\",\"error_class\":\"worker_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 71>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run4.card>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 72>\",\"finished_at\":\"<time@step 72>\",\"final_text\":\"\",\"error\":\"the provider hung up\",\"error_class\":\"worker_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 72>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2675,8 +2724,8 @@
         "priority": 0,
         "prompt": "Summarise P, flakily.",
         "worker_id": "tour-box",
-        "heartbeat_at": "<time@before step 71>",
-        "finished_at": "<time@step 71>",
+        "heartbeat_at": "<time@before step 72>",
+        "finished_at": "<time@step 72>",
         "final_text": "",
         "error": "the provider hung up",
         "error_class": "worker_error",
@@ -2686,7 +2735,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@before step 71>",
+        "created_at": "<time@before step 72>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -2728,7 +2777,7 @@
       ]
     },
     {
-      "n": 72,
+      "n": 73,
       "title": "W's queued runs: attempt 2 alone, retried from run4, claimable from next_attempt_at",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2749,7 +2798,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<retry4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":2,\"max_attempts\":3,\"next_attempt_at\":\"<retry4.next_attempt_at>\",\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 71>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
+        "[{\"id\":\"<retry4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":2,\"max_attempts\":3,\"next_attempt_at\":\"<retry4.next_attempt_at>\",\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 72>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2773,7 +2822,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@step 71>",
+          "created_at": "<time@step 72>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -2782,7 +2831,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 73,
+      "n": 74,
       "title": "the box key claims during the backoff: 204",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
@@ -2804,7 +2853,7 @@
       "events": []
     },
     {
-      "n": 74,
+      "n": 75,
       "title": "retry run4 by hand: 201, attempt 1 of a chain of its own, claimable at once",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2820,7 +2869,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<retry4m>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4m.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 74>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<retry4m>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4m.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 75>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2842,7 +2891,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 74>",
+        "created_at": "<time@step 75>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -2862,7 +2911,7 @@
       ]
     },
     {
-      "n": 75,
+      "n": 76,
       "title": "finish it as failed with agent_error, a class that is not retried",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/{id}/finish",
@@ -2881,7 +2930,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<retry4m>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4m.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 75>\",\"finished_at\":\"<time@step 75>\",\"final_text\":\"\",\"error\":\"the agent gave up\",\"error_class\":\"agent_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 74>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<retry4m>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4m.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 76>\",\"finished_at\":\"<time@step 76>\",\"final_text\":\"\",\"error\":\"the agent gave up\",\"error_class\":\"agent_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 75>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2896,8 +2945,8 @@
         "priority": 0,
         "prompt": "Summarise P, flakily.",
         "worker_id": "tour-box",
-        "heartbeat_at": "<time@before step 75>",
-        "finished_at": "<time@step 75>",
+        "heartbeat_at": "<time@before step 76>",
+        "finished_at": "<time@step 76>",
         "final_text": "",
         "error": "the agent gave up",
         "error_class": "agent_error",
@@ -2907,7 +2956,7 @@
         "tokens_out": 0,
         "artifacts_touched": [],
         "launched_by": "<owner>",
-        "created_at": "<time@step 74>",
+        "created_at": "<time@step 75>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -2939,7 +2988,7 @@
       ]
     },
     {
-      "n": 76,
+      "n": 77,
       "title": "W's queued runs: still attempt 2 of run4 alone",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2956,7 +3005,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<retry4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":2,\"max_attempts\":3,\"next_attempt_at\":\"<retry4.next_attempt_at>\",\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 71>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
+        "[{\"id\":\"<retry4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":2,\"max_attempts\":3,\"next_attempt_at\":\"<retry4.next_attempt_at>\",\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 72>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2980,7 +3029,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@step 71>",
+          "created_at": "<time@step 72>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -2989,7 +3038,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 77,
+      "n": 78,
       "title": "the member's runner key polls: 204, and the member's runner counts as online for 30 s",
       "actor": "runner",
       "route": "POST /api/v1/agent-runs/claim",
@@ -3011,7 +3060,7 @@
       "events": []
     },
     {
-      "n": 78,
+      "n": 79,
       "title": "the member launches with no project, which any member may: reserved for its runner (preferred_user_id) until hosted_after",
       "actor": "member",
       "acting_in": "<w>",
@@ -3035,7 +3084,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 78>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 79>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3056,7 +3105,7 @@
         "launched_by": "<member>",
         "preferred_user_id": "<member>",
         "hosted_after": "<time>",
-        "created_at": "<time@step 78>",
+        "created_at": "<time@step 79>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -3065,7 +3114,7 @@
       "events": []
     },
     {
-      "n": 79,
+      "n": 80,
       "title": "the box key claims: 204, run5 is reserved",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
@@ -3087,7 +3136,7 @@
       "events": []
     },
     {
-      "n": 80,
+      "n": 81,
       "title": "the member's runner key claims run5",
       "actor": "runner",
       "route": "POST /api/v1/agent-runs/claim",
@@ -3106,7 +3155,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 80>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 78>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:2>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 81>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 79>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:2>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3152,7 +3201,7 @@
           "priority": 0,
           "prompt": "Summarise my week.",
           "worker_id": "tour-runner",
-          "heartbeat_at": "<time@step 80>",
+          "heartbeat_at": "<time@step 81>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -3163,7 +3212,7 @@
           "launched_by": "<member>",
           "preferred_user_id": "<member>",
           "hosted_after": "<time>",
-          "created_at": "<time@step 78>",
+          "created_at": "<time@step 79>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -3174,7 +3223,7 @@
       "events": []
     },
     {
-      "n": 81,
+      "n": 82,
       "title": "the member reads run5, which it launched",
       "actor": "member",
       "acting_in": "<w>",
@@ -3190,7 +3239,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 80>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 78>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 81>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 79>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3202,7 +3251,7 @@
         "priority": 0,
         "prompt": "Summarise my week.",
         "worker_id": "tour-runner",
-        "heartbeat_at": "<time@step 80>",
+        "heartbeat_at": "<time@step 81>",
         "final_text": "",
         "error": "",
         "attempt_count": 1,
@@ -3213,7 +3262,7 @@
         "launched_by": "<member>",
         "preferred_user_id": "<member>",
         "hosted_after": "<time>",
-        "created_at": "<time@step 78>",
+        "created_at": "<time@step 79>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -3221,7 +3270,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 82,
+      "n": 83,
       "title": "the member's runner key finishes run5: its member's run",
       "actor": "runner",
       "route": "POST /api/v1/agent-runs/{id}/finish",
@@ -3240,7 +3289,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 80>\",\"finished_at\":\"<time@step 82>\",\"final_text\":\"Quiet week.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 78>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 81>\",\"finished_at\":\"<time@step 83>\",\"final_text\":\"Quiet week.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 79>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3252,8 +3301,8 @@
         "priority": 0,
         "prompt": "Summarise my week.",
         "worker_id": "tour-runner",
-        "heartbeat_at": "<time@step 80>",
-        "finished_at": "<time@step 82>",
+        "heartbeat_at": "<time@step 81>",
+        "finished_at": "<time@step 83>",
         "final_text": "Quiet week.",
         "error": "",
         "attempt_count": 1,
@@ -3264,7 +3313,7 @@
         "launched_by": "<member>",
         "preferred_user_id": "<member>",
         "hosted_after": "<time>",
-        "created_at": "<time@step 78>",
+        "created_at": "<time@step 79>",
         "agent_content_hash": "<hex64:1>",
         "agent_name": "Tour Worker",
         "agent_provider": "claude-code"
@@ -3284,7 +3333,7 @@
       ]
     },
     {
-      "n": 83,
+      "n": 84,
       "title": "the box key claims K's run: auth api-key, with the provider's own variable",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
@@ -3303,7 +3352,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"api_key_env\":\"ANTHROPIC_API_KEY\",\"mode\":\"api-key\"},\"run\":{\"id\":\"<run_k1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 83>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 83>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:3>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"api_key_env\":\"ANTHROPIC_API_KEY\",\"mode\":\"api-key\"},\"run\":{\"id\":\"<run_k1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 84>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 84>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:3>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3352,7 +3401,7 @@
           "priority": 0,
           "prompt": "Summarise K.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 83>",
+          "heartbeat_at": "<time@step 84>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -3361,7 +3410,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@before step 83>",
+          "created_at": "<time@before step 84>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -3384,7 +3433,7 @@
       ]
     },
     {
-      "n": 84,
+      "n": 85,
       "title": "the box key claims K's next run: the variable W's provider setting names",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
@@ -3403,7 +3452,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"api_key_env\":\"GOOGLE_API_KEY\",\"mode\":\"api-key\"},\"run\":{\"id\":\"<run_k2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:2>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 84>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 84>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:4>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"api_key_env\":\"GOOGLE_API_KEY\",\"mode\":\"api-key\"},\"run\":{\"id\":\"<run_k2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:2>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 85>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:4>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3452,7 +3501,7 @@
           "priority": 0,
           "prompt": "Summarise K again.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 84>",
+          "heartbeat_at": "<time@step 85>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -3461,7 +3510,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@before step 84>",
+          "created_at": "<time@before step 85>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -3484,7 +3533,7 @@
       ]
     },
     {
-      "n": 85,
+      "n": 86,
       "title": "a hosted claim: it skips the older run, whose agent has repository access",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
@@ -3503,7 +3552,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_h>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:3>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, hosted.\",\"worker_id\":\"tour-hosted\",\"heartbeat_at\":\"<time@step 85>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:5>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_h>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:3>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, hosted.\",\"worker_id\":\"tour-hosted\",\"heartbeat_at\":\"<time@step 86>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 86>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:5>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3551,7 +3600,7 @@
           "priority": 0,
           "prompt": "Summarise P, hosted.",
           "worker_id": "tour-hosted",
-          "heartbeat_at": "<time@step 85>",
+          "heartbeat_at": "<time@step 86>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -3560,7 +3609,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@before step 85>",
+          "created_at": "<time@before step 86>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -3583,7 +3632,7 @@
       ]
     },
     {
-      "n": 86,
+      "n": 87,
       "title": "a plain claim takes the repository run",
       "actor": "box",
       "route": "POST /api/v1/agent-runs/claim",
@@ -3602,7 +3651,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<repo.agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-repo\",\"name\":\"Tour Repo\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":true,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-repo.md\",\"content_hash\":\"<hex64:6>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_r>\",\"org_id\":\"<w>\",\"agent_id\":\"<repo.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:4>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Fix the build.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 86>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Repo\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:7>\"}"
+        "{\"agent\":{\"id\":\"<repo.agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-repo\",\"name\":\"Tour Repo\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":true,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-repo.md\",\"content_hash\":\"<hex64:6>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_r>\",\"org_id\":\"<w>\",\"agent_id\":\"<repo.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:4>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Fix the build.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 87>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 86>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Repo\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:7>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3650,7 +3699,7 @@
           "priority": 0,
           "prompt": "Fix the build.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 86>",
+          "heartbeat_at": "<time@step 87>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -3659,7 +3708,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@before step 85>",
+          "created_at": "<time@before step 86>",
           "agent_content_hash": "<hex64:6>",
           "agent_name": "Tour Repo",
           "agent_provider": "claude-code"
@@ -3682,7 +3731,7 @@
       ]
     },
     {
-      "n": 87,
+      "n": 88,
       "title": "the WORKER_API_KEY key claims: 204; it resolves to the earliest account's personal workspace, admin's, where nothing is queued",
       "actor": "legacy",
       "route": "POST /api/v1/agent-runs/claim",
@@ -3704,7 +3753,7 @@
       "events": []
     },
     {
-      "n": 88,
+      "n": 89,
       "title": "the WORKER_API_KEY key claims admin's run",
       "actor": "legacy",
       "route": "POST /api/v1/agent-runs/claim",
@@ -3723,7 +3772,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<admin.agent>\",\"org_id\":\"<admin.workspace>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<admin.workspace>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 88>\",\"created_at\":\"<time@before step 88>\",\"updated_at\":\"<time@before step 88>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_a>\",\"org_id\":\"<admin.workspace>\",\"agent_id\":\"<admin.agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise the platform.\",\"worker_id\":\"tour-legacy\",\"heartbeat_at\":\"<time@step 88>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<admin>\",\"created_at\":\"<time@before step 88>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:8>\"}"
+        "{\"agent\":{\"id\":\"<admin.agent>\",\"org_id\":\"<admin.workspace>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<admin.workspace>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 89>\",\"created_at\":\"<time@before step 89>\",\"updated_at\":\"<time@before step 89>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_a>\",\"org_id\":\"<admin.workspace>\",\"agent_id\":\"<admin.agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise the platform.\",\"worker_id\":\"tour-legacy\",\"heartbeat_at\":\"<time@step 89>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<admin>\",\"created_at\":\"<time@before step 89>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:8>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3753,9 +3802,9 @@
           "sort_order": 0,
           "file_path": "<tmp>/data/agents/<admin.workspace>/tour-worker.md",
           "content_hash": "<hex64:1>",
-          "synced_at": "<time@before step 88>",
-          "created_at": "<time@before step 88>",
-          "updated_at": "<time@before step 88>"
+          "synced_at": "<time@before step 89>",
+          "created_at": "<time@before step 89>",
+          "updated_at": "<time@before step 89>"
         },
         "auth": {
           "mode": "user-account"
@@ -3769,7 +3818,7 @@
           "priority": 0,
           "prompt": "Summarise the platform.",
           "worker_id": "tour-legacy",
-          "heartbeat_at": "<time@step 88>",
+          "heartbeat_at": "<time@step 89>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -3778,7 +3827,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<admin>",
-          "created_at": "<time@before step 88>",
+          "created_at": "<time@before step 89>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -3789,7 +3838,7 @@
       "events": []
     },
     {
-      "n": 89,
+      "n": 90,
       "title": "the WORKER_API_KEY key starts a run of W: 404",
       "actor": "legacy",
       "route": "POST /api/v1/agent-runs/{id}/start",
@@ -3814,7 +3863,7 @@
       "events": []
     },
     {
-      "n": 90,
+      "n": 91,
       "title": "admin's worker keys: null (Q14); with no workspace at boot, WORKER_API_KEY was never registered as one",
       "actor": "admin",
       "route": "GET /api/v1/orgs/{id}/worker-keys",
@@ -3839,7 +3888,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 91,
+      "n": 92,
       "title": "the member reads run1, the owner's run in P: P's guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -3864,7 +3913,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 92,
+      "n": 93,
       "title": "a run no one has: 404",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3889,7 +3938,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 93,
+      "n": 94,
       "title": "the id \"claim\": the GET matches {id} (the claim route is a POST), and no run has that id: 404",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3914,7 +3963,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 94,
+      "n": 95,
       "title": "the box key reads run1: the handler's 401",
       "actor": "box",
       "route": "GET /api/v1/agent-runs/{id}",
@@ -3938,7 +3987,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 95,
+      "n": 96,
       "title": "the member's runs, with no filter: only those it launched",
       "actor": "member",
       "acting_in": "<w>",
@@ -3954,7 +4003,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 80>\",\"finished_at\":\"<time@step 82>\",\"final_text\":\"Quiet week.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 78>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
+        "[{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 81>\",\"finished_at\":\"<time@step 83>\",\"final_text\":\"Quiet week.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 79>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -3967,8 +4016,8 @@
           "priority": 0,
           "prompt": "Summarise my week.",
           "worker_id": "tour-runner",
-          "heartbeat_at": "<time@step 80>",
-          "finished_at": "<time@step 82>",
+          "heartbeat_at": "<time@step 81>",
+          "finished_at": "<time@step 83>",
           "final_text": "Quiet week.",
           "error": "",
           "attempt_count": 1,
@@ -3979,7 +4028,7 @@
           "launched_by": "<member>",
           "preferred_user_id": "<member>",
           "hosted_after": "<time>",
-          "created_at": "<time@step 78>",
+          "created_at": "<time@step 79>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -3988,7 +4037,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 96,
+      "n": 97,
       "title": "the member's queued runs: none, null (Q14)",
       "actor": "member",
       "acting_in": "<w>",
@@ -4012,7 +4061,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 97,
+      "n": 98,
       "title": "the member lists P's runs: P's guard",
       "actor": "member",
       "acting_in": "<w>",
@@ -4038,7 +4087,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 98,
+      "n": 99,
       "title": "K's runs, newest first",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4055,7 +4104,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<run_k2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:2>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 84>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 84>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_k1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 83>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 83>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
+        "[{\"id\":\"<run_k2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:2>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 85>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_k1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 84>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 84>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -4070,7 +4119,7 @@
           "priority": 0,
           "prompt": "Summarise K again.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 84>",
+          "heartbeat_at": "<time@step 85>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -4079,7 +4128,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@before step 84>",
+          "created_at": "<time@before step 85>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -4095,7 +4144,7 @@
           "priority": 0,
           "prompt": "Summarise K.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 83>",
+          "heartbeat_at": "<time@step 84>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -4104,7 +4153,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@before step 83>",
+          "created_at": "<time@before step 84>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -4117,7 +4166,7 @@
       }
     },
     {
-      "n": 99,
+      "n": 100,
       "title": "tour-repo's runs",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4134,7 +4183,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<run_r>\",\"org_id\":\"<w>\",\"agent_id\":\"<repo.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:4>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Fix the build.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 86>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Repo\",\"agent_provider\":\"claude-code\"}]"
+        "[{\"id\":\"<run_r>\",\"org_id\":\"<w>\",\"agent_id\":\"<repo.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:4>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Fix the build.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 87>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 86>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Repo\",\"agent_provider\":\"claude-code\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -4149,7 +4198,7 @@
           "priority": 0,
           "prompt": "Fix the build.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 86>",
+          "heartbeat_at": "<time@step 87>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -4158,7 +4207,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@before step 85>",
+          "created_at": "<time@before step 86>",
           "agent_content_hash": "<hex64:6>",
           "agent_name": "Tour Repo",
           "agent_provider": "claude-code"
@@ -4167,7 +4216,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 100,
+      "n": 101,
       "title": "agent_id x: none, as for an agent no row has",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4191,7 +4240,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 101,
+      "n": 102,
       "title": "every run of W, as its admin: newest first, compressed and then sent with no Content-Type (Q1)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -4207,7 +4256,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<run_h>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:3>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, hosted.\",\"worker_id\":\"tour-hosted\",\"heartbeat_at\":\"<time@step 85>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_r>\",\"org_id\":\"<w>\",\"agent_id\":\"<repo.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:4>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Fix the build.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 86>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Repo\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_k2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:2>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 84>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 84>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_k1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 83>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 83>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 80>\",\"finished_at\":\"<time@step 82>\",\"final_text\":\"Quiet week.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 78>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<retry4m>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4m.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 75>\",\"finished_at\":\"<time@step 75>\",\"final_text\":\"\",\"error\":\"the agent gave up\",\"error_class\":\"agent_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 74>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<retry4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"finished_at\":\"<time@before step 77>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":2,\"max_attempts\":3,\"next_attempt_at\":\"<retry4.next_attempt_at>\",\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 71>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run4.card>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 71>\",\"finished_at\":\"<time@step 71>\",\"final_text\":\"\",\"error\":\"the provider hung up\",\"error_class\":\"worker_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 71>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_t>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"parent_run_id\":\"<run_b>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Help with W.\",\"finished_at\":\"<time@before step 71>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 70>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_b>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy W.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 68>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 67>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run3>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<phantom>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P for card zero.\",\"finished_at\":\"<time@before step 67>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 65>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 63>\",\"started_at\":\"<time@before step 63>\",\"finished_at\":\"<time@step 63>\",\"exit_code\":0,\"final_text\":\"P holds two requirements.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":1200,\"tokens_out\":340,\"cost_usd\":0.0125,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 55>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<retry1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry1.card>\",\"retried_from_run_id\":\"<run1>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"finished_at\":\"<time@step 54>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 50>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 41>\",\"started_at\":\"<time@step 20>\",\"finished_at\":\"<time@step 42>\",\"final_text\":\"\",\"error\":\"cancelled on request\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
+        "[{\"id\":\"<run_h>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:3>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, hosted.\",\"worker_id\":\"tour-hosted\",\"heartbeat_at\":\"<time@step 86>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 86>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_r>\",\"org_id\":\"<w>\",\"agent_id\":\"<repo.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:4>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Fix the build.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 87>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 86>\",\"agent_content_hash\":\"<hex64:6>\",\"agent_name\":\"Tour Repo\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_k2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:2>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 85>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 85>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_k1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<k>\",\"work_item_id\":\"<uuid:1>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise K.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 84>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 84>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run5>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise my week.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 81>\",\"finished_at\":\"<time@step 83>\",\"final_text\":\"Quiet week.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<member>\",\"preferred_user_id\":\"<member>\",\"hosted_after\":\"<time>\",\"created_at\":\"<time@step 79>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<retry4m>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4m.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 76>\",\"finished_at\":\"<time@step 76>\",\"final_text\":\"\",\"error\":\"the agent gave up\",\"error_class\":\"agent_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 75>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<retry4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry4.card>\",\"retried_from_run_id\":\"<run4>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"finished_at\":\"<time@before step 78>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":2,\"max_attempts\":3,\"next_attempt_at\":\"<retry4.next_attempt_at>\",\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 72>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run4>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run4.card>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P, flakily.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 72>\",\"finished_at\":\"<time@step 72>\",\"final_text\":\"\",\"error\":\"the provider hung up\",\"error_class\":\"worker_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 72>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_t>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"parent_run_id\":\"<run_b>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Help with W.\",\"finished_at\":\"<time@before step 72>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 71>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run_b>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy W.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 69>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 68>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run3>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<phantom>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P for card zero.\",\"finished_at\":\"<time@before step 68>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 66>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run2>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run2.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P again.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 64>\",\"started_at\":\"<time@before step 64>\",\"finished_at\":\"<time@step 64>\",\"exit_code\":0,\"final_text\":\"P holds two requirements.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":1200,\"tokens_out\":340,\"cost_usd\":0.0125,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@before step 56>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<retry1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<retry1.card>\",\"retried_from_run_id\":\"<run1>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"finished_at\":\"<time@step 55>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 51>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<run1>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<run1.card>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"Summarise P.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@step 42>\",\"started_at\":\"<time@step 21>\",\"finished_at\":\"<time@step 43>\",\"final_text\":\"\",\"error\":\"cancelled on request\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 11>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},{\"id\":\"<chat>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"status\":\"cancelled\",\"cancel_requested\":true,\"priority\":0,\"prompt\":\"What is in P?\",\"finished_at\":\"<time@before step 11>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 10>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -4222,7 +4271,7 @@
           "priority": 0,
           "prompt": "Summarise P, hosted.",
           "worker_id": "tour-hosted",
-          "heartbeat_at": "<time@step 85>",
+          "heartbeat_at": "<time@step 86>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -4231,7 +4280,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@before step 85>",
+          "created_at": "<time@before step 86>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -4247,7 +4296,7 @@
           "priority": 0,
           "prompt": "Fix the build.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 86>",
+          "heartbeat_at": "<time@step 87>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -4256,7 +4305,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@before step 85>",
+          "created_at": "<time@before step 86>",
           "agent_content_hash": "<hex64:6>",
           "agent_name": "Tour Repo",
           "agent_provider": "claude-code"
@@ -4271,6 +4320,31 @@
           "cancel_requested": false,
           "priority": 0,
           "prompt": "Summarise K again.",
+          "worker_id": "tour-box",
+          "heartbeat_at": "<time@step 85>",
+          "final_text": "",
+          "error": "",
+          "attempt_count": 1,
+          "max_attempts": 3,
+          "tokens_in": 0,
+          "tokens_out": 0,
+          "artifacts_touched": [],
+          "launched_by": "<owner>",
+          "created_at": "<time@before step 85>",
+          "agent_content_hash": "<hex64:1>",
+          "agent_name": "Tour Worker",
+          "agent_provider": "claude-code"
+        },
+        {
+          "id": "<run_k1>",
+          "org_id": "<w>",
+          "agent_id": "<agent>",
+          "project_id": "<k>",
+          "work_item_id": "<uuid:1>",
+          "status": "claimed",
+          "cancel_requested": false,
+          "priority": 0,
+          "prompt": "Summarise K.",
           "worker_id": "tour-box",
           "heartbeat_at": "<time@step 84>",
           "final_text": "",
@@ -4287,31 +4361,6 @@
           "agent_provider": "claude-code"
         },
         {
-          "id": "<run_k1>",
-          "org_id": "<w>",
-          "agent_id": "<agent>",
-          "project_id": "<k>",
-          "work_item_id": "<uuid:1>",
-          "status": "claimed",
-          "cancel_requested": false,
-          "priority": 0,
-          "prompt": "Summarise K.",
-          "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 83>",
-          "final_text": "",
-          "error": "",
-          "attempt_count": 1,
-          "max_attempts": 3,
-          "tokens_in": 0,
-          "tokens_out": 0,
-          "artifacts_touched": [],
-          "launched_by": "<owner>",
-          "created_at": "<time@before step 83>",
-          "agent_content_hash": "<hex64:1>",
-          "agent_name": "Tour Worker",
-          "agent_provider": "claude-code"
-        },
-        {
           "id": "<run5>",
           "org_id": "<w>",
           "agent_id": "<agent>",
@@ -4320,8 +4369,8 @@
           "priority": 0,
           "prompt": "Summarise my week.",
           "worker_id": "tour-runner",
-          "heartbeat_at": "<time@step 80>",
-          "finished_at": "<time@step 82>",
+          "heartbeat_at": "<time@step 81>",
+          "finished_at": "<time@step 83>",
           "final_text": "Quiet week.",
           "error": "",
           "attempt_count": 1,
@@ -4332,7 +4381,7 @@
           "launched_by": "<member>",
           "preferred_user_id": "<member>",
           "hosted_after": "<time>",
-          "created_at": "<time@step 78>",
+          "created_at": "<time@step 79>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -4349,8 +4398,8 @@
           "priority": 0,
           "prompt": "Summarise P, flakily.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@before step 75>",
-          "finished_at": "<time@step 75>",
+          "heartbeat_at": "<time@before step 76>",
+          "finished_at": "<time@step 76>",
           "final_text": "",
           "error": "the agent gave up",
           "error_class": "agent_error",
@@ -4360,7 +4409,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@step 74>",
+          "created_at": "<time@step 75>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -4376,7 +4425,7 @@
           "cancel_requested": true,
           "priority": 0,
           "prompt": "Summarise P, flakily.",
-          "finished_at": "<time@before step 77>",
+          "finished_at": "<time@before step 78>",
           "final_text": "",
           "error": "",
           "attempt_count": 2,
@@ -4386,7 +4435,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@step 71>",
+          "created_at": "<time@step 72>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -4402,8 +4451,8 @@
           "priority": 0,
           "prompt": "Summarise P, flakily.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@before step 71>",
-          "finished_at": "<time@step 71>",
+          "heartbeat_at": "<time@before step 72>",
+          "finished_at": "<time@step 72>",
           "final_text": "",
           "error": "the provider hung up",
           "error_class": "worker_error",
@@ -4413,7 +4462,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@before step 71>",
+          "created_at": "<time@before step 72>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -4427,7 +4476,7 @@
           "cancel_requested": true,
           "priority": 0,
           "prompt": "Help with W.",
-          "finished_at": "<time@before step 71>",
+          "finished_at": "<time@before step 72>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -4435,7 +4484,7 @@
           "tokens_in": 0,
           "tokens_out": 0,
           "artifacts_touched": [],
-          "created_at": "<time@step 70>",
+          "created_at": "<time@step 71>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -4449,7 +4498,7 @@
           "priority": 0,
           "prompt": "Tidy W.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@before step 68>",
+          "heartbeat_at": "<time@before step 69>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -4457,7 +4506,7 @@
           "tokens_in": 0,
           "tokens_out": 0,
           "artifacts_touched": [],
-          "created_at": "<time@step 67>",
+          "created_at": "<time@step 68>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -4472,7 +4521,7 @@
           "cancel_requested": true,
           "priority": 0,
           "prompt": "Summarise P for card zero.",
-          "finished_at": "<time@before step 67>",
+          "finished_at": "<time@before step 68>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -4481,7 +4530,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@step 65>",
+          "created_at": "<time@step 66>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -4497,9 +4546,9 @@
           "priority": 0,
           "prompt": "Summarise P again.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@before step 63>",
-          "started_at": "<time@before step 63>",
-          "finished_at": "<time@step 63>",
+          "heartbeat_at": "<time@before step 64>",
+          "started_at": "<time@before step 64>",
+          "finished_at": "<time@step 64>",
           "exit_code": 0,
           "final_text": "P holds two requirements.",
           "error": "",
@@ -4510,7 +4559,7 @@
           "cost_usd": 0.0125,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@before step 55>",
+          "created_at": "<time@before step 56>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -4526,7 +4575,7 @@
           "cancel_requested": true,
           "priority": 0,
           "prompt": "Summarise P.",
-          "finished_at": "<time@step 54>",
+          "finished_at": "<time@step 55>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -4535,7 +4584,7 @@
           "tokens_out": 0,
           "artifacts_touched": [],
           "launched_by": "<owner>",
-          "created_at": "<time@step 50>",
+          "created_at": "<time@step 51>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -4551,11 +4600,34 @@
           "priority": 0,
           "prompt": "Summarise P.",
           "worker_id": "tour-box",
-          "heartbeat_at": "<time@step 41>",
-          "started_at": "<time@step 20>",
-          "finished_at": "<time@step 42>",
+          "heartbeat_at": "<time@step 42>",
+          "started_at": "<time@step 21>",
+          "finished_at": "<time@step 43>",
           "final_text": "",
           "error": "cancelled on request",
+          "attempt_count": 1,
+          "max_attempts": 3,
+          "tokens_in": 0,
+          "tokens_out": 0,
+          "artifacts_touched": [],
+          "launched_by": "<owner>",
+          "created_at": "<time@step 11>",
+          "agent_content_hash": "<hex64:1>",
+          "agent_name": "Tour Worker",
+          "agent_provider": "claude-code"
+        },
+        {
+          "id": "<chat>",
+          "org_id": "<w>",
+          "agent_id": "<agent>",
+          "project_id": "<p>",
+          "status": "cancelled",
+          "cancel_requested": true,
+          "priority": 0,
+          "prompt": "What is in P?",
+          "finished_at": "<time@before step 11>",
+          "final_text": "",
+          "error": "",
           "attempt_count": 1,
           "max_attempts": 3,
           "tokens_in": 0,
@@ -4575,7 +4647,7 @@
       }
     },
     {
-      "n": 102,
+      "n": 103,
       "title": "the member's runner key claims: 204, run_o, which no one launched, is in P, where the member has no role",
       "actor": "runner",
       "route": "POST /api/v1/agent-runs/claim",
@@ -4600,7 +4672,7 @@
       "events": []
     },
     {
-      "n": 103,
+      "n": 104,
       "title": "the member's runner key reads P's repository connections: P's guard, the 404 the member's own session gets",
       "actor": "runner",
       "route": "GET /api/v1/projects/{id}/repo-connections",
@@ -4624,7 +4696,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 104,
+      "n": 105,
       "title": "the member's runner key lists W's projects: none, the member has a role in neither P nor K",
       "actor": "runner",
       "route": "GET /api/v1/projects",
@@ -4646,7 +4718,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 105,
+      "n": 106,
       "title": "the member's runner key claims run_o, now that the member views P",
       "actor": "runner",
       "route": "POST /api/v1/agent-runs/claim",
@@ -4668,7 +4740,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_o>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:5>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P for whoever can.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 105>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 102>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:9>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_o>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:5>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Summarise P for whoever can.\",\"worker_id\":\"tour-runner\",\"heartbeat_at\":\"<time@step 106>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 103>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:9>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4716,7 +4788,7 @@
           "priority": 0,
           "prompt": "Summarise P for whoever can.",
           "worker_id": "tour-runner",
-          "heartbeat_at": "<time@step 105>",
+          "heartbeat_at": "<time@step 106>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -4724,7 +4796,7 @@
           "tokens_in": 0,
           "tokens_out": 0,
           "artifacts_touched": [],
-          "created_at": "<time@before step 102>",
+          "created_at": "<time@before step 103>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"
@@ -4747,7 +4819,7 @@
       ]
     },
     {
-      "n": 106,
+      "n": 107,
       "title": "the member's runner key lists W's projects: P, which the member views",
       "actor": "runner",
       "route": "GET /api/v1/projects",
@@ -4780,7 +4852,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 107,
+      "n": 108,
       "title": "the member's runner key claims: 204, run_n, which no one launched, has no project, so only W's admins see it",
       "actor": "runner",
       "route": "POST /api/v1/agent-runs/claim",
@@ -4805,7 +4877,7 @@
       "events": []
     },
     {
-      "n": 108,
+      "n": 109,
       "title": "the owner's runner key claims run_n: W's admin sees every run of W",
       "actor": "own",
       "route": "POST /api/v1/agent-runs/claim",
@@ -4824,7 +4896,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_n>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy W for whoever can.\",\"worker_id\":\"tour-own\",\"heartbeat_at\":\"<time@step 108>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 107>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:10>\"}"
+        "{\"agent\":{\"id\":\"<agent>\",\"org_id\":\"<w>\",\"slug\":\"tour-worker\",\"name\":\"Tour Worker\",\"description\":\"An agent of the S5d tour.\",\"provider\":\"claude-code\",\"model\":\"\",\"effort\":\"\",\"allowed_tools\":[\"get_artifact\"],\"write_mode\":\"direct\",\"repo_access\":false,\"max_turns\":50,\"timeout_seconds\":1800,\"config\":{},\"system_prompt\":\"You answer in one line \\u0026 in plain text, never in \\u003chtml\\u003e.\",\"locked\":false,\"archived\":false,\"parent_agent_id\":null,\"reports_to\":\"\",\"group_name\":\"\",\"sort_order\":0,\"file_path\":\"<tmp>/data/agents/<w>/tour-worker.md\",\"content_hash\":\"<hex64:1>\",\"synced_at\":\"<time@before step 1>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\"},\"auth\":{\"mode\":\"user-account\"},\"run\":{\"id\":\"<run_n>\",\"org_id\":\"<w>\",\"agent_id\":\"<agent>\",\"status\":\"claimed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Tidy W for whoever can.\",\"worker_id\":\"tour-own\",\"heartbeat_at\":\"<time@step 109>\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@before step 108>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"Tour Worker\",\"agent_provider\":\"claude-code\"},\"run_token\":\"<hex64:10>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -4870,7 +4942,7 @@
           "priority": 0,
           "prompt": "Tidy W for whoever can.",
           "worker_id": "tour-own",
-          "heartbeat_at": "<time@step 108>",
+          "heartbeat_at": "<time@step 109>",
           "final_text": "",
           "error": "",
           "attempt_count": 1,
@@ -4878,7 +4950,7 @@
           "tokens_in": 0,
           "tokens_out": 0,
           "artifacts_touched": [],
-          "created_at": "<time@before step 107>",
+          "created_at": "<time@before step 108>",
           "agent_content_hash": "<hex64:1>",
           "agent_name": "Tour Worker",
           "agent_provider": "claude-code"

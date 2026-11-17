@@ -514,7 +514,7 @@ export const ReviewQueue: React.FC = () => {
       <div className="ov-page-head">
         {/* On a phone the top bar names the page; the heading stays for a
             screen reader. */}
-        <h2 className={phone ? 'sr-only' : undefined}>Review Queue</h2>
+        <h2 className={phone ? 'sr-only' : 'ov-page-title'}>Review Queue</h2>
         <span className="ov-page-sub">
           {inReview.length} in review · {suspectLinks.length} suspect link{suspectLinks.length === 1 ? '' : 's'}
         </span>

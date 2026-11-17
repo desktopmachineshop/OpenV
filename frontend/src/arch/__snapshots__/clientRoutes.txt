@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 325
-  axios instance calls: 315 (DELETE 37, GET 130, HEAD 1, POST 103, PUT 44)
+call sites: 356
+  axios instance calls: 346 (DELETE 42, GET 136, HEAD 1, POST 111, PUT 56)
   helper calls (a function that passes its argument to the instance): 1
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
   needing normalisation: 6 (3 of them axios calls)
-distinct METHOD PATH lines below: 324; server routes reached: 324
+distinct METHOD PATH lines below: 351; server routes reached: 351
 
 GET     /api/v1/admin/metrics/usage                                       adminAPI.usage
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
@@ -193,6 +193,10 @@ DELETE  /api/v1/orgs/{id}/my-runner-key                                   myRunn
 GET     /api/v1/orgs/{id}/my-runner-key                                   myRunnerKeyAPI.get
 POST    /api/v1/orgs/{id}/my-runner-key                                   myRunnerKeyAPI.create
 PUT     /api/v1/orgs/{id}/plan                                            adminAPI.setPlan
+GET     /api/v1/orgs/{id}/plan-calendar                                   planAPI.workspaceCalendar
+PUT     /api/v1/orgs/{id}/plan-calendar                                   planAPI.setWorkspaceWorkingDays
+POST    /api/v1/orgs/{id}/plan-calendar/time-off                          planAPI.addTimeOff
+DELETE  /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}              planAPI.removeTimeOff
 GET     /api/v1/orgs/{id}/quality-rules                                   qualityRulesAPI.forWorkspace
 PUT     /api/v1/orgs/{id}/quality-rules                                   qualityRulesAPI.setForWorkspace
 POST    /api/v1/orgs/{id}/restore                                         orgsAPI.restore
@@ -207,6 +211,8 @@ GET     /api/v1/orgs/{id}/worker-keys                                     worker
 POST    /api/v1/orgs/{id}/worker-keys                                     workerKeysAPI.create
 DELETE  /api/v1/orgs/{id}/worker-keys/{keyId}                             workerKeysAPI.revoke
 GET     /api/v1/orgs/{id}/worker-status                                   workerStatusAPI.get
+GET     /api/v1/plan/master                                               planAPI.master
+GET     /api/v1/plan/mine                                                 planAPI.mine
 GET     /api/v1/projects                                                  projectAPI.list
 POST    /api/v1/projects                                                  projectAPI.create
 POST    /api/v1/projects/import                                           projectAPI.import
@@ -238,6 +244,20 @@ DELETE  /api/v1/projects/{id}/members/{userId}                            member
 PUT     /api/v1/projects/{id}/members/{userId}                            membersAPI.setRole
 GET     /api/v1/projects/{id}/parties                                     projectAPI.parties
 PUT     /api/v1/projects/{id}/parties                                     projectAPI.setParties
+GET     /api/v1/projects/{id}/plan                                        planAPI.get
+POST    /api/v1/projects/{id}/plan/baselines                              planAPI.saveBaseline
+DELETE  /api/v1/projects/{id}/plan/baselines/{baselineId}                 planAPI.deleteBaseline
+GET     /api/v1/projects/{id}/plan/export                                 planAPI.export
+POST    /api/v1/projects/{id}/plan/import                                 planAPI.importMSProject
+POST    /api/v1/projects/{id}/plan/level                                  planAPI.level
+POST    /api/v1/projects/{id}/plan/milestones                             planAPI.createMilestone
+DELETE  /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAPI.removeMilestone
+PUT     /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAPI.updateMilestone
+POST    /api/v1/projects/{id}/plan/recalculate                            planAPI.recalculate
+PUT     /api/v1/projects/{id}/plan/release-milestones/{releaseId}         planAPI.setReleaseCriteria, planAPI.setReleaseWaitsFor
+POST    /api/v1/projects/{id}/plan/reschedule-remaining                   planAPI.rescheduleRemaining
+PUT     /api/v1/projects/{id}/plan/resources/{assigneeId}                 planAPI.removePlanned, planAPI.setResource, planAPI.staffPlanned
+PUT     /api/v1/projects/{id}/plan/settings                               planAPI.setSettings, planAPI.setWorkingDays
 GET     /api/v1/projects/{id}/priority-detection                          projectAPI.priorityDetection
 PUT     /api/v1/projects/{id}/priority-detection                          projectAPI.setPriorityDetection
 GET     /api/v1/projects/{id}/profile                                     productProfileAPI.get
@@ -331,7 +351,14 @@ DELETE  /api/v1/work-items/{id}                                           workIt
 GET     /api/v1/work-items/{id}                                           workItemsAPI.get
 PUT     /api/v1/work-items/{id}                                           workItemsAPI.update
 POST    /api/v1/work-items/{id}/comments                                  workItemsAPI.comment
+DELETE  /api/v1/work-items/{id}/external-links/{otherId}                  planAPI.unrelateExternal
+PUT     /api/v1/work-items/{id}/external-links/{otherId}                  planAPI.relateExternal
 POST    /api/v1/work-items/{id}/move                                      workItemsAPI.move
+DELETE  /api/v1/work-items/{id}/relationships/{otherId}                   planAPI.unrelate
+PUT     /api/v1/work-items/{id}/relationships/{otherId}                   planAPI.relate
+PUT     /api/v1/work-items/{id}/schedule                                  planAPI.schedule
+GET     /api/v1/work-items/{id}/todos                                     planAPI.listTodos
+POST    /api/v1/work-items/{id}/todos                                     planAPI.addTodo
 
 ## Normalised call sites (the path the client writes is not literally a route template)
   attachmentAPI.fetchFile: ${version ? `?version=${version}` : ''} is a query-string suffix

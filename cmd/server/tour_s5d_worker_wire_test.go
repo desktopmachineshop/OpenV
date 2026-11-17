@@ -220,6 +220,10 @@ func workerWireTour(tr *tour) {
 		elsewhere, launch, agent, jsonBody(`{"project_id":"{{p}}","prompt":"Summarise P."}`))
 	tr.step("launch on a card id that is not a UUID: the database's error, passed through (Q19)", o, launch, agent,
 		jsonBody(`{"project_id":"{{p}}","prompt":"Summarise P.","work_item_id":"not-a-card"}`))
+	tr.step("a chat with tour-worker in P is not a task: 201, queued, and no card on the board", o, launch, agent,
+		jsonBody(`{"project_id":"{{p}}","prompt":"What is in P?","conversation":true}`)).capture("chat", "/id")
+	tr.setup("the chat is cancelled, so the worker's claims below are of the runs that follow", o,
+		"POST /api/v1/agent-runs/{id}/cancel", at("id", "{{chat}}"))
 	first := tr.step("launch tour-worker in P: 201, queued, attempt 1 of 3, the agent's snapshot, and the board's "+
 		"tracking card, which the hooks create inside the request", o, launch, agent,
 		jsonBody(`{"project_id":"{{p}}","prompt":"Summarise P."}`),

@@ -15,6 +15,6 @@
       <li><b>Raw payload</b>, which opens the exact data the agent sent;</li>
       <li><b>from its run</b>, which opens the run that made the proposal beside the list.</li>
     </ul>
-    <p>Add an optional review note, then <b>Approve</b> or <b>Reject</b>. Tick several cards (or <b>Select all</b>) to approve or reject them together with one note.</p>
+    <p><b>Approve</b> takes one press. <b>Reject</b> first asks why: a note field opens, and pressing <b>Reject</b> again rejects with whatever you wrote, or nothing. <b>Add a note</b> opens the same field for an approval. To decide several together, press <b>Select several</b>: each card gets a tick, and a bar offers <b>Select all</b>, one note and <b>Approve Selected</b> or <b>Reject Selected</b>.</p>
   </conbody>
 </concept>

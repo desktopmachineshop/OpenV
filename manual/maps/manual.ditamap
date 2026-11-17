@@ -24,7 +24,8 @@
     <topicref href="../topics/projects/deleting-a-project.dita"/>
   </topicref>
   <topicref href="../topics/product-overview/index.dita">
-    <topicref href="../topics/product-overview/quick-links.dita"/>
+    <topicref href="../topics/product-overview/where-the-project-sits.dita"/>
+    <topicref href="../topics/product-overview/where-the-project-stands.dita"/>
     <topicref href="../topics/product-overview/product-definition.dita"/>
     <topicref href="../topics/product-overview/success-metrics.dita"/>
     <topicref href="../topics/product-overview/constraints.dita"/>
@@ -118,6 +119,29 @@
     <topicref href="../topics/releases/targeting-requirements.dita"/>
     <topicref href="../topics/releases/release-progress.dita"/>
     <topicref href="../topics/releases/the-burn-up.dita"/>
+    <topicref href="../topics/releases/releases-on-the-plan.dita"/>
+  </topicref>
+  <topicref href="../topics/gantt/index.dita">
+    <topicref href="../topics/gantt/reading-the-chart.dita"/>
+    <topicref href="../topics/gantt/scheduling-tasks.dita"/>
+    <topicref href="../topics/gantt/tasks-with-sub-tasks.dita"/>
+    <topicref href="../topics/gantt/listing-ordering-and-editing-tasks.dita"/>
+    <topicref href="../topics/gantt/working-days.dita"/>
+    <topicref href="../topics/gantt/duration-and-effort.dita"/>
+    <topicref href="../topics/gantt/the-critical-path.dita"/>
+    <topicref href="../topics/gantt/relationships-between-tasks.dita"/>
+    <topicref href="../topics/gantt/automatic-scheduling-and-constraints.dita"/>
+    <topicref href="../topics/gantt/resources-cost-and-levelling.dita"/>
+    <topicref href="../topics/gantt/tracking-progress-against-a-baseline.dita"/>
+    <topicref href="../topics/gantt/progress-from-to-dos-and-sub-tasks.dita"/>
+    <topicref href="../topics/gantt/milestones-and-their-criteria.dita"/>
+    <topicref href="../topics/gantt/assigning-tasks-to-a-milestone.dita"/>
+    <topicref href="../topics/gantt/release-milestones.dita"/>
+    <topicref href="../topics/gantt/exporting-the-plan.dita"/>
+    <topicref href="../topics/gantt/importing-from-microsoft-project.dita"/>
+    <topicref href="../topics/gantt/other-views-of-the-plan.dita"/>
+    <topicref href="../topics/gantt/all-projects-and-links-between-them.dita"/>
+    <topicref href="../topics/gantt/on-a-phone.dita"/>
   </topicref>
   <topicref href="../topics/project-pages/index.dita">
     <topicref href="../topics/project-pages/home.dita"/>
@@ -131,6 +155,7 @@
     <topicref href="../topics/org-settings/members.dita"/>
     <topicref href="../topics/org-settings/limits.dita"/>
     <topicref href="../topics/org-settings/teams.dita"/>
+    <topicref href="../topics/org-settings/plan-calendar.dita"/>
     <topicref href="../topics/org-settings/ai-providers-admin-only.dita"/>
     <topicref href="../topics/org-settings/runners.dita"/>
   </topicref>

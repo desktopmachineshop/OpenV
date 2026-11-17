@@ -167,7 +167,7 @@ export const TableView: React.FC<TableViewProps> = ({
         aria-label={`Actions for ${artifact.title}`}
         title="Actions: create, move, copy (or right-click the row)"
         onClick={openMenu(artifact)}
-        style={{ width: 28, height: 28, padding: 0, border: 'none', borderRadius: 4, background: 'transparent', color: 'var(--text-muted)', fontSize: 16, cursor: 'pointer', justifySelf: 'end' }}
+        style={{ width: 28, height: 28, padding: 0, border: 'none', borderRadius: 4, background: 'transparent', color: 'var(--text-muted)', fontSize: 16, cursor: 'pointer', justifySelf: 'end', position: 'sticky', right: 0, backgroundColor: 'inherit' }}
       >
         ⋯
       </button>
@@ -234,6 +234,7 @@ export const TableView: React.FC<TableViewProps> = ({
   return (
     <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }} data-help-key="requirements.views">
       <div
+        data-page-content=""
         style={{
           flex: 1,
           minHeight: 0,

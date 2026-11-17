@@ -13,6 +13,7 @@ import { ProposalReviewPanel } from '../components/agents/ProposalReviewPanel';
 import { RunnerConnectPrompt } from '../components/RunnerConnectPrompt';
 import { ErrorBanner, buttonStyle, chipStyle } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
+import { useUiRefresh } from '../hooks/useUiRefresh';
 
 // Cap the 5s poll: this page re-fetches every run in the project on a timer,
 // which is unbounded as run history grows. 200 covers the visible table; the
@@ -60,6 +61,7 @@ export const AgentRunsPage: React.FC = () => {
   // A phone shows the three columns that identify a run; the rest is in the
   // detail. A compact viewport opens that detail as a sheet over the list.
   const { isPhone, isCompact } = useViewport();
+  const refresh = useUiRefresh();
 
   useEffect(() => {
     if (!projectId) return;
@@ -142,12 +144,12 @@ export const AgentRunsPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="ov-gutter" style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <div
         data-help-key="agent-runs.list"
         style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}
       >
-        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: 20, fontWeight: 700 }}>Runs</h2>
+        <h2 className="ov-page-title" style={{ color: 'var(--text)', margin: 0, fontSize: 20, fontWeight: 700 }}>Runs</h2>
         <button
           data-help-key="agent-runs.approvals"
           onClick={() => setShowProposals(!showProposals)}
@@ -177,7 +179,7 @@ export const AgentRunsPage: React.FC = () => {
           </span>
         )}
         <div style={{ flex: 1 }} />
-        <RunStatusFilter value={statusFilter} onChange={setStatusFilter} />
+        <RunStatusFilter value={statusFilter} onChange={setStatusFilter} chips={refresh} />
       </div>
 
       <ErrorBanner message={error} onDismiss={() => setRaised(null)} style={{ marginBottom: 8 }} />
@@ -259,6 +261,7 @@ export const AgentRunsPage: React.FC = () => {
             selectedRunId={selectedRunId}
             onSelect={selectRun}
             isPhone={isPhone}
+            rows={refresh && isPhone}
             emptyText="No runs yet. Launch an agent from the Agents page or the board."
           />
         </div>

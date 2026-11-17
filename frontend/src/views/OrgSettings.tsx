@@ -10,6 +10,7 @@ import { OrgTeamsTab } from '../components/org/OrgTeamsTab';
 import { OrgProvidersTab } from '../components/org/OrgProvidersTab';
 import { WorkerKeysTab } from '../components/org/WorkerKeysTab';
 import { OrgUsageTab } from '../components/org/OrgUsageTab';
+import { OrgPlanCalendarTab } from '../components/org/OrgPlanCalendarTab';
 import { Chip, ErrorBanner, SettingsLayout } from '../components/ui';
 import { QualityRulesEditor, QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
 import { useViewport } from '../hooks/useViewport';
@@ -29,6 +30,7 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'providers', label: 'AI Providers' },
   { key: 'worker-keys', label: 'Runners' },
   { key: 'quality', label: 'Quality rules' },
+  { key: 'plan', label: 'Plan calendar' },
   { key: 'usage', label: 'Usage' },
 ];
 
@@ -426,7 +428,8 @@ export const OrgSettings: React.FC = () => {
                   ? 'Stable: new features turn on for this workspace at the monthly release. Fixes arrive with every nightly.'
                   : 'Nightly: every release reaches this workspace the day it ships.'}
                 {org.release_channel_locked && ' This plan always runs the nightly channel.'}
-                {currentRelease && ` The platform is on release ${currentRelease}.`}
+                {currentRelease && ` The platform is on release ${currentRelease}.`}{' '}
+                <Link to="/whats-new">What's new in each release</Link>
               </p>
               {isAdmin && !org.release_channel_locked ? (
                 <label style={{ fontSize: 13, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
@@ -616,6 +619,7 @@ export const OrgSettings: React.FC = () => {
           </div>
         )}
 
+        {tab === 'plan' && <OrgPlanCalendarTab org={org} isAdmin={isAdmin} currentUserId={currentUser?.id} />}
         {tab === 'usage' && <OrgUsageTab org={org} />}
         </div>
       </SettingsLayout>

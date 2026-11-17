@@ -13,6 +13,31 @@
       "requests": ["GET /api/v1/projects"]
     },
     {
+      "name": "create_project",
+      "read_only": false,
+      "description": "Create a project in the workspace. Give parent_project_id to file it under another project of the same workspace, so its requirements can refine that project's and its verification rolls up there. Works with a runner key and for a signed-in person; an agent run acts only inside its own project and is refused.",
+      "input_schema": {
+        "properties": {
+          "description": {
+            "description": "Optional description: what the project defines",
+            "type": "string"
+          },
+          "name": {"description": "Project name", "type": "string"},
+          "parent_project_id": {
+            "description": "Optional ID of the project this one belongs under",
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/projects", "PUT /api/v1/projects/{id}"],
+      "requests": [
+        "POST /api/v1/projects {\"description\":\"The brake assembly under the landing gear.\",\"name\":\"Brake assembly\"}",
+        "PUT /api/v1/projects/11111111-1111-4111-8111-111111111111 {\"parent_project_id\":\"11111111-1111-4111-8111-111111111111\"}"
+      ]
+    },
+    {
       "name": "list_artifacts",
       "read_only": true,
       "description": "List artifacts in a project, optionally filtered by type and by owner (the \"owner\" attribute: a person, team or supplier).",
@@ -727,6 +752,295 @@
       },
       "calls": ["POST /api/v1/todos/{id}/done"],
       "requests": ["POST /api/v1/todos/cccccccc-cccc-4ccc-8ccc-cccccccccccc/done {\"done\":true}"]
+    },
+    {
+      "name": "get_plan",
+      "read_only": true,
+      "description": "Read a project's plan: every board task in outline order with its start and due dates, parent task, progress (from its to-dos and sub-tasks), its duration and float in working days, its effort in days, whether it is on the critical path (the chain of tasks that decides the plan's end, which may still have float) and the day its end can slip to before it pushes the next task, its relationships to the tasks that drive it (FS, SS or FF) and whether it is late; the milestones in date order, each target release among them, with their completion criteria measured against the project's artifacts; and every metric a criterion can name with its current value.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["GET /api/v1/projects/{id}/plan"],
+      "requests": ["GET /api/v1/projects/11111111-1111-4111-8111-111111111111/plan"]
+    },
+    {
+      "name": "schedule_work_item",
+      "read_only": false,
+      "description": "Place a board task on the plan: its start date and due date (YYYY-MM-DD), its duration in working days and effort in days (a task with sub-tasks takes all four from them and refuses them), its parent task (making it a sub-task) and its relationships to the tasks that drive it. A relationship is written \"<work item id>:<type>\", where the type is FS (finish to start: this task starts after that one finishes), SS (start to start: it starts no earlier than that one starts) or FF (finish to finish: it finishes no earlier than that one finishes); with no type it is FS. A task may have several, so two tasks can together drive when it starts. Only the arguments you pass change; pass an empty string to clear a date or the parent, and an empty relationships list to clear them. Answers the task's row of the plan.",
+      "input_schema": {
+        "properties": {
+          "actual_cost": {
+            "description": "What the task has really cost so far; \"-1\" goes back to its earned share of the planned cost",
+            "type": "string"
+          },
+          "actual_finish": {
+            "description": "The day work really finished, YYYY-MM-DD; an empty string clears it",
+            "type": "string"
+          },
+          "actual_start": {
+            "description": "The day work really started, YYYY-MM-DD; an empty string clears it",
+            "type": "string"
+          },
+          "after_id": {
+            "description": "Work item ID of the sibling task this one goes straight after in the outline; an empty string makes it the first of its siblings. Siblings are otherwise listed by start date",
+            "type": "string"
+          },
+          "assignments": {
+            "description": "Who the task is assigned to on the plan, each \"user:<id>\" or \"agent:<id>\", with an optional share of their time after it as in \"user:<id>:50\" (percent; 100 when left out); replaces the task's assignments, and an empty list leaves it to the board's assignee",
+            "items": {"type": "string"},
+            "type": "array"
+          },
+          "constraint_date": {"description": "The constraint's date, YYYY-MM-DD", "type": "string"},
+          "constraint_type": {
+            "description": "A date constraint: \"asap\" (none), \"alap\" (as late as possible), \"snet\"/\"snlt\" (start no earlier/later than), \"fnet\"/\"fnlt\" (finish no earlier/later than), \"mso\"/\"mfo\" (must start/finish on). Every one but asap and alap needs constraint_date",
+            "type": "string"
+          },
+          "deadline": {
+            "description": "The day the task should be finished by, YYYY-MM-DD; it moves nothing, and the plan flags a task that misses it. An empty string clears it",
+            "type": "string"
+          },
+          "depends_on": {
+            "description": "Earlier form of relationships: work item IDs, each finish to start unless it already has a type",
+            "items": {"type": "string"},
+            "type": "array"
+          },
+          "due_date": {
+            "description": "Due date, YYYY-MM-DD; an empty string clears it",
+            "type": "string"
+          },
+          "duration_days": {
+            "description": "How long the task runs, in whole working days counting its first and last; the task keeps it, so a start date sent alone moves the due date and a due date sent alone moves the start. \"0\" clears it",
+            "type": "string"
+          },
+          "effort_days": {
+            "description": "The work in the task, in person-days (may be a decimal); \"0\" clears it",
+            "type": "string"
+          },
+          "effort_driven": {
+            "description": "\"true\" lets the task's effort and the people on it decide its duration",
+            "type": "string"
+          },
+          "elapsed": {
+            "description": "\"true\" makes the duration count calendar days, weekends and holidays included (a cure, a delivery); \"false\" counts working days",
+            "type": "string"
+          },
+          "fixed_cost": {
+            "description": "What the task costs beyond the time of the people on it; \"0\" clears it",
+            "type": "string"
+          },
+          "id": {"description": "Work item ID", "type": "string"},
+          "milestone": {
+            "description": "Key of the milestone the task is assigned to, as get_plan lists it (a milestone's id, or \"release:<release id>\"); an empty string takes it off. The milestone then counts the task among its tasks done",
+            "type": "string"
+          },
+          "mode": {
+            "description": "The task's own scheduling mode: \"manual\" (it stays where it is put), \"auto\" (the platform places it from its relationships and constraint), or an empty string to take the plan's",
+            "type": "string"
+          },
+          "parent_id": {
+            "description": "Work item ID of the parent task; an empty string makes it a top-level task",
+            "type": "string"
+          },
+          "percent_complete": {
+            "description": "How complete the task is, \"0\" to \"100\", in place of the progress counted from its to-dos and sub-tasks; \"-1\" goes back to the counted progress",
+            "type": "string"
+          },
+          "relationships": {
+            "description": "The tasks that drive this one, each \"<work item id>:FS\", \":SS\", \":FF\" or \":SF\", with an optional offset after it as in \"<id>:SS:5\" (working days; negative leads), \"<id>:FS:3ed\" (elapsed days) or \"<id>:SS:50%\" (of the driving task's duration); replaces the task's relationships",
+            "items": {"type": "string"},
+            "type": "array"
+          },
+          "start_date": {
+            "description": "Start date, YYYY-MM-DD; an empty string clears it",
+            "type": "string"
+          }
+        },
+        "required": ["id"],
+        "type": "object"
+      },
+      "calls": ["PUT /api/v1/work-items/{id}/schedule"],
+      "requests": [
+        "PUT /api/v1/work-items/88888888-8888-4888-8888-888888888888/schedule {\"actual_cost\":1200,\"actual_finish\":\"2027-02-01\",\"actual_start\":\"2027-01-12\",\"after_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"assignments\":[{\"id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"user\",\"units\":50},{\"id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"agent\"}],\"constraint_date\":\"2027-01-11\",\"constraint_type\":\"snet\",\"deadline\":\"2027-02-15\",\"depends_on\":[\"99999999-9999-4999-8999-999999999999\"],\"due_date\":\"2027-01-31\",\"duration_days\":21,\"effort_days\":7.5,\"effort_driven\":true,\"elapsed\":true,\"fixed_cost\":250,\"milestone\":\"release:99999999-9999-4999-8999-999999999999\",\"mode\":\"auto\",\"parent_id\":\"99999999-9999-4999-8999-999999999999\",\"percent_complete\":40,\"relationships\":[{\"lag_days\":5,\"lag_unit\":\"ed\",\"task_id\":\"99999999-9999-4999-8999-999999999999\",\"type\":\"SS\"},{\"lag_days\":50,\"lag_unit\":\"%\",\"task_id\":\"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb\",\"type\":\"SF\"}],\"start_date\":\"2027-01-11\"}"
+      ]
+    },
+    {
+      "name": "recalculate_plan",
+      "read_only": false,
+      "description": "Recalculate a project's plan: move each task that another task drives, or that a constraint holds to a date, to the dates those ask for. A task keeps its duration; a task nothing places, and a task that is done, stay where they are. Answers how many tasks moved. A manual plan's tasks move only on this call; an automatic plan's are placed after every change.",
+      "input_schema": {
+        "properties": {
+          "only_later": {
+            "description": "\"true\" treats relationships as minimums: a task already on or after the day asked is left where it is",
+            "type": "string"
+          },
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/projects/{id}/plan/recalculate"],
+      "requests": [
+        "POST /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/recalculate {\"only_later\":true}"
+      ]
+    },
+    {
+      "name": "set_plan_calendar",
+      "read_only": false,
+      "description": "Set a project's plan holidays, its critical threshold and how it is scheduled. holidays replaces the plan's days off (days it does not work whatever the weekday), each \"YYYY-MM-DD\" or \"YYYY-MM-DD:Name\"; critical_slack_days is the float, in working days, at or below which a task counts as critical (\"0\" by default); scheduling_mode \"auto\" has the platform place every task from its relationships and constraints after each change, \"manual\" (the default) leaves tasks where they are put. An argument left out stays as it is. Answers every setting as stored.",
+      "input_schema": {
+        "properties": {
+          "active_baseline_id": {
+            "description": "ID of the baseline variance and earned value are measured against, as get_plan lists under baselines; an empty string means the newest",
+            "type": "string"
+          },
+          "budget": {"description": "What the plan may cost; \"0\" clears it", "type": "string"},
+          "critical_slack_days": {
+            "description": "Float in working days at or below which a task is critical, \"0\" to \"365\"",
+            "type": "string"
+          },
+          "currency": {
+            "description": "The money costs are in, as up to three letters, e.g. \"GBP\"",
+            "type": "string"
+          },
+          "holidays": {
+            "description": "The plan's holidays, each \"YYYY-MM-DD\" or \"YYYY-MM-DD:Name\"; an empty list clears them",
+            "items": {"type": "string"},
+            "type": "array"
+          },
+          "multiple_critical_paths": {
+            "description": "\"true\" gives each chain of tasks a critical path of its own, to its own last task",
+            "type": "string"
+          },
+          "project_finish": {
+            "description": "The day the plan must finish by, YYYY-MM-DD: float is counted to it. An empty string clears it",
+            "type": "string"
+          },
+          "project_id": {"description": "Project ID", "type": "string"},
+          "project_start": {
+            "description": "The day the plan starts, YYYY-MM-DD: an automatic task starts no earlier. An empty string clears it",
+            "type": "string"
+          },
+          "schedule_from": {
+            "description": "\"start\" (tasks as soon as possible) or \"finish\" (automatic tasks as late as possible)",
+            "type": "string"
+          },
+          "scheduling_mode": {
+            "description": "\"manual\" or \"auto\": the mode of every task that has none of its own",
+            "type": "string"
+          },
+          "status_date": {
+            "description": "The day progress is reported as of, YYYY-MM-DD: earned value and behind-schedule marks are measured at it. An empty string means today",
+            "type": "string"
+          }
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["PUT /api/v1/projects/{id}/plan/settings"],
+      "requests": [
+        "PUT /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/settings {\"active_baseline_id\":\"99999999-9999-4999-8999-999999999999\",\"budget\":25000,\"critical_slack_days\":2,\"currency\":\"GBP\",\"holidays\":[{\"date\":\"2027-12-27\",\"name\":\"Shutdown\"},{\"date\":\"2027-01-01\",\"name\":\"\"}],\"multiple_critical_paths\":true,\"project_finish\":\"2027-12-17\",\"project_start\":\"2027-01-04\",\"schedule_from\":\"finish\",\"scheduling_mode\":\"auto\",\"status_date\":\"2027-03-05\"}"
+      ]
+    },
+    {
+      "name": "set_plan_resource",
+      "read_only": false,
+      "description": "Set what a day of a person's or an agent's time costs on a project, and the share of a working day they can give it. The plan costs each task from its people's rates, and reports anyone asked for more than their capacity. get_plan lists who can be assigned under people.",
+      "input_schema": {
+        "properties": {
+          "capacity": {
+            "description": "The percentage of a working day they can give the project; \"100\" when left out",
+            "type": "string"
+          },
+          "daily_rate": {
+            "description": "What a day of their time costs, in the plan's currency",
+            "type": "string"
+          },
+          "id": {"description": "The user's or the agent's ID", "type": "string"},
+          "project_id": {"description": "Project ID", "type": "string"},
+          "type": {"description": "\"user\" or \"agent\"", "type": "string"}
+        },
+        "required": ["project_id", "type", "id", "daily_rate"],
+        "type": "object"
+      },
+      "calls": ["PUT /api/v1/projects/{id}/plan/resources/{assigneeId}"],
+      "requests": [
+        "PUT /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/resources/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb {\"capacity\":80,\"daily_rate\":400,\"type\":\"user\"}"
+      ]
+    },
+    {
+      "name": "level_plan",
+      "read_only": false,
+      "description": "Level a project's plan: delay tasks until no person or agent is asked for more than their capacity on any day. Where someone is over-allocated the task with the most float is delayed until after the first of the others ends, and the tasks it drives follow. Answers how many tasks moved.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/projects/{id}/plan/level"],
+      "requests": ["POST /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/level"]
+    },
+    {
+      "name": "set_plan_working_days",
+      "read_only": false,
+      "description": "Set which days of the week a project's plan works, as ISO weekday numbers from \"1\" (Monday) to \"7\" (Sunday). A task's duration and float count only working days, so a plan that works Monday to Friday (the default) leaves weekends out. Answers the working days as stored.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"},
+          "working_days": {
+            "description": "ISO weekday numbers, \"1\" (Monday) to \"7\" (Sunday); at least one",
+            "items": {"type": "string"},
+            "type": "array"
+          }
+        },
+        "required": ["project_id", "working_days"],
+        "type": "object"
+      },
+      "calls": ["PUT /api/v1/projects/{id}/plan/settings"],
+      "requests": [
+        "PUT /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/settings {\"working_days\":[1,2,3,4,6]}"
+      ]
+    },
+    {
+      "name": "save_plan_baseline",
+      "read_only": false,
+      "description": "Save a baseline of a project's plan: every task's dates, duration, effort and cost as they stand, kept so get_plan can report how far each task has moved since (its variance) and the plan's earned value. It is a baseline of the project, the same as create_baseline takes: the artifacts and links are recorded with it. Answers the baseline's id and name.",
+      "input_schema": {
+        "properties": {
+          "name": {
+            "description": "What to call it; \"Baseline <today>\" when left out",
+            "type": "string"
+          },
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/projects/{id}/plan/baselines"],
+      "requests": [
+        "POST /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/baselines {\"name\":\"As approved\"}"
+      ]
+    },
+    {
+      "name": "reschedule_remaining_work",
+      "read_only": false,
+      "description": "Move the work that should have started by the plan's status date and has not to that date, and the tasks it drives after it. A task with progress or an actual start, and a task that is done, stay where they are. Answers how many tasks moved.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/projects/{id}/plan/reschedule-remaining"],
+      "requests": [
+        "POST /api/v1/projects/11111111-1111-4111-8111-111111111111/plan/reschedule-remaining"
+      ]
     }
   ],
   "read_only_tool_names": [
@@ -749,6 +1063,7 @@
     "mcp__openv__list_work_items",
     "mcp__openv__get_work_item",
     "mcp__openv__get_work_item_history",
-    "mcp__openv__list_todos"
+    "mcp__openv__list_todos",
+    "mcp__openv__get_plan"
   ]
 }

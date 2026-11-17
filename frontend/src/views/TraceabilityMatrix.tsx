@@ -288,9 +288,9 @@ export const TraceabilityMatrix: React.FC = () => {
     rows.every((r) => !(r.user_need_ids || []).length && !(r.design_ids || []).length && !(r.test_case_ids || []).length && !(r.hazard_ids || []).length);
 
   return (
-    <div style={{ padding: isPhone ? 12 : 16, display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
+    <div className="ov-gutter" style={{ padding: isPhone ? 12 : 16, display: 'flex', flexDirection: 'column', gap: 12, height: '100%' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }} data-help-key="matrix">
-        <h2 style={{ color: 'var(--text)', margin: 0, fontSize: 20 }}>Traceability Matrix</h2>
+        <h2 className="ov-page-title" style={{ color: 'var(--text)', margin: 0, fontSize: 20 }}>Traceability Matrix</h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <label htmlFor="matrix-baseline" style={{ margin: 0, fontSize: 12, color: 'var(--text-muted)' }}>
             Baseline

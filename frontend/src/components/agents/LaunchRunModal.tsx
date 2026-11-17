@@ -22,7 +22,7 @@ export const LaunchRunModal: React.FC<Props> = ({ agent, projectId, onClose, onE
     if (!prompt.trim()) return;
     setLaunching(true);
     try {
-      await agentsAPI.launchRun(agent.slug, { project_id: projectId || undefined, prompt: prompt.trim() });
+      await agentsAPI.launchRun(agent.slug, { conversation: true, project_id: projectId || undefined, prompt: prompt.trim() });
       onClose();
       navigate(`/projects/${projectId}/agent-runs`);
     } catch (err: any) {

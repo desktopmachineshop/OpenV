@@ -79,6 +79,16 @@ var Registry = []Feature{
 	{Key: FeatureFlatAgentTeam, ShippedIn: "0.31.0", Summary: "A flatter team of agents: the V&V Assistant you chat with, a Requirements Auditor, a Test Auditor, a Link Auditor and the interviewer; the agents they replace are archived with their history kept"},
 	{Key: FeatureAdminUsage, ShippedIn: "0.31.0", Summary: "Platform admins see how much each workspace and person uses OpenV, and whether that use is speeding up or slowing down, with workspaces grouped by plan and people filtered by plan or workspace"},
 	{Key: FeatureArtifactReinstate, ShippedIn: "0.31.0", Summary: "Removing an artifact archives it, as it always kept its history: open it from Activity and Reinstate brings it back as it was"},
+	{Key: FeatureGanttPlan, ShippedIn: "0.32.0", Summary: "A Gantt plan under Plan: the board's tasks on a timeline with sub-tasks, dependencies and progress from their to-dos, milestones with completion criteria read from the project's artifacts, each release as a milestone, and the plan exported as PDF, Excel, CSV or JSON"},
+	{Key: FeatureUIRefresh, ShippedIn: "0.33.0", Summary: "One navigation on every screen: Home, Plan, Define, Verify and Agents in the same order down the rail on a computer and along the bottom bar on a phone, the pages of the group you are in listed in a row under the top bar, and each page named once"},
+	{Key: FeaturePlanSizing, ShippedIn: "0.34.0", Summary: "Size a plan before it is staffed: planned resources stand in for people to be chosen later, with a rate and a capacity, and are handed to a person or an agent when one is chosen; and a plan's defaults say how new tasks are scheduled and whether their effort decides their duration"},
+	{Key: FeatureMilestoneLinks, ShippedIn: "0.34.0", Summary: "Milestones that wait for tasks: link tasks to a milestone from its panel or by dragging a link onto its diamond, and date it by the plan, on the day the last of them finishes, or keep its date fixed"},
+	{Key: FeatureWorkspacePlan, ShippedIn: "0.35.0", Summary: "A Plan page for the whole workspace: every project's plan on one chart, a line for each project with its top-level tasks and milestones on a shared time scale"},
+	{Key: FeatureJoinedBaselines, ShippedIn: "0.35.0", Summary: "One baseline for the project: a baseline records the plan with the artifacts, and comparing two shows how far the project got, its dates and its milestones, beside what changed in its definition"},
+	// A runner key has no session, so no channel gates what it does
+	// (featureEnabled): the key is registered so the features endpoint and
+	// What's new list it, and the create itself is unconditional.
+	{Key: FeatureKeyProjects, ShippedIn: "0.36.0", Summary: "Create a project with a runner key: scripts, and AI clients connected through the openv MCP server's new create_project tool, make projects and file them under a parent"},
 }
 
 // Feature keys the code gates on.
@@ -316,6 +326,43 @@ const (
 	// people list filtered by plan or workspace. It is gated on the
 	// admin's active workspace.
 	FeatureAdminUsage = "admin-usage"
+	// FeatureGanttPlan is the project plan (internal/domain/plan): the Plan
+	// page with its Gantt, a task's schedule, sub-tasks, dependencies and
+	// to-dos, milestones and their criteria, and the plan's export. It gates
+	// the page and every write; reading a plan is not gated, and neither is
+	// the board, whose tasks the plan draws.
+	FeatureGanttPlan = "gantt-plan"
+	// FeatureUIRefresh is the refreshed project shell: the menu's groups in
+	// the order Plan, Define, Verify, Agents with Overview and Summary under
+	// Plan, a row of the current group's pages under the top bar, the phone's
+	// bottom bar as Home and those groups, and a page's name shown once.
+	// Frontend only, and only on top of the compact layout.
+	FeatureUIRefresh = "ui-refresh"
+	// FeaturePlanSizing is the plan's planned resources (placeholders for
+	// people to be chosen later, in the Resources dialog and a task's
+	// resources) and its Defaults dialog (the scheduling mode, and whether a
+	// new task's effort decides its duration). The plan's API accepts both
+	// either way; the key gates the interface.
+	FeaturePlanSizing = "plan-sizing"
+	// FeatureMilestoneLinks is the tasks a milestone waits for and its date
+	// by the plan: the Waits for section of a milestone's panel, links
+	// dropped on its diamond, and the lines drawn to it. The plan's API
+	// accepts both either way; the key gates the interface.
+	FeatureMilestoneLinks = "milestone-links"
+	// FeatureWorkspacePlan is the workspace's Plan page (/org/plan), the
+	// chart of every project's plan, and its entry in the workspace's
+	// menu. Frontend only: it reads the master plan the Gantt already has.
+	FeatureWorkspacePlan = "workspace-plan"
+	// FeatureJoinedBaselines is the plan on the Baselines page: where the
+	// project's plan stood on each side of a comparison. The server records
+	// the plan with every baseline either way; the key gates the page.
+	FeatureJoinedBaselines = "joined-baselines"
+	// FeatureKeyProjects is a project created with a runner key (POST
+	// /projects, a template's project, an import) and the MCP server's
+	// create_project tool. Nothing reads the key: a runner key acts for a
+	// workspace whose members may be on either channel, so the creates are
+	// unconditional.
+	FeatureKeyProjects = "key-projects"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

@@ -114,7 +114,7 @@ export const EvidenceView: React.FC = () => {
   if (!projectId) return null;
 
   return (
-    <div style={{ padding: isCompact ? 12 : 24 }} data-help-key="evidence">
+    <div className="ov-gutter" style={{ padding: isCompact ? 12 : 24 }} data-help-key="evidence">
       <div
         style={{
           display: 'flex',
@@ -125,7 +125,7 @@ export const EvidenceView: React.FC = () => {
           marginBottom: 4,
         }}
       >
-        <h2 style={{ margin: 0 }}>Evidence</h2>
+        <h2 className="ov-page-title" style={{ margin: 0 }}>Evidence</h2>
         <button className="button" onClick={() => setCreating(true)}>
           Record a capture
         </button>

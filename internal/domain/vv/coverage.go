@@ -449,12 +449,15 @@ func GapAnalysis(export *snapshot.ProjectExport, coverage *CoverageReport) *GapR
 		}
 	}
 
-	hasVerifies := map[string]bool{}   // FromID of "verifies" links
+	// A test case is an orphan when it checks nothing: it verifies no
+	// requirement and validates no user need. A validation test, linked
+	// to a need by "validates", was counted as an orphan before.
+	hasVerifies := map[string]bool{}   // FromID of "verifies" and "validates" links
 	isDerivedFrom := map[string]bool{} // ToID of "derives-from" links
 	isMitigated := map[string]bool{}   // ToID of "mitigates" links
 	for _, l := range export.Links {
 		switch l.Type {
-		case "verifies":
+		case "verifies", "validates":
 			hasVerifies[l.FromID] = true
 		case "derives-from":
 			isDerivedFrom[l.ToID] = true

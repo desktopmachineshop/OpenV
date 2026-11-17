@@ -80,6 +80,9 @@ first:
 - **Pending invitations** are listed above the Add member form while any are
   outstanding, with who they were sent to and when they expire. *Revoke*
   stops a link working immediately.
+- On a phone the members and the pending invitations are rows, not a
+  table: the person's name and address, then their role and **Remove**
+  (or **Leave**, on your own row) beneath.
 
 On a server where the operator has closed public registration, an invitation
 is the only way in besides single sign-on — the sign-in page then says so
@@ -137,6 +140,10 @@ deleting a team also removes its project access grants.
 > Teams are groups of people. They have nothing to do with agents, which
 > are arranged on the *Agents* page.
 
+## Plan calendar
+
+The days of the week every project's plan in the workspace works, and the days each member is away. An admin sets the working days and anyone's time off; a member records their own time off. See *The plan (Gantt)* → *Working days* for what they do to a plan.
+
 ## AI Providers (admin only)
 
 Per-provider configuration for agent runs:
@@ -163,6 +170,14 @@ Everything that executes agent work:
 - **Worker keys** — shared workspace keys for self-managed always-on workers.
   The plaintext key is shown **once**, right after creation — store it
   safely. Keys can be revoked at any time.
+
+A script, or an AI client that runs the \`openv-mcp\` server with a key, can
+also **create projects** with one, and file a project under a parent. A
+project made with a workspace key has no owner of its own: the workspace's
+admins manage it, and can make someone its owner under **Settings → Access**
+in the project. A project made with a member's personal runner key is that
+member's, as if they had created it in the app. Either way it counts toward
+the workspace's project limit.
 `;
 
 export default content;

@@ -15,6 +15,7 @@ import {
 } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import type { ProjectAction } from './projectActions';
+import { applyPlanAction, scheduleNewTask } from './planActionsApply';
 
 /**
  * Applying a project-action card (projectActions.ts) with the calls the
@@ -174,13 +175,14 @@ export const applyProjectAction = async (ctx: ActionContext, a: ProjectAction): 
 
     case 'task': {
       const artifactIds = a.refs.map((ref) => need(ctx, ref).id);
-      await workItemsAPI.create(projectId, {
+      const created = await workItemsAPI.create(projectId, {
         title: a.title,
         description: a.description,
         artifact_ids: artifactIds,
         ...(a.assignee ? { assignee_type: 'user' as const, assignee_id: await memberNamed(projectId, a.assignee) } : {}),
         ...(a.due ? { due_date: due(a.due) } : {}),
       });
+      await scheduleNewTask(projectId, created.data.id, a.plan);
       return;
     }
 
@@ -203,5 +205,8 @@ export const applyProjectAction = async (ctx: ActionContext, a: ProjectAction): 
       if (a.complete) await vvAPI.updateRun(run.id, 'completed');
       return;
     }
+
+    default:
+      await applyPlanAction(projectId, a);
   }
 };

@@ -1,0 +1,497 @@
+// Package plan implements a project's plan: the Gantt over the board.
+//
+// A plan's tasks are the board's work items (internal/domain/workitems), so
+// a task has one title, one assignee and one due date wherever it is read.
+// The plan adds what a schedule needs and the board does not hold: a start
+// date, a parent task (a sub-task), finish-to-start dependencies between
+// tasks, and which task a to-do (internal/domain/todos) belongs to.
+//
+// Its milestones are of two kinds. A release milestone is a target release
+// (internal/domain/targetreleases) seen on the plan: every release of the
+// project is one, with the release's own name, date and status, so the plan
+// and the Releases page never disagree. A custom milestone is one the team
+// adds ("Definition complete"). Either kind carries completion criteria,
+// each a metric read from the project's artifacts with a target percentage
+// ("user needs addressed: 100%"); see metrics.go.
+//
+// Progress is computed, never typed in: a task's from its to-dos and its
+// sub-tasks, a milestone's from its criteria (build.go).
+package plan
+
+import (
+	"errors"
+	"regexp"
+	"strings"
+	"time"
+
+	"github.com/openv/requirements-platform/internal/domain/targetreleases"
+	"github.com/openv/requirements-platform/internal/domain/todos"
+	"github.com/openv/requirements-platform/internal/domain/workitems"
+)
+
+// DateLayout is how the plan writes a day.
+const DateLayout = "2006-01-02"
+
+// MaxCriteria is the most criteria one milestone may carry.
+const MaxCriteria = 12
+
+// Errors.
+var (
+	ErrNotFound           = errors.New("milestone not found")
+	ErrTaskNotFound       = errors.New("task not found")
+	ErrNameRequired       = errors.New("milestone name is required")
+	ErrInvalidDate        = errors.New("a date must be written YYYY-MM-DD")
+	ErrDateOrder          = errors.New("a task cannot start after it is due")
+	ErrParentSelf         = errors.New("a task cannot be its own sub-task")
+	ErrParentCycle        = errors.New("a task cannot be a sub-task of one of its own sub-tasks")
+	ErrOtherProject       = errors.New("the task is not on this project's board")
+	ErrDependsOnSelf      = errors.New("a task cannot depend on itself")
+	ErrDependencyCycle    = errors.New("these dependencies would make a loop")
+	ErrParentRelationship = errors.New("a task with sub-tasks cannot be linked: link the sub-task that the other task waits for, or that waits for it")
+	ErrInvalidDuration    = errors.New("a duration is a whole number of days, 1 or more")
+	ErrInvalidEffort      = errors.New("effort is a number of days, 0 or more")
+	ErrWorkingDays        = errors.New("working days are weekday numbers from 1 (Monday) to 7 (Sunday), at least one")
+	ErrInvalidLag         = errors.New("a relationship's offset is a whole number, at most 3650 either way, in working days (d), elapsed days (ed) or percent of the driving task's duration (%)")
+	ErrHoliday            = errors.New("a holiday is a date written YYYY-MM-DD with a name of at most 80 characters, and a plan has at most 366")
+	ErrAssignment         = errors.New("a task is assigned to at most 20 users, agents or planned resources, each for 1 to 1000 percent of their time")
+	ErrResource           = errors.New("a resource is a user, an agent or a named planned resource, with a daily rate of 0 or more and a capacity of 1 to 1000 percent")
+	ErrInvalidCost        = errors.New("a cost or a budget is 0 or more, and a currency is at most three letters")
+	ErrTooManyBaselines   = errors.New("a plan keeps at most 11 baselines")
+	ErrJoinedBaseline     = errors.New("this baseline belongs to a project baseline: delete it on the Baselines page")
+	ErrTimeOff            = errors.New("time off runs for at most a year, with a name of at most 80 characters")
+	ErrSameProject        = errors.New("the two tasks are in the same project: relate them on its plan")
+	ErrImport             = errors.New("the file is not a Microsoft Project XML plan this can read")
+	ErrPosition           = errors.New("a task is placed after one of its sibling tasks")
+	ErrPercent            = errors.New("a percentage complete is a whole number from 0 to 100, or -1 to go back to the computed one")
+	ErrSchedulingMode     = errors.New("a scheduling mode is manual or auto, and a plan is scheduled from its start or its finish")
+	ErrConstraint         = errors.New("a constraint is asap, alap, snet, snlt, fnet, fnlt, mso or mfo, and every one but asap and alap needs a date")
+	ErrCriticalSlack      = errors.New("the critical threshold is a whole number of working days from 0 to 365")
+	ErrMilestone          = errors.New("the milestone is not one of this project's")
+	ErrParentDates        = errors.New("a task with sub-tasks takes its dates, duration and effort from them")
+	ErrRelationshipType   = errors.New("a relationship is FS (finish to start), SS (start to start), FF (finish to finish) or SF (start to finish)")
+	ErrUnknownMetric      = errors.New("unknown criterion metric")
+	ErrInvalidTarget      = errors.New("a criterion's target is a percentage from 1 to 100")
+	ErrTooManyCriteria    = errors.New("a milestone carries at most 12 criteria")
+	ErrDuplicateMetric    = errors.New("a milestone names each metric once")
+	ErrMilestoneLink      = errors.New("a milestone waits for at most 50 tasks of its own project that have no sub-tasks, and its date is fixed or by the plan")
+	ErrReleaseMilestone   = errors.New("a release milestone's name and date are its release's: edit the release")
+	ErrUnsupportedFormat  = errors.New("unsupported plan export format")
+)
+
+var datePattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}$`)
+
+// TaskSchedule is what the plan stores about one work item.
+type TaskSchedule struct {
+	WorkItemID string
+	ProjectID  string
+	// StartDate is YYYY-MM-DD, or nil when the task has no start yet.
+	StartDate *string
+	// ParentID is the task this one is a sub-task of.
+	ParentID *string
+	// DurationDays is how long the task runs, counting its first and last
+	// day; nil when it has never been set or derived.
+	DurationDays *int
+	// EffortDays is the work in the task, in person-days.
+	EffortDays *float64
+	// Elapsed: the duration counts calendar days, weekends and holidays
+	// included, as for a cure or a delivery.
+	Elapsed bool
+	// Deadline is the day the task should be finished by, YYYY-MM-DD; it
+	// moves nothing, and the plan flags a task that misses it.
+	Deadline *string
+	// Mode is the task's own scheduling mode, ModeManual or ModeAuto; empty
+	// takes the plan's.
+	Mode string
+	// ConstraintType and ConstraintDate hold the task to a date: see the
+	// Constraint constants.
+	ConstraintType string
+	ConstraintDate *string
+	// FixedCost is what the task costs beyond the time of the people on it.
+	FixedCost float64
+	// EffortDriven: the task's effort and the people on it decide its
+	// duration.
+	EffortDriven bool
+	// ActualStart and ActualFinish are when the task really started and
+	// finished. PercentComplete is typed by hand, in place of the progress
+	// computed from to-dos and sub-tasks. ActualCost is what it has cost.
+	ActualStart     *string
+	ActualFinish    *string
+	PercentComplete *int
+	ActualCost      *float64
+	// MilestoneKey is the milestone the task is assigned to, by the key the
+	// plan gives it: a stored milestone's id, or "release:<id>".
+	MilestoneKey *string
+	// SortOrder is the task's place among its siblings, once one of them
+	// has been moved; SaveSchedule leaves it alone, SetOrder writes it.
+	SortOrder *int
+}
+
+// The types of a relationship between two tasks, as a Gantt names them.
+const (
+	// RelFinishToStart: the task starts after the other finishes.
+	RelFinishToStart = "FS"
+	// RelStartToStart: the task starts no earlier than the other starts.
+	RelStartToStart = "SS"
+	// RelFinishToFinish: the task finishes no earlier than the other finishes.
+	RelFinishToFinish = "FF"
+	// RelStartToFinish: the task finishes no earlier than the other starts.
+	RelStartToFinish = "SF"
+)
+
+// RelationshipTypes lists the types in the order a chooser shows them.
+var RelationshipTypes = []string{RelFinishToStart, RelStartToStart, RelFinishToFinish, RelStartToFinish}
+
+// ValidRelationshipType reports whether t names a relationship type.
+func ValidRelationshipType(t string) bool {
+	return t == RelFinishToStart || t == RelStartToStart || t == RelFinishToFinish || t == RelStartToFinish
+}
+
+// Dependency is a relationship between two tasks: WorkItemID is driven by
+// DependsOnID in the way Type says. A task may have several, so two tasks
+// can together drive when a third starts.
+type Dependency struct {
+	WorkItemID  string `json:"work_item_id"`
+	DependsOnID string `json:"depends_on_id"`
+	Type        string `json:"type"`
+	// LagDays is the offset: what the driven task keeps after what the
+	// type asks for, or before it when negative, in LagUnit.
+	LagDays int `json:"lag_days"`
+	// LagUnit is the offset's unit: working days ("d", the default),
+	// elapsed days ("ed") or percent of the driving task's duration ("%").
+	LagUnit string `json:"lag_unit"`
+}
+
+// Relationship names, in a schedule request, a task this one is driven by
+// and how. An empty Type is finish to start.
+type Relationship struct {
+	TaskID string `json:"task_id"`
+	Type   string `json:"type"`
+	// LagDays is the relationship's offset; negative leads. LagUnit is its
+	// unit: "d" (working days, the default), "ed" or "%".
+	LagDays int    `json:"lag_days"`
+	LagUnit string `json:"lag_unit"`
+}
+
+// Criterion is one completion criterion of a milestone: a metric and the
+// percentage it must reach.
+type Criterion struct {
+	Metric string `json:"metric"`
+	Target int    `json:"target"`
+}
+
+// ScheduleRequest changes a task's place on the plan. A nil field is left
+// as it is; an empty StartDate, DueDate or ParentID clears it.
+// Relationships replaces the task's relationships. DependsOn is the earlier
+// form of the same list, without types: a task it names keeps the type it
+// has, and a new one is finish to start. Relationships wins when both are
+// sent.
+//
+// A task keeps its duration: a StartDate sent alone moves the due date with
+// it, a DueDate sent alone moves the start, and a DurationDays sent alone
+// moves the due date (or the start, for a task with only a due date). Both
+// dates sent together set the duration to what they span. A DurationDays or
+// EffortDays of 0 clears it.
+type ScheduleRequest struct {
+	StartDate    *string  `json:"start_date"`
+	DueDate      *string  `json:"due_date"`
+	DurationDays *int     `json:"duration_days"`
+	EffortDays   *float64 `json:"effort_days"`
+	ParentID     *string  `json:"parent_id"`
+	// Milestone is the key of the milestone the task is assigned to; empty
+	// takes it off its milestone.
+	Milestone *string `json:"milestone"`
+	// AfterID places the task straight after that sibling in the outline;
+	// empty makes it the first of its siblings.
+	AfterID *string `json:"after_id"`
+	// Order places the task at that place among its siblings, from 1; a
+	// number past the last sibling puts it last. AfterID wins when both
+	// are sent.
+	Order *int `json:"order"`
+	// Elapsed makes the duration count calendar days.
+	Elapsed *bool `json:"elapsed"`
+	// Deadline is YYYY-MM-DD; empty clears it.
+	Deadline *string `json:"deadline"`
+	// Mode is "manual", "auto" or empty for the plan's.
+	Mode *string `json:"mode"`
+	// ConstraintType is one of the Constraint constants; ConstraintDate is
+	// YYYY-MM-DD, needed by every type but asap and alap.
+	ConstraintType *string `json:"constraint_type"`
+	ConstraintDate *string `json:"constraint_date"`
+	// Assignments replaces who the task is assigned to.
+	Assignments *[]Assignment `json:"assignments"`
+	// FixedCost is 0 or more; EffortDriven lets effort decide the duration.
+	FixedCost    *float64 `json:"fixed_cost"`
+	EffortDriven *bool    `json:"effort_driven"`
+	// ActualStart and ActualFinish are YYYY-MM-DD, empty to clear.
+	ActualStart  *string `json:"actual_start"`
+	ActualFinish *string `json:"actual_finish"`
+	// PercentComplete is 0 to 100; -1 goes back to the computed progress.
+	PercentComplete *int `json:"percent_complete"`
+	// ActualCost is 0 or more; -1 clears it.
+	ActualCost    *float64        `json:"actual_cost"`
+	DependsOn     *[]string       `json:"depends_on"`
+	Relationships *[]Relationship `json:"relationships"`
+}
+
+// Repository stores what the plan adds to the board.
+type Repository interface {
+	ListSchedules(projectID string) ([]*TaskSchedule, error)
+	// SaveSchedule inserts or replaces a task's schedule.
+	SaveSchedule(s *TaskSchedule) error
+	ListDependencies(projectID string) ([]Dependency, error)
+	// Settings returns the plan's calendar, critical threshold and
+	// scheduling settings; WorkingDays is nil for a project that never set
+	// them. SaveSettings stores them whole.
+	Settings(projectID string) (Settings, error)
+	SaveSettings(projectID string, s Settings) error
+	// ListAssignments lists who each task is assigned to; SetAssignments
+	// replaces a task's.
+	ListAssignments(projectID string) ([]Assignment, error)
+	SetAssignments(projectID, workItemID string, assignments []Assignment) error
+	// ListResources lists the rates and capacities the project keeps.
+	ListResources(projectID string) ([]Resource, error)
+	SaveResource(projectID string, res Resource) error
+	// RemoveResource forgets a resource and takes it off every task.
+	// ReplaceAssignee gives the tasks of one resource to another, adding to
+	// the share of a task the other is already on, then forgets the first.
+	RemoveResource(projectID, kind, id string) error
+	ReplaceAssignee(projectID string, from, to Assignment) error
+	// ListBaselines lists the project's baselines with their tasks, oldest
+	// first; DeleteBaseline answers ErrNotFound for one it has not.
+	ListBaselines(projectID string) ([]*Baseline, error)
+	// ListExternalLinks lists the project's links to tasks of other
+	// projects, both ways round; DeleteExternalLink answers ErrNotFound
+	// for a pair that has none.
+	ListExternalLinks(projectID string) ([]ExternalLink, error)
+	SaveExternalLink(taskID, dependsOnID, kind string, lagDays int, lagUnit string) error
+	DeleteExternalLink(taskID, otherID string) error
+	// WorkspaceCalendar answers a workspace's working days (nil until it
+	// sets them) and its time off in date order. SaveProjectWorkingDays
+	// sets the working days of the workspace a project is in.
+	WorkspaceCalendar(orgID string) ([]int, []TimeOff, error)
+	SaveWorkspaceWorkingDays(orgID string, days []int) error
+	SaveProjectWorkingDays(projectID string, days []int) error
+	// OrgProjects lists the ids of a workspace's projects.
+	OrgProjects(orgID string) ([]string, error)
+	// ListTimeOff lists the time off of the workspace a project is in.
+	ListTimeOff(projectID string) ([]TimeOff, error)
+	AddTimeOff(orgID string, t *TimeOff) error
+	DeleteTimeOff(orgID, id string) error
+	// SetOrder numbers tasks among their siblings: work item id to place,
+	// where 0 clears it.
+	SetOrder(projectID string, order map[string]int) error
+	CreateBaseline(b *Baseline) error
+	DeleteBaseline(projectID, id string) error
+	// SetDependencies replaces a task's relationships; each entry's
+	// DependsOnID and Type are read.
+	SetDependencies(projectID, workItemID string, relationships []Dependency) error
+	// ListTodoTasks maps each of the project's attached to-dos to its task.
+	ListTodoTasks(projectID string) (map[string]string, error)
+	AttachTodo(projectID, todoID, workItemID string) error
+	ListMilestones(projectID string) ([]*Milestone, error)
+	// GetMilestone returns ErrNotFound when no milestone has the id.
+	GetMilestone(id string) (*Milestone, error)
+	CreateMilestone(m *Milestone) error
+	UpdateMilestone(m *Milestone) error
+	DeleteMilestone(id string) error
+}
+
+// Board is the part of the work item service the plan uses.
+type Board interface {
+	Get(id string) (*workitems.WorkItem, error)
+	ListByProject(projectID string) ([]*workitems.WorkItem, error)
+	Update(id string, req workitems.UpdateWorkItemRequest, actor string) (*workitems.WorkItem, error)
+	Create(req workitems.CreateWorkItemRequest, createdBy *string, actor string) (*workitems.WorkItem, error)
+}
+
+// TodoStore is the part of the to-do service the plan uses.
+type TodoStore interface {
+	ListByProject(projectID string) ([]*todos.Todo, error)
+	Create(req todos.CreateRequest, createdBy *string) (*todos.Todo, error)
+}
+
+// Releases is the part of the target release service the plan uses.
+type Releases interface {
+	List(projectID string) ([]*targetreleases.Release, error)
+	Get(id string) (*targetreleases.Release, error)
+}
+
+// Service is the plan's domain logic.
+type Service interface {
+	// Plan computes the project's plan from the board, the to-dos, the
+	// releases and the evidence the caller read from the project.
+	Plan(projectID string, ev Evidence, now time.Time) (*Plan, error)
+	// Schedule changes a task's dates, parent and dependencies.
+	Schedule(workItemID string, req ScheduleRequest, actor string) error
+	// SetWorkingDays sets which days of the week the plan works.
+	SetWorkingDays(projectID string, days []int) ([]int, error)
+	// SetSettings changes the plan's calendar and critical threshold: the
+	// fields the request names.
+	SetSettings(projectID string, req SettingsRequest) (Settings, error)
+	// Relate makes a relationship between two tasks of one project, from
+	// either end: drives says the task drives the other one (else it is
+	// driven by it). Any relationship the pair already has is replaced.
+	Relate(taskID, otherID, kind string, drives bool, lagDays int, lagUnit string) error
+	// Recalculate moves each task that another drives to the dates its
+	// relationships ask for, and answers how many tasks it moved.
+	Recalculate(projectID, actor string, onlyLater bool, now time.Time) (int, error)
+	// Level delays tasks until nobody is asked for more than their
+	// capacity, and answers how many tasks it moved.
+	Level(projectID, actor string, now time.Time) (int, error)
+	// SetResource stores a person's or an agent's daily rate and capacity.
+	SetResource(projectID string, res Resource) (Resource, error)
+	// RemovePlanned drops a planned resource and takes it off every task.
+	// StaffPlanned gives a planned resource's tasks to a user or an agent,
+	// and drops it: the person chosen later takes the placeholder's place.
+	RemovePlanned(projectID, id string) error
+	StaffPlanned(projectID, id string, with Assignment) error
+	// SaveBaseline records the plan as it stands; DeleteBaseline removes
+	// one.
+	SaveBaseline(projectID, name string, now time.Time) (*Baseline, error)
+	SaveBaselineOf(p *Plan, name string, joined *string, now time.Time) (*Baseline, error)
+	BaselineMoments(projectID string) (map[string]*Moment, error)
+	JoinedBaselines(projectID string) (map[string]*Baseline, error)
+	DeleteBaseline(projectID, id string) error
+	// RescheduleRemaining moves unstarted work that should have started
+	// by the status date to that date, and answers how many tasks moved.
+	RescheduleRemaining(projectID, actor string, now time.Time) (int, error)
+	// The workspace's plan calendar: its working days and its people's
+	// time off.
+	WorkspaceCalendar(orgID string) (WorkspaceCalendar, error)
+	SetWorkspaceWorkingDays(orgID string, days []int) ([]int, error)
+	AddTimeOff(orgID string, t TimeOff) (*TimeOff, error)
+	DeleteTimeOff(orgID, id string) error
+	// RelateExternal makes a task driven by a task of another project;
+	// UnrelateExternal removes the link, whichever way round.
+	RelateExternal(taskID, otherID, kind string, lagDays int, lagUnit, actor string) error
+	UnrelateExternal(taskID, otherID string) error
+	// ImportMSProject adds the tasks, milestones and relationships of a
+	// Microsoft Project XML file to the project.
+	ImportMSProject(projectID string, data []byte, createdBy *string, actor string) (ImportResult, error)
+	// Unrelate removes the relationship between two tasks, whichever way
+	// it runs.
+	Unrelate(taskID, otherID string) error
+	// AddTodo raises a to-do on a task.
+	AddTodo(workItemID, orgID, text string, due *time.Time, createdBy *string) (*todos.Todo, error)
+	// TaskTodos lists the to-dos on a task, open ones first.
+	TaskTodos(workItemID string) ([]*todos.Todo, error)
+	GetMilestone(id string) (*Milestone, error)
+	CreateMilestone(projectID string, req MilestoneRequest) (*Milestone, error)
+	UpdateMilestone(id string, req MilestoneRequest) (*Milestone, error)
+	DeleteMilestone(id string) error
+	// SetReleaseCriteria sets the completion criteria of a release's
+	// milestone.
+	SetReleaseCriteria(projectID, releaseID string, criteria []Criterion) (*Milestone, error)
+	// SetReleaseWaitsFor sets the tasks a release's milestone waits for,
+	// storing the milestone, with the default criteria, the first time.
+	SetReleaseWaitsFor(projectID, releaseID string, taskIDs []string) (*Milestone, error)
+}
+
+// DefaultService implements Service.
+type DefaultService struct {
+	repo     Repository
+	board    Board
+	todos    TodoStore
+	releases Releases
+	now      func() time.Time
+}
+
+// NewDefaultService builds the service. todoStore and releases may be nil:
+// the plan then has no to-dos, or no release milestones.
+func NewDefaultService(repo Repository, board Board, todoStore TodoStore, releases Releases) *DefaultService {
+	return &DefaultService{repo: repo, board: board, todos: todoStore, releases: releases,
+		now: func() time.Time { return time.Now().UTC() }}
+}
+
+// cleanDate checks a day: nil for an empty one.
+func cleanDate(d string) (*string, error) {
+	v := strings.TrimSpace(d)
+	if v == "" {
+		return nil, nil
+	}
+	if !datePattern.MatchString(v) {
+		return nil, ErrInvalidDate
+	}
+	if _, err := time.Parse(DateLayout, v); err != nil {
+		return nil, ErrInvalidDate
+	}
+	return &v, nil
+}
+
+// CleanCriteria checks a milestone's criteria and returns them normalised.
+func CleanCriteria(in []Criterion) ([]Criterion, error) {
+	if len(in) > MaxCriteria {
+		return nil, ErrTooManyCriteria
+	}
+	out := make([]Criterion, 0, len(in))
+	seen := map[string]bool{}
+	for _, c := range in {
+		if !ValidMetric(c.Metric) {
+			return nil, ErrUnknownMetric
+		}
+		if c.Target < 1 || c.Target > 100 {
+			return nil, ErrInvalidTarget
+		}
+		if seen[c.Metric] {
+			return nil, ErrDuplicateMetric
+		}
+		seen[c.Metric] = true
+		out = append(out, c)
+	}
+	return out, nil
+}
+
+// dayOf is the UTC day of a time, as the plan writes it.
+func dayOf(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	d := t.UTC().Format(DateLayout)
+	return &d
+}
+
+// TaskTodos lists the to-dos on a task, in the project list's order: open
+// ones first.
+func (s *DefaultService) TaskTodos(workItemID string) ([]*todos.Todo, error) {
+	item, err := s.board.Get(workItemID)
+	if err != nil || item == nil {
+		return nil, ErrTaskNotFound
+	}
+	out := []*todos.Todo{}
+	if s.todos == nil {
+		return out, nil
+	}
+	on, err := s.repo.ListTodoTasks(item.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	all, err := s.todos.ListByProject(item.ProjectID)
+	if err != nil {
+		return nil, err
+	}
+	for _, t := range all {
+		if t != nil && on[t.ID] == item.ID {
+			out = append(out, t)
+		}
+	}
+	return out, nil
+}
+
+// AddTodo raises a to-do in the task's project and attaches it to the task.
+func (s *DefaultService) AddTodo(workItemID, orgID, text string, due *time.Time, createdBy *string) (*todos.Todo, error) {
+	item, err := s.board.Get(workItemID)
+	if err != nil || item == nil {
+		return nil, ErrTaskNotFound
+	}
+	if s.todos == nil {
+		return nil, errors.New("to-dos are not available")
+	}
+	t, err := s.todos.Create(todos.CreateRequest{OrgID: orgID, ProjectID: &item.ProjectID, Text: text, DueDate: due}, createdBy)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.repo.AttachTodo(item.ProjectID, t.ID, item.ID); err != nil {
+		return nil, err
+	}
+	return t, nil
+}

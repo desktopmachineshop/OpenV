@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 245; members of exported objects: 322
+exports: 283; members of exported objects: 353
 
 interface AdminUsage
 interface AdminUser
@@ -28,6 +28,9 @@ interface BaselineDiffArtifact
 interface BaselineDiffLink
 interface BaselineDiffModified
 interface BaselineDiffRef
+interface BaselinePlan
+interface BaselineTaskChange
+interface BaselineTaskMoment
 interface BillingSnapshot
 interface BillingState
 interface BulkProposalOutcome
@@ -78,7 +81,11 @@ interface LimitUsage
 interface Link
 interface LinkTypeRule
 interface LinkedArtifact
+type      MasterLevels
+interface MasterPlan
+interface MasterProject
 interface MatrixRow
+interface MyPlanTasks
 interface NoteMention
 interface NoteTodo
 interface NotificationList
@@ -99,10 +106,38 @@ interface OrgUsageSummary
 interface OrgUsageTotals
 const     PLANS
 interface Party
+interface PlanAssignment
+interface PlanBaselineInfo
+interface PlanBaselineTask
+type      PlanConstraintType
+interface PlanCriterion
+interface PlanCriterionResult
+interface PlanEarnedValue
+type      PlanExportFormat
+interface PlanExternalLink
+interface PlanHoliday
+type      PlanLagUnit
+interface PlanMetric
+interface PlanMetricValue
+interface PlanMilestone
+interface PlanMilestoneInput
+interface PlanPerson
+interface PlanRelationship
+type      PlanRelationshipDirection
+type      PlanRelationshipType
+interface PlanResourceLoad
+type      PlanResourceType
+interface PlanScheduleInput
+type      PlanSchedulingMode
+interface PlanSettings
+interface PlanTask
+interface PlanTaskTodo
+interface PlanTimeOff
 interface ProductProfile
 interface Project
 interface ProjectExport
 interface ProjectMember
+interface ProjectPlan
 interface Proposal
 interface ProviderAPIKeys
 interface ProviderLogin
@@ -153,6 +188,7 @@ interface SharedProductVotes
 interface SharedProject
 interface SiteVisit
 interface StableRelease
+interface StoredPlanMilestone
 interface StoredProviderAPIKey
 interface SuspectLink
 const     TARGET_RELEASE_ATTR
@@ -182,6 +218,7 @@ interface WorkerStatus
 interface WorkerStatusQueue
 interface WorkerStatusWorker
 interface WorkspaceLimits
+interface WorkspacePlanCalendar
 interface WorkspaceUsage
 const     adminAPI
             .issuePasswordReset
@@ -427,6 +464,38 @@ const     orgsAPI
             .usage
 const     passwordAPI
             .change
+const     planAPI
+            .addTimeOff
+            .addTodo
+            .createMilestone
+            .deleteBaseline
+            .export
+            .get
+            .importMSProject
+            .level
+            .listTodos
+            .master
+            .mine
+            .recalculate
+            .relate
+            .relateExternal
+            .removeMilestone
+            .removePlanned
+            .removeTimeOff
+            .rescheduleRemaining
+            .saveBaseline
+            .schedule
+            .setReleaseCriteria
+            .setReleaseWaitsFor
+            .setResource
+            .setSettings
+            .setWorkingDays
+            .setWorkspaceWorkingDays
+            .staffPlanned
+            .unrelate
+            .unrelateExternal
+            .updateMilestone
+            .workspaceCalendar
 const     productProfileAPI
             .get
             .update

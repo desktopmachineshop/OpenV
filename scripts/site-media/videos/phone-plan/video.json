@@ -1,0 +1,37 @@
+{
+  "title": "The plan and the board on your phone",
+  "description": "The Desktop CNC Mill's plan on a phone: the milestones and their criteria, the schedule, the board column by column, and what needs you.",
+  "viewport": "phone",
+  "steps": [
+    {
+      "id": "intro",
+      "do": [["goto", "/projects/{Desktop CNC Mill}/gantt"], ["click", "button[aria-label^='Tuck']"], ["see", "text=System requirements review"], ["shot", "phone-plan"]],
+      "say": "The mill's plan on a phone: how far it has got, how many tasks are done, and how many are late."
+    },
+    {
+      "id": "milestones",
+      "do": [["click", "button:has-text('Milestones')"], ["wait", 1000], ["shot", "phone-milestones"]],
+      "say": "Each milestone shows whether it is met. The first two reviews are, and the critical design review is a quarter of the way there."
+    },
+    {
+      "id": "schedule",
+      "do": [["click", "button:has-text('Schedule')"], ["wait", 800], ["wheel", 900], ["wait", 800]],
+      "say": "The schedule lists every phase and task with its dates and progress, in order."
+    },
+    {
+      "id": "board",
+      "do": [["goto", "/projects/{Desktop CNC Mill}/board"], ["see", "text=Backlog"], ["shot", "phone-board"]],
+      "say": "The board shows one column at a time."
+    },
+    {
+      "id": "columns",
+      "do": [["click", "button[aria-label='Next column']"], ["wait", 700], ["click", "button[aria-label='Next column']"], ["wait", 700]],
+      "say": "Move along to the work in progress: the detailed design, the verification plan and the long-lead parts."
+    },
+    {
+      "id": "home",
+      "do": [["goto", "/projects"], ["wait", 1200]],
+      "say": "And Home lists what needs you across every project, so a review or a failing test is never more than a tap away."
+    }
+  ]
+}

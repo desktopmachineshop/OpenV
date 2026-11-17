@@ -15,6 +15,7 @@ import automations from './chapters/automations';
 import interviews from './chapters/interviews';
 import vv from './chapters/vv';
 import releases from './chapters/releases';
+import gantt from './chapters/gantt';
 import projectPages from './chapters/projectPages';
 import orgSettings from './chapters/orgSettings';
 import troubleshooting from './chapters/troubleshooting';
@@ -43,6 +44,7 @@ export const MANUAL_CHAPTERS: ManualChapter[] = [
   { slug: 'interviews', title: 'Interviews', content: interviews },
   { slug: 'vv', title: 'V&V & test runs', content: vv },
   { slug: 'releases', title: 'Target releases', content: releases },
+  { slug: 'gantt', title: 'The plan (Gantt)', content: gantt },
   { slug: 'project-pages', title: 'Home, Design, Tests and Baselines', content: projectPages },
   { slug: 'org-settings', title: 'Workspace settings & teams', content: orgSettings },
   { slug: 'platform-admin', title: 'Platform admin', content: platformAdmin },

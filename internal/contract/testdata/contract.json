@@ -44,7 +44,14 @@
     "assistant-full-scope",
     "flat-agent-team",
     "admin-usage",
-    "artifact-reinstate"
+    "artifact-reinstate",
+    "gantt-plan",
+    "ui-refresh",
+    "plan-sizing",
+    "milestone-links",
+    "workspace-plan",
+    "joined-baselines",
+    "key-projects"
   ],
   "event_types": [
     "artifact.created",

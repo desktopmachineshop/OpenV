@@ -18,6 +18,8 @@ interface ToolbarProps {
   projectId: string;
   handleDeleteBaseline: (baselineId: string) => void;
   stacked: boolean;
+  /** In the wide screen's menu: the stacked labels at a mouse's heights. */
+  menu?: boolean;
   handleCaptureBaseline: () => void;
   handleDraftTestCases: () => void;
   isBaselineView: boolean;
@@ -35,6 +37,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   projectId,
   handleDeleteBaseline,
   stacked,
+  menu = false,
   handleCaptureBaseline,
   handleDraftTestCases,
   isBaselineView,
@@ -46,7 +49,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   // One primary action per area, and it is + New Artifact at the end of the
   // header: everything here is a quiet secondary button, the baseline delete
   // a red outline, and the agent action in the agent colour.
-  const tall = stacked ? { minHeight: 44, height: 'auto' } : { height: 30, minHeight: 30 };
+  const tall = stacked ? { minHeight: 44, height: 'auto' } : menu ? { minHeight: 32, height: 'auto' } : { height: 30, minHeight: 30 };
+  const worded = stacked || menu;
   const noBaselines = baselines.length === 0;
   const live = activeBaselineId === 'live';
   const cannotDraft = isBaselineView || draftingTests || requirementTargets.length === 0;
@@ -58,7 +62,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       title="Select baseline"
       data-help-key="baselines"
       style={{
-        height: stacked ? 44 : 30,
+        height: stacked ? 44 : menu ? 32 : 30,
         padding: '0 8px',
         borderRadius: 6,
         border: '1px solid var(--border)',
@@ -99,10 +103,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       disabled={live}
       style={{ ...buttonStyle('danger', { disabled: live }), ...tall }}
       title="Delete selected baseline"
-      aria-label={stacked ? undefined : 'Delete baseline'}
+      aria-label={worded ? undefined : 'Delete baseline'}
       data-help-key="baselines"
     >
-      {stacked ? 'Delete baseline' : '🗑'}
+      {worded ? 'Delete baseline' : '🗑'}
     </button>
     <button
       type="button"

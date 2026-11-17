@@ -7,6 +7,10 @@ OpenV is a requirements management platform with full traceability, verification
 & validation (V&V) tracking, and a built-in multi-agent suite. This chapter gets
 you from the sign-in screen to your first workspace.
 
+To watch a project go from nothing to its first baseline, see the
+[getting-started video](https://openv.app/demos#getting-started) on
+openv.app: two minutes, with captions and a transcript.
+
 ## Signing in
 
 Open the app in your browser and you land on the sign-in screen.
@@ -216,40 +220,60 @@ The frame is the same inside a project and on the workspace's own pages
 admin); only the rail's buttons change.
 
 - **The top bar** reads left to right: the **workspace switcher**, the
-  **project switcher**, the page you are on, the search across every
-  project, **Help**, the notification bell and the account menu.
+  **project switcher**, the search across every project, **Help**, the
+  notification bell and the account menu.
   - **Switch workspace**: click the workspace's name for the list of your
     workspaces, workspace settings and runs, and creating a company
     workspace.
   - **Switch project**: click the project's name (it reads **All projects**
     on a workspace page) for the workspace's projects. Choose one to open
-    it at its Summary; **All projects** opens the Projects page and **+ New
+    it at its Overview; **All projects** opens the Projects page and **+ New
     project** starts a project from wherever you are.
-- **The rail inside a project** has a button for each part of the project —
-  **Define**, **Verify**, **Plan** and **Agents** — and links to **Activity**
-  and **Settings**. Click a group to open its pages beside the rail (Define
-  holds Summary, Overview, Guided Definition, Requirements and Interviews, for
-  example), then click the page. The group holding the page you are on is
-  marked. The list closes when you arrive, or with **Esc** or a click
-  anywhere else.
-- **The rail on a workspace page** lists the workspace's own pages:
-  **Home**, **Runs** (where the workspace has them), **News** (What's
-  new), **Admin** for platform admins, and **Settings**.
+- **The rail inside a project** has a button for each part of the project,
+  in the order the work runs — **Plan**, **Define** and **Verify** — then,
+  below a rule, **Agents** and links to **Activity**, **Settings** and, for
+  platform admins, **Admin**. Click a group to
+  open its pages beside the rail (Plan holds Overview, Board, Gantt
+  and Releases, for example), then click the page. The group holding the
+  page you are on is marked. The list closes when you arrive, or with
+  **Esc** or a click anywhere else.
+- **The row under the top bar** lists the pages of the group you are in,
+  with the one you are reading underlined, so the page next door is one
+  click away. It is where a page is named: the page itself does not repeat
+  its name. Activity and Settings belong to no group, so they have no row.
+- **The rail on a workspace page** is laid out the same way: **Home**;
+  **Plan**, which holds every project's plan (**All projects**) and what is
+  yours across them (**My tasks** and **To-dos**); then **Agents**, which
+  holds the workspace's agents and their **Runs**, **Settings**, and
+  **Admin** for platform admins. The row under the top bar lists the pages
+  of the group you are in, as inside a project. What's new is not in the
+  rail: a release reaches you as a notification, and its notes are in your
+  account menu and beside the release in the workspace's settings.
 - **Home** is at the top of the rail on every page and opens the
   workspace's Home: what needs you across every project, the workspace's
   activity, and its projects to choose from.
 
 On a phone there is no rail. On a workspace page the top bar holds the
 workspace switcher above the project switcher, with help, the bell and your
-account beside them. Inside a project the top bar names where you are in
-two lines: the project, small, above the page you are reading. The project
-menu opens from **☰** in the top bar, and a row of tabs along the bottom
-reaches the pages used most on the move: **Overview**, **Reqs**
-(Requirements), **V&V** and **Review**. **More** opens the menu as a page of
-its own: the project at the top (tap it for all projects), the workspace
-switcher, the project switcher and the search, then each group of pages as
-a list under its name (tap the name to fold the group away), **Help**, and
-under **You** your account menu and the bell.
+account beside them. Inside a project the top bar names the project, and a
+bar along the bottom reads **Home**, **Plan**, **Define**, **Verify**,
+**More** from left to right: the same groups in the same order as the rail
+on a computer. A group's tab opens the page you last read in that group,
+and the row under the top bar lists the group's other pages (swipe it
+sideways when it is wider than the screen). **More** is the whole menu as a
+page of its own: the workspace switcher, the project switcher and the
+search, then every page as a tile under its group, **Help** for the page you
+were on, the **Manual**, **All projects**, and under **You** your account
+menu. The same bar stays under a workspace page: **Home** is the workspace's
+Home, a group's tab opens the project you last opened at the page you last
+read in that group (it is greyed until you have opened a project), and
+**More** lists the workspace's own pages.
+
+A form that opens as a dialog on a computer (recording evidence, launching
+a run, the download wizard) takes the whole screen on a phone: its title
+stays at the top beside **✕**, which closes it, and its fields scroll
+underneath. A short question, such as a confirmation, stays a small card.
+Every page keeps the same margin from the edge of the screen.
 
 ## Keyboard shortcuts
 
@@ -267,7 +291,7 @@ under **You** your account menu and the bell.
 
 ## Help on every page
 
-Press **Help** in the top bar, or the **?** or **F1** key, to open the help
+Press the **?** button in the top bar, or the **?** or **F1** key, to open the help
 panel (on a phone, tap **?** in the top bar). Outside a project — the
 projects list, workspace settings, workspace runs, platform admin and
 *What's new* — the **?** sits beside the notification bell, and the keys work

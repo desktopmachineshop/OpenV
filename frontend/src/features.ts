@@ -90,3 +90,43 @@ export const ARTIFACT_REINSTATE_FEATURE: FeatureKey = 'artifact-reinstate';
 // and pace per workspace and person, workspaces grouped by plan and people
 // filtered by plan or workspace.
 export const ADMIN_USAGE_FEATURE: FeatureKey = 'admin-usage';
+
+/**
+ * The project plan (internal/domain/plan): the Gantt page under Plan, a
+ * task's schedule, sub-tasks, dependencies and to-dos, milestones with
+ * their criteria, and the plan's export.
+ */
+export const GANTT_PLAN_FEATURE: FeatureKey = 'gantt-plan';
+
+/**
+ * Sizing a plan before it is staffed: planned resources, placeholders for
+ * people to be chosen later, in the plan's Resources dialog; and the plan's
+ * Defaults dialog, with the scheduling mode and whether a new task's effort
+ * decides its duration.
+ */
+export const PLAN_SIZING_FEATURE: FeatureKey = 'plan-sizing';
+
+/**
+ * Milestones that wait for tasks: the Waits for section of a milestone's
+ * panel, its date fixed or by the plan, and links dragged from a task's bar
+ * onto a milestone's diamond.
+ */
+export const MILESTONE_LINKS_FEATURE: FeatureKey = 'milestone-links';
+
+/** The workspace's Plan page (/org/plan): every project's plan on one chart, and its entry in the workspace's menu. */
+export const WORKSPACE_PLAN_FEATURE: FeatureKey = 'workspace-plan';
+
+/**
+ * The refreshed project shell, on top of the compact layout: the menu's
+ * groups in the order Plan, Define, Verify, Agents (Overview and Summary
+ * under Plan), a row of the current group's pages under the top bar, the
+ * phone's bottom bar as Home and those groups, and a page's name shown once.
+ */
+export const UI_REFRESH_FEATURE: FeatureKey = 'ui-refresh';
+
+/**
+ * The plan on the Baselines page: where the project's plan stood on each
+ * side of a comparison, beside what changed in its definition. The server
+ * records the plan with every baseline either way; the key gates the page.
+ */
+export const JOINED_BASELINES_FEATURE: FeatureKey = 'joined-baselines';

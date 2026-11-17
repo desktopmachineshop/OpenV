@@ -2,12 +2,11 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
-	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/members"
 )
@@ -40,32 +39,10 @@ func (h *Handler) CreateBaseline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	name := req.Name
-	if name == "" {
-		name = fmt.Sprintf("Baseline %s", time.Now().Format("2006-01-02 15:04"))
-	}
-
-	// The snapshot is the JSON export with the project's attribute
-	// definitions beside it (REQ-5): attachment metadata, not their files.
-	data, err := h.ExportService.Snapshot(projectID)
-	if err != nil {
-		respondInternal(w, r, "failed to export project", err)
+	baseline, _, ok := h.captureBaseline(w, r, projectID, req.Name, false)
+	if !ok {
 		return
 	}
-
-	// CurrentUserID is nil when the caller is an automation holding a
-	// workspace key rather than a person, which the column records as an
-	// unattributed capture instead of blaming somebody.
-	baseline, err := h.BaselineService.CreateBaseline(projectID, name, data, CurrentUserID(r))
-	if err != nil {
-		respondInternal(w, r, "failed to create baseline", err)
-		return
-	}
-
-	h.publish(r, events.BaselineCaptured, projectID, baseline.ID, map[string]interface{}{
-		"name": name,
-	})
-
 	writeJSON(w, http.StatusCreated, baseline)
 }
 
@@ -83,7 +60,26 @@ func (h *Handler) ListBaselines(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	h.withPlanMoments(projectID, baselines)
 	writeJSONOK(w, baselines)
+}
+
+// withPlanMoments puts on each baseline where the plan stood when it was
+// taken, for the ones that recorded it. A plan that cannot be read leaves
+// the baselines as they are.
+func (h *Handler) withPlanMoments(projectID string, list []*baselines.Baseline) {
+	if h.PlanService == nil || len(list) == 0 {
+		return
+	}
+	moments, err := h.PlanService.BaselineMoments(projectID)
+	if err != nil {
+		return
+	}
+	for _, b := range list {
+		if m := moments[b.ID]; m != nil {
+			b.Plan, _ = json.Marshal(m)
+		}
+	}
 }
 
 // GetBaseline returns the snapshot JSON for a baseline.

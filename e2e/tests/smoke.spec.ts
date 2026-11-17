@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { chooseOption, makeRunId, openModule } from './helpers';
+import { chooseOption, makeRunId, openModule, openRequirementsToolbar } from './helpers';
 
 // OpenV E2E smoke journey (issue #135).
 //
@@ -175,6 +175,7 @@ test('links the requirement to the user need (derives-from)', async () => {
 });
 
 test('captures a baseline via the prompt dialog', async () => {
+  await openRequirementsToolbar(page);
   await page.getByRole('button', { name: 'Capture Baseline' }).click();
 
   const dialog = page.getByRole('dialog');
@@ -183,6 +184,7 @@ test('captures a baseline via the prompt dialog', async () => {
   await dialog.getByRole('button', { name: 'OK' }).click();
 
   // The new baseline appears in the baseline selector.
+  await openRequirementsToolbar(page);
   const baselineSelect = page.locator('select[title="Select baseline"]');
   const baselineOption = baselineSelect.locator('option', { hasText: baselineName });
   await expect(baselineOption).toHaveCount(1);
@@ -236,9 +238,10 @@ test('downloads the project as JSON through the wizard', async () => {
   const card = page.locator('.project-card').filter({ hasText: projectName });
   await expect(card).toBeVisible();
 
-  // One download button per project now, and the format is chosen in the
-  // wizard it opens rather than by picking a different button.
-  await card.getByTitle(/^Download this project/).click();
+  // A project's actions are one menu, and the format is chosen in the
+  // wizard Download opens rather than by picking a different button.
+  await card.getByRole('button', { name: `Actions for ${projectName}` }).click();
+  await card.getByRole('menuitem', { name: 'Download' }).click();
   const wizard = page.getByRole('dialog');
   await expect(wizard).toBeVisible();
   await wizard.getByText('JSON data').click();

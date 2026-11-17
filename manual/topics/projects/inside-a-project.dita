@@ -2,7 +2,7 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="inside-a-project">
   <title>Inside a project</title>
-  <shortdesc>Opening a project shows the project menu with its pages, grouped under <b>Define</b>, <b>Verify</b>, <b>Plan</b> and <b>Agents</b> on the rail down the left (see <i>Getting started</i> → <i>Finding your way around</i>):</shortdesc>
+  <shortdesc>Opening a project shows the project menu with its pages, grouped under <b>Plan</b>, <b>Define</b>, <b>Verify</b> and <b>Agents</b> on the rail down the left (see <i>Getting started</i> → <i>Finding your way around</i>):</shortdesc>
   <conbody>
     <simpletable>
       <sthead><stentry>Entry</stentry><stentry>What it is</stentry></sthead>
@@ -18,6 +18,6 @@
       <strow><stentry>Settings</stentry><stentry>Project access, repositories, agent auth, attributes, quality rules, danger zone</stentry></strow>
     </simpletable>
     <p><b>Settings</b> lists its sections down the left — General, Access, Repositories, Agents, Attributes, Quality rules and, set apart in red, Danger Zone — with the open one beside them under its own title and a line on what it is for (on a phone the sections are a row of tabs along the top). In <b>Quality rules</b> each wording check has a switch: off silences it, on brings it back at the level it would speak at, and the menu beside it sets that level — error, warning or info. Below the rules, <b>Priority from the requirement text</b> lets a requirement's Priority follow its <i>shall</i>, <i>should</i> or <i>may</i> until someone picks one (see <i>Editing, versions &amp; history</i> in the Requirements chapter). It is off until an editor turns it on.</p>
-    <p><b>Projects</b> at the top of the rail takes you back to all projects. The account menu at the right end of the top bar (on a phone, your name at the foot of the project menu) opens <b>Settings</b> (personal runner and agent sign-ins) and <b>Sign out</b>.</p>
+    <p><b>Projects</b> at the top of the rail takes you back to all projects. The account menu at the right end of the top bar (on a phone, your name at the foot of <b>More</b>) opens <b>Settings</b> (personal runner and agent sign-ins) and <b>Sign out</b>.</p>
   </conbody>
 </concept>

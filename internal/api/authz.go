@@ -551,22 +551,34 @@ func (h *Handler) requireUnscopedLaunch(w http.ResponseWriter, r *http.Request, 
 
 // requireProjectCreate decides every project create (POST /projects, a
 // template's project, an import) and returns the workspace it lands in, the
-// one the caller acts in. A person creates it and owns it: an agent run acts
-// only inside its own project (REQ-42), and a runner key, workspace or
-// personal, has no person to own what it would make, so both are refused
-// before the body is read. Then, before anything is created, the
-// workspace's read-only gate (which import's alwaysWritable passes, REQ-177)
-// and the project maximum (REQ-176).
+// one the caller acts in. A person creates it and owns it. A runner key
+// creates one in its own workspace: a member's personal key is its holder
+// acting, who must still be a member there and becomes the owner
+// (projectCreator); a workspace key has no person behind it, so its project
+// has no owner of its own and is its workspace admins', who hold an owner's
+// rights on every project of the workspace. An agent run acts only inside
+// its own project (REQ-42) and is refused before the body is read. Then,
+// before anything is created, the workspace's read-only gate (which
+// import's alwaysWritable passes, REQ-177) and the project maximum
+// (REQ-176).
 func (h *Handler) requireProjectCreate(w http.ResponseWriter, r *http.Request) (string, bool) {
 	if CurrentRun(r) != nil {
 		writeJSONError(w, http.StatusForbidden, "agent runs cannot create projects")
 		return "", false
 	}
 	if IsWorker(r) {
-		writeJSONError(w, http.StatusForbidden, "runner keys cannot create projects")
-		return "", false
-	}
-	if requireUserMsg(w, r, "authentication required", http.StatusUnauthorized) == nil {
+		if holder := WorkerUser(r); holder != "" && h.OrgService != nil {
+			role, err := h.OrgService.RoleInOrg(WorkerOrg(r), holder)
+			if err != nil {
+				respondInternal(w, r, "failed to resolve workspace access", err)
+				return "", false
+			}
+			if role == "" {
+				writeJSONError(w, http.StatusForbidden, "this runner key's holder is not a member of the workspace")
+				return "", false
+			}
+		}
+	} else if requireUserMsg(w, r, "authentication required", http.StatusUnauthorized) == nil {
 		return "", false
 	}
 	orgID := ActiveOrg(r)
@@ -584,6 +596,16 @@ func (h *Handler) requireProjectCreate(w http.ResponseWriter, r *http.Request) (
 		return "", false
 	}
 	return orgID, true
+}
+
+// projectCreator names the account that owns a project the request creates:
+// the person signed in, or the holder of a personal runner key. "" for a
+// workspace runner key, whose project its workspace's admins own.
+func projectCreator(r *http.Request) string {
+	if user := CurrentUser(r); user != nil {
+		return user.ID
+	}
+	return WorkerUser(r)
 }
 
 // pendingArtifactRef returns the pending create_artifact proposal in runID that

@@ -197,8 +197,10 @@ export const TreePane: React.FC<TreePaneProps> = (p) => {
       >
         <ErrorBanner message={p.error} onDismiss={() => p.setError('')} />
         {p.showFilterPanel && <div style={{ flexShrink: 0, maxHeight: '50%', overflow: 'auto' }}>{p.filterPanel}</div>}
-        {p.isCreating && !p.isBaselineView && (
-          <div style={{ flexShrink: 0, maxWidth: 720, maxHeight: p.stacked ? undefined : '60%', overflow: 'auto' }}>
+        {/* Stacked, the new artifact's form sits above the list; on a wide
+            screen it takes the document pane, where editing happens too. */}
+        {p.isCreating && !p.isBaselineView && p.stacked && (
+          <div style={{ flexShrink: 0, maxWidth: 720 }}>
             <ArtifactEditor
               artifacts={p.artifacts}
               projectId={p.projectId}

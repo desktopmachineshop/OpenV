@@ -16,7 +16,7 @@
 // beside its <Route> in App.tsx. projectPath() builds the URL of a project's
 // page for new code; existing call sites keep their template strings.
 import type { FeatureKey } from './generated/contract';
-import { REDESIGN_PAGES_FEATURE, TARGET_RELEASES_FEATURE, TODO_LIST_FEATURE } from './features';
+import { GANTT_PLAN_FEATURE, REDESIGN_PAGES_FEATURE, TARGET_RELEASES_FEATURE, TODO_LIST_FEATURE } from './features';
 
 /** The labelled groups of the project menu, in the order it draws them. */
 export type NavGroup = 'Define' | 'Verify' | 'Plan' | 'Agents';
@@ -143,14 +143,6 @@ export const PAGES: readonly Page[] = [
   },
   {
     scope: 'project',
-    path: 'releases',
-    load: 'lazy',
-    public: false,
-    help: { topic: 'releases' },
-    nav: { group: 'Verify', label: 'Releases', feature: TARGET_RELEASES_FEATURE },
-  },
-  {
-    scope: 'project',
     path: 'evidence',
     load: 'eager',
     public: false,
@@ -196,6 +188,22 @@ export const PAGES: readonly Page[] = [
     public: false,
     help: { topic: 'todos' },
     nav: { group: 'Plan', label: 'To-dos', feature: TODO_LIST_FEATURE },
+  },
+  {
+    scope: 'project',
+    path: 'gantt',
+    load: 'lazy',
+    public: false,
+    help: { topic: 'gantt' },
+    nav: { group: 'Plan', label: 'Gantt', feature: GANTT_PLAN_FEATURE },
+  },
+  {
+    scope: 'project',
+    path: 'releases',
+    load: 'lazy',
+    public: false,
+    help: { topic: 'releases' },
+    nav: { group: 'Plan', label: 'Releases', feature: TARGET_RELEASES_FEATURE },
   },
   {
     scope: 'project',
@@ -256,6 +264,9 @@ export const PAGES: readonly Page[] = [
   { scope: 'site', path: 'projects', load: 'eager', public: false, help: { topic: 'projects' } },
   { scope: 'site', path: 'org/settings', load: 'eager', public: false, help: { topic: 'org/settings' } },
   { scope: 'site', path: 'org/runs', load: 'lazy', public: false, help: { topic: 'org/runs' } },
+  { scope: 'site', path: 'org/plan', load: 'lazy', public: false, help: { topic: 'org/plan' } },
+  { scope: 'site', path: 'org/plan/tasks', load: 'lazy', public: false, help: { topic: 'org/plan/tasks' } },
+  { scope: 'site', path: 'org/agents', load: 'lazy', public: false, help: { topic: 'org/agents' } },
   { scope: 'site', path: 'org/todos', load: 'lazy', public: false, help: { topic: 'org/todos' } },
   { scope: 'site', path: 'manual', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'manual/:chapterSlug', load: 'lazy', public: true, help: NO_PANEL },

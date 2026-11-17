@@ -2,6 +2,7 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="home">
   <title>Home</title>
+  <shortdesc>The workspace's <b>Home</b>, at the top of the rail, gathers what needs you across every project. A project's own Home is the right-hand side of its <b>Overview</b> (on a phone, its top): the project's figures as four tiles, <b>Needs you</b> and <b>Recent activity</b>. The old Summary address opens the Overview.</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="home"/>
     <resourceid appname="openv-web" appid="home.figures"/>
@@ -11,17 +12,15 @@
     <resourceid appname="openv-web" appid="home.proposals"/>
   </prolog>
   <conbody>
-    <p><b>Summary</b>, a project's own Home, is the project at a glance; the workspace's <b>Home</b>, at the top of the rail, gathers the same for every project. Along the top are its figures: how many artifacts it holds, the share of requirements that are <b>traced</b> (a test case verifies them) and <b>verified</b>, and how many fail their tests. Beside the project's name are its last baseline and the number of members.</p>
     <p><b>Needs you</b> lists what waits on the team. Click a line to open the artifact it names; the button on the right says what it does. <b>Review all</b> in its header opens the <b>Review Queue</b>.</p>
     <ul>
       <li><b>approve</b>: an artifact in review; <b>Review</b> opens it.</li>
-      <li><b>suspect</b>: a link whose ends changed after it was made. <b>✓</b> confirms the link still holds and <b>✗</b> removes it, after you confirm, right there on Home; the line leaves the list.</li>
+      <li><b>suspect</b>: a link whose ends changed after it was made. <b>Still valid</b> confirms the link still holds and <b>Remove</b> deletes it, after you confirm, right there on the line; the line leaves the list.</li>
       <li><b>test run</b>: a run still in progress, with how many test cases are left.</li>
       <li><b>failing</b>: a test case whose last result is a fail, and the requirements it verifies.</li>
       <li><b>comment</b>: a comment on an artifact that you have not read, by someone other than you; <b>Open</b> opens the artifact with its notes showing, which marks them read. <b>Mark read</b> clears the artifact's comments from the list without opening it, <b>Mark all read</b> in the header clears them all, and <b>Undo</b> on the line they leave puts them back.</li>
+      <li><b>proposal</b>: a change an agent has proposed; <b>Review</b> opens the agent runs, where you approve or reject it.</li>
     </ul>
-    <p>The <b>Audit trail</b> shows the newest events of the project, who did what to which artifact; click one to open what it is about. <b>Full history</b> opens the <b>Activity</b> page. <b>Projects</b> lists your workspace's projects with how far each is traced and verified, and when agents have proposed changes, a card counts the proposals waiting and opens the agent runs to review them.</p>
-    <p>On a computer or tablet, Home fits the window: <b>Needs you</b>, the <b>Audit trail</b> and <b>Projects</b> share the height below the figures, and each scrolls on its own when it has more than fits, so <b>Needs you</b> lists everything waiting.</p>
-    <p>On a phone, Home shows the figures as four tiles, then <b>Needs you</b>, the proposals and the recent activity.</p>
+    <p><b>Recent activity</b> shows the newest events of the project, who did what to which artifact; click one to open what it is about. <b>Full history</b> opens the <b>Activity</b> page.</p>
   </conbody>
 </concept>

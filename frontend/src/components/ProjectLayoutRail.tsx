@@ -3,12 +3,15 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import type { Project } from '../api/client';
 import type { NavGroup, NavSection } from '../pages';
 import { activeNavPath, sectionHasActive } from './navSections';
-import { NavIcon, groupIconPath, pageIconPath } from './ProjectLayoutIcons';
+import { NavIcon, SHELL_ICONS, groupIconPath, pageIconPath } from './ProjectLayoutIcons';
 import { GlobalSearch } from './GlobalSearch';
 import { NotificationBell } from './NotificationBell';
 import { OrgSwitcher } from './OrgSwitcher';
 import { UserMenu } from './UserMenu';
 import { ProjectSwitcher } from './ProjectLayoutSwitcher';
+import { GroupTabs } from './ProjectLayoutGroupTabs';
+import { useAppStore } from '../state/store';
+import { activeGroup } from './ProjectLayoutNav';
 
 // The compact project layout on a wide screen (the compact-layout feature
 // key): a 64 px icon rail on the left and one top bar, where the sidebar
@@ -36,6 +39,7 @@ interface RailProps {
 const Rail: React.FC<RailProps> = ({ sections, activePath }) => {
   const location = useLocation();
   const [openGroup, setOpenGroup] = useState<NavGroup | null>(null);
+  const isAdmin = useAppStore((st) => Boolean(st.currentUser?.is_admin));
   const railRef = useRef<HTMLElement | null>(null);
 
   // Arriving somewhere is the commonest reason to be done with the flyout.
@@ -68,13 +72,16 @@ const Rail: React.FC<RailProps> = ({ sections, activePath }) => {
         <span>Home</span>
       </NavLink>
       <nav className="ov-rail-nav" aria-label="Project pages" data-help-key="start.navigation">
-        {grouped.map((section) => {
+        <span className="ov-rail-rule" aria-hidden="true" />
+        {grouped.map((section, index) => {
           const label = section.label as NavGroup;
           const expanded = openGroup === label;
           const current = sectionHasActive(section.items, activePath);
           return (
+            <React.Fragment key={label}>
+            {/* Plan, Define and Verify are the project's work; Agents sits with the settings below the rule. */}
+            {label === 'Agents' && index > 0 && <span className="ov-rail-rule" aria-hidden="true" />}
             <button
-              key={label}
               type="button"
               className={`ov-rail-item${current ? ' is-current' : ''}`}
               aria-expanded={expanded}
@@ -84,15 +91,22 @@ const Rail: React.FC<RailProps> = ({ sections, activePath }) => {
               <NavIcon d={groupIconPath(label)} />
               <span>{label}</span>
             </button>
+            </React.Fragment>
           );
         })}
-        <span className="ov-rail-rule" aria-hidden="true" />
+        {!grouped.some((g) => g.label === 'Agents') && <span className="ov-rail-rule" aria-hidden="true" />}
         {tail.map((item) => (
           <NavLink key={item.to} to={item.to} end={item.end} className="ov-rail-item">
             <NavIcon d={pageIconPath(item.to)} />
             <span>{item.label}</span>
           </NavLink>
         ))}
+        {isAdmin && (
+          <NavLink to="/admin" className="ov-rail-item">
+            <NavIcon d="M10 2l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V5z" />
+            <span>Admin</span>
+          </NavLink>
+        )}
         {flyout && (
           <div
             id="ov-rail-flyout"
@@ -165,8 +179,7 @@ export const TopBar: React.FC<TopBarProps> = ({ project, pageLabel, helpOpen, on
       onClick={onHelpToggle}
       title="Help for this page (? or F1)"
     >
-      Help
-      <kbd aria-hidden="true">?</kbd>
+      <NavIcon d={SHELL_ICONS.help} size={20} />
     </button>
     <NotificationBell variant="light" />
     <UserMenu variant="light" />
@@ -177,6 +190,8 @@ interface RailShellProps {
   project: Project | null;
   projectId: string;
   sections: NavSection[];
+  /** The refreshed shell (ui-refresh): the current group's pages in a row under the top bar. */
+  refresh?: boolean;
   helpOpen: boolean;
   onHelpToggle: () => void;
   /** The help panel, which the caller mounts once for every layout. */
@@ -187,6 +202,7 @@ export const RailShell: React.FC<RailShellProps> = ({
   project,
   projectId,
   sections,
+  refresh = false,
   helpOpen,
   onHelpToggle,
   help,
@@ -195,16 +211,19 @@ export const RailShell: React.FC<RailShellProps> = ({
   const activePath = activeNavPath(location.pathname, projectId);
   const pageLabel =
     sections.flatMap((s) => s.items).find((item) => item.to === activePath)?.label ?? '';
+  // The row names the page, so the top bar's crumb does not repeat it.
+  const group = refresh ? activeGroup(sections, activePath) : undefined;
   return (
-    <div className="app-shell ov-layout">
+    <div className={`app-shell ov-layout${refresh ? ' ov-refresh' : ''}`}>
       <Rail sections={sections} activePath={activePath} />
       <div className="ov-layout-column">
         <TopBar
           project={project}
-          pageLabel={activePath === '' ? '' : pageLabel}
+          pageLabel={activePath === '' || group ? '' : pageLabel}
           helpOpen={helpOpen}
           onHelpToggle={onHelpToggle}
         />
+        {group && <GroupTabs section={group} />}
         <main className="ov-layout-main">
           <Outlet />
         </main>

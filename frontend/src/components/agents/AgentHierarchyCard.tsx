@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import type { AgentDef, AgentStats } from '../../api/client';
-import { buttonStyle, chipStyle } from '../ui';
+import { AgentGlyph, buttonStyle, chipStyle } from '../ui';
 import { HierarchyNode, groupColor, possibleParents } from './agentHierarchy';
 
 // One card of the Agents page's hierarchy (issue 733), with the agents that
@@ -97,7 +97,7 @@ export const AgentHierarchyCard: React.FC<CardProps> = ({
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <strong style={{ flex: 1, minWidth: 0, fontSize: 14, color: 'var(--text)' }}>🤖 {agent.name}</strong>
+          <strong style={{ flex: 1, minWidth: 0, fontSize: 14, color: 'var(--text)' }}><AgentGlyph /> {agent.name}</strong>
           {group && (
             <span className="agent-group-chip" style={{ ...chipStyle('neutral'), borderLeft: `3px solid ${color}` }}>
               {group}

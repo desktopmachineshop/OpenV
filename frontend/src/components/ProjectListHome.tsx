@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { PanelHeader, mutedStyle, panelStyle, plainLink, tapTarget } from './ui';
 import { ActivityRows, NeedsPanel, fitPanel, panelScroll } from './ProjectListHomePanels';
 import type { WorkspaceHomeData, WorkspaceTodo } from './ProjectListHomeLoad';
+import { useUiRefresh } from '../hooks/useUiRefresh';
 
 // The workspace Home's upper half on the Projects page (the Home design):
 // the workspace's figures, what needs the member across every project, the
@@ -53,6 +54,9 @@ export const ProjectListHome: React.FC<Props> = ({ workspace, projects, data, ph
   const activity = data?.activity || [];
   const proposals = data?.proposals || [];
   const reviewAll = reviewAllTarget(todo);
+  // The refreshed Home (ui-refresh) gives an empty Activity panel no room:
+  // what waits on you takes the width instead.
+  const quiet = useUiRefresh() && !!data && activity.length === 0;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12, ...(fit ? { height: '100%', minHeight: 0 } : {}) }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px 20px', flexWrap: 'wrap', flex: 'none' }}>
@@ -85,8 +89,8 @@ export const ProjectListHome: React.FC<Props> = ({ workspace, projects, data, ph
           more={(n) => `And ${n} more in the projects below.`}
           style={{ flex: '1.3 1 420px', minWidth: 0, ...(fit ? fitPanel : {}) }}
         />
-        <div style={{ flex: '1 1 340px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12, ...(fit ? { minHeight: 0 } : {}) }}>
-          <section
+        {!(quiet && proposals.length === 0) && <div style={{ flex: '1 1 340px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12, ...(fit ? { minHeight: 0 } : {}) }}>
+          {!quiet && <section
             aria-labelledby="home-activity"
             data-help-key="home.activity"
             style={fit ? { ...panelStyle, ...fitPanel, flex: '1 1 0' } : panelStyle}
@@ -96,7 +100,7 @@ export const ProjectListHome: React.FC<Props> = ({ workspace, projects, data, ph
               {data && activity.length === 0 && <p style={{ ...mutedStyle, margin: 0, padding: 12 }}>No activity yet.</p>}
               <ActivityRows items={activity} />
             </div>
-          </section>
+          </section>}
           {proposals.length > 0 && (
             <section
               aria-label="Agent proposals"
@@ -110,7 +114,7 @@ export const ProjectListHome: React.FC<Props> = ({ workspace, projects, data, ph
               </Link>
             </section>
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );

@@ -207,6 +207,7 @@ the area that owns them; the area guide of
 | | `internal/domain/settings` | workspace and project preferences: the quality rule set, reference parties |
 | | `internal/domain/traceability` | the link write service the four link-write paths share |
 | | `internal/domain/todos` | to-dos: one paragraph to tick off, a project's or a person's own, and promoting one to a board task |
+| | `internal/domain/plan` | the project plan, the Gantt over the board: a task's start date, parent and dependencies, the to-dos on a task, milestones (each target release is one) with completion criteria measured from the artifacts, computed progress, and the plan's PDF, Excel, CSV and JSON export |
 | | `internal/domain/workitems` | the kanban work items |
 | verification | `internal/domain/evidence` | evidence bundles |
 | | `internal/domain/vv` | verification methods, test runs and results, coverage, gaps, change impact |

@@ -76,6 +76,15 @@ const BaselineCompare = lazy(() =>
 );
 // The workspace's runs with no project, a low-traffic view.
 const MyTodosPage = lazy(() => import('./views/MyTodos').then((m) => ({ default: m.MyTodosPage })));
+const GanttWorkspaceTasks = lazy(() =>
+  import('./views/GanttWorkspaceTasks').then((m) => ({ default: m.GanttWorkspaceTasks }))
+);
+const AgentsWorkspace = lazy(() =>
+  import('./views/AgentsWorkspace').then((m) => ({ default: m.AgentsWorkspace }))
+);
+const GanttWorkspace = lazy(() =>
+  import('./views/GanttWorkspace').then((m) => ({ default: m.GanttWorkspace }))
+);
 const WorkspaceRunsPage = lazy(() =>
   import('./views/WorkspaceRunsPage').then((m) => ({ default: m.WorkspaceRunsPage }))
 );
@@ -100,6 +109,9 @@ const TestsPage = lazy(() =>
 );
 const BaselinesPage = lazy(() =>
   import('./views/BaselinesPage').then((m) => ({ default: m.BaselinesPage }))
+);
+const Gantt = lazy(() =>
+  import('./views/Gantt').then((m) => ({ default: m.Gantt }))
 );
 
 // How long App waits before each new try of a gate load that failed; after
@@ -294,6 +306,13 @@ function App() {
         {/* Gated on workspace-runs by the page itself, which waits for the
             gates and sends a member to /projects without it. */}
         <Route path="/org/runs" element={<WorkspaceRunsPage />} />
+        {/* The workspace's plan, every project on one chart: gated on
+            workspace-plan by the page itself, as Runs is. */}
+        <Route path="/org/plan" element={<GanttWorkspace />} />
+        {/* The reader's own tasks across the workspace's plans: a tab of the workspace's Plan, gated as it is. */}
+        <Route path="/org/plan/tasks" element={<GanttWorkspaceTasks />} />
+        {/* The workspace's agents, outside any project: Runs is the tab beside it. */}
+        <Route path="/org/agents" element={<AgentsWorkspace />} />
         {/* My to-dos: gated on todos by the page itself, as Runs is. */}
         <Route path="/org/todos" element={<MyTodosPage />} />
         <Route path="/manual" element={<ManualView />} />
@@ -334,6 +353,7 @@ function App() {
           <Route path="design" element={<DesignItems />} />
           <Route path="tests" element={<TestsPage />} />
           <Route path="baselines" element={<BaselinesPage />} />
+          <Route path="gantt" element={<Gantt />} />
         </Route>
           <Route path="*" element={<SitePages site={site} fallback={<Navigate to="/projects" replace />} />} />
           </>

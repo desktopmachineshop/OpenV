@@ -59,6 +59,13 @@ export const FEATURE_KEYS = [
   'flat-agent-team',
   'admin-usage',
   'artifact-reinstate',
+  'gantt-plan',
+  'ui-refresh',
+  'plan-sizing',
+  'milestone-links',
+  'workspace-plan',
+  'joined-baselines',
+  'key-projects',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

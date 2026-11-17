@@ -27,10 +27,13 @@ DELETE /api/v1/orgs/{id}/invitations/{invId}: org:admin
 DELETE /api/v1/orgs/{id}/logo: org:admin
 DELETE /api/v1/orgs/{id}/members/{userId}: session, org:admin|org:member
 DELETE /api/v1/orgs/{id}/my-runner-key: org:member
+DELETE /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}: org:member
 DELETE /api/v1/orgs/{id}/runner-session: org:member, runner-sessions
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: org:admin
 DELETE /api/v1/projects/{id}: project:owner
 DELETE /api/v1/projects/{id}/members/{userId}: project:owner
+DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}: project:editor
+DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}: project:editor
 DELETE /api/v1/projects/{id}/releases/{releaseId}: project:editor
 DELETE /api/v1/projects/{id}/team-access/{teamId}: project:owner
 DELETE /api/v1/provider-api-keys/{env}: org:admin
@@ -42,6 +45,8 @@ DELETE /api/v1/test-results/{id}/citations/{bundleId}: project:editor
 DELETE /api/v1/test-runs/{id}: project:editor
 DELETE /api/v1/todos/{id}: project:editor
 DELETE /api/v1/work-items/{id}: project:editor
+DELETE /api/v1/work-items/{id}/external-links/{otherId}: project:editor
+DELETE /api/v1/work-items/{id}/relationships/{otherId}: project:editor
 DELETE /mcp: -
 GET /.well-known/oauth-authorization-server: -
 GET /.well-known/oauth-protected-resource: -
@@ -122,6 +127,7 @@ GET /api/v1/orgs/{id}/limits: org:member
 GET /api/v1/orgs/{id}/logo: org:member
 GET /api/v1/orgs/{id}/members: org:member
 GET /api/v1/orgs/{id}/my-runner-key: org:member
+GET /api/v1/orgs/{id}/plan-calendar: org:member
 GET /api/v1/orgs/{id}/quality-rules: org:member
 GET /api/v1/orgs/{id}/runner-pool: org:admin
 GET /api/v1/orgs/{id}/runner-session: org:member
@@ -129,6 +135,8 @@ GET /api/v1/orgs/{id}/teams: org:member
 GET /api/v1/orgs/{id}/usage: org:member
 GET /api/v1/orgs/{id}/worker-keys: org:admin
 GET /api/v1/orgs/{id}/worker-status: org:member
+GET /api/v1/plan/master: project:viewer
+GET /api/v1/plan/mine: project:viewer
 GET /api/v1/projects: -
 GET /api/v1/projects/{id}: project:viewer
 GET /api/v1/projects/{id}/ai-map: project:viewer
@@ -150,6 +158,8 @@ GET /api/v1/projects/{id}/interviews: project:viewer
 GET /api/v1/projects/{id}/linked-artifacts: project:viewer
 GET /api/v1/projects/{id}/members: project:viewer
 GET /api/v1/projects/{id}/parties: project:viewer
+GET /api/v1/projects/{id}/plan: project:viewer
+GET /api/v1/projects/{id}/plan/export: project:viewer
 GET /api/v1/projects/{id}/priority-detection: project:viewer
 GET /api/v1/projects/{id}/profile: project:viewer
 GET /api/v1/projects/{id}/quality: project:viewer
@@ -201,6 +211,7 @@ GET /api/v1/todos/{id}: project:viewer
 GET /api/v1/users: session
 GET /api/v1/users/{id}/avatar: user-visible
 GET /api/v1/work-items/{id}: project:viewer
+GET /api/v1/work-items/{id}/todos: project:viewer
 GET /health: -
 GET /mcp: -
 GET /oauth/authorize: -
@@ -273,6 +284,7 @@ POST /api/v1/orgs/{id}/invitations: org:admin
 POST /api/v1/orgs/{id}/logo: org:admin
 POST /api/v1/orgs/{id}/members: org:admin
 POST /api/v1/orgs/{id}/my-runner-key: org:member
+POST /api/v1/orgs/{id}/plan-calendar/time-off: org:member
 POST /api/v1/orgs/{id}/restore: session
 POST /api/v1/orgs/{id}/runner-session: org:member, runner-sessions
 POST /api/v1/orgs/{id}/runner-session/extend: org:member, runner-sessions
@@ -285,6 +297,12 @@ POST /api/v1/projects/{id}/draft-test-cases: project:editor
 POST /api/v1/projects/{id}/evidence-bundles: project:editor
 POST /api/v1/projects/{id}/interviews: no-proposal-run, project:editor, project-visible
 POST /api/v1/projects/{id}/members: project:owner
+POST /api/v1/projects/{id}/plan/baselines: project:editor
+POST /api/v1/projects/{id}/plan/import: project:editor
+POST /api/v1/projects/{id}/plan/level: project:editor
+POST /api/v1/projects/{id}/plan/milestones: project:editor
+POST /api/v1/projects/{id}/plan/recalculate: project:editor
+POST /api/v1/projects/{id}/plan/reschedule-remaining: project:editor
 POST /api/v1/projects/{id}/reindex-embeddings: project:owner
 POST /api/v1/projects/{id}/releases: project:editor
 POST /api/v1/projects/{id}/repo-connections: project:owner
@@ -322,6 +340,7 @@ POST /api/v1/todos/{id}/done: project:editor
 POST /api/v1/todos/{id}/promote: project:editor
 POST /api/v1/work-items/{id}/comments: project:viewer
 POST /api/v1/work-items/{id}/move: project:editor
+POST /api/v1/work-items/{id}/todos: project:editor
 POST /mcp: -
 POST /oauth/register: -
 POST /oauth/revoke: -
@@ -352,10 +371,15 @@ PUT /api/v1/orgs/{id}: org:admin
 PUT /api/v1/orgs/{id}/members/me/preview: org:member
 PUT /api/v1/orgs/{id}/members/{userId}: org:admin
 PUT /api/v1/orgs/{id}/plan: platform-admin
+PUT /api/v1/orgs/{id}/plan-calendar: org:admin, org:member
 PUT /api/v1/orgs/{id}/quality-rules: org:admin
 PUT /api/v1/projects/{id}: project:editor, project-visible
 PUT /api/v1/projects/{id}/members/{userId}: project:owner
 PUT /api/v1/projects/{id}/parties: project:editor
+PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}: project:editor
+PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}: project:editor
+PUT /api/v1/projects/{id}/plan/resources/{assigneeId}: project:editor
+PUT /api/v1/projects/{id}/plan/settings: project:editor
 PUT /api/v1/projects/{id}/priority-detection: project:editor
 PUT /api/v1/projects/{id}/profile: project:editor
 PUT /api/v1/projects/{id}/quality-rules: project:editor
@@ -370,3 +394,6 @@ PUT /api/v1/shared-products/{id}/vote: session
 PUT /api/v1/test-runs/{id}: project:editor
 PUT /api/v1/todos/{id}: project:editor
 PUT /api/v1/work-items/{id}: project:editor
+PUT /api/v1/work-items/{id}/external-links/{otherId}: project:editor, project:viewer
+PUT /api/v1/work-items/{id}/relationships/{otherId}: project:editor
+PUT /api/v1/work-items/{id}/schedule: project:editor

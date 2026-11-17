@@ -1,0 +1,471 @@
+// The Plan page: a project's plan as a Gantt. Its tasks are the board's
+// cards, drawn on a timeline with their sub-tasks, their relationships
+// (finish to start, start to start, finish to finish) and progress (from the
+// to-dos ticked off on the card and sub-tasks done); its milestones are the
+// project's releases and the ones the team adds, each with criteria measured
+// from the project's artifacts, and the band between two milestones fills
+// with the later one's progress. See internal/domain/plan.
+//
+// In the redesign kit (components/ui): a line of figures and the controls,
+// then the chart as one panel, with the selected task or milestone in a
+// panel beside it. On a phone the same plan is a schedule list
+// (components/plan/PlanPhone.tsx) and the selection opens in a sheet: a
+// timeline needs width a phone does not have. On a touch tablet the chart
+// shows but bars do not drag; dates and relationships are set in the task's
+// panel. The plan's working days (Monday to Friday until set) decide which
+// days a duration counts and which the chart shades.
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import {
+  Artifact,
+  artifactAPI,
+  planAPI,
+  PlanExportFormat,
+  PlanLagUnit,
+  PlanMilestone,
+  PlanMilestoneInput,
+  PlanScheduleInput,
+  PlanTask,
+  ProjectPlan,
+  todosAPI,
+  workItemsAPI,
+} from '../api/client';
+import { apiErrorMessage } from '../api/errors';
+import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
+import { Zoom, fitZoom } from '../components/plan/ganttScale';
+import { MilestonePanel } from '../components/plan/MilestonePanel';
+import { PlanPickPanel, assignTasks, shiftTasks } from '../components/plan/PlanPickPanel';
+import { usePlanPicks, type PickKeys } from '../components/plan/planSelection';
+import { AddMilestoneForm, AddTaskForm, ExportControl, NewTask } from '../components/plan/PlanForms';
+import { PlanPhone } from '../components/plan/PlanPhone';
+import { PlanChartPanel } from '../components/plan/PlanChartPanel';
+import type { PlannedAction } from '../components/plan/PlanPlanned';
+import type { TrackingAction } from '../components/plan/PlanTracking';
+import { usePlanHistory } from '../components/plan/planHistory';
+import { useAssistantPageContext } from '../components/wizard/assistantStore';
+import { TaskPanel } from '../components/plan/TaskPanel';
+import { money, type RelationshipView } from '../components/plan/planModel';
+import { ErrorBanner, FeatureGate, Modal, Sheet, buttonStyle, mutedStyle, pageType, useConfirm } from '../components/ui';
+import { GANTT_PLAN_FEATURE } from '../features';
+import { useMilestoneLinks } from '../components/plan/useMilestoneLinks';
+import { useViewport } from '../hooks/useViewport';
+
+type Selection = { kind: 'task'; id: string } | { kind: 'milestone'; key: string } | null;
+
+const Figure: React.FC<{ value: React.ReactNode; label: string; color?: string }> = ({ value, label, color }) => (
+  <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 5 }}>
+    <b style={{ fontSize: 16, color: color || 'var(--text)' }}>{value}</b>
+    <span style={mutedStyle}>{label}</span>
+  </span>
+);
+
+/**
+ * The height that takes an element from where it sits to the bottom of the
+ * window, so the chart and the panel beside it fill the page however few
+ * tasks the plan has. Measured again on every render and resize, since a
+ * form or a banner above moves the element down.
+ */
+const useFillHeight = (min: number): [React.RefObject<HTMLDivElement>, number] => {
+  const ref = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(min);
+  const measure = useCallback(() => {
+    const el = ref.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + (document.scrollingElement?.scrollTop ?? 0);
+    const next = Math.max(Math.floor(window.innerHeight - top - 16), min);
+    setHeight((h) => (h === next ? h : next));
+  }, [min]);
+  useLayoutEffect(measure);
+  useEffect(() => {
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [measure]);
+  return [ref, height];
+};
+
+/** A task opened in full, in the board's drawer, with the project's artifacts it may name. */
+const FullTask: React.FC<{ workItemId: string; projectId: string; aside?: React.ReactNode; onClose: () => void; onChanged: () => void; onDeleted: () => void }> = ({ projectId, ...drawer }) => {
+  const [artifactMap, setArtifactMap] = useState<Record<string, Artifact>>({});
+  useEffect(() => {
+    artifactAPI
+      .list(projectId)
+      .then((res) => setArtifactMap(Object.fromEntries((res.data || []).map((a) => [a.id, a]))))
+      .catch(() => setArtifactMap({}));
+  }, [projectId]);
+  return <WorkItemDrawer {...drawer} projectId={projectId} artifactMap={artifactMap} />;
+};
+
+/** Adds a Microsoft Project file's tasks to the plan; answers what to tell the user. */
+const importPlan = async (projectId: string, file: File): Promise<string> => {
+  const n = (await planAPI.importMSProject(projectId, file)).data;
+  return `Imported ${n.tasks} ${n.tasks === 1 ? 'task' : 'tasks'}, ${n.milestones} ${n.milestones === 1 ? 'milestone' : 'milestones'} and ${n.relationships} ${n.relationships === 1 ? 'relationship' : 'relationships'}.`;
+};
+
+/** Recalculates the plan; answers what to tell the user. */
+const recalculatePlan = async (projectId: string, onlyLater: boolean): Promise<string> => {
+  const n = (await planAPI.recalculate(projectId, onlyLater)).data.moved;
+  return n === 0 ? 'Nothing moved: every task already sits where its relationships ask.' : `${n} ${n === 1 ? 'task' : 'tasks'} moved.`;
+};
+
+/** Levels the plan; answers what to tell the user. */
+/** Adds, removes or staffs a planned resource: a placeholder for someone to be chosen later. */
+const plannedResource = (projectId: string, action: PlannedAction) => {
+  if (action.kind === 'add') return planAPI.setResource(projectId, 'planned', crypto.randomUUID(), { daily_rate: action.daily_rate, capacity: action.capacity, planned_name: action.name });
+  if (action.kind === 'remove') return planAPI.removePlanned(projectId, action.id);
+  return planAPI.staffPlanned(projectId, action.id, action.with.type, action.with.id);
+};
+
+const levelPlan = async (projectId: string): Promise<string> => {
+  const n = (await planAPI.level(projectId)).data.moved;
+  return n === 0 ? 'Nothing moved: no delay would clear the over-allocation.' : `${n} ${n === 1 ? 'task' : 'tasks'} delayed.`;
+};
+
+/** Does what the tracking dialog asked; answers what to tell the user, if anything. */
+const trackPlan = async (projectId: string, action: TrackingAction): Promise<string> => {
+  if (action.kind === 'save') return `${(await planAPI.saveBaseline(projectId, action.name)).data.name} saved.`;
+  if (action.kind === 'delete') {
+    await planAPI.deleteBaseline(projectId, action.id);
+    return '';
+  }
+  const n = (await planAPI.rescheduleRemaining(projectId)).data.moved;
+  return n === 0 ? 'Nothing moved: no unstarted task sits before the status date.' : `${n} ${n === 1 ? 'task' : 'tasks'} moved.`;
+};
+
+/** The plan's figures above the chart: how far along it is, and what needs attention. */
+const PlanFigures: React.FC<{ plan: ProjectPlan }> = ({ plan }) => {
+  const s = plan.summary;
+  return (
+    <div data-help-key="gantt.summary" style={{ display: 'flex', gap: '4px 20px', flexWrap: 'wrap', flex: '1 1 320px' }}>
+      <Figure value={`${s.progress}%`} label="complete" />
+      <Figure value={s.tasks} label={s.tasks === 1 ? 'task' : 'tasks'} />
+      <Figure value={s.done} label="done" color="var(--success-text)" />
+      <Figure value={s.late} label="late" color={s.late ? 'var(--danger-strong)' : undefined} />
+      <Figure value={s.critical} label="on the critical path" color={s.critical ? 'var(--warning-text)' : undefined} />
+      {s.unscheduled > 0 && <Figure value={s.unscheduled} label="not scheduled" />}
+      {s.effort_days > 0 && <Figure value={s.effort_days} label={s.effort_days === 1 ? 'day of effort' : 'days of effort'} />}
+      {s.cost > 0 && <Figure value={money(s.cost, plan.currency)} label={plan.budget ? `of ${money(plan.budget, plan.currency)}` : 'cost'} color={plan.budget && s.cost > plan.budget ? 'var(--danger-strong)' : undefined} />}
+      {s.overallocated > 0 && <Figure value={s.overallocated} label="over-allocated" color="var(--danger-strong)" />}
+      <Figure value={`${plan.milestones.filter((m) => m.met).length}/${plan.milestones.length}`} label="milestones met" />
+    </div>
+  );
+};
+
+/** The one task open beside the chart, or none. */
+const taskSelection = (id: string): Selection => (id ? { kind: 'task', id } : null);
+
+/** What the last action on the plan had to say: an import's count, a levelling's. */
+const PlanNote: React.FC<{ note: string; onDismiss: () => void }> = ({ note, onDismiss }) =>
+  note ? (
+    <div role="status" style={{ ...mutedStyle, display: 'flex', alignItems: 'center', gap: 8 }}>
+      {note}
+      <button type="button" onClick={onDismiss} aria-label="Dismiss" style={buttonStyle('ghost', { compact: true })}>
+        ✕
+      </button>
+    </div>
+  ) : null;
+
+const PlanPage: React.FC = () => {
+  const { projectId = '' } = useParams<{ projectId: string }>();
+  const { isPhone, isCompact, coarsePointer, width } = useViewport();
+  const confirm = useConfirm();
+  const [fill, fillHeight] = useFillHeight(360);
+
+  const [plan, setPlan] = useState<ProjectPlan | null>(null);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [zoom, setZoom] = useState<Zoom | null>(null);
+  const [adding, setAdding] = useState<'task' | 'milestone' | null>(null);
+  const [selection, setSelection] = useState<Selection>(null);
+  // The task opened in full, in the board's drawer, and the artifacts it names.
+  const [note, setNote] = useState('');
+  const [fullTaskId, setFullTaskId] = useState('');
+  const [fullMilestone, setFullMilestone] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!projectId) return;
+    try {
+      const res = await planAPI.get(projectId);
+      setPlan(res.data);
+    } catch (err) {
+      setError(apiErrorMessage(err, 'Failed to load the plan'));
+    }
+  }, [projectId]);
+
+  useEffect(() => {
+    setPlan(null);
+    setSelection(null);
+    setZoom(null);
+    void load();
+  }, [load]);
+
+  // A plan card the assistant's panel applies shows here at once.
+  useAssistantPageContext({ label: 'The plan (Gantt)' }, () => void load());
+
+  // The first zoom is the closest one that shows the whole plan.
+  useEffect(() => {
+    if (plan && zoom === null) setZoom(fitZoom(plan.start, plan.end, Math.max(width - (isCompact ? 260 : 460), 320)));
+  }, [plan, zoom, width, isCompact]);
+
+  /** Runs a write, then reads the plan again; the error banner says what failed. */
+  const run = async (fn: () => Promise<unknown>, fallback: string): Promise<boolean> => {
+    setBusy(true);
+    setError('');
+    try {
+      await fn();
+      await load();
+      return true;
+    } catch (err) {
+      setError(apiErrorMessage(err, fallback));
+      void load();
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const history = usePlanHistory(plan?.tasks, (id, change) => run(() => planAPI.schedule(id, change), 'Failed to schedule the task'));
+  const schedule = history.schedule;
+
+  const relate = (taskId: string, otherId: string, view: RelationshipView, lagDays = 0, lagUnit: PlanLagUnit = 'd') =>
+    run(() => planAPI.relate(taskId, otherId, view.type, view.direction, lagDays, lagUnit), 'Failed to relate the tasks');
+
+  const recalculate = (onlyLater: boolean) => run(async () => setNote(await recalculatePlan(projectId, onlyLater)), 'Failed to recalculate the plan');
+
+  const addTask = async (t: NewTask, parentId?: string, inline = false) => {
+    const ok = await run(async () => {
+      const created = await workItemsAPI.create(projectId, { title: t.title, column: 'todo' });
+      const change: PlanScheduleInput = {
+        ...(t.start ? { start_date: t.start } : {}),
+        ...(t.end ? { due_date: t.end } : {}),
+        ...(parentId ? { parent_id: parentId } : {}),
+      };
+      if (Object.keys(change).length > 0) await planAPI.schedule(created.data.id, change);
+      if (!parentId && !inline) setSelection({ kind: 'task', id: created.data.id });
+    }, 'Failed to add the task');
+    if (ok && !parentId && !inline) setAdding(null);
+  };
+
+  const addMilestone = async (m: PlanMilestoneInput) => {
+    const ok = await run(async () => {
+      const created = await planAPI.createMilestone(projectId, m);
+      setSelection({ kind: 'milestone', key: created.data.id });
+    }, 'Failed to add the milestone');
+    if (ok) setAdding(null);
+  };
+
+  const milestoneLinks = useMilestoneLinks(projectId, plan, run);
+  const saveMilestone = (m: PlanMilestone, change: PlanMilestoneInput) =>
+    run(
+      () =>
+        m.kind === 'release'
+          ? planAPI.setReleaseCriteria(projectId, m.release_id!, change.criteria || [])
+          : planAPI.updateMilestone(projectId, m.id, change),
+      'Failed to save the milestone',
+    );
+
+  const deleteMilestone = async (m: PlanMilestone) => {
+    const release = m.kind === 'release';
+    const ok = await confirm({
+      title: release ? 'Reset criteria' : 'Delete milestone',
+      message: release
+        ? `Put ${m.name}'s criteria back to the defaults: every requirement in the release approved and verified?`
+        : `Delete the milestone ${m.name}? Its criteria go with it; no task or artifact changes.`,
+      confirmLabel: release ? 'Reset to defaults' : 'Delete milestone',
+      danger: !release,
+    });
+    if (!ok) return;
+    if (await run(() => planAPI.removeMilestone(projectId, m.id), 'Failed to delete the milestone')) {
+      if (!release) setSelection(null);
+    }
+  };
+
+  const exportPlan = async (format: PlanExportFormat) => {
+    setExporting(true);
+    setError('');
+    try {
+      await planAPI.export(projectId, format);
+    } catch (err) {
+      setError(apiErrorMessage(err, 'Failed to export the plan'));
+    } finally {
+      setExporting(false);
+    }
+  };
+
+  const selectedTask = useMemo(
+    () => (selection?.kind === 'task' && plan ? plan.tasks.find((t) => t.id === selection.id) || null : null),
+    [selection, plan],
+  );
+  const selectedMilestone = useMemo(
+    () => (selection?.kind === 'milestone' && plan ? plan.milestones.find((m) => m.key === selection.key) || null : null),
+    [selection, plan],
+  );
+  const picks = usePlanPicks(plan ? plan.tasks.map((t) => t.id) : [], selectedTask?.id || '');
+  const picked = plan && !selection && picks.ids.length > 1 ? plan.tasks.filter((t) => picks.ids.includes(t.id)) : [];
+  const openTask = (t: PlanTask) => setSelection({ kind: 'task', id: t.id });
+  // A click with Ctrl or Shift held picks more than one, which the panel beside the chart then acts on.
+  const pickTask = (t: PlanTask, keys?: PickKeys) => setSelection(taskSelection(picks.pick(t.id, keys)));
+  const openMilestone = (m: PlanMilestone) => setSelection({ kind: 'milestone', key: m.key });
+  // A milestone's open mark shows it over the page, as a task's does; its name shows it beside the chart.
+  const openMilestoneFull = (m: PlanMilestone) => (openMilestone(m), setFullMilestone(true));
+  const close = () => (setSelection(null), setFullMilestone(false), picks.clear());
+  const openFull = (t: PlanTask) => (setSelection({ kind: 'task', id: t.id }), setFullTaskId(t.id));
+
+  const errorBanner = <ErrorBanner message={error} onDismiss={() => setError('')} />;
+  if (!plan) {
+    return (
+      <div style={{ ...pageType(isPhone), padding: 16 }}>
+        {errorBanner}
+        {!error && <div style={mutedStyle}>Loading…</div>}
+      </div>
+    );
+  }
+
+  const controls = (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+      {adding !== 'task' && (
+        <button type="button" onClick={() => setAdding('task')} data-help-key="gantt.add-task" style={buttonStyle('primary')}>
+          Add task
+        </button>
+      )}
+      {adding !== 'milestone' && (
+        <button type="button" onClick={() => setAdding('milestone')} data-help-key="gantt.add-milestone" style={buttonStyle('secondary')}>
+          Add milestone
+        </button>
+      )}
+      <ExportControl busy={exporting} onExport={exportPlan} onImport={(file) => run(async () => setNote(await importPlan(projectId, file)), 'Failed to import the plan')} />
+    </div>
+  );
+  const forms = (
+    <>
+      {adding === 'task' && <AddTaskForm busy={busy} onSubmit={(t) => addTask(t)} onCancel={() => setAdding(null)} />}
+      {adding === 'milestone' && <AddMilestoneForm plan={plan} busy={busy} onSubmit={addMilestone} onCancel={() => setAdding(null)} />}
+    </>
+  );
+  const panel = picked.length ? (
+    <PlanPickPanel plan={plan} tasks={picked} busy={busy} onAssign={(ts, key) => run(() => assignTasks(ts, key), 'Failed to assign the tasks')} onShift={(ts, days) => run(() => shiftTasks(ts, days), 'Failed to move the tasks')} onOpenTask={openTask} onClose={picks.clear} />
+  ) : selectedTask ? (
+    <TaskPanel
+      plan={plan}
+      task={selectedTask}
+      projectId={projectId}
+      editable
+      busy={busy}
+      onSchedule={schedule}
+      onReload={() => void load()}
+      onRelate={(t, otherId, view, lagDays, lagUnit) => relate(t.id, otherId, view, lagDays, lagUnit)}
+      onUnrelate={(t, otherId) => run(() => planAPI.unrelate(t.id, otherId), 'Failed to remove the relationship')}
+      onAddSubtask={(t, title) => addTask({ title, start: '', end: '' }, t.id)}
+      onAddTodo={(t, text, due) => run(() => planAPI.addTodo(t.id, text, due), 'Failed to add the to-do')}
+      onTickTodo={(id, done) => run(() => todosAPI.setDone(id, done), 'Failed to save the to-do')}
+      onSelectTask={openTask}
+      onOpenTask={fullTaskId ? undefined : openFull}
+      onClose={fullTaskId ? () => setFullTaskId('') : close}
+    />
+  ) : selectedMilestone ? (
+    <MilestonePanel
+      plan={plan}
+      milestone={selectedMilestone}
+      projectId={projectId}
+      editable
+      busy={busy}
+      onSave={saveMilestone}
+      onDelete={deleteMilestone}
+      onAssign={(taskId, key) => run(() => planAPI.schedule(taskId, { milestone: key }), 'Failed to assign the task')}
+      onLink={milestoneLinks.onLink}
+      onSelectTask={(t) => (setFullMilestone(false), openTask(t))}
+      onClose={close}
+    />
+  ) : null;
+  const panelLabel = picked.length ? `${picked.length} tasks selected` : selectedTask ? `Task ${selectedTask.title}` : `Milestone ${selectedMilestone?.name}`;
+  const milestoneOver = fullMilestone && selectedMilestone;
+
+  const fullTask = fullTaskId ? (
+    <FullTask
+      workItemId={fullTaskId}
+      projectId={projectId}
+      aside={isPhone ? undefined : panel}
+      onClose={() => setFullTaskId('')}
+      onChanged={() => void load()}
+      onDeleted={() => {
+        setFullTaskId('');
+        setSelection(null);
+        void load();
+      }}
+    />
+  ) : null;
+
+  if (isPhone) {
+    return (
+      <>
+        <PlanPhone plan={plan} head={controls} forms={forms} error={errorBanner} onOpenTask={openTask} onOpenMilestone={openMilestone} />
+        {panel && (
+          <Sheet label={panelLabel} onClose={close}>
+            {panel}
+          </Sheet>
+        )}
+        {fullTask}
+      </>
+    );
+  }
+
+  return (
+    <div className="ov-gutter" style={{ ...pageType(false), padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px 20px', flexWrap: 'wrap' }}>
+        <PlanFigures plan={plan} />
+        {controls}
+      </div>
+      {errorBanner}
+      <PlanNote note={note} onDismiss={() => setNote('')} />
+      {forms}
+      <div ref={fill} style={{ display: 'flex', gap: 12, alignItems: 'stretch', height: fillHeight }}>
+        <PlanChartPanel
+          plan={plan}
+          zoom={zoom || 'weeks'}
+          onZoom={setZoom}
+          outlineWidth={isCompact ? 220 : 320}
+          selectedTaskId={selectedTask?.id || ''}
+          selectedIds={picks.ids}
+          selectedMilestoneKey={selectedMilestone?.key || ''}
+          onSelectTask={pickTask}
+          onOpenTask={openFull}
+          onSelectMilestone={(m) => (setFullMilestone(false), openMilestone(m))}
+          onOpenMilestone={openMilestoneFull}
+          onEdit={coarsePointer ? undefined : schedule}
+          history={history}
+          onReschedule={coarsePointer ? undefined : (t, start, end) => schedule(t, { start_date: start, due_date: end })}
+          onLink={coarsePointer ? undefined : relate}
+          onLinkMilestone={coarsePointer ? undefined : milestoneLinks.onDrop}
+          onRecalculate={recalculate}
+          onResource={(res, change) => run(() => planAPI.setResource(projectId, res.type, res.id, res.type === 'planned' ? { ...change, planned_name: res.planned_name } : change), 'Failed to save the resource')}
+          onPlanned={(action) => run(() => plannedResource(projectId, action), 'Failed to change the planned resource')}
+          onLevel={() => run(async () => setNote(await levelPlan(projectId)), 'Failed to level the plan')}
+          onTracking={(action) => run(async () => setNote(await trackPlan(projectId, action)), 'Failed to update the tracking')}
+          onSettings={(change) => run(() => planAPI.setSettings(projectId, change), 'Failed to save the plan settings')}
+          onAddTask={(title) => addTask({ title, start: '', end: '' }, undefined, true)}
+          busy={busy} touch={coarsePointer}
+        />
+        {panel && !isCompact && !fullTaskId && !milestoneOver && (
+          <div data-plan-side style={{ width: 340, flexShrink: 0, display: 'flex', flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>{panel}</div>
+        )}
+      </div>
+      {panel && isCompact && !milestoneOver && (
+        <Sheet label={panelLabel} onClose={close}>
+          {panel}
+        </Sheet>
+      )}
+      {milestoneOver && (
+        <Modal title={`Milestone ${milestoneOver.name}`} width={760} onClose={() => setFullMilestone(false)}>
+          <div data-milestone-full>{panel}</div>
+        </Modal>
+      )}
+      {fullTask}
+    </div>
+  );
+};
+
+export const Gantt: React.FC = () => (
+  <FeatureGate feature={GANTT_PLAN_FEATURE} name="Gantt">
+    <PlanPage />
+  </FeatureGate>
+);

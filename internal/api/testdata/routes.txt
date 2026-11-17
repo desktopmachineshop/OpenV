@@ -21,10 +21,13 @@ DELETE /api/v1/orgs/{id}/invitations/{invId}
 DELETE /api/v1/orgs/{id}/logo
 DELETE /api/v1/orgs/{id}/members/{userId}
 DELETE /api/v1/orgs/{id}/my-runner-key
+DELETE /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}
 DELETE /api/v1/orgs/{id}/runner-session
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}
 DELETE /api/v1/projects/{id}
 DELETE /api/v1/projects/{id}/members/{userId}
+DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}
+DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}
 DELETE /api/v1/projects/{id}/releases/{releaseId}
 DELETE /api/v1/projects/{id}/team-access/{teamId}
 DELETE /api/v1/provider-api-keys/{env}
@@ -36,6 +39,8 @@ DELETE /api/v1/test-results/{id}/citations/{bundleId}
 DELETE /api/v1/test-runs/{id}
 DELETE /api/v1/todos/{id}
 DELETE /api/v1/work-items/{id}
+DELETE /api/v1/work-items/{id}/external-links/{otherId}
+DELETE /api/v1/work-items/{id}/relationships/{otherId}
 DELETE /mcp
 GET /.well-known/oauth-authorization-server
 GET /.well-known/oauth-protected-resource
@@ -116,6 +121,7 @@ GET /api/v1/orgs/{id}/limits
 GET /api/v1/orgs/{id}/logo
 GET /api/v1/orgs/{id}/members
 GET /api/v1/orgs/{id}/my-runner-key
+GET /api/v1/orgs/{id}/plan-calendar
 GET /api/v1/orgs/{id}/quality-rules
 GET /api/v1/orgs/{id}/runner-pool
 GET /api/v1/orgs/{id}/runner-session
@@ -123,6 +129,8 @@ GET /api/v1/orgs/{id}/teams
 GET /api/v1/orgs/{id}/usage
 GET /api/v1/orgs/{id}/worker-keys
 GET /api/v1/orgs/{id}/worker-status
+GET /api/v1/plan/master
+GET /api/v1/plan/mine
 GET /api/v1/projects
 GET /api/v1/projects/{id}
 GET /api/v1/projects/{id}/ai-map
@@ -144,6 +152,8 @@ GET /api/v1/projects/{id}/interviews
 GET /api/v1/projects/{id}/linked-artifacts
 GET /api/v1/projects/{id}/members
 GET /api/v1/projects/{id}/parties
+GET /api/v1/projects/{id}/plan
+GET /api/v1/projects/{id}/plan/export
 GET /api/v1/projects/{id}/priority-detection
 GET /api/v1/projects/{id}/profile
 GET /api/v1/projects/{id}/quality
@@ -195,6 +205,7 @@ GET /api/v1/todos/{id}
 GET /api/v1/users
 GET /api/v1/users/{id}/avatar
 GET /api/v1/work-items/{id}
+GET /api/v1/work-items/{id}/todos
 GET /health
 GET /mcp
 GET /oauth/authorize
@@ -267,6 +278,7 @@ POST /api/v1/orgs/{id}/invitations
 POST /api/v1/orgs/{id}/logo
 POST /api/v1/orgs/{id}/members
 POST /api/v1/orgs/{id}/my-runner-key
+POST /api/v1/orgs/{id}/plan-calendar/time-off
 POST /api/v1/orgs/{id}/restore
 POST /api/v1/orgs/{id}/runner-session
 POST /api/v1/orgs/{id}/runner-session/extend
@@ -279,6 +291,12 @@ POST /api/v1/projects/{id}/draft-test-cases
 POST /api/v1/projects/{id}/evidence-bundles
 POST /api/v1/projects/{id}/interviews
 POST /api/v1/projects/{id}/members
+POST /api/v1/projects/{id}/plan/baselines
+POST /api/v1/projects/{id}/plan/import
+POST /api/v1/projects/{id}/plan/level
+POST /api/v1/projects/{id}/plan/milestones
+POST /api/v1/projects/{id}/plan/recalculate
+POST /api/v1/projects/{id}/plan/reschedule-remaining
 POST /api/v1/projects/{id}/reindex-embeddings
 POST /api/v1/projects/{id}/releases
 POST /api/v1/projects/{id}/repo-connections
@@ -316,6 +334,7 @@ POST /api/v1/todos/{id}/done
 POST /api/v1/todos/{id}/promote
 POST /api/v1/work-items/{id}/comments
 POST /api/v1/work-items/{id}/move
+POST /api/v1/work-items/{id}/todos
 POST /mcp
 POST /oauth/register
 POST /oauth/revoke
@@ -346,10 +365,15 @@ PUT /api/v1/orgs/{id}
 PUT /api/v1/orgs/{id}/members/me/preview
 PUT /api/v1/orgs/{id}/members/{userId}
 PUT /api/v1/orgs/{id}/plan
+PUT /api/v1/orgs/{id}/plan-calendar
 PUT /api/v1/orgs/{id}/quality-rules
 PUT /api/v1/projects/{id}
 PUT /api/v1/projects/{id}/members/{userId}
 PUT /api/v1/projects/{id}/parties
+PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}
+PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}
+PUT /api/v1/projects/{id}/plan/resources/{assigneeId}
+PUT /api/v1/projects/{id}/plan/settings
 PUT /api/v1/projects/{id}/priority-detection
 PUT /api/v1/projects/{id}/profile
 PUT /api/v1/projects/{id}/quality-rules
@@ -364,3 +388,6 @@ PUT /api/v1/shared-products/{id}/vote
 PUT /api/v1/test-runs/{id}
 PUT /api/v1/todos/{id}
 PUT /api/v1/work-items/{id}
+PUT /api/v1/work-items/{id}/external-links/{otherId}
+PUT /api/v1/work-items/{id}/relationships/{otherId}
+PUT /api/v1/work-items/{id}/schedule

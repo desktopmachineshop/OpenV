@@ -225,9 +225,32 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
       'Tick a to-do off to complete it: completed ones collapse under Completed, and unticking one opens it again.',
       'Promote to board task makes a card of a to-do that grew, carrying its text, and ticks the to-do off.',
       'Raise a to-do from a note with + Add to-do: the person named and the note’s first paragraph are filled in.',
-      'My to-dos, in the workspace rail, gathers yours across every project.',
+      'To-dos, under Plan in the workspace menu, gathers yours across every project.',
     ],
     chapter: { slug: 'board', title: 'Kanban board' },
+  },
+  gantt: {
+    title: 'Gantt',
+    summary:
+      "The project's plan on a timeline: the board's tasks with their sub-tasks, dependencies and progress, and milestones whose progress is measured from the project's artifacts.",
+    tips: [
+      'Every card on the board is a task here: give it a start and a due date by dragging its bar, or open it with the button on its row.',
+      "A task's bar fills as its to-dos are ticked off and its sub-tasks finish; a task in Done is 100%.",
+      'A task keeps its duration: change its start and the due date moves, change its due date and the start moves. Effort is the work in it, in person-days.',
+      'Critical path marks in amber the tasks with no float: a day lost on one is a day lost at the end of the plan.',
+      'The timeline scrolls past both ends of the plan; drag an empty part of it, and Today brings today back.',
+      'Relationships are finish to start, start to start or finish to finish, and a task can have several, so two tasks can drive when a third starts.',
+      'Sub-task of and the relationship chooser are searchable: type part of a task name or its outline number.',
+      'Each release is a milestone on the plan; add your own, such as Definition complete, with criteria like user needs addressed: 100%.',
+      'The band leading up to a milestone fills as its criteria are met.',
+      "A dashed red arrow is a relationship the tasks' dates break.",
+      'Export saves the plan as a PDF of the chart, an Excel workbook, CSV or JSON.',
+    ],
+    chapter: { slug: 'gantt', title: 'The plan (Gantt)' },
+    also: [
+      { slug: 'board', title: 'Kanban board' },
+      { slug: 'releases', title: 'Target releases' },
+    ],
   },
   matrix: {
     title: 'Traceability Matrix',
@@ -247,7 +270,7 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     summary:
       'A kanban view of work items — and cards assigned to an AI agent launch a run when you drag them to To Do.',
     tips: [
-      'Assign a card to an agent (🤖) and drag it to To Do to kick off an agent run.',
+      'Assign a card to an agent and drag it to To Do to kick off an agent run.',
       "A pulsing blue dot means a live run — the card is locked until the run finishes (cancel it from the Runs page if needed).",
       'Attach requirements by listing artifact IDs in the card composer; they show as links in the card drawer.',
       "The agent's progress and comments land on the card's activity feed.",
@@ -333,8 +356,36 @@ const HELP_TOPICS: Record<string, HelpTopic> = {
     ],
     chapter: { slug: 'runs-runners', title: 'Runs & runners' },
   },
+  'org/plan': {
+    title: 'Workspace plan',
+    summary:
+      "Every project's plan on one chart: a line for each project you can see, with its top-level tasks and milestones on a time scale they share.",
+    tips: [
+      'Days, Weeks, Months and Quarters set how wide a day is drawn; the chart scrolls sideways and the project names stay in place.',
+      "Each project's critical path is the top row of its line; Critical path turns its marking on and off.",
+      "A project's name opens its own Gantt, where its tasks are scheduled.",
+      'Links between the tasks of different projects are listed under the chart.',
+    ],
+    chapter: { slug: 'gantt', title: 'The plan (Gantt)' },
+  },
+  'org/plan/tasks': {
+    title: 'My tasks',
+    summary: 'The tasks you work on, across every project of the workspace you can read: the ones assigned to you on a board, and the ones you are a resource of on a plan.',
+    tips: [
+      'Open tasks come first: the late ones, then by the day they end.',
+      "A task's name opens its project's Gantt, where it is scheduled.",
+      'Show done lists the finished ones too.',
+    ],
+    chapter: { slug: 'gantt', title: 'The plan (Gantt)' },
+  },
+  'org/agents': {
+    title: 'Agents',
+    summary: "The workspace's agents, outside any project: who they are, what they may do, and a way to talk to one.",
+    tips: ['Runs, the tab beside it, lists the runs that belong to no project.', 'A chat with an agent from here puts no card on a board.'],
+    chapter: { slug: 'agents', title: 'Agents' },
+  },
   'org/todos': {
-    title: 'My to-dos',
+    title: 'To-dos',
     summary:
       'Your to-dos across the workspace: those assigned to you in its projects, and your personal ones, which nobody else sees.',
     tips: [

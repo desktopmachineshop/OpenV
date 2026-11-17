@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="exporting-the-plan">
+  <title>Exporting the plan</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt.export"/>
+  </prolog>
+  <conbody>
+    <p><b>Export</b> saves the plan as a file:</p>
+    <ul>
+      <li><b>PDF</b>: the chart on landscape pages, with the outline, dates, bars, the lines between related tasks, milestones and today's line, then the milestones with their criteria. Each page ends with a legend. A line to a task on another page runs to the edge of the page and names that task's number and page, as in <i>→ 2.1 p.2</i>.</li>
+      <li><b>Excel</b>: the tasks with a timeline of weeks drawn beside them, and the milestones on a second sheet.</li>
+      <li><b>CSV</b>: the tasks, then the milestones and their criteria.</li>
+      <li><b>Microsoft Project (XML)</b>: a file Microsoft Project opens, with the tasks, their outline, dates, durations, progress, constraints, deadlines and relationships, the milestones, and the people with their assignments.</li>
+    </ul>
+    <p>In Excel and CSV, the <b>relationships</b> column names each driving task by its outline number and type, with any offset after it, as in <i>1.1FS, 2SS+5</i>, and each task has its duration and float in working days, its effort and whether it is critical. The PDF and the Excel timeline mark critical tasks in amber.</p>
+    <ul>
+      <li><b>JSON</b>: the whole plan as the app reads it.</li>
+    </ul>
+    <p>Agents read the plan with the <codeph>get_plan</codeph> tool, place a task, with its relationships, with <codeph>schedule_work_item</codeph>, which also assigns it to a milestone and to people, set day rates with <codeph>set_plan_resource</codeph>, level the plan with <codeph>level_plan</codeph>, recalculate it with <codeph>recalculate_plan</codeph>, and set the working days with <codeph>set_plan_working_days</codeph>.</p>
+  </conbody>
+</concept>

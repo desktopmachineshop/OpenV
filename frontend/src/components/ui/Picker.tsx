@@ -48,7 +48,8 @@ export const Picker: React.FC<PickerProps> = (props) => {
   return on ? <PickerControl {...props} /> : <NativeFallback {...props} />;
 };
 
-const NativeFallback: React.FC<PickerProps> = ({ id, value, options, onChange, noneLabel, freeText, placeholder, disabled, ...aria }) => {
+// searchable is the Picker's own: a native control has no search box, and the prop must not reach the DOM.
+const NativeFallback: React.FC<PickerProps> = ({ id, value, options, onChange, noneLabel, freeText, placeholder, disabled, searchable: _searchable, ...aria }) => {
   if (freeText) {
     return (
       <>

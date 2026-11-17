@@ -1,10 +1,13 @@
 import { ARTIFACT_STATUSES, LINK_TYPE_RULES, type FeatureKey } from '../../generated/contract';
 import { text } from './artifactTemplates';
+import { PLAN_ACTION_KINDS, PLAN_ACTION_LABELS, planActionLabels, planActionSummary, planPlanAction, scheduleFields, scheduleSummary, type PlanAction, type ScheduleFields } from './planActions';
 
 /**
  * The rest of a project's API as V&V Assistant cards (assistant-full-scope):
  * releases and what artifacts target, links, review status, archiving,
- * comments, to-dos, board tasks, baselines, a review round and test runs.
+ * comments, to-dos, board tasks, baselines, a review round and test runs,
+ * and the plan (planActions.ts): scheduling tasks, milestones, to-dos on
+ * tasks and the plan-wide actions.
  *
  * Beside the artifact, edit and move cards (suggestionDrafts.ts), these are
  * the other changes a member makes to a project. Each is still a card: the
@@ -32,6 +35,7 @@ export const PROJECT_ACTION_KINDS: ReadonlySet<string> = new Set([
   'baseline',
   'review',
   'test_run',
+  ...PLAN_ACTION_KINDS,
 ]);
 /** Each card's heading. A kind the chat panel has no label for is shown read-only. */
 export const PROJECT_ACTION_LABELS: Record<string, string> = {
@@ -46,6 +50,7 @@ export const PROJECT_ACTION_LABELS: Record<string, string> = {
   baseline: 'Baseline',
   review: 'Review round',
   test_run: 'Test run',
+  ...PLAN_ACTION_LABELS,
 };
 /**
  * Cards Apply all leaves out: archiving is done one card at a time, by the
@@ -75,7 +80,8 @@ export type ProjectAction =
   | { kind: 'archive'; refs: string[] }
   | { kind: 'comment'; ref: string; message: string }
   | { kind: 'todo'; text: string; assignee?: string; due?: string; ref?: string }
-  | { kind: 'task'; title: string; description: string; refs: string[]; assignee?: string; due?: string }
+  | { kind: 'task'; title: string; description: string; refs: string[]; assignee?: string; due?: string; plan: ScheduleFields }
+  | PlanAction
   | { kind: 'baseline'; name: string }
   | { kind: 'review'; types?: string[] }
   | {
@@ -194,6 +200,9 @@ export const planProjectAction = (s: Suggestion): ProjectActionPlan => {
       const due = dateOf(s.due);
       if (due === null) return refuse(`"${text(s.due)}" is not a date; write it as YYYY-MM-DD.`);
       const assignee = text(s.assignee);
+      // Where the task goes on the plan: everything but the due date, which is the card's own.
+      const plan = scheduleFields({ ...s, due: undefined });
+      if ('reason' in plan) return refuse(plan.reason);
       return act({
         kind: 'task',
         title,
@@ -201,6 +210,7 @@ export const planProjectAction = (s: Suggestion): ProjectActionPlan => {
         refs: refsOf(s),
         ...(assignee ? { assignee } : {}),
         ...(due ? { due } : {}),
+        plan: plan.ok,
       });
     }
 
@@ -233,7 +243,7 @@ export const planProjectAction = (s: Suggestion): ProjectActionPlan => {
     }
 
     default:
-      return refuse(`I do not know how to apply a "${s.kind}".`);
+      return PLAN_ACTION_KINDS.has(s.kind) ? planPlanAction(s) : refuse(`I do not know how to apply a "${s.kind}".`);
   }
 };
 
@@ -241,6 +251,7 @@ const list = (refs: string[]): string => (refs.length > 4 ? `${refs.slice(0, 4).
 
 /** The card's heading and the line under it. */
 export const projectActionSummary = (s: Suggestion): { title: string; detail: string } => {
+  if (PLAN_ACTION_KINDS.has(s.kind)) return planActionSummary(s);
   const plan = planProjectAction(s);
   if (plan.outcome === 'refused') return { title: String(s.kind), detail: plan.reason };
   const a = plan.action;
@@ -272,7 +283,7 @@ export const projectActionSummary = (s: Suggestion): { title: string; detail: st
     case 'todo':
       return { title: a.text, detail: [a.assignee, a.due ? `due ${a.due}` : '', a.ref].filter(Boolean).join(' · ') };
     case 'task':
-      return { title: a.title, detail: [a.assignee, a.due ? `due ${a.due}` : '', a.refs.length ? list(a.refs) : ''].filter(Boolean).join(' · ') };
+      return { title: a.title, detail: [a.assignee, a.due ? `due ${a.due}` : '', scheduleSummary(a.plan), a.refs.length ? list(a.refs) : ''].filter(Boolean).join(' · ') };
     case 'baseline':
       return { title: a.name, detail: 'A snapshot of the project as it stands' };
     case 'review':
@@ -282,6 +293,8 @@ export const projectActionSummary = (s: Suggestion): { title: string; detail: st
         title: a.name,
         detail: `${a.results.length} result${a.results.length === 1 ? '' : 's'}${a.complete ? ', completed' : ''}`,
       };
+    default:
+      return { title: String(s.kind), detail: '' };
   }
 };
 
@@ -315,6 +328,6 @@ export const projectActionLabels = (s: Suggestion): { button: string; done: stri
     case 'test_run':
       return { button: 'Record run', done: '✓ Recorded' };
     default:
-      return { button: 'Apply', done: '✓ Applied' };
+      return PLAN_ACTION_KINDS.has(s.kind) ? planActionLabels(s) : { button: 'Apply', done: '✓ Applied' };
   }
 };

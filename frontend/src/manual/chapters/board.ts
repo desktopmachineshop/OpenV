@@ -6,6 +6,15 @@ The **Board** is a kanban view of the project's work items. Its special trick:
 cards can be assigned to AI agents, and dragging an agent's card to
 **To Do** kicks off an agent run.
 
+Every card is also a task of the project's plan: the **Gantt** page draws
+the cards on a timeline, with start dates, sub-tasks and dependencies. See
+[The plan (Gantt)](/manual/gantt).
+
+A card can carry **To-dos**: open the card, type one under **To-dos** and
+press **Add**, and tick it off when it is done. They are what fills the
+task's bar on the Gantt, and the **To-dos** page lists them with the
+project's others.
+
 ## Columns
 
 Backlog · To Do · In Progress · Review · Done. Each column shows its card
@@ -16,7 +25,7 @@ count and has a **+ Add card** composer at the bottom.
 The composer takes:
 
 - **Title** (required) and an optional description.
-- **Assignee** — Unassigned, *Me*, or any **🤖 agent**.
+- **Assignee** — Unassigned, *Me*, or any **agent**.
 - **Artifact IDs** — optional comma-separated artifact IDs to attach the
   relevant requirements to the card.
 
@@ -33,16 +42,27 @@ The composer takes:
   running). While a run is live the card is **locked** — it can't be dragged
   until the run finishes.
 - The agent's progress and comments land back on the card's **activity feed**.
+- A chat is not a task. Talking to the assistant, or typing a prompt to an
+  agent with **▶ Launch run**, puts no card on the board: the run is on the
+  **Runs** page. A card is something you assigned; an automation or a
+  schedule that starts an agent on a project still gets one, so its work is
+  tracked.
 
 ## The card drawer
 
-Click a card to open its drawer:
+On a computer, click a card to open it beside the board: the board gives
+it room and stays in view, so you can go from card to card. The open mark
+at a card's corner, or in the open card's header, opens the card in full,
+wide in the middle of the window. On a phone a card opens over the board.
+Either way the card lets you:
 
 - Edit the **title** and **description**.
 - See **linked artifacts** (from the artifact IDs) with links into the
   Requirements view.
-- Follow the **activity feed** — comments, moves, status changes, and agent
-  run events — and add your own comments.
+- Follow its **History** — comments, moves, status changes, and agent
+  run events — and add your own comments. It is the same History an
+  artifact has: **Comments**, **Changes** and **All** choose what it
+  lists, and with the card opened in full it is a card of its own.
 - Delete the card.
 
 ## Moving cards
@@ -84,8 +104,8 @@ note's artifact.
 
 ### My to-dos
 
-**My to-dos**, in the workspace's rail beside *Runs* (and linked from every
-project's To-dos page), gathers your to-dos across the workspace: every
+**My to-dos**, the **To-dos** tab under **Plan** in the workspace's rail (and
+linked from every project's To-dos page), gathers your to-dos across the workspace: every
 to-do assigned to you in a project you can open, each labelled with its
 project, and your **personal** to-dos. A personal to-do belongs to no
 project and nobody else sees it; the quick add on My to-dos makes one.

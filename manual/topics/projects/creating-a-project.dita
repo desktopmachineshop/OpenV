@@ -2,7 +2,7 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="creating-a-project">
   <title>Creating a project</title>
-  <shortdesc>Click <b>+ New Project</b>. The form offers a <b>Project Type</b>:</shortdesc>
+  <shortdesc>Click <b>+ New Project</b>. <b>Parent project</b> places the new project in the hierarchy: leave it at <i>None</i> for a top-level project, or choose the project it belongs under. <b>New child project</b>, in a project's <b>⋯</b> menu, opens the form with that project already chosen. The form then offers a <b>Project Type</b>:</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="projects.create"/>
   </prolog>

@@ -67,6 +67,7 @@ func (s *DefaultService) Launch(req LaunchRequest) (*Run, string, error) {
 		RunTokenHash:       tokens.HashToken(token),
 		ArtifactsTouched:   []map[string]interface{}{},
 		LaunchedBy:         req.LaunchedBy,
+		Conversation:       req.Conversation,
 		AttemptCount:       req.AttemptCount,
 		MaxAttempts:        req.MaxAttempts,
 		NextAttemptAt:      req.NextAttemptAt,
@@ -143,6 +144,9 @@ func (s *DefaultService) Retry(sourceRunID string, launchedBy *string) (*Run, er
 		Prompt:           source.Prompt,
 		LaunchedBy:       launchedBy,
 		RetriedFromRunID: &source.ID,
+		// A run the board tracked names its card; one with none was a chat
+		// (or lost its card), and its retry gets none either.
+		Conversation: source.WorkItemID == nil,
 	})
 	return run, err
 }

@@ -1,12 +1,14 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/plan"
 	"github.com/openv/requirements-platform/internal/domain/snapshot"
 )
 
@@ -74,6 +76,52 @@ func (h *Handler) DiffBaseline(w http.ResponseWriter, r *http.Request) {
 	result := baselines.Diff(base, target)
 	result.Base = baselines.SnapshotRef{ID: baseline.ID, Name: baseline.Name}
 	result.Target = targetRef
+	if !h.diffPlan(w, r, baseline.ProjectID, against, result) {
+		return
+	}
 
 	writeJSONOK(w, result)
+}
+
+// diffPlan puts on a comparison where the project's plan stood on each
+// side: at a baseline, what it recorded; live, the plan as it stands. A
+// side with no plan to show is left out. It answers false after writing an
+// error.
+func (h *Handler) diffPlan(w http.ResponseWriter, r *http.Request, projectID, against string, result *baselines.DiffResult) bool {
+	if h.PlanService == nil {
+		return true
+	}
+	joined, err := h.PlanService.JoinedBaselines(projectID)
+	if err != nil {
+		respondInternal(w, r, "failed to load the plan's baselines", err)
+		return false
+	}
+	base := joined[result.Base.ID]
+	if base != nil && base.Moment != nil {
+		result.PlanBase, _ = json.Marshal(base.Moment)
+	}
+	// The other side: what its baseline recorded, or the plan as it stands.
+	var moment *plan.Moment
+	var tasks []plan.BaselineTask
+	if against != "live" {
+		if other := joined[result.Target.ID]; other != nil {
+			moment, tasks = other.Moment, other.Tasks
+		}
+	} else {
+		p, ok := h.loadPlan(w, r, projectID)
+		if !ok {
+			return false
+		}
+		if len(p.Tasks) > 0 || len(p.Milestones) > 0 {
+			moment, tasks = plan.MomentOf(p), plan.TasksOf(p)
+		}
+	}
+	if moment != nil {
+		result.PlanTarget, _ = json.Marshal(moment)
+	}
+	// Task by task, where both sides recorded the plan.
+	if base != nil && moment != nil {
+		result.PlanTasks, _ = json.Marshal(plan.TaskChanges(base.Tasks, tasks))
+	}
+	return true
 }

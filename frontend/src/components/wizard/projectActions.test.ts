@@ -74,7 +74,7 @@ describe('planProjectAction', () => {
       due: '2027-02-01',
       ref: 'REQ-1',
     });
-    expect(ok({ kind: 'task', title: 'Build it', refs: ['REQ-1'] })).toEqual({ kind: 'task', title: 'Build it', description: '', refs: ['REQ-1'] });
+    expect(ok({ kind: 'task', title: 'Build it', refs: ['REQ-1'] })).toEqual({ kind: 'task', title: 'Build it', description: '', refs: ['REQ-1'], plan: {} });
     expect(ok({ kind: 'baseline', name: 'Before review' })).toEqual({ kind: 'baseline', name: 'Before review' });
     expect(ok({ kind: 'review' })).toEqual({ kind: 'review' });
     expect(ok({ kind: 'review', types: ['requirement'] })).toEqual({ kind: 'review', types: ['requirement'] });

@@ -114,6 +114,7 @@ func toolGoldenIDs() map[string]bool {
 func toolGoldenArgs() map[string]map[string]interface{} {
 	return map[string]map[string]interface{}{
 		"list_projects":           {},
+		"create_project":          {"name": "Brake assembly", "description": "The brake assembly under the landing gear.", "parent_project_id": goldenProjectID},
 		"list_artifacts":          {"project_id": goldenProjectID, "type": "requirement", "owner": "QA"},
 		"get_artifact":            {"id": goldenArtifactRef, "project_id": goldenProjectID},
 		"get_project_map":         {"project_id": goldenProjectID, "baseline_id": goldenBaselineID},
@@ -151,6 +152,19 @@ func toolGoldenArgs() map[string]map[string]interface{} {
 		"list_todos":              {"project_id": goldenProjectID, "include_done": false},
 		"create_todo":             {"project_id": goldenProjectID, "text": "Check the seal wording.", "assignee_id": goldenUserID, "due_date": "2027-01-31"},
 		"tick_todo":               {"id": goldenTodoID, "done": true},
+		"get_plan":                {"project_id": goldenProjectID},
+		"level_plan":              {"project_id": goldenProjectID},
+		"set_plan_resource":       {"project_id": goldenProjectID, "type": "user", "id": goldenAgentID, "daily_rate": "400", "capacity": "80"},
+		"recalculate_plan":        {"project_id": goldenProjectID, "only_later": "true"},
+		"set_plan_calendar": {"project_id": goldenProjectID, "holidays": []interface{}{"2027-12-27:Shutdown", "2027-01-01"}, "critical_slack_days": "2",
+			"scheduling_mode": "auto", "project_start": "2027-01-04", "project_finish": "2027-12-17", "schedule_from": "finish", "multiple_critical_paths": "true", "currency": "GBP", "budget": "25000", "status_date": "2027-03-05", "active_baseline_id": goldenDelegateRunID},
+		"save_plan_baseline":        {"project_id": goldenProjectID, "name": "As approved"},
+		"reschedule_remaining_work": {"project_id": goldenProjectID},
+		"set_plan_working_days":     {"project_id": goldenProjectID, "working_days": []interface{}{"1", "2", "3", "4", "6"}},
+		"schedule_work_item": {"id": goldenWorkItemID, "start_date": "2027-01-11", "due_date": "2027-01-31", "duration_days": "21", "effort_days": "7.5", "parent_id": goldenDelegateRunID, "milestone": "release:" + goldenDelegateRunID, "deadline": "2027-02-15", "elapsed": "true", "mode": "auto", "constraint_type": "snet", "constraint_date": "2027-01-11",
+			"assignments": []interface{}{"user:" + goldenAgentID + ":50", "agent:" + goldenDelegateRunID}, "fixed_cost": "250", "effort_driven": "true", "actual_start": "2027-01-12", "actual_finish": "2027-02-01", "percent_complete": "40", "actual_cost": "1200", "after_id": goldenAgentID,
+			"relationships": []interface{}{goldenDelegateRunID + ":SS:5ed", goldenAgentID + ":SF:50%"},
+			"depends_on":    []interface{}{goldenDelegateRunID}},
 	}
 }
 
@@ -173,6 +187,7 @@ func toolStubBodies() map[string]string {
 			`","attributes":{"priority":"must","target_release":"old"}}`,
 		"GET /api/v1/work-items/{id}":             `{"id":"` + goldenWorkItemID + `","activity":[]}`,
 		"GET /api/v1/projects/{id}/quality-rules": `{"effective":{},"summary":"shall"}`,
+		"POST /api/v1/projects":                   `{"id":"` + goldenProjectID + `","name":"Brake assembly"}`,
 	}
 }
 

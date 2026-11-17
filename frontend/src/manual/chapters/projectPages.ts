@@ -3,26 +3,25 @@ const content = `
 # Home, Design, Tests and Baselines
 
 Four project pages bring together what you would otherwise collect from
-several others. **Summary** (a project's Home) and **Design** are under **Define** in the project
-menu, **Tests** and **Baselines** under **Verify**. They show what the
+several others. A project's own Home is part of its **Overview**, first under **Plan** in the project
+menu; **Tests** and **Baselines** under **Verify**; design items are read in **Requirements**. They show what the
 project already holds; you edit artifacts, record results and capture
 baselines where you always have.
 
 ## Home
 
-**Summary**, a project's own Home, is the project at a glance; the workspace's **Home**, at the top of the rail, gathers the same for every project. Along the top are its figures: how many
-artifacts it holds, the share of requirements that are **traced** (a test
-case verifies them) and **verified**, and how many fail their tests. Beside
-the project's name are its last baseline and the number of members.
+The workspace's **Home**, at the top of the rail, gathers what needs you across every project. A project's
+own Home is the right-hand side of its **Overview** (on a phone, its top): the project's figures as four
+tiles, **Needs you** and **Recent activity**. The old Summary address opens the Overview.
 
 **Needs you** lists what waits on the team. Click a line to open the
 artifact it names; the button on the right says what it does. **Review
 all** in its header opens the **Review Queue**.
 
 - **approve**: an artifact in review; **Review** opens it.
-- **suspect**: a link whose ends changed after it was made. **✓** confirms
-  the link still holds and **✗** removes it, after you confirm, right there
-  on Home; the line leaves the list.
+- **suspect**: a link whose ends changed after it was made. **Still valid**
+  confirms the link still holds and **Remove** deletes it, after you
+  confirm, right there on the line; the line leaves the list.
 - **test run**: a run still in progress, with how many test cases are left.
 - **failing**: a test case whose last result is a fail, and the
   requirements it verifies.
@@ -31,21 +30,12 @@ all** in its header opens the **Review Queue**.
   marks them read. **Mark read** clears the artifact's comments from the
   list without opening it, **Mark all read** in the header clears them all,
   and **Undo** on the line they leave puts them back.
+- **proposal**: a change an agent has proposed; **Review** opens the agent
+  runs, where you approve or reject it.
 
-The **Audit trail** shows the newest events of the project, who did what to
+**Recent activity** shows the newest events of the project, who did what to
 which artifact; click one to open what it is about. **Full history** opens
-the **Activity** page. **Projects**
-lists your workspace's projects with how far each is traced and verified,
-and when agents have proposed changes, a card counts the proposals waiting
-and opens the agent runs to review them.
-
-On a computer or tablet, Home fits the window: **Needs you**, the
-**Audit trail** and **Projects** share the height below the figures, and
-each scrolls on its own when it has more than fits, so **Needs you** lists
-everything waiting.
-
-On a phone, Home shows the figures as four tiles, then **Needs you**, the
-proposals and the recent activity.
+the **Activity** page.
 
 ## Activity log
 
@@ -73,23 +63,20 @@ Click **▸** at the end of an event for its detail:
 
 ## Design
 
-**Design** shows the project's design items as a tree: an item nested under
-another in the **Requirements** view is nested here too. The number beside
-an item counts the design items beneath it. Type in **Filter** to find an
-item by its reference or title.
+Design items are read in **Requirements**; there is no separate Design page,
+and its old address opens Requirements with the **Type: Design item** filter
+on. Switch to **Tree** to see the items nested as they are in the document:
+an item under another is drawn under it.
 
-Select an item to read it: its description, its **Attributes** as a table,
-the requirements it **satisfies** (and anything else it links to, such as
-the hazards it mitigates), and **Verified through**: the test cases that
-verify those requirements, each with its last result. Test cases verify
-requirements rather than design items, so this is the evidence that reaches
-the item through them. **Properties** gives its parent, how many items it
-contains, its version and when it last changed.
+Select an item to read it in the detail panel: its text straight under its
+title, its attributes, the requirements it **satisfies** (and anything else
+it links to, such as the hazards it mitigates), and **Verified through**:
+the test cases that verify those requirements, each with its last result.
+Test cases verify requirements rather than design items, so this is the
+evidence that reaches the item through them.
 
-**Edit** opens the item in the **Requirements** view. To see what a change
-would touch, run **Impact** from a requirement the item satisfies: it flows
-down to the item and what it links to. On a phone the page walks the tree instead: the path to
-the item, the item, what it contains and the other items beside it.
+To see what a change would touch, run **Impact** from a requirement the item
+satisfies: it flows down to the item and what it links to.
 
 ## Tests
 
@@ -123,6 +110,17 @@ removed. **Hide status-only** leaves out the artifacts whose only change is
 their review status, such as a whole project approved at once; it shows how
 many there are.
 
+A baseline records the project's plan as well as its artifacts, so the
+comparison also says how far the project got. **Plan**, above the list of
+changes, gives the plan's progress, its tasks done, how many were late and
+its finish date on each side, and names each milestone or release that was
+met, moved or added between them. **Tasks that changed** lists each task
+that was added, removed, finished or moved, with how many days later or
+earlier it now ends, the ones that slipped furthest first. The timeline shows the plan's progress at
+each baseline. A baseline taken before plans were recorded has no plan to
+show, and the page says so. A baseline saved from the Gantt's **Tracking**
+is the same baseline, and is listed here.
+
 Select a change to read its text word by word: removed words are struck out
 in red and added words underlined in green. On a computer a long list of
 changes scrolls on its own, with its column headings kept in view, and the
@@ -130,7 +128,7 @@ selected change's text stays on screen below it. With a change selected,
 **↑** and **↓** move to the previous and next change, **Home** and **End**
 to the first and last, and the text follows. When you compare to the working
 copy, the links of that artifact that are suspect now are named under it.
-**Open the full comparison** opens the comparison page with every link.
+**Open the full comparison** opens the comparison page with every link, and the same **Plan** figures above them.
 `;
 
 export default content;

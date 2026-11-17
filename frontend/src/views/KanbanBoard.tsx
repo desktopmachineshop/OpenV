@@ -1,3 +1,4 @@
+import { useUiRefresh } from '../hooks/useUiRefresh';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -14,8 +15,9 @@ import {
 } from '../api/client';
 import { useAppStore } from '../state/store';
 import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
+import { OpenIcon } from '../components/ui/OpenIcon';
 import { BOARD_COLUMNS } from '../components/kanban/columns';
-import { ArtifactPicker, ErrorBanner, Modal, SegmentedControl, chipStyle } from '../components/ui';
+import { AgentGlyph, ArtifactPicker, ErrorBanner, Modal, SegmentedControl, chipStyle } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 
 const COLUMNS = BOARD_COLUMNS;
@@ -52,6 +54,8 @@ export const KanbanBoard: React.FC = () => {
   const [runsByWorkItem, setRunsByWorkItem] = useState<Record<string, AgentRun>>({});
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // A card opens beside the board, which keeps its place; its open mark opens it in full.
+  const [full, setFull] = useState(false);
   const [composers, setComposers] = useState<Record<string, ComposerState>>({});
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const dragItemId = useRef<string | null>(null);
@@ -59,6 +63,7 @@ export const KanbanBoard: React.FC = () => {
   // 260px columns do not fit, and drag-and-drop between them never starts
   // from a finger, so a card's actions menu offers Move to… instead.
   const viewport = useViewport();
+  const refresh = useUiRefresh();
   const phone = viewport.isPhone;
   const [phoneColumn, setPhoneColumn] = useState<string>(COLUMNS[0].key);
   const [actionsFor, setActionsFor] = useState<WorkItem | null>(null);
@@ -240,7 +245,7 @@ export const KanbanBoard: React.FC = () => {
           title={`Agent: ${agent?.name || item.assignee_id}`}
           style={{ ...chipStyle('agent'), fontWeight: 600 }}
         >
-          <span role="img" aria-label="agent">🤖</span>
+          <span role="img" aria-label="agent"><AgentGlyph /></span>
           {agent?.name || 'agent'}
         </span>
       );
@@ -269,12 +274,12 @@ export const KanbanBoard: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: phone ? 12 : 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="ov-gutter" style={{ padding: phone ? 12 : 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <style>
         {`@keyframes ovPulse { 0% { opacity: 1; } 50% { opacity: 0.25; } 100% { opacity: 1; } }`}
       </style>
       <div className="ov-page-head" style={{ marginBottom: 10 }}>
-        <h2>Board</h2>
+        <h2 className="ov-page-title">Board</h2>
         <span className="ov-page-sub">
           {phone
             ? 'Tip: a card’s ⋯ menu moves it between columns.'
@@ -323,7 +328,8 @@ export const KanbanBoard: React.FC = () => {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 12, flex: 1, overflowX: 'auto', alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
+      <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0, overflowX: 'auto', alignItems: 'flex-start' }}>
         {COLUMNS.filter((col) => !phone || col.key === phoneColumn).map((col) => {
           const composer = composers[col.key] || emptyComposer();
           return (
@@ -389,13 +395,17 @@ export const KanbanBoard: React.FC = () => {
                       marginBottom: 8,
                       cursor: disabled ? 'not-allowed' : 'grab',
                       opacity: disabled ? 0.85 : 1,
-                      border: '1px solid var(--border)',
+                      border: `1px solid ${item.id === selectedId ? 'var(--accent)' : 'var(--border)'}`,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                       <div style={{ flex: 1, fontSize: phone ? 15 : 13, color: 'var(--text)', fontWeight: 600 }}>
                         {item.title}
                       </div>
+                      <button type="button" aria-label={`Open ${item.title} in full`} title="Open the card in full" onClick={(e) => (e.stopPropagation(), setSelectedId(item.id), setFull(true))}
+                        style={{ border: 'none', background: 'none', padding: phone ? 8 : 2, color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}>
+                        <OpenIcon />
+                      </button>
                       {phone && (
                         <button
                           type="button"
@@ -404,17 +414,7 @@ export const KanbanBoard: React.FC = () => {
                             e.stopPropagation();
                             setActionsFor(item);
                           }}
-                          style={{
-                            width: 44,
-                            height: 44,
-                            margin: '-10px -12px -10px 0',
-                            border: 'none',
-                            background: 'none',
-                            fontSize: 20,
-                            color: 'var(--text-muted)',
-                            cursor: 'pointer',
-                            flexShrink: 0,
-                          }}
+                          style={{ width: 44, height: 44, margin: '-10px -12px -10px 0', border: 'none', background: 'none', fontSize: 20, color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}
                         >
                           ⋯
                         </button>
@@ -422,15 +422,7 @@ export const KanbanBoard: React.FC = () => {
                       {live && (
                         <span
                           title={`Run ${runsByWorkItem[item.id]?.status}`}
-                          style={{
-                            width: 9,
-                            height: 9,
-                            borderRadius: '50%',
-                            background: 'var(--accent)',
-                            animation: 'ovPulse 1.2s ease-in-out infinite',
-                            marginTop: 3,
-                            flexShrink: 0,
-                          }}
+                          style={{ width: 9, height: 9, borderRadius: '50%', background: 'var(--accent)', animation: 'ovPulse 1.2s ease-in-out infinite', marginTop: 3, flexShrink: 0 }}
                         />
                       )}
                     </div>
@@ -491,7 +483,7 @@ export const KanbanBoard: React.FC = () => {
                     <optgroup label="Agents">
                       {agents.map((a) => (
                         <option key={a.id} value={`agent:${a.id}`}>
-                          🤖 {a.name}
+                          {refresh ? '' : '🤖 '}{a.name}
                         </option>
                       ))}
                     </optgroup>
@@ -544,6 +536,11 @@ export const KanbanBoard: React.FC = () => {
           );
         })}
       </div>
+      {selectedId && projectId && (
+        <WorkItemDrawer workItemId={selectedId} projectId={projectId} artifactMap={artifactMap} mode={full ? 'pane' : phone ? undefined : 'docked'} onExpand={full ? undefined : () => setFull(true)}
+          onClose={() => (setSelectedId(null), setFull(false))} onChanged={loadItems} onDeleted={() => (setSelectedId(null), setFull(false), loadItems())} />
+      )}
+      </div>
 
       {actionsFor && (
         <Modal title={actionsFor.title} width={360} onClose={() => setActionsFor(null)}>
@@ -580,19 +577,6 @@ export const KanbanBoard: React.FC = () => {
         </Modal>
       )}
 
-      {selectedId && projectId && (
-        <WorkItemDrawer
-          workItemId={selectedId}
-          projectId={projectId}
-          artifactMap={artifactMap}
-          onClose={() => setSelectedId(null)}
-          onChanged={loadItems}
-          onDeleted={() => {
-            setSelectedId(null);
-            loadItems();
-          }}
-        />
-      )}
     </div>
   );
 };

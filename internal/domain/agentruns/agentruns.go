@@ -185,6 +185,11 @@ type Run struct {
 	CostUSD          *float64                 `json:"cost_usd,omitempty"`
 	ArtifactsTouched []map[string]interface{} `json:"artifacts_touched"`
 	LaunchedBy       *string                  `json:"launched_by,omitempty"`
+	// Conversation: a person typed this run's prompt to the agent, as a
+	// chat, rather than giving it a task. It is known only while the run
+	// is launched, which is when the board would otherwise make it a card
+	// (orchestration.Hooks); it is not stored or sent.
+	Conversation bool `json:"-"`
 	// PreferredUserID reserves the run for the launcher's personal runner
 	// until HostedAfter, when workspace/hosted runners may claim it.
 	PreferredUserID *string    `json:"preferred_user_id,omitempty"`
@@ -256,7 +261,10 @@ type LaunchRequest struct {
 	RetriedFromRunID   *string
 	Priority           int
 	Prompt             string
-	LaunchedBy         *string
+	// Conversation marks a run whose prompt a person typed to the agent:
+	// a chat, which the board does not track as a task.
+	Conversation bool
+	LaunchedBy   *string
 	// AttemptCount / MaxAttempts seed the new run's attempt chain. Both default
 	// (1 and the service's configured cap) when left zero — a plain manual
 	// launch. Auto-retry sets AttemptCount to the source's + 1 and carries the

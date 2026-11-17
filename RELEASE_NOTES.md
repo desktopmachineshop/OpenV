@@ -9,6 +9,468 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **An agent's proposal shows only what it changes.** A proposal to
+  reword a requirement listed the requirement's other fields as though it
+  would clear them, though approving it left them as they were. Review now
+  shows the new wording alone.
+- **Tables follow the dark theme.** A test run's table of results and the
+  traceability matrix stayed white on the dark theme, with pale text that
+  could not be read. Both now use the dark colours, and so do a button
+  under the pointer and the chosen result on a phone's test run.
+
+### Maintenance updates
+
+- **The manual links to the getting-started video.** The Getting started
+  chapter points to the two-minute walk-through on openv.app.
+- **A lighter logo.** The OpenV logo at the top of every page is 5 KB
+  instead of 177 KB, so a page shows sooner on a slow connection.
+
+## 0.36.2 — 2026-11-14
+
+### Bug fixes
+
+- **A phase shows under its milestone on a phone.** On a phone, the
+  plan's schedule grouped only the top-level tasks, by their own
+  milestone, so a plan of phases whose sub-tasks lead to each review
+  showed every milestone with no task. A phase now goes under the
+  milestone its sub-tasks are assigned to.
+
+## 0.36.1 — 2026-11-14
+
+### Bug fixes
+
+- **A validation test is no longer listed as a gap.** A test case that
+  validates a user need, rather than verifying a requirement, was counted
+  on the gap list as a test that checks nothing. It now counts as linked.
+
+## 0.36.0 — 2026-11-14
+
+### New features
+
+- **Create projects with a runner key or from a connected AI app.** A
+  script holding a runner key can now create a project, import one or
+  start one from a template, and the MCP tools gain **create_project**,
+  which also files the new project under a parent. So Claude, Cursor or
+  another connected app can set up a project, or a whole programme of
+  sub-projects, when you ask it to. A project made by a connected app or
+  with your personal runner key is yours; one made with a workspace key
+  has no owner of its own and is managed by the workspace's admins. Agent
+  runs still work only inside their own project.
+
+### Maintenance updates
+
+- **A shorter zoom control.** The plan's time scale buttons read **D**,
+  **W**, **M** and **Q**, for days, weeks, months and quarters; pointing
+  at one names it.
+- **Every Gantt view, for every project at once.** The workspace's
+  **Plan** page has a **View** menu: beside the timeline of a line per
+  project it now draws all the projects as a **Gantt** (a row per
+  project, its tasks beneath it), a **Network**, a **Calendar** and
+  **Resource usage**, which adds up each person's work across the
+  projects. They read the plans; a task's open mark leads to its own
+  project's Gantt.
+- **Download a project with the projects under it.** The download form
+  of a project that has projects beneath it offers **Child projects**:
+  tick it and each one you can read, every level down, travels in the
+  same archive as its own download, in a folder of its name under
+  `projects/`, with the same format and choices, and its own plan if you
+  asked for the plan.
+- **Open an artifact in full.** The open mark beside an artifact's title
+  shows it over the page, as a task opens, with its **History** in a card
+  of its own beside it.
+- **A task's activity is its History.** A card's activity feed is now the
+  same **History** an artifact has, with **Comments**, **Changes** and
+  **All** to choose what it lists; with the card opened in full it sits
+  in a card of its own under the card's fields.
+- **Select several tasks on the Gantt and the Timeline.** **Ctrl**-click
+  (**Cmd** on a Mac) a row or a bar adds a task to those selected, or
+  drops it; **Shift**-click takes every task between. With several
+  selected, the panel beside the chart lists them, assigns them all to a
+  milestone, and moves their dates by a number of days.
+- **Help is the ? in the top bar.** The button that read *Help ?* is now
+  the **?** icon alone, as it already was on a phone, and the small arrow
+  beside your picture in the top bar has gone: the picture opens the
+  account menu.
+- **The Assistant button is on every page, and tucks away.** The
+  **✦ Assistant** button now shows on the workspace's pages (Plan, Agents,
+  Settings and the rest) as well as inside a project. The small arrow at
+  its side folds it into a tab on the edge of the window; the tab brings
+  it back, and your browser remembers which. **Alt+A** opens the
+  assistant either way.
+- **A tidier menu.** With no project open the rail is **Home**, **Plan**,
+  then **Agents**, **Settings** and **Admin**. **Plan** holds every
+  project's plan and two tabs of what is yours across them: **My tasks**,
+  new, and **To-dos** (which was *My to-dos* in the rail). **Agents** is
+  new at this level and holds the workspace's agents with **Runs** as its
+  tab. Inside a project the rail groups the same way: **Plan**,
+  **Define**, **Verify**, then **Agents**, **Activity**, **Settings** and
+  **Admin**. News has left the rail: releases arrive as notifications,
+  and the notes are in your account menu and beside the release in the
+  workspace's settings.
+- **A card opens beside the board.** On a computer, clicking a card opens
+  it in a panel at the side that the board makes room for, so the columns
+  stay in view and you can go from card to card. Each card, and the open
+  card's header, has an open mark that shows the card in full.
+- **Tasks linked to another project are marked.** A task that waits on,
+  or drives, a task of another project's plan has two joined rings beside
+  its name on the Gantt and the phone's schedule, red when the dates
+  break the link, and ⇄ before its name on the Timeline and All projects.
+  Pointing at the mark names the other task and its project.
+- **The Timeline has a level of detail.** A project's Timeline view has
+  the same **Level** menu as All projects: Level 1 is the top-level
+  tasks, each level further adds the sub-tasks on rows beneath their
+  parents, whose bars stay, and **All levels** goes all the way down. The
+  two views share the choice.
+- **All projects follows the project hierarchy.** On the workspace's
+  Plan page and a Gantt's All projects view, a project that belongs under
+  another is listed beneath it, indented, and a parent folds its projects
+  away.
+- **A baseline comparison names the tasks that changed.** Under
+  **Plan** on the Baselines page, **Tasks that changed** lists each task
+  that was added, removed, finished or moved between the two sides, with
+  how many days later or earlier it now ends, the ones that slipped
+  furthest first. Baselines taken from now on also keep each task's name,
+  so a task deleted since is still named.
+- **The full comparison page shows the plan too**, with the same figures
+  and task list as the Baselines page.
+- **All projects remembers its level.** The level of detail you choose on
+  the workspace's Plan page or a Gantt's All projects view is kept in your
+  browser for the next visit, and the page's controls are thumb-sized on
+  a phone.
+- **Encrypted, off-host backups for a self-hosted server.** Set
+  `BACKUP_PASSPHRASE` and every backup bundle is encrypted; `make restore`
+  decrypts it with the same passphrase. `BACKUP_COPY_HOST_DIR` copies each
+  bundle to a second place, such as a mounted network disk, and
+  `BACKUP_POST_HOOK` runs a command of yours on it, to push it wherever
+  you keep copies. `make backup-drill` proves on a scratch database that
+  a backup restores. See *Backup and restore* in the operations guide.
+
+### Bug fixes
+
+- **A milestone's open mark opens it in full.** On the Gantt the mark beside a
+  milestone's name did what the name did. The name now opens the milestone
+  beside the chart and the mark opens it over the page, as for a task.
+- **A chat with an agent no longer puts a card on the board.** Typing a
+  prompt to an agent with **Launch run** made an *Agent run* card for it.
+  A chat is not a task, so it now makes none: the run is on the Runs page.
+  A card you assign to an agent still launches it, and work an automation,
+  a schedule or a script calling the API starts is still tracked on the
+  board. Cards already made this way stay until you delete them.
+- **A scheduled backup whose database dump failed still wrote a
+  bundle.** On a self-hosted server with the backup sidecar, a run that
+  could not reach the database went on to write a bundle with no
+  database in it, which looked like any other. It now writes nothing and
+  tries again at the next interval. Manual `make backup` was not
+  affected. If you rely on scheduled backups, check that a recent bundle
+  holds a non-empty `openv-db.sql`.
+
+## 0.35.0 — 2026-11-13
+
+### New features
+
+- **One baseline for the project.** A baseline now records the plan
+  with the artifacts, so a key moment is kept once. On the Baselines
+  page, **Plan** shows the plan's progress, tasks done, late tasks and
+  finish date on each side of a comparison, with every milestone or
+  release that was met, moved or added, above what changed in the
+  definition. **Save a baseline** on the Gantt takes the same baseline,
+  and the plan no longer stops at 11. Baselines taken before this keep
+  what they had: artifacts only, or the plan only.
+- **A Plan page for the whole workspace.** **Plan**, in the workspace's
+  menu beside Home, shows every project's plan on one chart: a line for
+  each project you can see, with its top-level tasks and milestones on a
+  time scale they all share, and the links between projects' tasks
+  listed beneath. Each project's critical path is the top row of its
+  line, the chart scrolls sideways with the project names kept in place,
+  and a project's name opens its own Gantt.
+
+### Maintenance updates
+
+- **Export the plan with the project.** The download wizard has a
+  **Plan and tasks** section: tick **The plan and its tasks** to take
+  every task with its dates, effort, progress and assignee, and the
+  milestones, as a file beside the document in a .zip. The plan comes in
+  the format nearest the one you chose: JSON, CSV or a workbook, a PDF
+  beside a PDF or Word specification, and Microsoft Project XML beside
+  ReqIF.
+- **The phone's plan groups tasks by the milestone they are assigned
+  to.** A task is listed under a milestone only when it is assigned to
+  it, not because it happens to be due before the milestone's date, and
+  the rest are under **Not assigned to a milestone** in place of *After
+  the last milestone*. Tasks with no dates are folded under **Not
+  scheduled** until you tap **Show**.
+- **One bar on every chart of the plan.** The Timeline and All projects
+  now draw a task's bar exactly as the Gantt does: green when done, red
+  when late, filled as far as the work has gone, with a parent in grey
+  and the critical path ringed in amber.
+- **Choose how much detail All projects shows.** A level menu beside the
+  Project heading, on the workspace's Plan page and in a Gantt's All
+  projects view, sets how far down each project's tasks are drawn. It
+  opens on Level 1, the top-level tasks; each level further adds the
+  sub-tasks on rows beneath their parents, whose bars stay in view as
+  they do on the Gantt, and **All levels** goes all the way down.
+  Milestones show at every level.
+- **The Gantt's outline keeps the order you give it.** Rows no longer
+  re-sort by start date when a date changes: the outline is a stored
+  order. Each task's panel shows its place as **Order in the outline**,
+  and typing another place moves it there; the arrows and dragging work as
+  before. Tasks you have never moved are listed after the ones you have,
+  in the order they were made, so a plan you had not ordered by hand will
+  show its rows in a different order once.
+- **Dated only.** A checkbox beside the Gantt's filter leaves out the
+  tasks with no dates, which have nothing to draw on the chart. It works
+  with any filter and is remembered in your browser.
+- **A project's parent is set on its Overview.** **Part of**, at the top
+  of the Overview, names the project this one belongs under and lets you
+  change it, with its child projects listed beside it. It has moved there
+  from project settings, which now points to it.
+- **Create a project at its level.** On the projects page, **New child
+  project** in a project's **⋯** menu starts a project under it, and the
+  create form has a **Parent project** field for any new project.
+
+### Bug fixes
+
+- **Even spacing in the phone's workspace header.** Help, the bell and
+  your account sat at uneven distances and slightly different heights on
+  a workspace page. Help is now an icon the size of the bell, and the
+  three are evenly spaced and level.
+
+## 0.34.0 — 2026-11-12
+
+Stable channel release since 2026-11-12.
+
+### New features
+
+- **Size a plan before you staff it.** A **planned resource** is a
+  placeholder for someone you will choose later: add one by name in the
+  plan's Resources dialog, with a day rate and a capacity, and assign
+  tasks to it like anyone else. The plan's cost, load, levelling and
+  effort-driven durations count it, so a plan can be sized and costed
+  before anyone is named. When you know who it is, **Staff with…** hands
+  its tasks to that person or agent. **Defaults**, in Plan tools, sets the
+  plan's scheduling mode and whether a new task's effort decides its
+  duration, so you no longer set that task by task.
+
+- **Milestones can wait for tasks, and take their date from them.** In a
+  milestone's panel, **Waits for** lists the tasks that must finish before
+  it; add one there, or drag a link from a task's bar onto the milestone's
+  diamond, and the chart draws a line to it. **Its date is** chooses
+  between **Fixed**, the date you give it, and **By the plan**, the day
+  the last of those tasks finishes, so the milestone moves when the work
+  does. A fixed milestone flags any task that finishes after it.
+
+### Maintenance updates
+
+- **Projects on Home show their hierarchy.** A project with a parent is
+  listed under it, indented, and the arrow before a parent folds its
+  children away. The fold is remembered in your browser.
+- **Week numbers in the weeks views.** At the Weeks scale the Gantt labels
+  each week with its ISO week number, as in *9 (W46)*, and the Calendar
+  shows it beside each Monday.
+
+### Bug fixes
+
+- **A parent task's float follows its sub-tasks.** A task with sub-tasks
+  that nothing was linked to showed float all the way to the plan's last
+  day, even when the sub-tasks under it were critical. Its float is now
+  the least of its sub-tasks', so a parent over critical work shows none.
+- **A task with sub-tasks can no longer be linked.** It is one of its
+  sub-tasks that another task waits for, so the Gantt no longer offers a
+  parent in a task's relationships or as the end of a dragged link, and
+  its own panel says to link the sub-task. Relationships a parent already
+  has stay until you remove them.
+- **The Gantt's Import button lines up.** **Import…** sat a few pixels
+  higher than **Add task**, **Add milestone** and **Export…** beside it;
+  the four are level now.
+- **Critical path works in every view of the plan.** The button used to
+  change the Gantt only. It now turns the amber marking on and off in the
+  Network, the Calendar, the Timeline and All projects too, and Resource
+  usage underlines the weeks in which someone has critical work.
+- **The critical path is the top row of the Timeline and of All
+  projects**, instead of sitting wherever its dates happened to pack it.
+- **The Calendar follows the time scale.** Days shows a week with every
+  task of each day, Weeks four weeks, Months a month and Quarters a
+  quarter; the arrows step by that much and **Today** returns to the
+  present. Before, the scale did nothing there.
+- **The Timeline and All projects scroll.** Both squeezed the whole plan
+  into the page's width, so a long plan became unreadable. They are now
+  drawn on the Gantt's time scale, under the same rows of dates, and
+  scroll sideways; in All projects the projects' names stay in place.
+- **The time scale works in every view that has time.** Besides the
+  Calendar, Days, Weeks, Months and Quarters now set how wide the
+  Timeline and All projects are drawn and whether Resource usage counts by
+  day, week, month or quarter. The Network has no time axis, so the scale
+  is not offered there.
+
+## 0.33.0 — 2026-11-12
+
+Stable channel release since 2026-11-12.
+
+### New features
+
+- **One navigation on every screen.** A project's menu now runs in the order
+  the work does: **Plan**, **Define**, **Verify**, **Agents**. On a computer
+  that is the rail from top to bottom; on a phone it is the bar along the
+  bottom, which reads **Home**, **Plan**, **Define**, **Verify**, **More**
+  from left to right. **Overview** and **Summary** have moved from Define to
+  the head of Plan. A row under the top bar lists the pages of the group you
+  are in, so the page next door is one click away instead of a trip through
+  the menu, and a page's name appears there once instead of again as a
+  heading on the page. On a phone a group's tab returns to the page you last
+  read in it, the **☰** button is gone, and **More** shows every page as a
+  tile under its group.
+
+- **Requirements: one toolbar, and the requirement's text first.** On a
+  computer the page has one bar: the search and filters, the view switch,
+  then **Working copy**, which opens the baseline picker with Compare,
+  Capture Baseline, Delete baseline, Draft test cases and Download, and
+  **+ New Artifact**. Opening an artifact shows its own text straight under
+  its title; its type, owner, version and dates fold to one line with the
+  rest behind **Details**, and History and Archive sit behind a **⋯** menu
+  beside Edit. On a phone the list is the page and an artifact opens as a
+  screen of its own, with **‹ Requirements** to go back, in place of the
+  Tree / Document tabs.
+- **Design items are read in Requirements.** The separate Design page is
+  gone from the menu, and its old address opens Requirements filtered to
+  design items. A design item's panel there shows what the page showed:
+  what it satisfies and **Verified through**, the tests that reach it.
+
+- **One Overview for what the product is and where the project stands.**
+  A project's Summary and Overview are one page now, the first under Plan
+  and the page a project opens on. The product's definition, metrics,
+  constraints, personas and needs are on the left; on the right are the
+  project's figures, **Needs you** and the recent activity (on a phone,
+  those come first). The changes agents have proposed are lines of Needs you
+  instead of a separate band, and the old Summary address opens the
+  Overview.
+
+- **Approvals and runs you can decide on from a phone.** A proposal's
+  **Approve** is one press and **Reject** asks why first, so the note field
+  is there when it is wanted instead of on every card; **Select several**
+  brings out the ticks and the bulk bar when you want to decide many at once.
+  The runs' Status filter is a row of chips, and on a phone each run is a
+  two-line row (the agent and its status, then when, how long and the cost)
+  instead of a squeezed table.
+- **The bottom bar stays on a workspace page.** On a phone, Home, Plan,
+  Define, Verify and More are under the workspace's Home, runs and settings
+  too: a group opens the project you last opened, and More lists the
+  workspace's own pages.
+
+- **A calmer Gantt header and projects list.** The Gantt's header keeps how
+  you look at the plan (a **View** picker, **Critical path**, **Today** and
+  the zoom) and moves what changes it (Calendar, Resources, Tracking,
+  Recalculate) into one **Plan tools** menu, which turns red when someone
+  is over-allocated. The chart's small text and its fold arrows are larger.
+  On the projects page each project's four unlabelled icons are one **⋯**
+  menu of named actions, and a workspace with no activity yet no longer
+  shows an empty Activity panel.
+
+- **Forms, members and small controls that fit a phone.** A form that
+  opens as a dialog (recording evidence, launching a run, the download
+  wizard) fills the screen on a phone, with its title and a close button
+  that stay at the top. Workspace members and pending invitations are rows
+  there instead of a table that scrolls sideways. An agent's name carries
+  the Agents icon in place of the robot emoji. The small controls a finger
+  kept missing are larger: the diagram's fold and zoom buttons, the cross
+  on a search chip, the linked-artifact chips on a card. Every page now
+  keeps one margin: 16px on a computer and 12px on a phone.
+
+### Maintenance updates
+
+- On Home, a suspect link's two buttons now say what they do, **Still valid**
+  and **Remove**, instead of ✓ and ✗.
+- The notification bell is drawn in the same line style as the other icons
+  instead of as an emoji, so it looks the same on every device.
+
+### Bug fixes
+
+- **An artifact's ⋯ menu.** The ⋯ button at the end of a requirements row
+  stays in view on a narrower window instead of sitting off the right edge
+  of the table, so opening it no longer slides the table sideways. The menu
+  always fits the screen (on a phone its last entries were cut off), and the
+  heavy lines between its entries are gone.
+- **+ New Artifact on a computer** opens its form in the panel on the right,
+  where editing happens, instead of in a short scrolling box above the table.
+- The labels under the icons of the left-hand rail are larger and easier to
+  read.
+- On a phone, the list of test cases in a test run no longer has a heavy
+  line above its first row.
+
+## 0.32.1 — 2026-11-11
+
+Stable channel release since 2026-11-11.
+
+### Security fixes
+
+- **Rebuilt on Go 1.26.11.** The server and the runner are built with Go 1.26.11, which closes an advisory about a crash of the web server under a particular pattern of requests (GO-2026-6859).
+
+### Maintenance updates
+
+- **Tasks stretch over time off, by who is there.** A task keeps its days of work and ends later when its people are away. With several people on it, a day counts for the share of them who are there, by their percentage on the task, and each person's work and cost count only the days they are there. Recording or removing time off, or reassigning the task, moves it to fit.
+- **Time off for each person.** **Workspace settings** → **Plan calendar** records the days each member is away. Members record their own time off; admins anyone's.
+- **Working days are a workspace setting.** The days of the week a plan works moved from the Gantt's header to **Workspace settings** → **Plan calendar**, set by a workspace admin and shared by every project in the workspace.
+- **A task opens in the middle of the window.** The open button on a Gantt row now opens the task in a wide pane over the page, with its description, to-dos and activity beside everything the plan holds on it.
+- **A cleaner Gantt.** The paragraph of instructions under the chart is gone, so the chart has the room; the help and the tooltips say the same. A relationship's line now starts at the end of the driving task's float line instead of running over it.
+- **The V&V Assistant plans with you.** Ask the assistant to plan a piece of work and it offers cards that add tasks with dates, durations and the tasks they wait on, add milestones with their criteria, add to-dos to a task and tick them off, update a task's dates or progress, and recalculate, level or baseline the plan. As with its other cards, nothing changes until you apply one.
+- **More views of the plan.** The Gantt page can show the plan as a network diagram, a month calendar, each person's work by week, or a one-band timeline.
+- **All projects on one chart.** **All projects** shows the plan of every project in the workspace that you can read, each on its own line with its milestones.
+- **Links between projects.** A task can wait on a task of another project in the same workspace. It follows that task when the plan is recalculated, and both plans name the link.
+- **Microsoft Project files.** Export a plan as Microsoft Project XML, and **Import** one to add its tasks, outline, dates, milestones and relationships to a project.
+- **Columns you can edit.** **Columns**, under the Gantt's header, adds start, finish, days, effort, % done, float, cost and who beside the task names. Click a cell to change it in place.
+- **Find, filter, sort and group.** Find tasks by name, list only the late, critical or unscheduled ones, sort by date, float or progress, and group by person, milestone or board column.
+- **Move, indent and outdent tasks.** Move the selected task up or down among its siblings, make it a sub-task of the task above or move it out a level, or drag it by its outline number onto another task. Tasks keep the order you give them.
+- **Undo and redo.** **Undo** (Ctrl+Z) and **Redo** (Ctrl+Y) on the Gantt take back and repeat your edits to tasks.
+- **PDF lines across pages, and a legend.** In the plan's PDF, a relationship to a task on another page now runs to the page's edge and names that task and its page, and every chart page ends with a legend.
+- **Baselines.** **Tracking**, above the Gantt, saves a baseline of the plan. The chart then shows where each task was as a grey bar under it, and a task's panel says how many working days it has moved.
+- **Actual dates, percent complete and cost.** A task's panel has **Tracking**: the days work really started and finished, a percentage complete you type in place of the counted one, and what the task has cost.
+- **Status date and earned value.** Report progress as of a status date, see planned, earned and spent value with the schedule and cost indices, and move work that has not started up to the status date with **Reschedule remaining work**.
+- **People on tasks.** A task's panel on the Gantt has **Resources**: assign several people or agents, each for a share of their time. **Effort decides the duration** makes a task as long as its effort and its people need.
+- **Who is over-allocated, and levelling.** **Resources**, above the chart, lists everyone with work on the plan, their work and the days they are asked for more than their capacity. **Level the plan** delays the tasks with the most float until nobody is.
+- **Cost and budget.** Give each person a day rate and a task a fixed cost, and the plan costs every task and itself, against a budget if you set one.
+- **Automatic scheduling.** A plan can be scheduled automatically: after every change, each task goes straight after the tasks that drive it. Set it under **Calendar** on the Gantt, with the day the plan starts and the day it must finish by; a task can keep its own mode. Plans stay manual until you change them.
+- **Constraints.** A task can be held to a date: start or finish no earlier or no later than, must start or finish on, or as late as possible.
+- **Earliest and latest dates, and negative float.** A task's panel shows the earliest and latest it can run and its float, which goes negative, *N working days behind*, when it runs past a deadline, a constraint or the plan's finish.
+- **Recalculate, only later.** **Recalculate** can treat relationships as minimums and leave alone a task that already starts late enough. A plan can also have a critical path for each chain of tasks.
+- **Holidays.** **Holidays**, beside the Gantt's working days, lists the days the plan does not work whatever the weekday. Durations and float skip them and the chart shades them.
+- **Elapsed time and deadlines.** A task can count its duration in calendar days (**Elapsed time**), for a cure or a delivery, and can carry a **Deadline**: a marker on the chart that moves nothing and turns red when the task runs past it.
+- **Start to finish, and offsets in other units.** A relationship can be **start to finish**, and its offset can be in working days, elapsed days or a percentage of the driving task's duration.
+- **A critical threshold, and only the critical path.** The plan's calendar sets how much float still counts as critical, and **Only critical** lists just the tasks on the path. Every task with room now shows its float line, including tasks nothing depends on.
+- **Offsets on relationships.** A relationship on the Gantt takes an **Offset** in working days: start to start with an offset of 5 starts the second task five working days after the first. A negative offset starts it earlier. A relationship whose task does not keep its offset shows as broken.
+- **Recalculate the plan.** **Recalculate**, above the Gantt, moves every task that another drives to the dates its relationships and offsets ask for, keeping each task's duration. It asks first and says how many tasks moved; nothing else moves a task.
+- **Assign tasks to a milestone.** A task's panel on the Gantt has a **Milestone**, and a milestone's panel lists its **Tasks** and assigns more; a release's milestone takes tasks too. A task with sub-tasks brings them with it. A milestone with tasks counts the share of them done, **Milestone tasks done**, as part of its percentage without being asked, and the criterion can be added with a lower target.
+- **Relationships on the Gantt follow the standard types.** A task's **Depends on** is now **Relationships**, and each one is **finish to start**, **start to start** or **finish to finish**. A task can have several, so two tasks can together drive when a third starts, and the arrows on the chart join the ends each type names. Relationships you had already set are finish to start, as before.
+- **Find a task by typing.** **Sub-task of** and the task chooser under **Relationships** are searchable: type part of a task's name or its outline number, however long the plan.
+- **To-dos are off the chart, and have a deadline.** A bar no longer carries a to-do count. A task's to-dos are listed in its panel beside the chart and on its card on the **Board**; add one with an optional **deadline**, the one date a to-do has, and a deadline that has passed shows in red. They still fill the task's bar.
+- **Duration and effort.** A task has a **Duration** in days and keeps it: change its start and the due date moves with it, change its due date and the start moves, change the duration and the due date moves. **Effort** records the work in a task in person-days, separately, and the figures above the chart add it up.
+- **The critical path.** The Gantt works out how far each task can slip before the plan ends later, and marks in amber the tasks with no room at all, with the arrows between them. A task's panel says **Critical**, or how many days of float it has. **Critical path** above the chart turns the marks off.
+- **A timeline you can scroll.** The Gantt opens on the whole plan when it fits, and otherwise with today a third of the way in from the left. It scrolls past both ends of the plan, further forward than back; drag an empty part of the timeline to move it, and **Today** brings today back.
+- **Working days.** **Working days**, above the Gantt, says which days of the week the plan works: Monday to Friday until you change it. Durations and float count those days only, so a three-day task that starts on a Thursday is due on Monday, and the chart shades the days off. Durations already on a plan are counted again in working days; no date moves.
+- **A task with sub-tasks takes its dates from them.** It starts with its first sub-task and finishes with its last, its effort is theirs added up, and it has no dates of its own to set: schedule the sub-tasks to move it. Dates such a task had are no longer used.
+- **Links in and out of a folded task.** Fold a task and the relationships of its sub-tasks to tasks outside it are still drawn, leaving or landing on its bar at the point along it where the sub-task starts or finishes. If the critical path runs through its sub-tasks, the folded task carries the critical marks.
+- **Relationships from either task.** A relationship is listed on both of its tasks, named from the side of the one you have open: **Finish to start** on the task that comes first is **Start to finish** on the one that follows. Add, change or remove it from either.
+- **Draw a relationship on the chart.** Point at a bar and drag the **+** at its start or end to another bar. The ends you join decide whether it is finish to start, start to start or finish to finish.
+- **Click or drag to schedule.** On the row of a task with no dates, click a date to schedule it for that day, week, month or quarter, by the scale you are at, or drag across the row for the range you want, drawn as you drag.
+- **The whole critical path, with its float.** The critical path is now the chain of tasks that decides when the plan ends, shown even where the dates leave room between two of them. After a task's bar, a thin dashed line ended by a tick shows how far it can slip before it pushes the next task.
+- **Add a task in the chart.** Type a title in the last row of the Gantt's outline and press Enter.
+- **The scroll bar belongs to the timeline.** It sits under the timeline and starts where the task column ends.
+- **The Gantt fills the window.** On a computer, the chart and the task or milestone panel beside it reach the bottom of the window, however few tasks the plan has; each scrolls on its own when it is longer.
+- **The open button opens the full task.** The small open button on a Gantt row now opens the task in full, with its description, assignee, linked artifacts and activity, as the board does. Selecting the task's title or its bar still shows it in the panel beside the chart, which has **Open the full task** too.
+- **Open a task from its row.** Each row of the Gantt, and each milestone, has a small open button.
+- **Releases is under Plan.** The **Releases** page has moved from **Verify** to **Plan** in the project menu, beside the Gantt, where each release is a milestone. Links to it are unchanged.
+
+### Bug fixes
+
+- **Today on the Gantt.** **Today** scrolls the timeline so that today sits a third of the way in from the left; it had stopped after a first small step.
+- **Lines in the PDF plan.** The PDF export of the plan draws the lines between related tasks, as the chart does.
+
+## 0.32.0 — 2026-11-10
+
+### New features
+
+- **A Gantt plan for every project.** The new **Gantt** page, under **Plan**, draws the board's cards on a timeline. Give a task a start and a due date by dragging its bar, make it a sub-task of another, and say which tasks it waits for; an arrow turns red when a task starts before one it depends on ends. Nothing is typed in as a percentage: a task's bar fills as the to-dos on it are ticked off and its sub-tasks finish. Add **milestones** with criteria measured from the project itself, such as *user needs addressed: 100%* for an early definition milestone or *requirements verified: 80%* later, and the band leading up to each milestone fills as its criteria are met. Every **release** is a milestone on the plan at its target date, with its own criteria. **Export** saves the plan as a PDF of the chart, an Excel workbook, CSV or JSON. On a phone the same plan is a schedule list grouped by milestone. Agents read the plan with `get_plan` and place a task with `schedule_work_item`.
+
 ## 0.31.0 — 2026-11-10
 
 ### New features

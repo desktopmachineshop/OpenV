@@ -4993,10 +4993,10 @@
       "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 1785,
+      "content_length": 1819,
       "kind": "json",
       "body": [
-        "{\"sections\":[],\"types\":[{\"type\":\"requirement\",\"count\":1}],\"attachments\":[],\"fields\":[{\"key\":\"status\",\"label\":\"Status\",\"count\":1,\"custom\":false}],\"owners\":[],\"templates\":[{\"key\":\"standard\",\"name\":\"Specification\",\"description\":\"The whole project as a specification: every artifact with its fields, figures and traceability, and each requirement's V\\u0026V status.\",\"content\":{\"traceability\":true,\"figures\":true,\"toc\":true,\"all_fields\":true,\"test_results\":false,\"vv_status\":true}},{\"key\":\"requirements-review\",\"name\":\"Requirements review\",\"description\":\"Needs and requirements with their priority, status and verification method, traced to what they derive from, for a review board.\",\"types\":[\"user-need\",\"requirement\"],\"content\":{\"traceability\":true,\"figures\":true,\"toc\":true,\"all_fields\":false,\"fields\":[\"priority\",\"status\",\"verification_method\"],\"test_results\":false,\"vv_status\":false}},{\"key\":\"test-planning\",\"name\":\"Test planning\",\"description\":\"Requirements and the test cases that verify them, with verification and execution methods, no results yet.\",\"types\":[\"requirement\",\"test-case\"],\"content\":{\"traceability\":true,\"figures\":false,\"toc\":true,\"all_fields\":false,\"fields\":[\"priority\",\"status\",\"verification_method\",\"execution_method\"],\"test_results\":false,\"vv_status\":false}},{\"key\":\"vv\",\"name\":\"Verification \\u0026 Validation\",\"description\":\"Requirements, tests and hazards with every field, each requirement's verification rollup, the latest test results, the coverage summary and gaps.\",\"types\":[\"user-need\",\"requirement\",\"test-case\",\"hazard\"],\"content\":{\"traceability\":true,\"figures\":false,\"toc\":true,\"all_fields\":true,\"test_results\":true,\"vv_status\":true}}],\"defaults\":{\"traceability\":true,\"figures\":true,\"toc\":true,\"all_fields\":true,\"test_results\":false,\"vv_status\":true}}"
+        "{\"sections\":[],\"types\":[{\"type\":\"requirement\",\"count\":1}],\"attachments\":[],\"fields\":[{\"key\":\"status\",\"label\":\"Status\",\"count\":1,\"custom\":false}],\"owners\":[],\"templates\":[{\"key\":\"standard\",\"name\":\"Specification\",\"description\":\"The whole project as a specification: every artifact with its fields, figures and traceability, and each requirement's V\\u0026V status.\",\"content\":{\"traceability\":true,\"figures\":true,\"toc\":true,\"all_fields\":true,\"test_results\":false,\"vv_status\":true}},{\"key\":\"requirements-review\",\"name\":\"Requirements review\",\"description\":\"Needs and requirements with their priority, status and verification method, traced to what they derive from, for a review board.\",\"types\":[\"user-need\",\"requirement\"],\"content\":{\"traceability\":true,\"figures\":true,\"toc\":true,\"all_fields\":false,\"fields\":[\"priority\",\"status\",\"verification_method\"],\"test_results\":false,\"vv_status\":false}},{\"key\":\"test-planning\",\"name\":\"Test planning\",\"description\":\"Requirements and the test cases that verify them, with verification and execution methods, no results yet.\",\"types\":[\"requirement\",\"test-case\"],\"content\":{\"traceability\":true,\"figures\":false,\"toc\":true,\"all_fields\":false,\"fields\":[\"priority\",\"status\",\"verification_method\",\"execution_method\"],\"test_results\":false,\"vv_status\":false}},{\"key\":\"vv\",\"name\":\"Verification \\u0026 Validation\",\"description\":\"Requirements, tests and hazards with every field, each requirement's verification rollup, the latest test results, the coverage summary and gaps.\",\"types\":[\"user-need\",\"requirement\",\"test-case\",\"hazard\"],\"content\":{\"traceability\":true,\"figures\":false,\"toc\":true,\"all_fields\":true,\"test_results\":true,\"vv_status\":true}}],\"defaults\":{\"traceability\":true,\"figures\":true,\"toc\":true,\"all_fields\":true,\"test_results\":false,\"vv_status\":true},\"plan\":{\"tasks\":3,\"milestones\":0}}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -5103,6 +5103,10 @@
           "all_fields": true,
           "test_results": false,
           "vv_status": true
+        },
+        "plan": {
+          "tasks": 3,
+          "milestones": 0
         }
       },
       "gzip": "not sent: S5a pins the documents by structure; the 200 on a read-only workspace is the point here"

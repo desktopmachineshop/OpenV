@@ -266,6 +266,7 @@ func TestGuidedCopilotPromptOffersEveryProjectActionBehindItsGate(t *testing.T) 
 	shapes := []string{
 		`"kind":"release"`, `"kind":"target"`, `"kind":"link"`, `"kind":"status"`, `"kind":"archive"`,
 		`"kind":"comment"`, `"kind":"todo"`, `"kind":"task"`, `"kind":"baseline"`, `"kind":"review"`, `"kind":"test_run"`,
+		`"kind":"plan_task"`, `"kind":"milestone"`, `"kind":"task_todo"`, `"kind":"todo_done"`, `"kind":"plan"`,
 	}
 	off := buildGuidedCopilotPrompt(session, nil, nil, 0, "", nil, "", nil, &projectOutline{Edits: true})
 	on := buildGuidedCopilotPrompt(session, nil, nil, 0, "", nil, "", nil, &projectOutline{Edits: true, Full: true})

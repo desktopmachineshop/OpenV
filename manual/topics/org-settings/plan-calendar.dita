@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="plan-calendar">
+  <title>Plan calendar</title>
+  <shortdesc>The days of the week every project's plan in the workspace works, and the days each member is away. An admin sets the working days and anyone's time off; a member records their own time off. See <i>The plan (Gantt)</i> → <i>Working days</i> for what they do to a plan.</shortdesc>
+  <conbody/>
+</concept>

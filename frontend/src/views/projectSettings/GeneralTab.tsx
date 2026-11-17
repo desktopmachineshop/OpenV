@@ -2,8 +2,8 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Party, Project, Setter, td, th } from './shared';
 
-// The General tab of project settings: the parent project (REQ-144) and the
-// reference parties (REQ-147), each behind its feature key, and a note on the
+// The General tab of project settings: where the parent project is set
+// (the project's Overview; REQ-144) and the reference parties (REQ-147), each behind its feature key, and a note on the
 // stable channel while both are off.
 // Props-only (refactor plan F6): the ProjectSettings shell owns the state, the
 // loads and the handlers, so a tab switch keeps unsaved input.
@@ -11,10 +11,6 @@ interface GeneralTabProps {
   flowDown: boolean;
   ownersOn: boolean;
   project: Project | null;
-  parentCandidates: Project[];
-  childProjects: Project[];
-  savingParent: boolean;
-  handleSetParent: (parentId: string) => void;
   parties: Party[];
   savingParties: boolean;
   saveParties: (next: Party[]) => void;
@@ -29,10 +25,6 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
   flowDown,
   ownersOn,
   project,
-  parentCandidates,
-  childProjects,
-  savingParent,
-  handleSetParent,
   parties,
   savingParties,
   saveParties,
@@ -62,38 +54,10 @@ export const GeneralTab: React.FC<GeneralTabProps> = ({
             rolls those refinements up. A supplier works in the child project with editor
             rights there and viewer rights on the parent.
           </p>
-          {!project ? (
-            <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading project…</div>
-          ) : (
-            <div className="form-group" style={{ maxWidth: 420 }}>
-              <label htmlFor="parent-project">This project refines</label>
-              <select
-                id="parent-project"
-                value={project.parent_project_id || ''}
-                disabled={savingParent}
-                onChange={(e) => handleSetParent(e.target.value)}
-              >
-                <option value="">None (top-level project)</option>
-                {parentCandidates.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          )}
-          {childProjects.length > 0 && (
-            <div style={{ fontSize: 13, color: 'var(--text)' }}>
-              <div style={{ color: 'var(--text-muted)', marginBottom: 4 }}>Child projects</div>
-              <ul style={{ margin: 0, paddingLeft: '1.2em' }}>
-                {childProjects.map((p) => (
-                  <li key={p.id}>
-                    <Link to={`/projects/${p.id}/settings?tab=general`}>{p.name}</Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+          <p style={{ fontSize: 13 }}>
+            A project's parent is set on its <Link to={`/projects/${project?.id || ''}`}>Overview</Link>, where its child projects are
+            listed too. A new child project is started from the parent's menu on the projects page.
+          </p>
         </div>
     )}
 

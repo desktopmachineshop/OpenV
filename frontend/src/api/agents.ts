@@ -37,7 +37,8 @@ export const agentsAPI = {
     client.get<AgentStatsResponse>('/api/v1/agent-stats', { params: { project_id: projectId } }),
   // Places agents in the hierarchy; answers the workspace's agents.
   arrange: (agents: AgentPlacement[]) => client.put<AgentDef[]>('/api/v1/agent-arrangement', { agents }),
-  launchRun: (slug: string, payload: { project_id?: string; prompt: string; work_item_id?: string }) =>
+  /** `conversation` says a person is chatting with the agent rather than giving it a task, so the board makes no card of the run. */
+  launchRun: (slug: string, payload: { project_id?: string; prompt: string; work_item_id?: string; conversation?: boolean }) =>
     client.post<AgentRun>(`/api/v1/agents/${slug}/runs`, payload),
   // Launch the seeded test-case-author agent to draft test cases (and verifies
   // links) for the given requirement artifacts, as proposals. The agent fetches

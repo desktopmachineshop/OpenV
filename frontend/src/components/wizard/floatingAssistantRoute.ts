@@ -20,6 +20,18 @@ const DEEP_LABELS: Record<string, string> = {
   'crew/network': 'Crew',
 };
 
+// The workspace's own pages, which show the assistant as the project's do.
+const WORKSPACE_LABELS: Record<string, string> = {
+  'org/plan/tasks': 'My tasks',
+  'org/plan': 'Workspace plan',
+  'org/todos': 'My to-dos',
+  'org/agents': 'Agents',
+  'org/runs': 'Workspace runs',
+  'org/settings': 'Workspace settings',
+  'whats-new': "What's new",
+  admin: 'Platform admin',
+};
+
 const pageLabelFor = (rest: string[]): string => {
   const first = rest[0] || '';
   if (rest.length >= 2) {
@@ -31,12 +43,17 @@ const pageLabelFor = (rest: string[]): string => {
 };
 
 /**
- * Read a pathname: the workspace Home (/projects) and every project page
- * show the assistant, except the guided wizard, which has the assistant
- * docked beside its form already.
+ * Read a pathname: the workspace Home (/projects), the workspace's own
+ * pages and every project page show the assistant, except the guided
+ * wizard, which has the assistant docked beside its form already. The
+ * sign-in pages and the public site do not.
  */
 export const assistantRoute = (pathname: string): AssistantRoute => {
   const parts = pathname.replace(/\/+$/, '').split('/').filter(Boolean);
+  // A workspace page has no project in its address: the conversation is
+  // the one of the project the panel names, as on Home.
+  const workspace = WORKSPACE_LABELS[parts.slice(0, 3).join('/')] || WORKSPACE_LABELS[parts.slice(0, 2).join('/')] || WORKSPACE_LABELS[parts[0] || ''];
+  if (workspace) return { show: true, projectId: null, pageLabel: workspace };
   if (parts[0] !== 'projects') return HIDDEN;
   if (parts.length === 1) return { show: true, projectId: null, pageLabel: 'Home' };
   const projectId = decodeURIComponent(parts[1]);

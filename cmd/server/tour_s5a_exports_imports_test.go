@@ -229,6 +229,10 @@ func exportsImportsTour(tr *tour) {
 			"priority)"))
 	tr.step("download P as JSON with its figures: a zip of the document and the figure", o,
 		"GET /api/v1/projects/{id}/download/json", at("id", "{{p}}"), query("attachments=figures"))
+	tr.step("download P as CSV with the projects under it: a zip of P's rows and the supplier's in its folder", o,
+		"GET /api/v1/projects/{id}/download/csv", at("id", "{{p}}"), query("children=1"))
+	tr.step("download P's baseline with children=1: a baseline takes no project along", o,
+		"GET /api/v1/projects/{id}/download/csv", at("id", "{{p}}"), query("baseline_id={{baseline}}&children=1"))
 	tr.step("download with a category P does not hold: no archive", o, "GET /api/v1/projects/{id}/download/csv",
 		at("id", "{{p}}"), query("attachments=documents"))
 	tr.step("download a project that does not exist", o, "GET /api/v1/projects/{id}/download/json",

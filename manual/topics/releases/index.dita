@@ -6,6 +6,6 @@
     <resourceid appname="openv-web" appid="releases"/>
   </prolog>
   <conbody>
-    <p>A <b>release</b> is a milestone you plan requirements for, such as <i>MVP</i>, <i>V1.0</i> or <i>V2.0</i>. The <b>Releases</b> page, under <b>Verify</b> in the project menu, lists a project's releases in order and shows how far each one has come: how many of its requirements are approved, how many are verified, and a burn-up of verification over time.</p>
+    <p>A <b>release</b> is a milestone you plan requirements for, such as <i>MVP</i>, <i>V1.0</i> or <i>V2.0</i>. The <b>Releases</b> page, under <b>Plan</b> in the project menu, lists a project's releases in order and shows how far each one has come: how many of its requirements are approved, how many are verified, and a burn-up of verification over time.</p>
   </conbody>
 </concept>

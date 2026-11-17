@@ -69,6 +69,16 @@ type Request struct {
 	// snapshot as loaded, not narrowed, since a selection can leave out a
 	// requirement's own test cases (see coverageAsLoaded).
 	Coverage reports.CoverageFunc
+	// Extra are files that travel beside the document: the project's plan,
+	// which the caller renders. With any, the download is an archive.
+	Extra []ExtraFile
+}
+
+// ExtraFile is a file a download carries beside its document, at the path
+// it is given inside the archive.
+type ExtraFile struct {
+	Name string
+	Data []byte
 }
 
 // Result is the file to serve.
@@ -253,9 +263,10 @@ func (s *DefaultService) Options(projectID string, baselineID string) (*Options,
 	return BuildOptions(data), nil
 }
 
-// Download renders one file. When the selection asks for attachments, the
-// rendered document and the files travel together in a zip: a specification
-// and the drawings it cites are one deliverable.
+// Download renders one file. When the selection asks for attachments, or the
+// request carries extra files (the plan), the rendered document and the files
+// travel together in a zip: a specification, the drawings it cites and the
+// plan to deliver it are one deliverable.
 func (s *DefaultService) Download(req Request) (*Result, error) {
 	if !Supported(string(req.Format)) {
 		return nil, fmt.Errorf("%w: %s", ErrUnsupportedFormat, req.Format)
@@ -312,11 +323,11 @@ func (s *DefaultService) Download(req Request) (*Result, error) {
 	}
 
 	files := exports.SelectedFiles(data, req.Selection)
-	if len(files) == 0 {
+	if len(files) == 0 && len(req.Extra) == 0 {
 		return &Result{Data: body, Filename: filename, ContentType: ContentType(req.Format)}, nil
 	}
 
-	archive, err := s.bundle(filename, body, files)
+	archive, err := s.bundle(filename, body, files, req.Extra)
 	if err != nil {
 		return nil, err
 	}
@@ -364,7 +375,7 @@ func zipName(filename string) string {
 // A file that cannot be read is skipped rather than failing the download: the
 // document is what was asked for, and one missing drawing should not deny it.
 // The archive records the loss in a manifest so nobody assumes it is complete.
-func (s *DefaultService) bundle(filename string, body []byte, files []*attachments.Attachment) ([]byte, error) {
+func (s *DefaultService) bundle(filename string, body []byte, files []*attachments.Attachment, extra []ExtraFile) ([]byte, error) {
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
 
@@ -374,6 +385,15 @@ func (s *DefaultService) bundle(filename string, body []byte, files []*attachmen
 	}
 	if _, err := doc.Write(body); err != nil {
 		return nil, err
+	}
+	for _, e := range extra {
+		f, err := w.Create(e.Name)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := f.Write(e.Data); err != nil {
+			return nil, err
+		}
 	}
 
 	var missing []string

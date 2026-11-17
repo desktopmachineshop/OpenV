@@ -177,8 +177,11 @@ export const ArtifactActionsMenu: React.FC<ArtifactActionsMenuProps> = ({
                   fontSize: touch ? 14 : 13,
                   color: item.disabled ? 'var(--text-muted)' : 'var(--text)',
                   // A rule above Move and above Copy separates making new
-                  // artifacts, moving this one, and copying it.
-                  borderTop: item.separated ? '1px solid var(--border-soft)' : undefined,
+                  // artifacts, moving this one, and copying it. The other
+                  // entries say 'none' outright: leaving the side unset after
+                  // the border shorthand hands it back to the browser's own
+                  // button border, a heavy line above every entry.
+                  borderTop: item.separated ? '1px solid var(--border-soft)' : 'none',
                 }}
                 onMouseEnter={(e) => {
                   if (!item.disabled) e.currentTarget.style.backgroundColor = 'var(--surface-hover)';
