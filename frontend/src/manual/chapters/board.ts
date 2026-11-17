@@ -65,6 +65,15 @@ Either way the card lets you:
   lists, and with the card opened in full it is a card of its own.
 - Delete the card.
 
+Opened in full on a computer, the card also shows everything the plan
+holds on it, on the right: its **schedule** (start, due date, duration,
+effort and deadline), the task it is a sub-task of, who is assigned and
+what has been done, its **milestone**, its **relationships** with other
+tasks, its to-dos and its **sub-tasks**. It is the same panel the
+**Gantt** page shows for the task, and a change made in either place
+shows in both: see [The plan (Gantt)](/manual/gantt). Selecting a
+sub-task or a related task there opens that card.
+
 ## Moving cards
 
 Drag any unlocked card between columns or within a column. Human-assigned and
