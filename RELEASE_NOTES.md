@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.36.3 — 2026-11-17
+
 ### Bug fixes
 
 - **An agent's proposal shows only what it changes.** A proposal to
