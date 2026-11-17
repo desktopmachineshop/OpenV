@@ -240,6 +240,8 @@ func TestGapAnalysis(t *testing.T) {
 			mkArtifact("tc-fail", "test-case", "TC fail", nil),
 			mkArtifact("tc-pass", "test-case", "TC pass", nil),
 			mkArtifact("tc-orphan", "test-case", "TC orphan", nil),
+			// a validation test checks a user need, not a requirement
+			mkArtifact("tc-validation", "test-case", "TC validation", nil),
 			// user needs
 			mkArtifact("need-linked", "user-need", "Linked need", nil),
 			mkArtifact("need-orphan", "user-need", "Orphan need", nil),
@@ -251,6 +253,7 @@ func TestGapAnalysis(t *testing.T) {
 		[]*links.Link{
 			mkLink("tc-fail", "req-fail", "verifies"),
 			mkLink("tc-pass", "req-pass", "verifies"),
+			mkLink("tc-validation", "need-linked", "validates"),
 			mkLink("req-pass", "need-linked", "derives-from"),
 			mkLink("design-1", "req-pass", "satisfies"),
 			mkLink("design-1", "hazard-mitigated", "mitigates"),

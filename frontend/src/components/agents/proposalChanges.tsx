@@ -97,6 +97,10 @@ const fieldChanges = (payload: Record<string, any>, current: Artifact | undefine
   const out: { key: string; label: string; before?: string; after: string }[] = [];
   Object.entries(payload || {}).forEach(([k, v]) => {
     if (ADDRESS_KEYS.has(k)) return;
+    // A field sent as null sets nothing: the server leaves it as it is on an
+    // update (an agent's update_artifact sends attributes: null when it
+    // changes only the text), so it is not a change to show.
+    if (v === null || v === undefined) return;
     if (k === 'attributes' && v && typeof v === 'object' && !Array.isArray(v)) {
       Object.entries(v as Record<string, unknown>).forEach(([ak, av]) => {
         const before = current ? show(current.attributes?.[ak]) : undefined;

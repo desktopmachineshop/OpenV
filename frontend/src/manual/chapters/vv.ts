@@ -44,7 +44,9 @@ attention, worst first — failing requirements, then those without a
 verification method, without a test case, and so on — each with the reason.
 **All** opens the full list, grouped by kind of gap (for example
 requirements without a verification method, or without any verifying test).
-An empty list means full coverage. When agents have proposals waiting, the
+A test case is a gap only when it checks nothing: one that validates a user
+need counts as linked, as one that verifies a requirement does. An empty
+list means full coverage. When agents have proposals waiting, the
 card says how many and links to them.
 
 Otherwise the card ends in **Draft tests**. It opens the V&V Assistant over the

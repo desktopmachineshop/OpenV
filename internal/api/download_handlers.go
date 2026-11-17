@@ -13,6 +13,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/exports"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/plan"
+	"github.com/openv/requirements-platform/internal/domain/projects"
 )
 
 // Taking a project away used to mean four separate things: a JSON export, a
@@ -64,7 +65,40 @@ func (h *Handler) DownloadOptions(w http.ResponseWriter, r *http.Request) {
 			out.Plan = &downloadPlanOption{Tasks: len(p.Tasks), Milestones: len(p.Milestones)}
 		}
 	}
+	// A project with projects under it the caller can read can take them along.
+	if id := r.URL.Query().Get("baseline_id"); id == "" || id == "live" {
+		out.Children = len(h.readableDescendants(r, projectID))
+	}
 	writeJSONOK(w, out)
+}
+
+// readableDescendants lists the projects under a project, every level
+// down, that the caller may read, a parent before its children. One the
+// caller cannot read is left out with everything under it: its place in
+// the hierarchy is not the caller's to learn.
+func (h *Handler) readableDescendants(r *http.Request, projectID string) []*projects.Project {
+	if h.ProjectService == nil {
+		return nil
+	}
+	var out []*projects.Project
+	seen := map[string]bool{projectID: true}
+	queue := []string{projectID}
+	for len(queue) > 0 {
+		children, err := h.ProjectService.ListChildren(queue[0])
+		queue = queue[1:]
+		if err != nil {
+			continue
+		}
+		for _, c := range children {
+			if c == nil || seen[c.ID] || !h.hasProjectRole(r, c.ID, members.RoleViewer) {
+				continue
+			}
+			seen[c.ID] = true
+			out = append(out, c)
+			queue = append(queue, c.ID)
+		}
+	}
+	return out
 }
 
 // downloadOptions is what a download form is offered: what the project
@@ -72,6 +106,8 @@ func (h *Handler) DownloadOptions(w http.ResponseWriter, r *http.Request) {
 type downloadOptions struct {
 	*downloads.Options
 	Plan *downloadPlanOption `json:"plan,omitempty"`
+	// Children counts the projects under this one that a download can take along.
+	Children int `json:"children,omitempty"`
 }
 
 // downloadPlanOption counts what the plan would add to a download.
@@ -132,6 +168,18 @@ func (h *Handler) serveDownload(w http.ResponseWriter, r *http.Request, format d
 		extra = append(extra, downloads.ExtraFile{Name: "plan/" + out.Filename, Data: out.Data})
 	}
 
+	// ?children=1 takes the projects under this one along, each as its own
+	// download in the same format with the same selection, in a folder of
+	// its name. They are the projects as they stand, so a baseline's
+	// download has none.
+	if wantsFlag(r, "children") && (baselineID == "" || baselineID == "live") {
+		files, ok := h.childDownloads(w, r, projectID, format)
+		if !ok {
+			return
+		}
+		extra = append(extra, files...)
+	}
+
 	result, err := h.DownloadService.Download(downloads.Request{
 		ProjectID:  projectID,
 		BaselineID: baselineID,
@@ -164,9 +212,66 @@ func (h *Handler) serveDownload(w http.ResponseWriter, r *http.Request, format d
 }
 
 // wantsPlan reports whether a download asks for the plan beside it.
-func wantsPlan(r *http.Request) bool {
-	v := strings.TrimSpace(r.URL.Query().Get("plan"))
+func wantsPlan(r *http.Request) bool { return wantsFlag(r, "plan") }
+
+// wantsFlag reports whether a query parameter is switched on.
+func wantsFlag(r *http.Request, name string) bool {
+	v := strings.TrimSpace(r.URL.Query().Get(name))
 	return v != "" && v != "0" && !strings.EqualFold(v, "false")
+}
+
+// childDownloads renders each project under a project the caller may read
+// as the download the request asks for, at projects/<name>/ in the
+// archive; with ?plan=1 each takes its own plan too. A child that fails to
+// render fails the download: an archive that silently lacked a project
+// would read as complete.
+func (h *Handler) childDownloads(w http.ResponseWriter, r *http.Request, projectID string, format downloads.Format) ([]downloads.ExtraFile, bool) {
+	var files []downloads.ExtraFile
+	used := map[string]bool{}
+	for _, child := range h.readableDescendants(r, projectID) {
+		var extra []downloads.ExtraFile
+		if wantsPlan(r) && h.PlanService != nil {
+			out, ok := h.renderPlan(w, r, child.ID, planFormatFor(format))
+			if !ok {
+				return nil, false
+			}
+			extra = append(extra, downloads.ExtraFile{Name: "plan/" + out.Filename, Data: out.Data})
+		}
+		result, err := h.DownloadService.Download(downloads.Request{
+			ProjectID: child.ID,
+			Format:    format,
+			Selection: selectionFromQuery(r),
+			Coverage:  h.flowDownCoverage,
+			Extra:     extra,
+		})
+		if err != nil {
+			respondInternal(w, r, "failed to build download", err)
+			return nil, false
+		}
+		files = append(files, downloads.ExtraFile{Name: "projects/" + childFolder(child, used) + "/" + result.Filename, Data: result.Data})
+	}
+	return files, true
+}
+
+// childFolder is the folder a child project's download sits in: its name,
+// made safe for a path, and told apart from another of the same name.
+func childFolder(p *projects.Project, used map[string]bool) string {
+	name := strings.Map(func(c rune) rune {
+		if c == '/' || c == '\\' || c == ':' || c < 0x20 {
+			return '-'
+		}
+		return c
+	}, strings.TrimSpace(p.Name))
+	name = strings.Trim(name, ". ")
+	if name == "" {
+		name = "project"
+	}
+	folder := name
+	for n := 2; used[strings.ToLower(folder)]; n++ {
+		folder = fmt.Sprintf("%s (%d)", name, n)
+	}
+	used[strings.ToLower(folder)] = true
+	return folder
 }
 
 // planFormatFor is the plan's format beside a document of a format: data

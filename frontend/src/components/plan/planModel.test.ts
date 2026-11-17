@@ -277,6 +277,30 @@ describe('the plan model', () => {
     expect(phoneGroups([], [milestone('m1', '2027-03-01')]).map((g) => g.key)).toEqual(['m1']);
     expect(phoneGroups([task('x', { span_end: '2027-01-01' })], [])[0].title).toBe('Scheduled');
   });
+
+  it('puts a phase on the phone under the milestone its sub-tasks are assigned to', () => {
+    // The regression: a plan of phases, each a summary task whose sub-tasks
+    // lead to a review, showed every review as having no task, because only
+    // the top-level task's own milestone was read.
+    const groups = phoneGroups(
+      [
+        task('define', { span_end: '2026-03-27' }),
+        task('needs', { depth: 1, parent_id: 'define', span_end: '2026-02-06', milestone: 'srr' }),
+        task('srr-meeting', { depth: 1, parent_id: 'define', span_end: '2026-03-27', milestone: 'srr' }),
+        task('design', { span_end: '2026-07-17', milestone: 'pdr' }),
+        task('layout', { depth: 1, parent_id: 'design', span_end: '2026-05-29', milestone: 'srr' }),
+        task('build', { span_end: '2027-05-28' }),
+        task('parts', { depth: 1, parent_id: 'build', span_end: '2027-02-26' }),
+      ],
+      [milestone('srr', '2026-03-27'), milestone('pdr', '2026-07-17')],
+    );
+    expect(groups.map((g) => [g.key, g.tasks.map((t) => t.id)])).toEqual([
+      ['srr', ['define']],
+      // A task's own milestone wins over its sub-tasks'.
+      ['pdr', ['design']],
+      ['unassigned', ['build']],
+    ]);
+  });
 });
 
 describe('the chart\'s view of the plan', () => {

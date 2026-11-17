@@ -365,6 +365,9 @@ func (s *s9Projects) GetProject(id string) (*projects.Project, error) {
 	return &c, nil
 }
 
+// The fixture's projects sit side by side: none has one under it.
+func (s *s9Projects) ListChildren(string) ([]*projects.Project, error) { return nil, nil }
+
 type s9Products struct {
 	products.Service
 	d *s9Data

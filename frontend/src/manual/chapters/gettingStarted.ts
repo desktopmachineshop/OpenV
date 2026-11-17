@@ -7,6 +7,10 @@ OpenV is a requirements management platform with full traceability, verification
 & validation (V&V) tracking, and a built-in multi-agent suite. This chapter gets
 you from the sign-in screen to your first workspace.
 
+To watch a project go from nothing to its first baseline, see the
+[getting-started video](https://openv.app/demos#getting-started) on
+openv.app: two minutes, with captions and a transcript.
+
 ## Signing in
 
 Open the app in your browser and you land on the sign-in screen.

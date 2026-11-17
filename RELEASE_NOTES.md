@@ -9,6 +9,44 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **An agent's proposal shows only what it changes.** A proposal to
+  reword a requirement listed the requirement's other fields as though it
+  would clear them, though approving it left them as they were. Review now
+  shows the new wording alone.
+- **Tables follow the dark theme.** A test run's table of results and the
+  traceability matrix stayed white on the dark theme, with pale text that
+  could not be read. Both now use the dark colours, and so do a button
+  under the pointer and the chosen result on a phone's test run.
+
+### Maintenance updates
+
+- **The manual links to the getting-started video.** The Getting started
+  chapter points to the two-minute walk-through on openv.app.
+- **A lighter logo.** The OpenV logo at the top of every page is 5 KB
+  instead of 177 KB, so a page shows sooner on a slow connection.
+
+## 0.36.2 — 2026-11-14
+
+### Bug fixes
+
+- **A phase shows under its milestone on a phone.** On a phone, the
+  plan's schedule grouped only the top-level tasks, by their own
+  milestone, so a plan of phases whose sub-tasks lead to each review
+  showed every milestone with no task. A phase now goes under the
+  milestone its sub-tasks are assigned to.
+
+## 0.36.1 — 2026-11-14
+
+### Bug fixes
+
+- **A validation test is no longer listed as a gap.** A test case that
+  validates a user need, rather than verifying a requirement, was counted
+  on the gap list as a test that checks nothing. It now counts as linked.
+
+## 0.36.0 — 2026-11-14
+
 ### New features
 
 - **Create projects with a runner key or from a connected AI app.** A
@@ -23,6 +61,22 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ### Maintenance updates
 
+- **A shorter zoom control.** The plan's time scale buttons read **D**,
+  **W**, **M** and **Q**, for days, weeks, months and quarters; pointing
+  at one names it.
+- **Every Gantt view, for every project at once.** The workspace's
+  **Plan** page has a **View** menu: beside the timeline of a line per
+  project it now draws all the projects as a **Gantt** (a row per
+  project, its tasks beneath it), a **Network**, a **Calendar** and
+  **Resource usage**, which adds up each person's work across the
+  projects. They read the plans; a task's open mark leads to its own
+  project's Gantt.
+- **Download a project with the projects under it.** The download form
+  of a project that has projects beneath it offers **Child projects**:
+  tick it and each one you can read, every level down, travels in the
+  same archive as its own download, in a folder of its name under
+  `projects/`, with the same format and choices, and its own plan if you
+  asked for the plan.
 - **Open an artifact in full.** The open mark beside an artifact's title
   shows it over the page, as a task opens, with its **History** in a card
   of its own beside it.

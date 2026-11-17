@@ -251,11 +251,22 @@ export const phoneGroups = (tasks: PlanTask[], milestones: PlanMilestone[]): Pho
   const groups: PhoneGroup[] = shown.map((m) => ({ key: m.key, milestone: m, title: m.name, tasks: [] }));
   const unassigned: PhoneGroup = { key: 'unassigned', milestone: null, title: milestones.length ? 'Not assigned to a milestone' : 'Scheduled', tasks: [] };
   const unscheduled: PhoneGroup = { key: 'unscheduled', milestone: null, title: 'Not scheduled', tasks: [] };
-  for (const t of tasks) {
-    if (t.depth > 0) continue;
-    const own = t.milestone ? groups.find((g) => g.key === t.milestone) : undefined;
+  // A top-level task goes under its own milestone or, when it has none, the
+  // milestone its first assigned sub-task has: a phase whose tasks lead to a
+  // review is that review's, though the phase itself was never assigned.
+  const milestoneOf = (i: number): string | null | undefined => {
+    if (tasks[i].milestone) return tasks[i].milestone;
+    for (let j = i + 1; j < tasks.length && tasks[j].depth > tasks[i].depth; j++) {
+      if (tasks[j].milestone) return tasks[j].milestone;
+    }
+    return undefined;
+  };
+  tasks.forEach((t, i) => {
+    if (t.depth > 0) return;
+    const key = milestoneOf(i);
+    const own = key ? groups.find((g) => g.key === key) : undefined;
     (own ?? (t.span_end ? unassigned : unscheduled)).tasks.push(t);
-  }
+  });
   // A dated milestone shows even with no task yet; an undated one only with tasks.
   return [...groups, unassigned, unscheduled].filter((g) => g.milestone?.date || g.tasks.length > 0);
 };

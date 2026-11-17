@@ -160,6 +160,12 @@ a two-step wizard.
   specification, and Microsoft Project XML beside ReqIF. It also makes the
   download a **.zip**. It is offered for the project as it stands, when it
   has a task or a milestone, and not for a baseline.
+- **Child projects** — tick **The projects under this one** to take them
+  along: each project beneath this one that you can read, every level
+  down, travels as its own download with the same format and choices, in
+  a folder of its name under \`projects/\` in the **.zip**, with its own
+  plan if you ticked the plan. It is offered for a project that has
+  projects under it, and not for a baseline.
 
 The line at the foot of the wizard says what you are about to get — "1 of 3
 sections, no headings, with figures" — and the button refuses to download a

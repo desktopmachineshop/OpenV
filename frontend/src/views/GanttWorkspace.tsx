@@ -13,6 +13,7 @@ import { GANTT_PLAN_FEATURE, WORKSPACE_PLAN_FEATURE } from '../features';
 import { Navbar } from '../components/Navbar';
 import { PanelHeader, SegmentedControl, buttonStyle, panelStyle } from '../components/ui';
 import { PlanMaster } from '../components/plan/PlanLines';
+import { PlanWorkspaceViews, WORKSPACE_VIEWS, type WorkspaceView } from '../components/plan/PlanWorkspaceViews';
 import { ZOOMS, type Zoom } from '../components/plan/ganttScale';
 
 /**
@@ -30,6 +31,8 @@ export const GanttWorkspace: React.FC = () => {
   const [zoom, setZoom] = useState<Zoom>('months');
   const [showCritical, setShowCritical] = useState(true);
   const [todaySignal, setTodaySignal] = useState(0);
+  // The line per project, or one of the views a project's Gantt has, over every project.
+  const [view, setView] = useState<WorkspaceView>('lines');
   const { isPhone } = useViewport();
   if ((gatesSettled && !on) || noWorkspace) return <Navigate to="/projects" replace />;
   return (
@@ -43,6 +46,13 @@ export const GanttWorkspace: React.FC = () => {
               title="All projects"
               action={
                 <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+                  <select aria-label="View" data-help-key="gantt.views" value={view} onChange={(e) => setView(e.target.value as WorkspaceView)} style={{ width: 'auto', height: isPhone ? 40 : 28, padding: '0 8px', fontSize: isPhone ? 16 : 12 }}>
+                    {WORKSPACE_VIEWS.map((v) => (
+                      <option key={v.value} value={v.value}>
+                        {v.label}
+                      </option>
+                    ))}
+                  </select>
                   <button
                     type="button"
                     aria-pressed={showCritical}
@@ -63,7 +73,11 @@ export const GanttWorkspace: React.FC = () => {
               }
             />
             {/* A workspace switch loads the other workspace's plans. */}
-            <PlanMaster key={activeOrgId || ''} currentProjectId="" zoom={zoom} showCritical={showCritical} todaySignal={todaySignal} />
+            {view === 'lines' ? (
+              <PlanMaster key={activeOrgId || ''} currentProjectId="" zoom={zoom} showCritical={showCritical} todaySignal={todaySignal} />
+            ) : (
+              <PlanWorkspaceViews key={activeOrgId || ''} view={view} zoom={zoom} showCritical={showCritical} todaySignal={todaySignal} />
+            )}
           </section>
         </div>
       ) : (

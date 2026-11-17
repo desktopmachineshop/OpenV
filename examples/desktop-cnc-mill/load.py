@@ -29,7 +29,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", "..", "scripts", "openv"))
 
-from mill_seed import FOLLOWS, PLANS, PROJECTS, RELEASE, SCHEDULE, WAITS_FOR_CHILDREN  # noqa: E402
+from mill_seed import FOLLOWS, PLANS, PROFILE, PROJECTS, RELEASE, SCHEDULE, WAITS_FOR_CHILDREN  # noqa: E402
 
 # from-type, to-type for each link type the seed uses (docs/link-type-rules.md).
 LINK_RULES = {
@@ -204,6 +204,11 @@ def load(api, token):
         have = live[p.name]
         if any((have.get(k) or "") != v for k, v in want.items()):
             c.call("PUT", f"/api/v1/projects/{pid}", want)
+        if not p.parent:  # the product definition belongs to the top of the programme
+            have_profile = c.call("GET", f"/api/v1/projects/{pid}/profile") or {}
+            if not (have_profile.get("vision") or "").strip():
+                c.call("PUT", f"/api/v1/projects/{pid}/profile", PROFILE)
+                print(f"{p.name}: product definition saved")
         by_title = {a["title"]: a for a in (c.call("GET", f"/api/v1/artifacts?project_id={pid}") or [])}
         created, sort = 0, 0
         for a in p.artifacts:

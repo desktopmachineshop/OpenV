@@ -43,7 +43,11 @@
 //                  screenshots, which must declare fixed pixel dimensions:
 //                  <cssWidth>x<cssHeight>@<dpr> replaces the phone profile's
 //                  viewport (e.g. 360x640@3 => 1080x1920 PNGs)
-//   COLOR_SCHEME   dark renders every screen in the dark scheme (default light)
+//   COLOR_SCHEME   dark renders every screen in the dark scheme (default light),
+//                  and adds two findings: light:N, surfaces painted light on
+//                  the dark theme (a hard-coded white, a third-party default),
+//                  and faint:N, text under 2.1:1 against what is behind it (text
+//                  left on a surface of the other scheme)
 //   SHOT_FULLPAGE  0 clips each screenshot to the viewport instead of the
 //                  full page, which is what a fixed size needs
 // Exit code is 1 when a screen fails to render or throws a page error;
@@ -394,6 +398,36 @@ async function mockScreen(page, extra) {
 const AUDIT = (opts) => {
   const vw = window.innerWidth;
   const desktop = !!(opts && opts.desktop);
+  const dark = !!(opts && opts.dark);
+  // Colours, for the dark-scheme findings. A canvas resolves any CSS colour
+  // (named, hex, color-mix) to the pixel it paints.
+  const cv = document.createElement('canvas'); cv.width = cv.height = 1;
+  const cx = cv.getContext('2d', { willReadFrequently: true });
+  const rgbaCache = new Map();
+  const rgba = (c) => {
+    if (rgbaCache.has(c)) return rgbaCache.get(c);
+    cx.clearRect(0, 0, 1, 1); cx.fillStyle = '#000'; cx.fillStyle = c; cx.fillRect(0, 0, 1, 1);
+    const d = cx.getImageData(0, 0, 1, 1).data;
+    const v = [d[0], d[1], d[2], d[3] / 255];
+    rgbaCache.set(c, v); return v;
+  };
+  const lum = (c) => { const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; }; return 0.2126 * f(c[0]) + 0.7152 * f(c[1]) + 0.0722 * f(c[2]); };
+  const over = (top, under) => { const a = top[3]; return [0, 1, 2].map((i) => top[i] * a + under[i] * (1 - a)).concat(1); };
+  // What is painted behind an element: its own and its ancestors'
+  // background colours composited, down to the page. null where an image or
+  // gradient is in the way, since its colour cannot be read from styles.
+  const backdrop = (el) => {
+    const layers = [];
+    for (let p = el; p; p = p.parentElement) {
+      const s = getComputedStyle(p);
+      if (s.backgroundImage !== 'none') return null;
+      const c = rgba(s.backgroundColor);
+      if (c[3] > 0) { layers.push(c); if (c[3] >= 0.99) break; }
+    }
+    let acc = rgba(getComputedStyle(document.documentElement).colorScheme.includes('dark') ? '#121212' : '#fff');
+    for (let i = layers.length - 1; i >= 0; i--) acc = over(layers[i], acc);
+    return acc;
+  };
   const inScroller = (el) => {
     for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
       const o = getComputedStyle(p).overflowX;
@@ -404,7 +438,7 @@ const AUDIT = (opts) => {
   };
   const vis = (el) => { const r = el.getBoundingClientRect(); const cs = getComputedStyle(el); return r.width > 0 && r.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
   const desc = (el) => `${el.tagName.toLowerCase()}${el.id ? '#' + el.id : ''}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : ''} "${(el.getAttribute('aria-label') || el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 40)}"`;
-  const out = { overflow: [], clipped: [], small: [], tiny: [], lines: [], stretched: [], blurry: [], scrollWidth: document.documentElement.scrollWidth, vw, dpr: window.devicePixelRatio, coarse: matchMedia('(hover: none) and (pointer: coarse)').matches };
+  const out = { overflow: [], clipped: [], small: [], tiny: [], lines: [], stretched: [], blurry: [], light: [], faint: [], scrollWidth: document.documentElement.scrollWidth, vw, dpr: window.devicePixelRatio, coarse: matchMedia('(hover: none) and (pointer: coarse)').matches };
   // Desktop-only measures: a text block wider than this is hard to read; a
   // field wider than this is a form stretched across the screen.
   const MEASURE = 900;
@@ -454,6 +488,28 @@ const AUDIT = (opts) => {
         if (r.width > cssPixelsAvailable * 1.05) out.blurry.push({ el: desc(el), rendered: Math.round(r.width), natural: el.naturalWidth, dpr: window.devicePixelRatio, src: (el.currentSrc || el.src || '').split('/').pop() });
       }
     }
+    // A light shape in a drawing: a chart's or diagram's hard-coded fill.
+    if (dark && el.ownerSVGElement && el.matches('rect, path, circle, ellipse, polygon') && r.width >= 40 && r.height >= 20) {
+      const fill = rgba(cs.fill);
+      if (cs.fill !== 'none' && fill[3] * parseFloat(cs.fillOpacity || '1') * parseFloat(cs.opacity || '1') > 0.5 && lum(fill) > 0.55) out.light.push({ el: desc(el), bg: cs.fill, w: Math.round(r.width), h: Math.round(r.height) });
+    }
+    if (dark && !el.closest('svg, img, canvas, video, [data-light-surface]')) {
+      // A surface painted light on the dark theme. Small marks (a toggle's
+      // knob, a status dot) are allowed to be bright; a surface is not.
+      const bg = rgba(cs.backgroundColor);
+      if (bg[3] > 0.5 && lum(bg) > 0.55 && r.width >= 40 && r.height >= 20) out.light.push({ el: desc(el), bg: cs.backgroundColor, w: Math.round(r.width), h: Math.round(r.height) });
+      // Text that barely separates from what is behind it.
+      const ownText = Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim());
+      if (ownText && parseFloat(cs.opacity) > 0.5) {
+        const back = backdrop(el);
+        if (back) {
+          const fg = over(rgba(cs.color), back);
+          const a = lum(fg), b = lum(back);
+          const ratio = (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+          if (ratio < 2.1) out.faint.push({ el: desc(el), color: cs.color, on: `rgb(${back.slice(0, 3).map(Math.round).join(', ')})`, ratio: Math.round(ratio * 100) / 100 });
+        }
+      }
+    }
     const fs = parseFloat(cs.fontSize);
     if (fs < 12 && el.childNodes.length && Array.from(el.childNodes).some((n) => n.nodeType === 3 && n.textContent.trim())) out.tiny.push({ el: desc(el), fontSize: fs });
   }
@@ -494,6 +550,8 @@ const AUDIT = (opts) => {
   out.lines = dedupe(out.lines, (x) => x.el).slice(0, 12);
   out.stretched = dedupe(out.stretched, (x) => x.el).slice(0, 12);
   out.blurry = dedupe(out.blurry, (x) => x.el).slice(0, 12);
+  out.light = dedupe(out.light, (x) => x.el).slice(0, 25);
+  out.faint = dedupe(out.faint, (x) => x.el).slice(0, 25);
   return out;
 };
 // press taps on a touch context and clicks elsewhere, so one screen list
@@ -688,7 +746,7 @@ async function runEngine(engine, device, name, desktop = false) {
     try {
       await page.goto(s.path); await page.waitForTimeout(900);
       if (open) { try { await open(page); } catch (e) { openErr = String(e).split('\n')[0].slice(0, 120); } await page.waitForTimeout(500); }
-      const audit = await page.evaluate(AUDIT, { desktop });
+      const audit = await page.evaluate(AUDIT, { desktop, dark: COLOR_SCHEME === 'dark' });
       await page.screenshot({ path: `${OUT}/${name}-${s.tag}.png`, fullPage: process.env.SHOT_FULLPAGE !== '0' });
       report.push({ tag: s.tag, url: page.url().replace(BASE_URL, ''), openErr, errors, ...audit });
     } catch (e) {
@@ -747,6 +805,8 @@ const desktopDevice = (p) => ({
       if (r.lines && r.lines.length) flags.push(`lines:${r.lines.length}`);
       if (r.stretched && r.stretched.length) flags.push(`stretched:${r.stretched.length}`);
       if (r.blurry && r.blurry.length) flags.push(`blurry:${r.blurry.length}`);
+      if (r.light && r.light.length) flags.push(`light:${r.light.length}`);
+      if (r.faint && r.faint.length) flags.push(`faint:${r.faint.length}`);
       if (r.errors && r.errors.length) { flags.push(`errors:${r.errors.length}`); failed = true; }
       if (r.openErr) flags.push('open-failed');
       if (r.chrome && r.chrome.share > CHROME_BUDGET) { flags.push(`CHROME ${r.chrome.share}%>${CHROME_BUDGET}%`); failed = true; }

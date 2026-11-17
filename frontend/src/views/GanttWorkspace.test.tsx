@@ -131,7 +131,7 @@ describe('GanttWorkspace', () => {
     const button = (name: string) => Array.from(container.querySelectorAll('button')).find((b) => b.textContent === name)!;
     await act(async () => button('Critical path').click());
     expect(container.querySelectorAll('[data-critical]')).toHaveLength(0);
-    await act(async () => button('Weeks').click());
+    await act(async () => button('W').click());
     expect(container.querySelector('[data-plan-view="master"]')?.getAttribute('data-plan-scale')).toBe('weeks');
     await act(async () => useAppStore.setState({ activeOrgId: 'o2' }));
     await flush();
