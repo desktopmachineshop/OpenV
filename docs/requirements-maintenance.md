@@ -7,7 +7,9 @@ truth** for what the platform must do. Repo files (`CLAUDE.md`,
 
 - **Instance**: https://openv.app (API: https://api.openv.app)
 - **Workspace**: Desktop Machine Shop (primary admin: the founder account)
-- **Project**: OpenV Platform
+- **Project**: OpenV, with the hosted-only requirements (openv.app's
+  billing, plans, release channels, community pool, showcase, visitor
+  analytics and marketing site) in OpenV - Hosted
 
 ## The tool
 
@@ -100,7 +102,7 @@ Two conventions are supported:
 | `shall` (default, ISO/IEC/IEEE 29148) | "The system **shall** …" | `should`, `may`, `might`, `could` as weak wording; `must` as off-convention |
 | `rfc2119` | **MUST** / **SHOULD** / **MAY**, each a graded obligation | `shall` as off-convention; should/may are normative, not weak |
 
-The OpenV Platform project uses `shall`. Note that this is a different
+The OpenV project uses `shall`. Note that this is a different
 vocabulary from the `priority` attribute, which is MoSCoW (`must` / `should` /
 `could`) — the two look alike and mean different things, so a requirement body
 states obligation with the convention's keyword and leaves prioritization to
@@ -131,8 +133,8 @@ From go-live onwards, edits happen **directly in the live project** — via
 the OpenV UI or `sync.py api` — not by editing the seed file:
 
 1. When a PR adds, changes, or removes platform behavior, update the
-   affected artifacts and links in the OpenV Platform project as part of
-   that work.
+   affected artifacts and links in the OpenV project (OpenV - Hosted for a
+   hosted-only change) as part of that work.
 2. When verification for a requirement lands (a test suite, an E2E check),
    record it: create or reuse a test run, add results, set
    `verification_status` on the requirement.
