@@ -96,8 +96,8 @@ code {
 }
 
 .button:hover {
-  background-color: var(--accent-text);
-  border-color: var(--accent-text);
+  background-color: var(--accent);
+  border-color: var(--accent);
 }
 
 .button-secondary {
@@ -402,7 +402,10 @@ textarea {
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.ag-theme-quartz {
+/* The grid's own stylesheet arrives with the lazy views that draw one, so
+   after this file: the doubled class outranks its defaults, which a single
+   class lost to and left the grid white on the dark theme. */
+.ag-theme-quartz.ag-theme-quartz {
   --ag-background-color: var(--surface);
   --ag-border-color: var(--border);
   --ag-header-background-color: var(--surface-inset);
@@ -414,6 +417,9 @@ textarea {
   --ag-control-panel-background-color: var(--surface-alt);
   --ag-tooltip-background-color: var(--surface-alt);
   --ag-input-background-color: var(--surface);
+  --ag-selected-row-background-color: var(--tint-blue);
+  --ag-active-color: var(--accent);
+  color-scheme: inherit;
 }
 
 /* Markdown Content Styling */

@@ -15,6 +15,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   reword a requirement listed the requirement's other fields as though it
   would clear them, though approving it left them as they were. Review now
   shows the new wording alone.
+- **Tables follow the dark theme.** A test run's table of results and the
+  traceability matrix stayed white on the dark theme, with pale text that
+  could not be read. Both now use the dark colours, and so do a button
+  under the pointer and the chosen result on a phone's test run.
 
 ### Maintenance updates
 
