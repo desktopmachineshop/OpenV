@@ -108,6 +108,30 @@ batched — nightly or weekly — at the maintainer's discretion. Merging to
 waiting, then leave promotion alone unless asked. Approval to merge is not
 approval to promote.
 
+## GitHub Actions in November 2026
+
+Until 1 December 2026, GitHub Actions does not start jobs on the private
+repositories (`OpenV-hosted`, `dms-id`, `OpenD-hosted`): a run fails within
+seconds and leaves no log (first seen on 14 November; the cause is on the
+GitHub account, not in the code). This repository is public and its
+Actions work, so its CI still gates every merge and every promotion. The
+maintainer's instruction of 17 November 2026, for this month only, is to
+skip the Actions that fail this way:
+
+- **Promote to release** cuts and tags the release, opens the pull request
+  on `OpenV-hosted`'s `release` branch, then fails at *Ship the release to
+  openv.app*, because that step waits for CI there. Finish it by hand:
+  merge `OpenV-hosted`'s `main` into the pull request's branch if `main`
+  has changes to ship (keep the branch's `OPENV_VERSION`), run both jobs
+  of that repository's `ci.yml` yourself on the result, merge the pull
+  request with a merge commit, then check that `api.openv.app/health` and
+  `openv.app/build.json` name the release commit.
+- This changes nothing about when to promote: only when the maintainer
+  asks for that release.
+
+Delete this section in December, or as soon as a run on `OpenV-hosted`
+completes normally.
+
 ## The user manual
 
 The user manual travels with the code (`docs/docs-maintenance.md`). It is
