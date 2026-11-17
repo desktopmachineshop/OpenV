@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="guided-wizard">
+  <title>Guided definition &amp; the V&amp;V Assistant</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="guided"/>
+  </prolog>
+  <conbody>
+    <p><b>Guided Definition</b> walks you from a blank product to a committed, traceable requirement set in eight steps — with the V&amp;V Assistant alongside, suggesting entries you can add with one click.</p>
+  </conbody>
+</concept>

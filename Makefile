@@ -19,7 +19,7 @@ GITLEAKS_VERSION := 8.21.2
 # relative to that, and check-fast tests the Go packages changed since then.
 BASE_REF ?= origin/master
 
-.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp vapid-keys test check check-fast vuln secrets backup restore
+.PHONY: build up down prod-up prod-down worker worker-unix worker-image runner-pool-up runner-pool-down connector-dist mcp vapid-keys test check check-fast vuln secrets backup restore backup-drill
 
 ## Build all Docker images.
 build:
@@ -83,13 +83,19 @@ backup:
 ## Usage: make restore BACKUP=backups/openv-backup-<stamp>.tar.gz
 ## Stops the API while data is swapped, then starts it again. DESTRUCTIVE:
 ## replaces the database and the contents of the data/uploads volumes.
+## An encrypted bundle (.tar.gz.enc) is decrypted first, with BACKUP_PASSPHRASE
+## or BACKUP_PASSPHRASE_FILE from the environment; it needs the openssl command.
+restore: RESTORE_BUNDLE = $(if $(filter %.enc,$(BACKUP)),.restore-$(notdir $(basename $(BACKUP))),$(notdir $(BACKUP)))
 restore:
 	@test -n "$(BACKUP)" || { echo "Usage: make restore BACKUP=backups/openv-backup-<stamp>.tar.gz"; exit 1; }
+	@case "$(BACKUP)" in *.enc) \
+		test -n "$$BACKUP_PASSPHRASE$$BACKUP_PASSPHRASE_FILE" || { echo "An encrypted bundle needs BACKUP_PASSPHRASE or BACKUP_PASSPHRASE_FILE"; exit 1; }; \
+		sh scripts/backup.sh --decrypt "backups/$(notdir $(BACKUP))" "backups/$(RESTORE_BUNDLE)" || { echo "Could not decrypt $(BACKUP): is the passphrase right?"; exit 1; };; esac
 	docker stop openv-api
 	docker run --rm --volumes-from openv-api -v "$(CURDIR)/backups:/backup" alpine sh -c '\
 		set -e && \
 		rm -rf /tmp/restore && mkdir -p /tmp/restore && \
-		tar xzf "/backup/$(notdir $(BACKUP))" -C /tmp/restore && \
+		tar xzf "/backup/$(RESTORE_BUNDLE)" -C /tmp/restore && \
 		find /data -mindepth 1 -delete && tar xzf /tmp/restore/openv-data.tar.gz -C /data && \
 		find /uploads -mindepth 1 -delete && tar xzf /tmp/restore/uploads-data.tar.gz -C /uploads && \
 		mkdir -p /backup/.restore && cp /tmp/restore/openv-db.sql /backup/.restore/openv-db.sql'
@@ -97,8 +103,22 @@ restore:
 	docker exec openv-postgres sh -c 'psql -U postgres -d openv -q -f /tmp/openv-db.sql'
 	docker exec openv-postgres sh -c 'rm -f /tmp/openv-db.sql'
 	rm -rf backups/.restore
+	@case "$(BACKUP)" in *.enc) unlink "backups/$(RESTORE_BUNDLE)";; esac
 	docker start openv-api
 	@echo "Restore complete."
+
+## Prove that a backup restores: back up a scratch database and scratch
+## volumes with scripts/backup.sh, restore them as `make restore` does, and
+## compare; then the same encrypted, and what must fail. Needs a Postgres
+## (OPENV_TEST_DATABASE_URL, or DB_HOST/DB_PORT/DB_USER) and pg_dump, psql
+## and openssl. Touches only its own scratch databases.
+backup-drill:
+	@url="$${OPENV_TEST_DATABASE_URL:-}"; \
+	if [ -n "$$url" ]; then \
+		hostport="$${url#*@}"; hostport="$${hostport%%/*}"; userinfo="$${url#*://}"; userinfo="$${userinfo%%@*}"; \
+		export DB_HOST="$${hostport%%:*}" DB_PORT="$${hostport##*:}" DB_USER="$${userinfo%%:*}"; \
+		case "$$userinfo" in *:*) export PGPASSWORD="$${userinfo#*:}";; esac; \
+	fi; sh scripts/backup_drill.sh
 
 ## Build host worker binaries for Windows (bin/agentd.exe, bin/openv-mcp.exe).
 worker:
@@ -199,7 +219,13 @@ test:
 ## The release-notes job requires a new bullet relative to the merge base
 ## with BASE_REF, which is what CI's comparison of the merge commit with its
 ## first parent amounts to; set NO_RELEASE_NOTES=1 for a pull request that
-## carries the no-release-notes label. From
+## carries the no-release-notes label. From .github/workflows/docs.yml: the
+## docs job (the manual matches the chapters, OpenD validates it, and a pull
+## request that changes what users see changes the manual; set
+## NO_DOCS_CHANGE=1 for one that carries the no-docs-change label). The
+## OpenD validation builds a pinned OpenD into .cache/opend on first use,
+## which needs network, Node 22.12+ and corepack; set SKIP_OPEND=1 to skip
+## it offline (CI runs it). From
 ## .github/workflows/refactor-guard.yml: the Refactor guard job, over the
 ## commits since that merge base, with the labels the pull request will carry
 ## in LABELS (space-separated): `make check LABELS="refactor refactor:tooling
@@ -281,6 +307,7 @@ check:
 		rm -f "$$log"; exit $$rc; \
 	fi
 	python3 -m unittest scripts/release_notes_test.py
+	cd scripts && python3 -m unittest release_ci_test
 	python3 scripts/release_notes.py check RELEASE_NOTES.md
 	python3 scripts/release_notes.py site --check RELEASE_NOTES.md
 	@if [ -n "$(NO_RELEASE_NOTES)" ]; then \
@@ -292,6 +319,18 @@ check:
 		if ! git show "$$base:RELEASE_NOTES.md" > "$$base_notes"; then rm -f "$$base_notes"; exit 1; fi; \
 		python3 scripts/release_notes.py check-pr --base "$$base_notes" RELEASE_NOTES.md; rc=$$?; \
 		rm -f "$$base_notes"; exit $$rc; \
+	fi
+	python3 -m unittest scripts/manual/docs_test.py
+	python3 scripts/manual/docs.py sync --check
+	@if [ -n "$(SKIP_OPEND)" ]; then \
+		echo "SKIP_OPEND is set: OpenD's validation of the manual skipped (CI runs it)"; \
+	else scripts/manual/validate.sh; fi
+	@if [ -n "$(NO_DOCS_CHANGE)" ]; then \
+		echo "NO_DOCS_CHANGE is set: not requiring a manual update (the no-docs-change label)"; \
+	else \
+		base="$$(git merge-base "$(BASE_REF)" HEAD)" || { \
+			echo "cannot find where HEAD left $(BASE_REF): run 'git fetch origin master' or set BASE_REF"; exit 1; }; \
+		python3 scripts/manual/docs.py check-pr --base "$$base"; \
 	fi
 	@base="$$(git merge-base "$(BASE_REF)" HEAD)" || { \
 		echo "cannot find where HEAD left $(BASE_REF): run 'git fetch origin master' or set BASE_REF"; exit 1; }; \
@@ -329,7 +368,9 @@ check:
 ## sent from internal/orchestration, say), S13's Go vocabularies in
 ## internal/vocabparity and X4a's generated contract in internal/contract,
 ## which parse packages they do not import (an error code in internal/api,
-## an event type), and the frontend type check; then
+## an event type), that manual/ matches the manual's chapters (a chapter
+## edit needs `python3 scripts/manual/docs.py sync`), and the frontend type
+## check; then
 ## refactor plan S12b's CSS cascade test, which walks the whole frontend
 ## import graph, S10's table of the notification bell's deep links, which
 ## reads the Go notification goldens under internal/notify/testdata (so a
@@ -366,6 +407,7 @@ check-fast:
 	go test ./internal/archtest
 	go test -short -run '^(TestSSE|TestEventPayload)' ./internal/api
 	go test ./internal/vocabparity ./internal/contract
+	python3 scripts/manual/docs.py sync --check
 	cd frontend && npx tsc --noEmit
 	cd frontend && npx vitest run src/arch/cssOrder.test.ts src/components/NotificationBell.paths.test.tsx
 	cd frontend && npm run build --silent -- --logLevel warn && node scripts/bundle-check.mjs

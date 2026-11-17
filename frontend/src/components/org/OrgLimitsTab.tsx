@@ -116,7 +116,7 @@ export const OrgLimitsTab: React.FC<OrgLimitsTabProps> = ({ org }) => {
 
   return (
     <div>
-      <h3 style={{ marginBottom: 4 }}>Limits</h3>
+      {/* The settings pane already heads this section "Limits". */}
       <p style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 0, maxWidth: 640 }}>
         What this workspace is allowed to do. Anything shown as “No limit” has
         no ceiling at all.
@@ -130,7 +130,7 @@ export const OrgLimitsTab: React.FC<OrgLimitsTabProps> = ({ org }) => {
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
 
       {data?.read_only && (
-        <div role="alert" className="card" style={{ padding: 14, marginBottom: 16, borderLeft: '4px solid var(--danger)' }}>
+        <div role="alert" className="card" style={{ padding: 14, borderLeft: '4px solid var(--danger)' }}>
           <strong>This workspace is read-only.</strong>
           {/* A self-hosted deployment has no plans: its ceilings are its own
               settings, so the way out is raising them, not changing plan. */}

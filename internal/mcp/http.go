@@ -12,10 +12,10 @@ import (
 // these and the newest otherwise, which the client may then refuse.
 var ProtocolVersions = []string{"2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"}
 
-// runOnly names the tools that act only inside an agent run: delegation
-// asks the server for a child run of the caller's run, and a member has no
-// run, so the server would refuse it every time.
-var runOnly = map[string]bool{"delegate_to_agent": true}
+// runOnly names the tools that act only inside an agent run, which a member,
+// who has no run, is not offered. There are none since delegate_to_agent,
+// which asked for a child run of a crew run, went with crews (issue 732).
+var runOnly = map[string]bool{}
 
 // MemberTools is the tool table a member's connected app is offered: every
 // tool but those that work only inside an agent run, and with readOnly only

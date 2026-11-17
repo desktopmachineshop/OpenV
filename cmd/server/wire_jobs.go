@@ -21,8 +21,8 @@ func (a *app) jobs() {
 
 	// Trigger matcher + scheduler + reaper. The scheduler and reaper loops
 	// stop when the signal context is canceled.
-	automation.NewTriggerMatcher(a.automationRepo, a.runService, a.teamService).Start(a.bus)
-	scheduler.New(a.automationRepo, a.runService, a.teamService).Start(a.ctx)
+	automation.NewTriggerMatcher(a.automationRepo, a.runService).Start(a.bus)
+	scheduler.New(a.automationRepo, a.runService).Start(a.ctx)
 
 	// Workspace purge: hard-delete workspaces whose soft-delete grace period
 	// (orgs.DeletionGraceDays) has expired — once at boot, then daily.

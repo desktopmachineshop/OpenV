@@ -1,5 +1,6 @@
 import { test, expect, Page } from '@playwright/test';
 import {
+  chooseOption,
   createProject,
   expectNoHorizontalScroll,
   makeRunId,
@@ -52,36 +53,60 @@ test('registers on a phone-sized screen without sideways scrolling', async () =>
 
 test('creates a project and lands in the mobile shell', async () => {
   projectId = await createProject(page, projectName);
-  // The compact shell: a top bar with the menu button, no permanent sidebar.
-  const menuButton = page.getByRole('button', { name: 'Project menu' });
-  await expect(menuButton).toBeVisible();
+  // The phone shell: a bar along the bottom reading Home, Plan, Define,
+  // Verify, More, and no permanent sidebar. A project opens on its Overview,
+  // which is in Plan, so the row under the header lists Plan's pages.
+  const bar = page.getByRole('navigation', { name: 'Project tabs' });
+  await expect(bar).toBeVisible();
+  await expect(bar.getByRole('button', { name: 'More', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Plan pages' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Requirements', exact: true })).toBeHidden();
   await expectNoHorizontalScroll(page);
 });
 
-test('navigates through the drawer, which closes on arrival', async () => {
-  await page.getByRole('button', { name: 'Project menu' }).click();
-  const drawer = page.getByRole('complementary', { name: 'Project navigation' });
-  await expect(drawer).toBeVisible();
-  const define = drawer.getByRole('button', { name: 'Define', exact: true });
-  if ((await define.getAttribute('aria-expanded')) !== 'true') {
-    await define.click();
-  }
-  await drawer.getByRole('link', { name: 'Requirements', exact: true }).click();
+test('navigates by the bar and the row of the group, and by More, which closes on arrival', async () => {
+  // A group's tab opens the group; the row under the header lists its pages.
+  const bar = page.getByRole('navigation', { name: 'Project tabs' });
+  await bar.getByRole('link', { name: 'Define', exact: true }).click();
+  await page
+    .getByRole('navigation', { name: 'Define pages' })
+    .getByRole('link', { name: 'Requirements', exact: true })
+    .click();
+  // The address and the exact heading: "Guided requirements definition", the
+  // page being left, also has "Requirements" in its heading, and More closes
+  // on arrival, so it must not be opened before the page has arrived.
+  await expect(page).toHaveURL(/\/requirements$/);
+  await expect(page.getByRole('heading', { name: 'Requirements', exact: true })).toBeVisible();
+  await expectNoHorizontalScroll(page);
 
-  await expect(page.getByRole('heading', { name: 'Requirements' })).toBeVisible();
-  await expect(drawer).toBeHidden();
+  // More is the whole menu, every page a tile, and it closes on arrival.
+  await bar.getByRole('button', { name: 'More', exact: true }).click();
+  const menu = page.getByRole('complementary', { name: 'Project navigation' });
+  await expect(menu).toBeVisible();
+  await expectNoHorizontalScroll(page);
+  await menu.getByRole('link', { name: 'Board', exact: true }).click();
+  await expect(menu).toBeHidden();
+  await expect(page).toHaveURL(/\/board$/);
+  await expect(page.getByRole('navigation', { name: 'Plan pages' })).toBeVisible();
+
+  // The Define tab returns to the page last read there.
+  await bar.getByRole('link', { name: 'Define', exact: true }).click();
+  await expect(page).toHaveURL(/\/requirements$/);
+  await expect(page.getByRole('heading', { name: 'Requirements', exact: true })).toBeVisible();
   await expectNoHorizontalScroll(page);
 });
 
-test('the requirements module stacks into tree, document and notes panes', async () => {
-  const panes = page.getByRole('tablist', { name: 'Requirements panes' });
-  await expect(panes).toBeVisible();
-  await expect(panes.getByRole('tab', { name: 'Tree' })).toHaveAttribute('aria-selected', 'true');
+test('the requirements page is a list, and an artifact opens as a screen of its own with its History', async () => {
+  // The list is the page: no pane switcher, and no way back to show.
+  const back = page.getByRole('button', { name: 'Back to the list' });
+  const bar = page.getByRole('navigation', { name: 'Project tabs' });
+  await expect(page.getByRole('tablist', { name: 'Requirements panes' })).toHaveCount(0);
+  await expect(back).toBeHidden();
+  await expect(bar).toBeVisible();
 
-  // The tree pane holds the create form.
+  // The list holds the create form.
   await page.getByRole('button', { name: '+ New Artifact' }).click();
-  await page.locator('#type').selectOption('requirement');
+  await chooseOption(page, '#type', 'requirement');
   await page.locator('#title').fill(reqTitle);
   await page.locator('#body').fill('The system shall be usable on a phone.');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -90,33 +115,38 @@ test('the requirements module stacks into tree, document and notes panes', async
 
   // Tapping an artifact moves to its document, which is what the tap meant.
   await page.getByText(reqTitle, { exact: true }).first().click();
-  await expect(panes.getByRole('tab', { name: 'Document' })).toHaveAttribute('aria-selected', 'true');
+  await expect(back).toBeVisible();
   await expect(page.getByRole('heading', { name: reqTitle }).first()).toBeVisible();
+  // An open artifact is a screen of its own: the shell's bar steps aside for
+  // the artifact's own actions.
+  await expect(bar).toBeHidden();
   await expectNoHorizontalScroll(page);
 
-  // Notes are a pane of their own rather than a third column.
-  await panes.getByRole('tab', { name: 'Notes' }).click();
-  await expect(page.getByRole('heading', { name: /Notes/ })).toBeVisible();
+  // The artifact's comments and changes are its History, at the foot of the
+  // document, rather than a Notes pane of their own (#725).
+  await expect(page.getByRole('region', { name: 'History' })).toBeVisible();
   await expectNoHorizontalScroll(page);
 
-  // And back to the tree, which kept its state.
-  await panes.getByRole('tab', { name: 'Tree' }).click();
+  // And back to the list, which kept its state.
+  await back.click();
+  await expect(back).toBeHidden();
+  await expect(bar).toBeVisible();
   await expect(page.getByText(reqTitle, { exact: true }).first()).toBeVisible();
 });
 
 test('stepping between artifacts works by control and by swipe', async () => {
   const second = `${reqTitle} second`;
-  const panes = page.getByRole('tablist', { name: 'Requirements panes' });
+  const back = page.getByRole('button', { name: 'Back to the list' });
 
   // A second artifact, so there is somewhere to step to.
   await page.getByRole('button', { name: '+ New Artifact' }).click();
-  await page.locator('#type').selectOption('requirement');
+  await chooseOption(page, '#type', 'requirement');
   await page.locator('#title').fill(second);
   await page.locator('#body').fill('The system shall be the artifact after the first.');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
 
   await page.getByText(reqTitle, { exact: true }).first().click();
-  await expect(panes.getByRole('tab', { name: 'Document' })).toHaveAttribute('aria-selected', 'true');
+  await expect(back).toBeVisible();
   // Exactly: the stepper renders the count visibly and again in the
   // screen-reader live region, which also names the artifact.
   await expect(page.getByText('1 of 2', { exact: true })).toBeVisible();
@@ -129,8 +159,8 @@ test('stepping between artifacts works by control and by swipe', async () => {
   await next.click();
   await expect(page.getByText('2 of 2', { exact: true })).toBeVisible();
   await expect(page.getByRole('heading', { name: second }).first()).toBeVisible();
-  // Stepping stays on the document; it is not a pane switch.
-  await expect(panes.getByRole('tab', { name: 'Document' })).toHaveAttribute('aria-selected', 'true');
+  // Stepping stays on the artifact; it does not go back to the list.
+  await expect(back).toBeVisible();
   await expectNoHorizontalScroll(page);
 
   // The gesture, where the engine can build one.
@@ -172,10 +202,10 @@ test('the project list and settings pages fit the phone', async () => {
 
 test('the personal settings sheet shows every theme option', async () => {
   // The example from the maintainer's phone: the System / Light / Dark
-  // control was clipped after "System". The settings open from the drawer
-  // footer and fill the screen; every option must be inside the viewport.
+  // control was clipped after "System". The settings open from the foot of
+  // More and fill the screen; every option must be inside the viewport.
   await page.goto(`/projects/${projectId}`);
-  await page.getByRole('button', { name: 'Project menu' }).click();
+  await page.getByRole('navigation', { name: 'Project tabs' }).getByRole('button', { name: 'More', exact: true }).click();
   const drawer = page.getByRole('complementary', { name: 'Project navigation' });
   await drawer.getByRole('button', { name: /^Account menu/ }).click();
   await drawer.getByRole('button', { name: 'Settings', exact: true }).click();
@@ -219,9 +249,11 @@ test('the agent pages open their side panes as sheets', async () => {
   await sheet.getByRole('button', { name: 'Close editor' }).click();
   await expect(sheet).toBeHidden();
 
-  // Runs and automations: the tables keep to the phone's width.
+  // Runs: a list of rows under the Status chips, with no table to squeeze.
+  // Automations: the table keeps to the phone's width.
   await page.goto(`/projects/${projectId}/agent-runs`);
-  await expect(page.getByRole('columnheader', { name: 'Agent' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Status' })).toBeVisible();
+  await expect(page.getByRole('list', { name: 'Runs' })).toBeVisible();
   await expect(page.getByRole('columnheader', { name: 'Tokens' })).toHaveCount(0);
   await expectNoHorizontalScroll(page);
   await page.goto(`/projects/${projectId}/automations`);
@@ -250,7 +282,7 @@ test('runner control and the relayed sign-in work at phone size', async () => {
   // runner" on an unleased pool is the same full-width control as "Extend
   // the lease" and "End now" once a lease is held.
   await page.goto(`/projects/${projectId}`);
-  await page.getByRole('button', { name: 'Project menu' }).click();
+  await page.getByRole('navigation', { name: 'Project tabs' }).getByRole('button', { name: 'More', exact: true }).click();
   const drawer = page.getByRole('complementary', { name: 'Project navigation' });
   await drawer.getByRole('button', { name: /^Account menu/ }).click();
   await drawer.getByRole('button', { name: 'Settings', exact: true }).click();

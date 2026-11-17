@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="im-stuck-on-check-your-inbox">
+  <title>I'm stuck on "Check your inbox"</title>
+  <conbody>
+    <p>The server sends new accounts a verification link and serves nothing else until it is clicked. Check the spam folder, then use <b>Resend email</b>. If the address has a typo, <b>Use a different address</b> sends the link there; your account keeps its old address until the new one is confirmed. If no email ever arrives, the server's operator may not have finished setting up mail — ask them; they can verify the account directly.</p>
+  </conbody>
+</concept>

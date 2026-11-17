@@ -35,7 +35,7 @@ export const AttributesTab: React.FC<AttributesTabProps> = ({
   savingAttr,
   handleAddAttribute,
 }) => (
-  <div className="card">
+  <div className="card" data-help-key="settings.attributes">
     <h3>Custom attributes</h3>
     <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
       Define extra typed fields for this project's artifacts. They appear as inputs in the

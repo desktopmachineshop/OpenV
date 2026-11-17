@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-vv-assistant-doesnt-answer">
+  <title>The V&amp;V Assistant doesn't answer</title>
+  <shortdesc>Same cause: no runner online. The chat panel says replies are paused; your messages are saved and answered as soon as a runner connects.</shortdesc>
+  <conbody/>
+</concept>

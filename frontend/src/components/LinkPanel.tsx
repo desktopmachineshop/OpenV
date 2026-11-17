@@ -258,7 +258,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
 
       {/* Existing Links */}
       {(outgoingLinks.length > 0 || incomingLinks.length > 0) ? (
-        <div style={{ marginBottom: '20px' }}>
+        <div style={{ marginBottom: '20px' }} data-help-key="links.view">
           {outgoingLinks.length > 0 && (
             <div style={{ marginBottom: '15px' }}>
               <strong style={{ color: 'var(--success)', fontSize: '13px' }}>
@@ -295,7 +295,7 @@ export const LinkPanel: React.FC<LinkPanelProps> = ({
           gap: '10px',
           alignItems: 'flex-end',
           flexWrap: 'wrap'
-        }}>
+        }} data-help-key="links.create">
           {!isCreating && (
             <button
               onClick={() => {

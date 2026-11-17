@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="an-interview-link-stopped-working">
+  <title>An interview link stopped working</title>
+  <shortdesc>The interview was <b>closed</b> — closing revokes its invite links, and a closed interview can't issue new ones. Create a new interview if you need more sessions.</shortdesc>
+  <conbody/>
+</concept>

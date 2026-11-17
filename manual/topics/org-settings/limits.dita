@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="limits">
+  <title>Limits</title>
+  <conbody>
+    <p><b>Settings → Limits</b> shows everything this workspace is allowed to do, with how much of each is used. It is there so you find out before you are stopped, rather than at the moment something refuses you.</p>
+    <simpletable>
+      <sthead><stentry>Limit</stentry><stentry>What it counts</stentry></sthead>
+      <strow><stentry>Workspace members</stentry><stentry>People in the workspace. <b>Invitations you have sent but nobody has accepted count towards it</b>, so a seat is reserved from the moment you invite somebody. A <b>personal workspace always seats exactly one person</b> — you — and no plan changes that.</stentry></strow>
+      <strow><stentry>Projects</stentry><stentry>Projects in this workspace.</stentry></strow>
+      <strow><stentry>Shared workspaces</stentry><stentry>Shared workspaces you have created. Your personal workspace is never counted.</stentry></strow>
+      <strow><stentry>Test evidence storage</stentry><stentry>Total size of the evidence files uploaded for physical and manual tests.</stentry></strow>
+      <strow><stentry>Largest figure</stentry><stentry>The biggest single file you can attach to an artifact — a drawing, a datasheet or a CAD model.</stentry></strow>
+      <strow><stentry>Cloud runner lease</stentry><stentry>How long a leased cloud runner lasts before it is reclaimed.</stentry></strow>
+      <strow><stentry>Cloud runner idle window</stentry><stentry>How long a leased cloud runner may sit unused before it is reclaimed.</stentry></strow>
+      <strow><stentry>Hosted runner memory / CPUs</stentry><stentry>What an always-on hosted runner gets.</stentry></strow>
+    </simpletable>
+    <p>Anything shown as <b>No limit</b> has no ceiling at all. A bar turns amber at 80% and red when it is full — except where the number is simply a fact rather than a ration, like your personal workspace's single seat, which is shown in grey because nothing raises it.</p>
+    <section id="when-you-hit-one">
+      <title>When you hit one</title>
+      <p>The message says what stopped you, how close you are, and what to do about it — for example <i>"Workspace members: this workspace allows 5 and already has 5 (including invitations not yet accepted)."</i> Nothing is deleted and nobody loses access: a full workspace refuses the <b>next</b> member, project or upload, and everything already there keeps working exactly as before. The same is true if a limit is ever lowered beneath you.</p>
+      <p>Your <b>personal workspace</b> is the exception: it is only ever you. Adding somebody to it is refused however much you pay, because a personal workspace with two people in it is a shared workspace. Create a shared workspace instead, and invite them there.</p>
+      <p>On the hosted service, upgrading the workspace's plan raises these; if you are not an admin, the message tells you to ask one. On a self-hosted OpenV there is no plan — whoever runs the server sets the limits, and the message names the setting they need to change.</p>
+    </section>
+  </conbody>
+</concept>

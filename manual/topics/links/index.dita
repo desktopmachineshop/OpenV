@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="links">
+  <title>Traceability links</title>
+  <shortdesc>Links are typed, directional relationships between artifacts. They are what turns a pile of requirements into a traceable system — and they feed the V&amp;V coverage rollups and the traceability matrix.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="links"/>
+  </prolog>
+  <conbody/>
+</concept>

@@ -5,6 +5,7 @@ package config
 // server's.
 
 import (
+	"errors"
 	"log/slog"
 	"strings"
 
@@ -48,6 +49,10 @@ type OIDC struct {
 	Scopes       []string // OPENV_OIDC_SCOPES split on spaces; nil when unset or empty
 	ProviderName string   // OPENV_OIDC_NAME, else SSO
 	FrontendURL  string   // FRONTEND_URL, else the dev frontend
+	// Only is OPENV_OIDC_ONLY (a boolean, false by default): this provider
+	// is the only way in, so password sign-in, sign-up, password reset and
+	// Google are off, and the sign-in page goes straight to the provider.
+	Only bool
 }
 
 // OIDC is nil unless OPENV_OIDC_ISSUER is set; only then are the other
@@ -73,7 +78,27 @@ func (c *Config) OIDC() *OIDC {
 		Scopes:       scopes,
 		ProviderName: c.text("OPENV_OIDC_NAME", "SSO"),
 		FrontendURL:  c.text("FRONTEND_URL", "http://localhost:3000"),
+		Only:         c.boolean("OPENV_OIDC_ONLY", false),
 	}
+}
+
+// OIDCOnlyUnusable is stage sso's check of OPENV_OIDC_ONLY, given what
+// OIDC() returned: a deployment that signs people in only through single
+// sign-on must have single sign-on to sign them in through, or nobody could
+// sign in at all, so the stage refuses to start. With o nil (no
+// OPENV_OIDC_ISSUER) it reads OPENV_OIDC_ONLY itself, the one read of it
+// outside OIDC(); with o set it reads nothing.
+func (c *Config) OIDCOnlyUnusable(o *OIDC) error {
+	if o == nil {
+		if c.boolean("OPENV_OIDC_ONLY", false) {
+			return errors.New("OPENV_OIDC_ONLY is on but OPENV_OIDC_ISSUER is not set, so nobody could sign in")
+		}
+		return nil
+	}
+	if o.Only && o.ClientID == "" {
+		return errors.New("OPENV_OIDC_ONLY is on but OPENV_OIDC_CLIENT_ID is not set, so nobody could sign in")
+	}
+	return nil
 }
 
 // Billing is billing.ConfigFromEnv over the recorded values. Its error is
@@ -120,6 +145,30 @@ func (c *Config) HandlerFrontendURL() string {
 // server's localhost.
 func (c *Config) PublicAPIURL() string {
 	return c.text("PUBLIC_URL", "http://localhost:"+c.Port())
+}
+
+// HelpDocs is where the in-app help reads the user manual from: the OpenD
+// docs site that publishes manual/ (docs/plans/opend-help.md). Help is off,
+// and the app keeps the help it ships, unless OPENV_DOCS_URL is set. With
+// the URL alone it reads the site's public view; OPENV_DOCS_EMBED_SECRET
+// reads per profile instead, and only with it is OPENV_DOCS_ADMIN_TOKEN read.
+type HelpDocs struct {
+	URL         string // OPENV_DOCS_URL: the docs site's PUBLIC_URL
+	EmbedSecret string // OPENV_DOCS_EMBED_SECRET: its OPEND_EMBED_SECRET
+	AdminToken  string // OPENV_DOCS_ADMIN_TOKEN: its OPEND_ADMIN_TOKEN, to provision profiles
+}
+
+// HelpDocs is nil unless the docs site is set.
+func (c *Config) HelpDocs() *HelpDocs {
+	url := c.text("OPENV_DOCS_URL", "")
+	if url == "" {
+		return nil
+	}
+	d := &HelpDocs{URL: url, EmbedSecret: c.text("OPENV_DOCS_EMBED_SECRET", "")}
+	if d.EmbedSecret != "" {
+		d.AdminToken = c.text("OPENV_DOCS_ADMIN_TOKEN", "")
+	}
+	return d
 }
 
 // ConnectorDistDir is where the connector downloads are served from

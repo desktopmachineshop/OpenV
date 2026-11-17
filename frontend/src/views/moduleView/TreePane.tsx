@@ -1,21 +1,34 @@
 import React from 'react';
 import type { ArtifactContextAction, QualityRowInfo } from '../../components/ArtifactList';
 import type { DropZone } from '../../utils/artifactDrag';
+import type { FactsIndex, ModuleFigures } from '../../utils/artifactFacts';
 import { ErrorBanner } from '../../components/ui';
 import { ArtifactEditor } from '../../components/ArtifactEditor';
 import { ArtifactList } from '../../components/ArtifactList';
+import { KpiStrip } from './KpiStrip';
+import { LayersView } from './LayersView';
+import { LevelDrill } from './LevelDrill';
+import type { RequirementsView } from './ListToolbar';
+import { TableGroup, TableView } from './TableView';
+import { TreeDiagramView } from './TreeDiagramView';
+import type { FoldTrigger } from './useFoldAll';
 import type { Artifact, Setter } from './shared';
 
-// The tree pane: the left column on a wide screen, the Tree pane stacked. It
-// holds the error banner, the create button and form, the search box with the
-// filter panel (passed in, shown while toggled on), collapse and expand all,
-// and the artifact tree, or a notice while a baseline loads.
+// The list pane: the main area on a wide screen, the Tree pane stacked. It
+// holds the error banner, the create form, the filter panel (passed in, shown
+// while toggled on), the figures, and the artifacts as a table, a tree or
+// layers — or, on a phone, as a list, a tree or a drill-down by level — or a
+// notice while a baseline loads. With the Table and Tree views on, the table
+// is the tree with its columns and the tree is the diagram; a phone keeps its
+// list and its outline.
 // Props-only (refactor plan F7): the ModuleView shell owns the state, the
 // effects, the loads and the handlers.
 interface TreePaneProps {
   stacked: boolean;
+  phone: boolean;
   stackedPane: 'tree' | 'document' | 'notes';
-  leftColumnDrawn: number;
+  view: RequirementsView;
+  setView: (view: RequirementsView) => void;
   error: string;
   setError: Setter<string>;
   isBaselineView: boolean;
@@ -23,204 +36,188 @@ interface TreePaneProps {
   setIsCreating: Setter<boolean>;
   setPendingCreateContext: Setter<Partial<Artifact> | null>;
   setPendingCreatePlacement: Setter<{ anchorId: string; position: 'before' | 'after' } | null>;
-  searchText: string;
-  setSearchText: Setter<string>;
-  buildFilterSummary: () => string;
-  setShowFilterPanel: Setter<boolean>;
   showFilterPanel: boolean;
   filterPanel: React.ReactNode;
-  setCollapseAllToken: Setter<number>;
-  setExpandAllToken: Setter<number>;
+  toolbar: React.ReactNode;
+  figures: ModuleFigures;
+  facts: FactsIndex;
+  depthTrigger: { depth: number; token: number };
+  /** The Table and Tree views (REQUIREMENTS_TREE_FEATURE), and their fold-all button. */
+  treeViews: boolean;
+  foldTrigger: FoldTrigger;
   artifacts: Artifact[];
   projectId: string;
   pendingCreateContext: Partial<Artifact> | null;
   handleCreateArtifact: (data: Partial<Artifact>) => void;
   baselineLoading: boolean;
   filteredArtifacts: Artifact[];
+  totalArtifacts: number;
   selectedArtifactId: string | null;
   handleSelectArtifact: (artifactId: string | null) => void;
   handleReorderArtifact: (sourceId: string, targetId: string, mode: 'swap' | DropZone) => void;
   handleArtifactContextMenu: (action: ArtifactContextAction, artifact: Artifact) => void;
   clipboard: Artifact | null;
-  collapseAllToken: number;
-  expandAllToken: number;
   qualityScores: Record<string, QualityRowInfo>;
+  /** The chip search bar's group-by, which the table draws its rows under (issue #722). */
+  tableGroups?: TableGroup[];
+  groupedBy?: string;
 }
 
-export const TreePane: React.FC<TreePaneProps> = ({
-  stacked,
-  stackedPane,
-  leftColumnDrawn,
-  error,
-  setError,
-  isBaselineView,
-  isCreating,
-  setIsCreating,
-  setPendingCreateContext,
-  setPendingCreatePlacement,
-  searchText,
-  setSearchText,
-  buildFilterSummary,
-  setShowFilterPanel,
-  showFilterPanel,
-  filterPanel,
-  setCollapseAllToken,
-  setExpandAllToken,
-  artifacts,
-  projectId,
-  pendingCreateContext,
-  handleCreateArtifact,
-  baselineLoading,
-  filteredArtifacts,
-  selectedArtifactId,
-  handleSelectArtifact,
-  handleReorderArtifact,
-  handleArtifactContextMenu,
-  clipboard,
-  collapseAllToken,
-  expandAllToken,
-  qualityScores,
-}) => (
-  <div style={stacked
-    ? { flex: 1, minWidth: 0, display: stackedPane === 'tree' ? 'flex' : 'none', flexDirection: 'column', overflowX: 'hidden', overflowY: 'hidden', minHeight: 0 }
-    : { width: `${leftColumnDrawn}px`, minWidth: '200px', maxWidth: '800px', display: 'flex', flexDirection: 'column', overflowX: 'hidden', overflowY: 'hidden', minHeight: 0, paddingRight: '10px' }}>
-    <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 15 }} />
-    {!isBaselineView && (
-      <button
-        onClick={() => {
-          setIsCreating(!isCreating);
-          // A manual open (or cancel) always starts from a blank form, and
-          // without the placement a context-menu create had asked for.
-          setPendingCreateContext(null);
-          setPendingCreatePlacement(null);
-          setError('');
-        }}
-        className="button"
-        style={{ width: '100%', marginBottom: stacked ? '10px' : '20px' }}
-      >
-        {isCreating ? 'Cancel' : '+ New Artifact'}
-      </button>
-    )}
-
-    <div style={{ marginBottom: stacked ? '10px' : '20px' }}>
-      {!stacked && (
-      <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '8px', color: 'var(--text)' }}>
-        Filter and Search:
-      </label>
-      )}
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <input
-            type="text"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            placeholder="Search..."
-            style={{
-              width: '100%',
-              padding: '8px 160px 8px 8px',
-              borderRadius: '4px',
-              border: '1px solid var(--neutral-mid)',
-              fontSize: '14px',
-              backgroundColor: 'var(--surface)',
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              top: '50%',
-              right: '10px',
-              transform: 'translateY(-50%)',
-              fontSize: '12px',
-              color: 'var(--text-muted)',
-              maxWidth: '140px',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              pointerEvents: 'none',
-            }}
-            title={buildFilterSummary()}
-          >
-            {buildFilterSummary()}
-          </div>
+export const TreePane: React.FC<TreePaneProps> = (p) => {
+  const quality = p.isBaselineView ? undefined : p.qualityScores;
+  const list = () => {
+    if (p.isBaselineView && p.baselineLoading) {
+      return (
+        <div role="status" style={{ padding: '24px 16px', textAlign: 'center', color: 'var(--text-muted)', fontSize: 14 }}>
+          Loading baseline…
+          <div style={{ fontSize: 13, marginTop: 4 }}>A baseline holds the whole project, so this can take a moment.</div>
         </div>
-        <button
-          onClick={() => setShowFilterPanel((prev) => !prev)}
-          className="button-secondary"
-          style={{ padding: '6px 10px', fontSize: '14px' }}
-          title="Toggle filters"
-        >
-          ⚙
-        </button>
-      </div>
-      {showFilterPanel && filterPanel}
-      <div style={{ marginTop: '10px', display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-        <button
-          onClick={() => {
-            setCollapseAllToken((prev) => prev + 1);
-          }}
-          className="button-secondary"
-          style={{ padding: '6px 10px', fontSize: '12px' }}
-        >
-          Collapse all
-        </button>
-        <button
-          onClick={() => {
-            setExpandAllToken((prev) => prev + 1);
-          }}
-          className="button-secondary"
-          style={{ padding: '6px 10px', fontSize: '12px' }}
-        >
-          Expand all
-        </button>
+      );
+    }
+    if (p.treeViews && !(p.phone && p.view === 'table')) return treeViewList();
+    if (p.view === 'layers' && p.phone) {
+      return (
+        <LevelDrill
+          artifacts={p.filteredArtifacts}
+          facts={p.facts}
+          onOpen={(id) => p.handleSelectArtifact(id)}
+          onBack={() => p.setView('table')}
+        />
+      );
+    }
+    if (p.view === 'layers') {
+      return (
+        <LayersView
+          artifacts={p.filteredArtifacts}
+          selectedId={p.selectedArtifactId}
+          onSelect={(id) => p.handleSelectArtifact(id)}
+          facts={p.facts}
+        />
+      );
+    }
+    if (p.view === 'table') {
+      return (
+        <TableView
+          artifacts={p.filteredArtifacts}
+          allArtifacts={p.artifacts}
+          total={p.totalArtifacts}
+          selectedId={p.selectedArtifactId}
+          onSelect={(id) => p.handleSelectArtifact(id)}
+          facts={p.facts}
+          qualityScores={quality}
+          readOnly={p.isBaselineView}
+          canPaste={!!p.clipboard}
+          onReorder={p.handleReorderArtifact}
+          onContextMenuAction={p.handleArtifactContextMenu}
+          phone={p.phone}
+          groups={p.tableGroups}
+          groupedBy={p.groupedBy}
+        />
+      );
+    }
+    return (
+      <ArtifactList
+        artifacts={p.filteredArtifacts}
+        allArtifacts={p.artifacts}
+        selectedId={p.selectedArtifactId || undefined}
+        onSelect={p.handleSelectArtifact}
+        onReorder={p.handleReorderArtifact}
+        onContextMenuAction={p.handleArtifactContextMenu}
+        canPaste={!!p.clipboard}
+        defaultCollapsed
+        depthTrigger={p.depthTrigger}
+        readOnly={p.isBaselineView}
+        qualityScores={quality}
+        hideHeading
+        facts={p.facts}
+        compact={p.stacked}
+      />
+    );
+  };
+
+  // The Table and Tree views: the hierarchy with every column, the diagram,
+  // or (a phone's Tree) the outline.
+  const treeViewList = () => {
+    if (p.view === 'tree' && !p.phone) {
+      return (
+        <TreeDiagramView
+          artifacts={p.filteredArtifacts}
+          selectedId={p.selectedArtifactId}
+          onSelect={(id) => p.handleSelectArtifact(id)}
+          facts={p.facts}
+          foldTrigger={p.foldTrigger}
+        />
+      );
+    }
+    const outline = p.phone;
+    const trigger = p.foldTrigger.token ? { depth: p.foldTrigger.folded ? 1 : Infinity, token: p.foldTrigger.token } : undefined;
+    return (
+      <ArtifactList
+        artifacts={p.filteredArtifacts}
+        allArtifacts={p.artifacts}
+        selectedId={p.selectedArtifactId || undefined}
+        onSelect={p.handleSelectArtifact}
+        onReorder={p.handleReorderArtifact}
+        onContextMenuAction={p.handleArtifactContextMenu}
+        canPaste={!!p.clipboard}
+        defaultCollapsed={outline}
+        depthTrigger={trigger}
+        readOnly={p.isBaselineView}
+        qualityScores={quality}
+        hideHeading
+        facts={p.facts}
+        compact={outline}
+        groups={p.view === 'table' ? p.tableGroups : undefined}
+      />
+    );
+  };
+
+  return (
+    <div
+      style={{
+        flex: 1,
+        minWidth: 0,
+        minHeight: 0,
+        display: p.stacked && p.stackedPane !== 'tree' ? 'none' : 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
+      {p.toolbar}
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 10,
+          padding: p.phone ? (p.view === 'table' || p.view === 'layers' ? 0 : '10px 12px 0') : p.stacked ? '10px 12px 0' : '12px 16px 16px 20px',
+          overflow: 'hidden',
+        }}
+      >
+        <ErrorBanner message={p.error} onDismiss={() => p.setError('')} />
+        {p.showFilterPanel && <div style={{ flexShrink: 0, maxHeight: '50%', overflow: 'auto' }}>{p.filterPanel}</div>}
+        {/* Stacked, the new artifact's form sits above the list; on a wide
+            screen it takes the document pane, where editing happens too. */}
+        {p.isCreating && !p.isBaselineView && p.stacked && (
+          <div style={{ flexShrink: 0, maxWidth: 720 }}>
+            <ArtifactEditor
+              artifacts={p.artifacts}
+              projectId={p.projectId}
+              initialData={p.pendingCreateContext ?? undefined}
+              onSave={p.handleCreateArtifact}
+              onCancel={() => {
+                p.setIsCreating(false);
+                p.setPendingCreateContext(null);
+                p.setPendingCreatePlacement(null);
+                p.setError('');
+              }}
+            />
+          </div>
+        )}
+        {!p.stacked && <KpiStrip figures={p.figures} />}
+        {list()}
       </div>
     </div>
-
-    {isCreating && !isBaselineView && (
-      <ArtifactEditor
-        artifacts={artifacts}
-        projectId={projectId}
-        initialData={pendingCreateContext ?? undefined}
-        onSave={handleCreateArtifact}
-        onCancel={() => {
-          setIsCreating(false);
-          setPendingCreateContext(null);
-          setPendingCreatePlacement(null);
-          setError('');
-        }}
-      />
-    )}
-
-    {isBaselineView && baselineLoading ? (
-      <div
-        role="status"
-        style={{
-          padding: '24px 16px',
-          textAlign: 'center',
-          color: 'var(--text-muted)',
-          fontSize: 14,
-        }}
-      >
-        Loading baseline…
-        <div style={{ fontSize: 13, marginTop: 4 }}>
-          A baseline holds the whole project, so this can take a moment.
-        </div>
-      </div>
-    ) : (
-      <ArtifactList
-        artifacts={filteredArtifacts}
-        allArtifacts={artifacts}
-        selectedId={selectedArtifactId || undefined}
-        onSelect={handleSelectArtifact}
-        onReorder={handleReorderArtifact}
-        onContextMenuAction={handleArtifactContextMenu}
-        canPaste={!!clipboard}
-        defaultCollapsed
-        collapseAllTrigger={collapseAllToken}
-        expandAllTrigger={expandAllToken}
-        readOnly={isBaselineView}
-        qualityScores={isBaselineView ? undefined : qualityScores}
-        hideHeading={stacked}
-      />
-    )}
-  </div>
-);
+  );
+};

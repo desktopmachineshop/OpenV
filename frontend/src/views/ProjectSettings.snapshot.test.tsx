@@ -384,7 +384,7 @@ const tablist = () => {
 const expectTablist = (selectedLabel: string) => {
   const selectedKey = TABS.find(([, label]) => label === selectedLabel)![0];
   expect(tablist()).toEqual({
-    strips: ['div.tab-strip'],
+    strips: ['div.ov-settings-tabs'],
     children: TABS.map(
       ([key, label]) =>
         `button ${label} role=tab aria-selected=${key === selectedKey} aria-controls=project-settings-panel id=project-settings-tab-${key} type=null tabindex=null`
@@ -467,7 +467,6 @@ const LOAD_GATED_OFF = [
   'projectAPI.get("p1")',
   'attributeDefinitionAPI.listByProject("p1")',
   'metaAPI.artifactTypes()',
-  'projectAPI.list()',
   'projectAPI.parties("p1")',
 ];
 const LOAD = [...LOAD_GATED_OFF.slice(0, 7), 'shareLinkAPI.list("p1")', ...LOAD_GATED_OFF.slice(7)];
@@ -477,8 +476,9 @@ const QUALITY = 'qualityRulesAPI.forProject("p1")';
 
 // What each tab's form controls hold once loaded, in document order.
 const CONTROLS: Record<TabKey, string[]> = {
-  // The parent picker (p1 refines p0), then the new-party name and note.
-  general: ['select=p0', 'text=', 'text='],
+  // The new-party name and note. The parent picker is on the project's
+  // Overview now (ProductOverviewParent).
+  general: ['text=', 'text='],
   // Four member roles, the new member's email and role; the team grant's
   // role, the team to grant and its role; the share link's access, label
   // and expiry.
@@ -503,8 +503,18 @@ const CONTROLS: Record<TabKey, string[]> = {
   // The new attribute's key, label, type, applies-to and required box.
   attributes: ['text=', 'text=', 'select=text', 'select=', 'checkbox=false'],
   // The convention, then weak wording (the project's error), passive voice
-  // (the workspace's info) and not testable (the default warning).
-  quality: ['radio=true', 'radio=false', 'select=error', 'select=info', 'select=warning'],
+  // (the workspace's info) and not testable (the default warning), each
+  // after the switch that turns it on or off.
+  quality: [
+    'radio=true',
+    'radio=false',
+    'checkbox=true',
+    'select=error',
+    'checkbox=true',
+    'select=info',
+    'checkbox=true',
+    'select=warning',
+  ],
   danger: [],
 };
 
@@ -607,14 +617,23 @@ describe('ProjectSettings characterization (S16c)', () => {
     // Quality rules: weak wording turned off, not saved.
     await click(tabButton('Quality rules'));
     await setValue(selects()[0], 'off');
-    expect(controls()).toEqual(['radio=true', 'radio=false', 'select=off', 'select=info', 'select=warning']);
+    expect(controls()).toEqual([
+      'radio=true',
+      'radio=false',
+      'checkbox=false',
+      'select=off',
+      'checkbox=true',
+      'select=info',
+      'checkbox=true',
+      'select=warning',
+    ]);
 
     // Away, then back to each tab in turn.
     await click(tabButton('Danger Zone'));
     await click(tabButton('Agents'));
 
     await click(tabButton('General'));
-    expect(controls()).toEqual(['select=p0', 'text=Seal supplier', 'text=Tier 3']);
+    expect(controls()).toEqual(['text=Seal supplier', 'text=Tier 3']);
 
     await click(tabButton('Access'));
     expect(controls()).toEqual([
@@ -655,7 +674,16 @@ describe('ProjectSettings characterization (S16c)', () => {
     // The page holds the editor's rules and draft, so the change is still
     // there, unsaved, and the rules are not loaded again.
     await click(tabButton('Quality rules'));
-    expect(controls()).toEqual(['radio=true', 'radio=false', 'select=off', 'select=info', 'select=warning']);
+    expect(controls()).toEqual([
+      'radio=true',
+      'radio=false',
+      'checkbox=false',
+      'select=off',
+      'checkbox=true',
+      'select=info',
+      'checkbox=true',
+      'select=warning',
+    ]);
     expect(byText<HTMLButtonElement>('button', 'Save rules').disabled).toBe(false);
 
     expect(recorder.calls).toEqual([...LOAD, QUALITY]);

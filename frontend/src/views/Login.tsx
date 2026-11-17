@@ -7,8 +7,10 @@ import {
   authAPI,
 } from '../api/client';
 import { API_ERROR, apiErrorCode, apiErrorMessage, retryAfterSeconds } from '../api/errors';
+import { useIdentityLink } from '../hooks/useIdentityLink';
 import { useAppStore } from '../state/store';
-import { rememberReturnTo, safeReturnPath } from '../utils/returnTo';
+import { safeReturnPath } from '../utils/returnTo';
+import { ResetForLinkNote, SignInLoading, SsoButtons, SsoError, SsoOnlySignIn } from './LoginSso';
 
 // Login renders email/password sign-in plus optional Google SSO, and a
 // register mode. The first registered user becomes the admin.
@@ -36,10 +38,20 @@ import { rememberReturnTo, safeReturnPath } from '../utils/returnTo';
 //     colleague is signed in must not quietly put THEIR account into the
 //     workspace.
 //
+// A Google or OIDC sign-on whose address belongs to an account made with a
+// password lands here as ?link=<provider>, holding a link request the server
+// keeps in an HttpOnly cookie. The page names the account and asks for its
+// password; confirming adds the provider to the account's sign-in methods
+// and signs in, and from then on that provider goes straight in.
+//
 // Whatever the path, a conversion that did NOT happen is said out loud: the
 // register call reports what the token did (`invitation`), and a failed
 // accept is shown rather than swallowed. Somebody who followed a link to
 // join a workspace must never be dropped into an empty account instead.
+//
+// Where single sign-on is the only way in (oidc_only), SsoOnlySignIn takes
+// the page's place, but for linking a provider and deciding on an invitation.
+
 export const Login: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -54,6 +66,7 @@ export const Login: React.FC = () => {
   // A page that sent the person here to sign in and wants them back (the
   // consent an AI app asks for, REQ-44): only a path inside the app.
   const returnTo = safeReturnPath(searchParams.get('next'));
+  const linkProvider = searchParams.get('link') || '';
   // The landing page links straight to registration with ?mode=register, and
   // an invite link means registration too — that is what the link is for.
   const [mode, setMode] = useState<'login' | 'register' | 'forgot'>(
@@ -78,6 +91,11 @@ export const Login: React.FC = () => {
   const [googleEnabled, setGoogleEnabled] = useState(false);
   const [oidcEnabled, setOidcEnabled] = useState(false);
   const [oidcName, setOidcName] = useState('SSO');
+  const [oidcOnly, setOidcOnly] = useState(false);
+  // Nothing renders until the methods are known: a form that flashes and
+  // vanishes as the page goes to the provider is worse than a moment of none.
+  const [configLoaded, setConfigLoaded] = useState(false);
+  const [signedOut, setSignedOut] = useState(false);
   const [registrationClosed, setRegistrationClosed] = useState(false);
   // The server's password rule, so the form states what will actually be
   // enforced. DEFAULT_MIN_PASSWORD_LENGTH stands in while the policy is in
@@ -95,6 +113,12 @@ export const Login: React.FC = () => {
   // either nobody is signed in, or there was no invitation and the effect
   // has already navigated away.
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  // The pending link of a sign-on provider to a password account, once the
+  // server has named it; linkError when the request is gone.
+  const { preview: linkPreview, error: linkError } = useIdentityLink(linkProvider, (p) => {
+    setEmail(p.email);
+    setMode('login');
+  });
 
   useEffect(() => {
     authAPI
@@ -102,6 +126,7 @@ export const Login: React.FC = () => {
       .then((res) => {
         setGoogleEnabled(res.data.google_enabled);
         setOidcEnabled(res.data.oidc_enabled);
+        setOidcOnly(!!res.data.oidc_only);
         if (res.data.oidc_provider_name) setOidcName(res.data.oidc_provider_name);
         setVerificationRequired(!!res.data.email_verification_required);
         setEmailVerificationRequired(!!res.data.email_verification_required);
@@ -111,7 +136,8 @@ export const Login: React.FC = () => {
       .catch(() => {
         setGoogleEnabled(false);
         setOidcEnabled(false);
-      });
+      })
+      .finally(() => setConfigLoaded(true));
     authAPI
       .policy()
       .then((res) => {
@@ -139,7 +165,7 @@ export const Login: React.FC = () => {
         }
         setSessionEmail(res.data.email);
       })
-      .catch(() => {});
+      .catch(() => setSignedOut(true));
   }, [navigate, setCurrentUser, setEmailVerificationRequired, inviteToken, shareToken, returnTo]);
 
   // Resolve the invite link so the form can name the workspace and prefill
@@ -177,6 +203,9 @@ export const Login: React.FC = () => {
   const decidingAsSignedIn = !!inviteToken && sessionEmail !== null;
   const inviteIsForThisSession =
     !!invite && sessionEmail !== null && sameAddress(invite.email, sessionEmail);
+  // Linking happens on the sign-in form only.
+  const linking = !!linkPreview && activeMode === 'login';
+  const linkProviderName = linkPreview?.provider === 'oidc' ? oidcName : 'Google';
 
   // join takes the invitation up for the account already signed in. It is
   // only reachable when the addresses match: the server refuses anything
@@ -293,6 +322,14 @@ export const Login: React.FC = () => {
         navigate(await afterSignIn(verificationRequired && !res.data.email_verified));
         return;
       }
+      if (linking) {
+        // The password confirms the link and signs in; the server takes up
+        // any invitation waiting for the provider-verified address itself.
+        const linked = await authAPI.confirmIdentityLink(password);
+        setCurrentUser(linked.data);
+        navigate(await afterSignIn(verificationRequired && !linked.data.email_verified));
+        return;
+      }
       const res = await authAPI.login(email, password);
       setCurrentUser(res.data);
       // Signing in through an invite link is how somebody who already has an
@@ -338,6 +375,15 @@ export const Login: React.FC = () => {
     }
   };
 
+  if (!configLoaded) return <SignInLoading />;
+  // A forgotten password still has a use there: the link step asks for it.
+  if (oidcOnly && !decidingAsSignedIn && !linking && activeMode !== 'forgot') {
+    const back = shareToken ? `/s/${encodeURIComponent(shareToken)}` : returnTo;
+    const problem = linkError ? 'That sign-in has expired.' : inviteError;
+    const props = { name: oidcName, returnTo: back, ready: signedOut, invite, problem };
+    return <SsoOnlySignIn {...props} signUp={mode === 'register' || !!inviteToken} />;
+  }
+
   return (
     <div
       className="app-shell"
@@ -372,6 +418,7 @@ export const Login: React.FC = () => {
                 ? 'Reset your password'
                 : 'Create your account'}
         </p>
+        {!oidcOnly && <SsoError name={oidcName} />}
         {resetDone && activeMode === 'login' && (
           <div
             role="status"
@@ -514,6 +561,7 @@ export const Login: React.FC = () => {
                 <p style={{ fontSize: 13, color: 'var(--text-body)', lineHeight: 1.5, marginTop: 0 }}>
                   Enter the address you sign in with and we will email you a link to set a new password.
                 </p>
+                {oidcOnly && <ResetForLinkNote name={oidcName} />}
                 <div className="form-group" style={{ marginBottom: 16 }}>
                   <input
                     type="email"
@@ -548,8 +596,28 @@ export const Login: React.FC = () => {
             </button>
           </>
         )}
+        {!decidingAsSignedIn && linking && linkPreview && (
+          <div
+            role="status"
+            style={{
+              background: 'var(--tint-blue)',
+              border: '1px solid var(--accent)',
+              borderRadius: 4,
+              padding: '10px 12px',
+              marginBottom: 16,
+              fontSize: 13,
+              color: 'var(--text)',
+            }}
+          >
+            An OpenV account already uses <b>{linkPreview.email}</b>. Enter its password to connect{' '}
+            {linkProviderName}; after that, either one signs you in.
+          </div>
+        )}
         {!decidingAsSignedIn && activeMode !== 'forgot' && (
           <>
+            {linkError && (
+              <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{linkError}</div>
+            )}
             {inviteError && (
               <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{inviteError}</div>
             )}
@@ -579,15 +647,15 @@ export const Login: React.FC = () => {
                   inputMode="email"
                   value={email}
                   required
-                  readOnly={!!invite}
-                  aria-readonly={!!invite}
+                  readOnly={!!invite || linking}
+                  aria-readonly={!!invite || linking}
                   title={invite ? `This invitation was sent to ${invite.email}` : undefined}
                   onChange={(e) => setEmail(e.target.value)}
                   style={{
                     width: '100%',
                     padding: 10,
                     boxSizing: 'border-box',
-                    ...(invite ? { background: 'var(--neutral-soft)', cursor: 'not-allowed' } : {}),
+                    ...(invite || linking ? { background: 'var(--neutral-soft)', cursor: 'not-allowed' } : {}),
                   }}
                 />
                 {invite && (
@@ -616,9 +684,15 @@ export const Login: React.FC = () => {
                 <div style={{ color: 'var(--danger)', fontSize: 13, marginBottom: 12 }}>{String(error)}</div>
               )}
               <button className="button" type="submit" disabled={busy} style={{ width: '100%' }}>
-                {busy ? 'Please wait…' : activeMode === 'login' ? 'Sign in' : 'Create account'}
+                {busy
+                  ? 'Please wait…'
+                  : linking
+                    ? `Connect ${linkProviderName} and sign in`
+                    : activeMode === 'login'
+                      ? 'Sign in'
+                      : 'Create account'}
               </button>
-              {activeMode === 'login' && (
+              {activeMode === 'login' && (!oidcOnly || linking) && (
                 <div style={{ textAlign: 'center', marginTop: 10 }}>
                   <button
                     type="button"
@@ -636,7 +710,7 @@ export const Login: React.FC = () => {
                       width: 'auto',
                     }}
                   >
-                    Forgot your password?
+                    {linking ? 'Forgot your OpenV password?' : 'Forgot your password?'}
                   </button>
                 </div>
               )}
@@ -653,35 +727,10 @@ export const Login: React.FC = () => {
                 Continue to OpenV
               </button>
             )}
-            {oidcEnabled && (
-              <a
-                href={authAPI.oidcLoginUrl()}
-                onClick={() => rememberReturnTo(returnTo)}
-                className="button-secondary button"
-                style={{ display: 'block', textAlign: 'center', marginTop: 12, textDecoration: 'none' }}
-              >
-                Sign in with {oidcName}
-              </a>
+            {!oidcOnly && (
+              <SsoButtons {...{ oidcEnabled, oidcName, googleEnabled, returnTo }} signingIn={activeMode === 'login'} />
             )}
-            {googleEnabled ? (
-              <a
-                href={authAPI.googleLoginUrl()}
-                onClick={() => rememberReturnTo(returnTo)}
-                className="button-secondary button"
-                style={{ display: 'block', textAlign: 'center', marginTop: 12, textDecoration: 'none' }}
-              >
-                Sign in with Google
-              </a>
-            ) : (
-              !oidcEnabled &&
-              activeMode === 'login' && (
-                <div style={{ marginTop: 12, fontSize: 11, textAlign: 'center', color: 'var(--neutral-mid)' }}>
-                  Google sign-in is available once the server is configured with a Google OAuth
-                  client (see docs/agents.md).
-                </div>
-              )
-            )}
-            <div style={{ margin: '20px 0 0', borderTop: '1px solid var(--neutral-soft)', paddingTop: 16 }}>
+            <div hidden={oidcOnly} style={{ margin: '20px 0 0', borderTop: '1px solid var(--neutral-soft)', paddingTop: 16 }}>
               {!signUpAvailable ? (
                 <div style={{ fontSize: 13, textAlign: 'center', color: 'var(--text-muted)' }}>
                   Registration is closed; ask a workspace admin for an invitation.

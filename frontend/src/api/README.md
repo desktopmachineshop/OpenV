@@ -12,7 +12,7 @@ covers the rest of the app.
 
 | Area (`docs/areas.json`) | Files here |
 |---|---|
-| frontend-shell | `client.ts`, `http.ts`, `errors.ts`, `baseURL.ts`, `contentDisposition.ts`, `*.md` |
+| frontend-shell | `client.ts`, `http.ts`, `errors.ts`, `baseURL.ts`, `contentDisposition.ts`, `help.ts`, `types/help.ts`, `*.md` |
 | requirements-core | `artifacts.ts`, `projects.ts`, `types/artifacts.ts`, `types/projects.ts` |
 | verification | `vv.ts`, `types/vv.ts` |
 | documents | `attachments.ts`, `types/attachments.ts` |

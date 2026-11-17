@@ -26,8 +26,9 @@ type ChatterEntry struct {
 	UpdatedAt  time.Time `json:"updated_at"`
 
 	// Mentions and Todo are resolved for display and never stored: the
-	// note's text is the record of who it names, and the work item is the
-	// record of the to-do. Both are composed by the API when a feed is
+	// note's text is the record of who it names, and the to-do (or, for a
+	// note raised before to-dos had a table, the work item) is the record of
+	// the to-do. Both are composed by the API when a feed is
 	// read, so a status shown beside a note is the item's status now
 	// rather than a copy taken when the note was written.
 	Mentions []MentionRef `json:"mentions,omitempty"`
@@ -41,11 +42,16 @@ type MentionRef struct {
 }
 
 // TodoRef is the to-do raised from a note, as much of it as the note needs
-// to show a link and a status.
+// to show a link and a status. Since to-dos have a table of their own
+// (internal/domain/todos) it names a to-do by TodoID; a note raised before
+// that names the board card it raised by WorkItemID. Exactly one is set.
 type TodoRef struct {
-	WorkItemID string `json:"work_item_id"`
-	Title      string `json:"title"`
-	// Status is the board column the item sits in.
+	TodoID     string `json:"todo_id,omitempty"`
+	WorkItemID string `json:"work_item_id,omitempty"`
+	// Title is the to-do's text, or the card's title.
+	Title string `json:"title"`
+	// Status is "open" or "done" for a to-do, and the board column for a
+	// card.
 	Status       string  `json:"status"`
 	AssigneeID   *string `json:"assignee_id,omitempty"`
 	AssigneeName string  `json:"assignee_name,omitempty"`

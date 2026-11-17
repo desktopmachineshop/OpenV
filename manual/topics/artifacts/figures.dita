@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="figures">
+  <title>Figures</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="requirements.figures"/>
+  </prolog>
+  <conbody>
+    <p>Files attached to an artifact are <b>figures</b>. Each is numbered from the artifact's own reference — <codeph>REQ-17-FIG-1</codeph> — and that number is never reissued, so it stays a safe citation even after the figure it named is deleted. The stored file takes the figure's name too, so downloading one saves <codeph>REQ-17-FIG-1.png</codeph> rather than whatever the camera called it.</p>
+    <section id="what-can-be-attached">
+      <title>What can be attached</title>
+      <ul>
+        <li><b>Images</b> — PNG, JPEG, GIF, WebP, SVG, TIFF, BMP.</li>
+        <li><b>PDFs</b> — a supplier datasheet, a standard, a test report.</li>
+        <li><b>CAD</b> — STEP, IGES, STL, 3MF, OBJ, PLY, glTF, DXF, DWG, and the common native formats (SolidWorks, Inventor, CATIA, Fusion, Parasolid, Rhino).</li>
+      </ul>
+      <p>How big one figure may be follows your workspace's plan — the <b>Limits</b> tab in workspace settings gives the number, under <i>Largest figure</i>. It is measured in hundreds of megabytes, because a CAD assembly is a figure like any other. Attach the file your team actually works from, so the requirement points at the real thing rather than a picture of it.</p>
+    </section>
+    <section id="looking-at-one">
+      <title>Looking at one</title>
+      <p>Clicking a figure opens it. An image is shown full size, a PDF opens in a reader with the pages scrollable, and an <b>STL</b> is drawn as a 3D preview you can drag to turn, with its triangle count and bounding box underneath.</p>
+      <p>Other CAD formats are <b>not</b> previewed: a STEP file or a native part needs a geometry kernel to interpret, and an approximation of a part is worse than none because a reviewer would trust it. Those open a panel naming the format and its size, with a Download button — open it in the tool that owns it.</p>
+      <p>Every figure, previewable or not, has that Download button.</p>
+    </section>
+    <section id="changing-one">
+      <title>Changing one</title>
+      <p>Figures are added, replaced and removed <b>while editing</b> the artifact — what the document shows changes by a deliberate edit, not a stray click while reading. Use <b>⬆</b> on a figure to upload a new version: the figure keeps its reference, the artifact takes a new version, and the notes record the change. <b>🕘</b> shows the history, and every superseded version stays viewable.</p>
+      <p>A figure may change format between versions — a sketch replaced by the real drawing, a screenshot replaced by the STEP file — and keeps its number.</p>
+      <p>From that history you can <b>Restore</b> any earlier version. The figure goes back to the image <i>and</i> the name it had then — a restore that brought back the drawing but left a later rename in place would show one figure under another's name.</p>
+      <p>Restoring works the way it does for an artifact: it is recorded as a <b>new version</b> with the old content, and nothing is deleted. So the history after restoring version 1 over version 3 reads v1, v2, v3, v4 — with v4 marked <i>restored from v1</i> — and version 3's drawing is still there to open. That matters when a requirement was reviewed, or a baseline captured, against what the figure used to show: rewinding and discarding would destroy the record of what the reviewer actually saw.</p>
+      <p>Restoring is an editor's action, and the version already showing cannot be restored over itself.</p>
+      <p>A figure also has a <b>name</b>, shown under its reference and printed under the picture in PDF and Word documents. Until you give it one, the name is the filename it was uploaded with — which for a screenshot is usually a timestamp. Use <b>✎</b> on a figure to rename it: the new name is a figure version like a new image is, with who set it and when, so the history shows every name the figure has had, and the artifact takes a new version with a note recording the change. Clearing the name goes back to the uploaded filename.</p>
+    </section>
+    <section id="in-generated-documents">
+      <title>In generated documents</title>
+      <p>Only images are laid into a generated PDF or Word document. A datasheet or a model has nothing to draw, so it is listed and citable rather than printed as an apology in the middle of the specification; its file rides along in a download's zip, under the <b>Models</b> or <b>Documents</b> group rather than <b>Figures</b>.</p>
+      <p>On the details view figures are read-only, with the viewer for a closer look.</p>
+    </section>
+  </conbody>
+</concept>

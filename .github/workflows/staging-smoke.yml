@@ -39,7 +39,9 @@ concurrency:
 jobs:
   smoke:
     name: Smoke test staging
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest is now 26.04, which Playwright 1.57 cannot
+    # install its browsers' dependencies on.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
 

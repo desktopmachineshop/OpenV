@@ -275,7 +275,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<author>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r1>, <r2>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Case Author\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<author>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r1>, <r2>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Auditor\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -299,7 +299,7 @@
         "created_at": "<time@step 6>",
         "agent_content_hash": "<hex64:1>",
         "agent_effort": "medium",
-        "agent_name": "Test Case Author",
+        "agent_name": "Test Auditor",
         "agent_provider": "claude-code"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -311,7 +311,7 @@
           "entity": "<author.card>",
           "payload": {
             "column": "string \"todo\"",
-            "title": "string \"Agent run: Test Case Author\""
+            "title": "string \"Agent run: Test Auditor\""
           }
         }
       ]
@@ -336,7 +336,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<author2>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author2.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r2>, <phantom>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 7>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Case Author\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<author2>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author2.card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r2>, <phantom>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 7>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Auditor\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -359,7 +359,7 @@
         "created_at": "<time@step 7>",
         "agent_content_hash": "<hex64:1>",
         "agent_effort": "medium",
-        "agent_name": "Test Case Author",
+        "agent_name": "Test Auditor",
         "agent_provider": "claude-code"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -371,7 +371,7 @@
           "entity": "<author2.card>",
           "payload": {
             "column": "string \"todo\"",
-            "title": "string \"Agent run: Test Case Author\""
+            "title": "string \"Agent run: Test Auditor\""
           }
         }
       ]
@@ -743,7 +743,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<author>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author.card>\",\"status\":\"awaiting_approval\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r1>, <r2>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 12>\",\"started_at\":\"<time@before step 12>\",\"finished_at\":\"<time@step 19>\",\"final_text\":\"Drafted a test case with a verifies link for R1; R2 needs a load profile before a test can be written.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Case Author\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<author>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author.card>\",\"status\":\"awaiting_approval\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r1>, <r2>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 12>\",\"started_at\":\"<time@before step 12>\",\"finished_at\":\"<time@step 19>\",\"final_text\":\"Drafted a test case with a verifies link for R1; R2 needs a load profile before a test can be written.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Auditor\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -771,7 +771,7 @@
         "created_at": "<time@step 6>",
         "agent_content_hash": "<hex64:1>",
         "agent_effort": "medium",
-        "agent_name": "Test Case Author",
+        "agent_name": "Test Auditor",
         "agent_provider": "claude-code"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
@@ -1344,7 +1344,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<author>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r1>, <r2>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 12>\",\"started_at\":\"<time@before step 12>\",\"finished_at\":\"<time@step 30>\",\"final_text\":\"Drafted a test case with a verifies link for R1; R2 needs a load profile before a test can be written.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Case Author\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<author>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author.card>\",\"status\":\"succeeded\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r1>, <r2>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 12>\",\"started_at\":\"<time@before step 12>\",\"finished_at\":\"<time@step 30>\",\"final_text\":\"Drafted a test case with a verifies link for R1; R2 needs a load profile before a test can be written.\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 6>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Auditor\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1372,7 +1372,7 @@
         "created_at": "<time@step 6>",
         "agent_content_hash": "<hex64:1>",
         "agent_effort": "medium",
-        "agent_name": "Test Case Author",
+        "agent_name": "Test Auditor",
         "agent_provider": "claude-code"
       },
       "gzip": {
@@ -1556,7 +1556,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<author2>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author2.card>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r2>, <phantom>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 33>\",\"finished_at\":\"<time@step 35>\",\"final_text\":\"\",\"error\":\"one or more approved proposals failed to apply\",\"error_class\":\"agent_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 7>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Case Author\",\"agent_provider\":\"claude-code\"}"
+        "{\"id\":\"<author2>\",\"org_id\":\"<w>\",\"agent_id\":\"<author.agent>\",\"project_id\":\"<p>\",\"work_item_id\":\"<author2.card>\",\"status\":\"failed\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Draft verification test cases for the following requirement artifacts in project <p>: <r2>, <phantom>.\\n\\nFor each requirement: fetch it with get_artifact, draft one or more test-case artifacts (preconditions, numbered steps, expected result tied to its fit criterion) via create_artifact, then create a verifies link from each new test case to the requirement via create_link. Everything you create is a proposal for human review.\",\"worker_id\":\"tour-box\",\"heartbeat_at\":\"<time@before step 33>\",\"finished_at\":\"<time@step 35>\",\"final_text\":\"\",\"error\":\"one or more approved proposals failed to apply\",\"error_class\":\"agent_error\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"created_at\":\"<time@step 7>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Auditor\",\"agent_provider\":\"claude-code\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1583,7 +1583,7 @@
         "created_at": "<time@step 7>",
         "agent_content_hash": "<hex64:1>",
         "agent_effort": "medium",
-        "agent_name": "Test Case Author",
+        "agent_name": "Test Auditor",
         "agent_provider": "claude-code"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
@@ -2184,7 +2184,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@before step 54>\",\"actor_kind\":\"worker\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<uuid:3>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<q>\",\"entity_id\":\"<rq>\",\"actor\":\"user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Keep a log\"},\"created_at\":\"<time@step 51>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Keep a log\"},{\"id\":\"<events.cursor>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Case Author\"}]"
+        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@before step 54>\",\"actor_kind\":\"worker\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<uuid:3>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<q>\",\"entity_id\":\"<rq>\",\"actor\":\"user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Keep a log\"},\"created_at\":\"<time@step 51>\",\"actor_kind\":\"user\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Keep a log\"},{\"id\":\"<events.cursor>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Auditor\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2257,9 +2257,9 @@
           "created_at": "<time@step 50>",
           "actor_kind": "agent",
           "actor_id": "<author3>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "agent run",
-          "entity_name": "Test Case Author"
+          "entity_name": "Test Auditor"
         }
       ],
       "gzip": {
@@ -2288,7 +2288,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@before step 54>\",\"actor_kind\":\"worker\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<events.cursor>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Case Author\"}]"
+        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@before step 54>\",\"actor_kind\":\"worker\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<events.cursor>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Auditor\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2343,9 +2343,9 @@
           "created_at": "<time@step 50>",
           "actor_kind": "agent",
           "actor_id": "<author3>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "agent run",
-          "entity_name": "Test Case Author"
+          "entity_name": "Test Auditor"
         }
       ],
       "gzip": {
@@ -2545,7 +2545,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:9>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<k3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"op\":\"create_artifact\",\"run_id\":\"<author3>\"},\"created_at\":\"<time@before step 42>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_artifact\"},{\"id\":\"<uuid:10>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<s3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"op\":\"create_artifact\",\"run_id\":\"<author3>\"},\"created_at\":\"<time@before step 42>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_artifact\"},{\"id\":\"<uuid:11>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<l3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"op\":\"create_link\",\"run_id\":\"<author3>\"},\"created_at\":\"<time@before step 42>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_link\"},{\"id\":\"<uuid:12>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<a3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"op\":\"create_artifact\",\"run_id\":\"<author3>\"},\"created_at\":\"<time@before step 42>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_artifact\"},{\"id\":\"<uuid:13>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<l2>\",\"actor\":\"agent:<author2>\",\"payload\":{\"op\":\"create_link\",\"run_id\":\"<author2>\"},\"created_at\":\"<time@before step 33>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author2>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_link\"},{\"id\":\"<uuid:14>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<a2>\",\"actor\":\"agent:<author2>\",\"payload\":{\"op\":\"create_artifact\",\"run_id\":\"<author2>\"},\"created_at\":\"<time@before step 33>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author2>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_artifact\"},{\"id\":\"<uuid:15>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<l1>\",\"actor\":\"agent:<author>\",\"payload\":{\"op\":\"create_link\",\"run_id\":\"<author>\"},\"created_at\":\"<time@step 14>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_link\"},{\"id\":\"<uuid:16>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<a1>\",\"actor\":\"agent:<author>\",\"payload\":{\"op\":\"create_artifact\",\"run_id\":\"<author>\"},\"created_at\":\"<time@step 12>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_artifact\"}]"
+        "[{\"id\":\"<uuid:9>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<k3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"op\":\"create_artifact\",\"run_id\":\"<author3>\"},\"created_at\":\"<time@before step 42>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_artifact\"},{\"id\":\"<uuid:10>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<s3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"op\":\"create_artifact\",\"run_id\":\"<author3>\"},\"created_at\":\"<time@before step 42>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_artifact\"},{\"id\":\"<uuid:11>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<l3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"op\":\"create_link\",\"run_id\":\"<author3>\"},\"created_at\":\"<time@before step 42>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_link\"},{\"id\":\"<uuid:12>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<a3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"op\":\"create_artifact\",\"run_id\":\"<author3>\"},\"created_at\":\"<time@before step 42>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_artifact\"},{\"id\":\"<uuid:13>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<l2>\",\"actor\":\"agent:<author2>\",\"payload\":{\"op\":\"create_link\",\"run_id\":\"<author2>\"},\"created_at\":\"<time@before step 33>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author2>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_link\"},{\"id\":\"<uuid:14>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<a2>\",\"actor\":\"agent:<author2>\",\"payload\":{\"op\":\"create_artifact\",\"run_id\":\"<author2>\"},\"created_at\":\"<time@before step 33>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author2>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_artifact\"},{\"id\":\"<uuid:15>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<l1>\",\"actor\":\"agent:<author>\",\"payload\":{\"op\":\"create_link\",\"run_id\":\"<author>\"},\"created_at\":\"<time@step 14>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_link\"},{\"id\":\"<uuid:16>\",\"org_id\":\"<w>\",\"event_type\":\"proposal.created\",\"project_id\":\"<p>\",\"entity_id\":\"<a1>\",\"actor\":\"agent:<author>\",\"payload\":{\"op\":\"create_artifact\",\"run_id\":\"<author>\"},\"created_at\":\"<time@step 12>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"proposal\",\"entity_name\":\"create_artifact\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2563,7 +2563,7 @@
           "created_at": "<time@before step 42>",
           "actor_kind": "agent",
           "actor_id": "<author3>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "proposal",
           "entity_name": "create_artifact"
         },
@@ -2581,7 +2581,7 @@
           "created_at": "<time@before step 42>",
           "actor_kind": "agent",
           "actor_id": "<author3>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "proposal",
           "entity_name": "create_artifact"
         },
@@ -2599,7 +2599,7 @@
           "created_at": "<time@before step 42>",
           "actor_kind": "agent",
           "actor_id": "<author3>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "proposal",
           "entity_name": "create_link"
         },
@@ -2617,7 +2617,7 @@
           "created_at": "<time@before step 42>",
           "actor_kind": "agent",
           "actor_id": "<author3>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "proposal",
           "entity_name": "create_artifact"
         },
@@ -2635,7 +2635,7 @@
           "created_at": "<time@before step 33>",
           "actor_kind": "agent",
           "actor_id": "<author2>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "proposal",
           "entity_name": "create_link"
         },
@@ -2653,7 +2653,7 @@
           "created_at": "<time@before step 33>",
           "actor_kind": "agent",
           "actor_id": "<author2>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "proposal",
           "entity_name": "create_artifact"
         },
@@ -2671,7 +2671,7 @@
           "created_at": "<time@step 14>",
           "actor_kind": "agent",
           "actor_id": "<author>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "proposal",
           "entity_name": "create_link"
         },
@@ -2689,7 +2689,7 @@
           "created_at": "<time@step 12>",
           "actor_kind": "agent",
           "actor_id": "<author>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "proposal",
           "entity_name": "create_artifact"
         }
@@ -2720,7 +2720,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@before step 54>\",\"actor_kind\":\"worker\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<events.cursor>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Case Author\"}]"
+        "[{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r4>\",\"actor\":\"worker:<w>:user:<owner>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer briefly\"},\"created_at\":\"<time@before step 54>\",\"actor_kind\":\"worker\",\"actor_id\":\"<owner>\",\"actor_name\":\"Tour Owner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer briefly\"},{\"id\":\"<uuid:2>\",\"org_id\":\"<w>\",\"event_type\":\"artifact.created\",\"project_id\":\"<p>\",\"entity_id\":\"<r3>\",\"actor\":\"worker:<w>\",\"payload\":{\"artifact_type\":\"requirement\",\"title\":\"Answer politely\"},\"created_at\":\"<time@step 52>\",\"actor_kind\":\"worker\",\"actor_id\":\"<w>\",\"actor_name\":\"Workspace runner\",\"entity_kind\":\"requirement\",\"entity_name\":\"Answer politely\"},{\"id\":\"<events.cursor>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"succeeded\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Auditor\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2775,9 +2775,9 @@
           "created_at": "<time@step 50>",
           "actor_kind": "agent",
           "actor_id": "<author3>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "agent run",
-          "entity_name": "Test Case Author"
+          "entity_name": "Test Auditor"
         }
       ],
       "gzip": {
@@ -2806,7 +2806,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "[{\"id\":\"<uuid:18>\",\"org_id\":\"<w>\",\"event_type\":\"workitem.moved\",\"project_id\":\"<p>\",\"entity_id\":\"<author3.card>\",\"actor\":\"agent:<author3>\",\"payload\":{\"assignee_id\":\"<author.agent>\",\"assignee_type\":\"agent\",\"column\":\"done\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"work item\",\"entity_name\":\"Agent run: Test Case Author\"},{\"id\":\"<uuid:19>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"awaiting_approval\"},\"created_at\":\"<time@before step 44>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Case Author\"},{\"id\":\"<uuid:17>\",\"org_id\":\"<w>\",\"event_type\":\"workitem.moved\",\"project_id\":\"<p>\",\"entity_id\":\"<author3.card>\",\"actor\":\"agent:<author3>\",\"payload\":{\"assignee_id\":\"<author.agent>\",\"assignee_type\":\"agent\",\"column\":\"review\"},\"created_at\":\"<time@before step 44>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Case Author\",\"entity_kind\":\"work item\",\"entity_name\":\"Agent run: Test Case Author\"}]"
+        "[{\"id\":\"<uuid:18>\",\"org_id\":\"<w>\",\"event_type\":\"workitem.moved\",\"project_id\":\"<p>\",\"entity_id\":\"<author3.card>\",\"actor\":\"agent:<author3>\",\"payload\":{\"assignee_id\":\"<author.agent>\",\"assignee_type\":\"agent\",\"column\":\"done\"},\"created_at\":\"<time@step 50>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"work item\",\"entity_name\":\"Agent run: Test Auditor\"},{\"id\":\"<uuid:19>\",\"org_id\":\"<w>\",\"event_type\":\"agentrun.finished\",\"project_id\":\"<p>\",\"entity_id\":\"<author3>\",\"actor\":\"agent:<author3>\",\"payload\":{\"agent_id\":\"<author.agent>\",\"launched_by\":\"<owner>\",\"status\":\"awaiting_approval\"},\"created_at\":\"<time@before step 44>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"agent run\",\"entity_name\":\"Test Auditor\"},{\"id\":\"<uuid:17>\",\"org_id\":\"<w>\",\"event_type\":\"workitem.moved\",\"project_id\":\"<p>\",\"entity_id\":\"<author3.card>\",\"actor\":\"agent:<author3>\",\"payload\":{\"assignee_id\":\"<author.agent>\",\"assignee_type\":\"agent\",\"column\":\"review\"},\"created_at\":\"<time@before step 44>\",\"actor_kind\":\"agent\",\"actor_id\":\"<author3>\",\"actor_name\":\"Test Auditor\",\"entity_kind\":\"work item\",\"entity_name\":\"Agent run: Test Auditor\"}]"
       ],
       "trailing_newline": true,
       "parsed": [
@@ -2825,9 +2825,9 @@
           "created_at": "<time@step 50>",
           "actor_kind": "agent",
           "actor_id": "<author3>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "work item",
-          "entity_name": "Agent run: Test Case Author"
+          "entity_name": "Agent run: Test Auditor"
         },
         {
           "id": "<uuid:19>",
@@ -2844,9 +2844,9 @@
           "created_at": "<time@before step 44>",
           "actor_kind": "agent",
           "actor_id": "<author3>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "agent run",
-          "entity_name": "Test Case Author"
+          "entity_name": "Test Auditor"
         },
         {
           "id": "<uuid:17>",
@@ -2863,9 +2863,9 @@
           "created_at": "<time@before step 44>",
           "actor_kind": "agent",
           "actor_id": "<author3>",
-          "actor_name": "Test Case Author",
+          "actor_name": "Test Auditor",
           "entity_kind": "work item",
-          "entity_name": "Agent run: Test Case Author"
+          "entity_name": "Agent run: Test Auditor"
         }
       ],
       "gzip": {

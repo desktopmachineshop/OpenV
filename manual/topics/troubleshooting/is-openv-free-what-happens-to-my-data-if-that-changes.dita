@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="is-openv-free-what-happens-to-my-data-if-that-changes">
+  <title>Is OpenV free? What happens to my data if that changes?</title>
+  <conbody>
+    <p>The hosted service is free while OpenV is in alpha, with every feature included; self-hosting is free for good under the open-source MIT License (which asks only that you keep OpenV's copyright and licence notice); and registered charities and open-source projects stay free on the hosted service (an open-source workspace's projects are published, as of their latest baseline, on the site's <xref href="https://openv.app/open-source" scope="external" format="html">open-source page</xref>). The hosted service will come in four tiers: Single User (free, bring your own AI), and Business Lite, Business and Enterprise, which are coming soon. The <xref href="https://openv.app/pricing" scope="external" format="html">pricing page</xref> describes each tier and lists the hosted-runner limits in force. There is no billing in the product today.</p>
+    <p>If hosted OpenV ever charges, your data will not be behind the paywall. Export and import stay available on every plan, and a JSON export restores into a self-hosted OpenV.</p>
+  </conbody>
+</concept>

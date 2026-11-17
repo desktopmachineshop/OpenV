@@ -65,12 +65,13 @@ func TestComputeImpact_Downstream(t *testing.T) {
 	}
 
 	// Things that depend on R1: R2 (decomposes-to), D1 (satisfies), T1 (verifies).
-	// D1 in turn mitigates H1, but H1 is upstream of D1 (D1 depends on H1), so
-	// H1 must NOT appear downstream of R1.
+	// D1 in turn mitigates H1: a change to D1 changes H1's risk control, so
+	// the walk flows on down to H1.
 	want := map[string]int{
 		artifacts.TypeRequirement: 1, // R2
 		artifacts.TypeDesignItem:  1, // D1
 		artifacts.TypeTestCase:    1, // T1
+		artifacts.TypeHazard:      1, // H1, through D1
 	}
 	got := groupTypes(rep.Downstream)
 	for typ, n := range want {
@@ -78,14 +79,15 @@ func TestComputeImpact_Downstream(t *testing.T) {
 			t.Errorf("downstream group %q = %d, want %d", typ, got[typ], n)
 		}
 	}
-	if _, ok := nodeByID(rep.Downstream, "H1"); ok {
-		t.Errorf("hazard H1 should not be downstream of R1")
+	h1, ok := nodeByID(rep.Downstream, "H1")
+	if !ok || h1.Distance != 2 || h1.Via != "mitigates" {
+		t.Errorf("hazard H1 should be downstream of R1 through D1, got %+v (present=%v)", h1, ok)
 	}
 	if _, ok := nodeByID(rep.Downstream, "N1"); ok {
 		t.Errorf("need N1 is upstream of R1, must not appear downstream")
 	}
-	if rep.Total != 3 {
-		t.Errorf("total = %d, want 3", rep.Total)
+	if rep.Total != 4 {
+		t.Errorf("total = %d, want 4", rep.Total)
 	}
 
 	// Distance and via of a direct dependant.
@@ -135,9 +137,9 @@ func TestComputeImpact_Both(t *testing.T) {
 	if len(rep.Downstream) == 0 || len(rep.Upstream) == 0 {
 		t.Fatalf("both should populate downstream (%d) and upstream (%d)", len(rep.Downstream), len(rep.Upstream))
 	}
-	// Distinct affected set across both directions: R2, D1, T1 (down) + N1 (up) = 4.
-	if rep.Total != 4 {
-		t.Errorf("total = %d, want 4", rep.Total)
+	// Distinct affected set across both directions: R2, D1, T1, H1 (down) + N1 (up) = 5.
+	if rep.Total != 5 {
+		t.Errorf("total = %d, want 5", rep.Total)
 	}
 }
 
@@ -150,15 +152,15 @@ func TestComputeImpact_DefaultsToBoth(t *testing.T) {
 }
 
 func TestComputeImpact_CycleGuard(t *testing.T) {
-	// A -> B -> C -> A forms a cycle via generic "relates-to" links. The
+	// A -> B -> C -> A forms a cycle via "decomposes-to" links. The
 	// visited set must stop the walk rather than loop forever.
 	a := mkArtifact("A", artifacts.TypeRequirement, "A", nil)
 	b := mkArtifact("B", artifacts.TypeRequirement, "B", nil)
 	c := mkArtifact("C", artifacts.TypeRequirement, "C", nil)
 	lnks := []*links.Link{
-		mkLink("A", "B", "relates-to"),
-		mkLink("B", "C", "relates-to"),
-		mkLink("C", "A", "relates-to"),
+		mkLink("A", "B", "decomposes-to"),
+		mkLink("B", "C", "decomposes-to"),
+		mkLink("C", "A", "decomposes-to"),
 	}
 	rep := ComputeImpact(mkExport([]*artifacts.Artifact{a, b, c}, lnks), "A", DirectionUpstream)
 
@@ -217,5 +219,41 @@ func TestComputeImpact_UnknownSeedHasEmptySets(t *testing.T) {
 	rep := ComputeImpact(mkExport(arts, lnks), "does-not-exist", DirectionBoth)
 	if rep.Total != 0 || len(rep.Downstream) != 0 || len(rep.Upstream) != 0 {
 		t.Errorf("unknown seed should yield an empty report, got total=%d", rep.Total)
+	}
+}
+
+// relates-to has no direction, so it carries the walk both ways; impacts
+// reads From -> To as "a change to From affects To".
+func TestComputeImpact_UndirectedAndImpactsLinks(t *testing.T) {
+	seed, arts, lnks := impactGraph()
+	arts = append(arts,
+		mkArtifact("R3", artifacts.TypeRequirement, "Related requirement", nil),
+		mkArtifact("R4", artifacts.TypeRequirement, "Impacted requirement", nil),
+		mkArtifact("R5", artifacts.TypeRequirement, "Impacting requirement", nil),
+	)
+	lnks = append(lnks,
+		mkLink("R3", "R1", "relates-to"),
+		mkLink("R1", "R4", "impacts"),
+		mkLink("R5", "R1", "impacts"),
+	)
+	rep := ComputeImpact(mkExport(arts, lnks), seed.ID, DirectionBoth)
+
+	if _, ok := nodeByID(rep.Downstream, "R3"); !ok {
+		t.Errorf("R3 relates to R1, should be downstream")
+	}
+	if _, ok := nodeByID(rep.Upstream, "R3"); !ok {
+		t.Errorf("R3 relates to R1, should be upstream")
+	}
+	if _, ok := nodeByID(rep.Downstream, "R4"); !ok {
+		t.Errorf("R1 impacts R4, so R4 should be downstream")
+	}
+	if _, ok := nodeByID(rep.Upstream, "R4"); ok {
+		t.Errorf("R1 impacts R4, so R4 must not be upstream")
+	}
+	if _, ok := nodeByID(rep.Upstream, "R5"); !ok {
+		t.Errorf("R5 impacts R1, so R5 should be upstream")
+	}
+	if _, ok := nodeByID(rep.Downstream, "R5"); ok {
+		t.Errorf("R5 impacts R1, so R5 must not be downstream")
 	}
 }

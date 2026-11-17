@@ -240,6 +240,8 @@ func accessorCases() []accessorCase {
 			get: func(c *Config) any { return c.OIDC().ProviderName }},
 		{name: "FRONTEND_URL", read: "cmd/server:envOr(key)", accessor: "OIDC().FrontendURL", with: oidcOn,
 			def: "http://localhost:3000", get: func(c *Config) any { return c.OIDC().FrontendURL }},
+		{name: "OPENV_OIDC_ONLY", read: "internal/config:Config.boolean(name)", accessor: "OIDC().Only", with: oidcOn,
+			def: false, get: func(c *Config) any { return c.OIDC().Only }},
 		// stage billing
 		{name: "STRIPE_SECRET_KEY", read: "internal/billing:ConfigFromEnv(getenv)", accessor: "Billing().SecretKey", def: "",
 			get: billingField(func(b billing.Config) any { return b.SecretKey })},
@@ -305,6 +307,25 @@ func accessorCases() []accessorCase {
 	} {
 		cases = append(cases, rateCases(l.burstVar, l.refillVar, l.field, l.burst, l.refill, l.pick)...)
 	}
+	// The in-app help's docs site: nil unless the URL is set; the admin token
+	// is read only with the secret.
+	docsOn := map[string]string{"OPENV_DOCS_URL": "https://docs.example.test", "OPENV_DOCS_EMBED_SECRET": "secret"}
+	helpDocs := func(field func(*HelpDocs) any) func(*Config) any {
+		return func(c *Config) any {
+			if d := c.HelpDocs(); d != nil {
+				return field(d)
+			}
+			return ""
+		}
+	}
+	cases = append(cases,
+		accessorCase{name: "OPENV_DOCS_URL", read: "internal/config:Config.text(name)", accessor: "HelpDocs().URL",
+			def: "", get: helpDocs(func(d *HelpDocs) any { return d.URL })},
+		accessorCase{name: "OPENV_DOCS_EMBED_SECRET", read: "internal/config:Config.text(name)", accessor: "HelpDocs().EmbedSecret", with: map[string]string{"OPENV_DOCS_URL": "https://docs.example.test"},
+			def: "", get: helpDocs(func(d *HelpDocs) any { return d.EmbedSecret })},
+		accessorCase{name: "OPENV_DOCS_ADMIN_TOKEN", read: "internal/config:Config.text(name)", accessor: "HelpDocs().AdminToken", with: docsOn,
+			def: "", get: helpDocs(func(d *HelpDocs) any { return d.AdminToken })},
+	)
 	return cases
 }
 

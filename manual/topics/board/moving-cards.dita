@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="moving-cards">
+  <title>Moving cards</title>
+  <shortdesc>Drag any unlocked card between columns or within a column. Human-assigned and unassigned cards behave like a normal kanban; only agent cards with live runs are locked.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="board.move"/>
+  </prolog>
+  <conbody>
+    <p>A card that was assigned to a crew, before crews were removed, is now assigned to the crew's first (entry) agent, or is unassigned if the crew had none.</p>
+  </conbody>
+</concept>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="baselines">
+  <title>Baselines</title>
+  <shortdesc>The <b>Baseline</b> selector switches the whole dashboard between the live project and any captured baseline. Baseline views are read-only historical snapshots — useful for "where were we at design review?".</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="vv.baselines"/>
+  </prolog>
+  <conbody/>
+</concept>

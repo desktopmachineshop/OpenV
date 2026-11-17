@@ -228,4 +228,54 @@ func reviewChatterSearchTour(tr *tour) {
 		at("id", "{{p}}", "userId", "{{reviewer}}"), jsonBody(`{"role":"editor"}`))
 	tr.step("the reviewer, now an editor, reindexes P's embeddings: owners only", reviewer,
 		"POST /api/v1/projects/{id}/reindex-embeddings", at("id", "{{p}}"))
+
+	// The chip search bar's facets (issue #722): type, status and project
+	// narrow the search, facets=1 carries each hit's status and owner, and
+	// facets alone are a search.
+	tr.step("search narrowed to test cases, with each hit's status and owner", owner, "GET /api/v1/search",
+		query("q=answer&type=test-case&facets=1"))
+	tr.step("search narrowed to P's draft requirements", owner, "GET /api/v1/search",
+		query("q=answer&project={{p}}&type=requirement&status=draft&facets=1"))
+	tr.step("a search of facets alone: P's design items", owner, "GET /api/v1/search",
+		query("type=design-item&project={{p}}"))
+
+	// Saved searches (issue #722): per member, workspace and scope.
+	savedList := "GET /api/v1/me/saved-searches"
+	savedCreate := "POST /api/v1/me/saved-searches"
+	savedDelete := "DELETE /api/v1/me/saved-searches/{id}"
+	tr.step("no saved search yet: []", owner, savedList, query("scope=requirements"))
+	tr.step("a list with no scope: 400", owner, savedList)
+	tr.step("save a search, shared with the workspace: 201", owner, savedCreate,
+		jsonBody(`{"scope":"requirements","name":"In review","value":{"chips":[{"kind":"filter","field":"status","values":["in_review"]}],"text":""},"shared":true}`)).
+		capture("saved", "/id")
+	tr.step("save under the same name again: the value is replaced, the id kept", owner, savedCreate,
+		jsonBody(`{"scope":"requirements","name":"In review","value":{"chips":[{"kind":"filter","field":"status","values":["in_review","draft"]}],"text":"answer"},"shared":true}`))
+	tr.step("a scope with a space: 400", owner, savedCreate, jsonBody(`{"scope":"my page","name":"x","value":{}}`))
+	tr.step("a blank name: 400", owner, savedCreate, jsonBody(`{"scope":"requirements","name":" ","value":{}}`))
+	tr.step("a value that is not an object: 400", owner, savedCreate,
+		jsonBody(`{"scope":"requirements","name":"x","value":[1]}`))
+	tr.step("the owner's requirements searches: the one", owner, savedList, query("scope=requirements"))
+	tr.step("the reviewer, in its own workspace, sees none of the owner's", reviewer, savedList,
+		query("scope=requirements"))
+	tr.step("the reviewer may not delete the owner's search: 404", reviewer, savedDelete, at("id", "{{saved}}"))
+	tr.step("the owner deletes it: 204", owner, savedDelete, at("id", "{{saved}}"))
+	tr.step("deleted again: 404", owner, savedDelete, at("id", "{{saved}}"))
+
+	// Comment read state: when a member last read an artifact's comments.
+	// Each write names its time, so the golden does not follow the clock.
+	readsList := "GET /api/v1/me/comment-reads"
+	readsSet := "PUT /api/v1/me/comment-reads"
+	tr.step("no artifact named: []", owner, readsList)
+	tr.step("comments never read: []", owner, readsList, query("artifact_ids={{req1}},{{req2}}"))
+	tr.step("mark read; an id that is not an artifact is skipped", owner, readsSet,
+		jsonBody(`{"reads":[{"artifact_id":"{{req1}}","read_at":"2026-11-09T10:00:00Z"},{"artifact_id":"00000000-0000-4000-8000-000000000000"}]}`))
+	tr.step("mark unread: an earlier time replaces it", owner, readsSet,
+		jsonBody(`{"reads":[{"artifact_id":"{{req1}}","read_at":"2026-11-09T09:59:59.999Z"}]}`))
+	tr.step("the owner's read state: the earlier time", owner, readsList, query("artifact_ids={{req1}},{{req2}}"))
+	tr.step("the reviewer, in its own workspace, has none of the owner's", reviewer, readsList,
+		query("artifact_ids={{req1}}"))
+	tr.step("the reviewer cannot mark another workspace's artifact: nothing stored", reviewer, readsSet,
+		jsonBody(`{"reads":[{"artifact_id":"{{req1}}","read_at":"2026-11-09T10:00:00Z"}]}`))
+	tr.step("no reads: 400", owner, readsSet, jsonBody(`{"reads":[]}`))
+	tr.step("an id that is not an id: 400", owner, readsSet, jsonBody(`{"reads":[{"artifact_id":"nope"}]}`))
 }

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="ai-providers-admin-only">
+  <title>AI Providers (admin only)</title>
+  <shortdesc>Per-provider configuration for agent runs:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="org.settings.providers"/>
+  </prolog>
+  <conbody>
+    <ul>
+      <li><b>Detection status</b> — whether the provider's CLI was found on a worker host, whether it is logged in, and its version ("never detected" means no worker has reported yet).</li>
+      <li><b>Default model</b> — the model agents use when set to <i>provider default</i>.</li>
+      <li><b>Connect</b> — start a workspace-targeted CLI sign-in that any of the workspace's shared workers can pick up. (Personal sign-ins live in your user settings instead — see <i>Runs &amp; runners</i>.)</li>
+      <li>Enable/disable providers for runs.</li>
+    </ul>
+  </conbody>
+</concept>

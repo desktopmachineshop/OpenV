@@ -152,7 +152,7 @@ func TestTheAgentRunsStampTimesInUTC(t *testing.T) {
 				rtStamp(t, "a heartbeat's heartbeat_at", *find(run.ID).HeartbeatAt, time.Time{}, before, time.Now())
 
 				start()
-				if err := svc.NoteRun(run.ID, agentruns.NoteHandOffRefused, "Refused", nil); err != nil {
+				if err := svc.NoteRun(run.ID, "test_note", "Noted", nil); err != nil {
 					t.Fatal(err)
 				}
 				if logs, err = svc.Logs(run.ID, 2); err != nil || len(logs) != 1 {

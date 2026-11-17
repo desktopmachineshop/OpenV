@@ -22,7 +22,7 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
-import { ErrorBanner, useConfirm } from '../components/ui';
+import { ErrorBanner, SettingsLayout, useConfirm } from '../components/ui';
 import { useFeature } from '../hooks/useFeature';
 import { FLOW_DOWN_FEATURE, ARTIFACT_OWNERS_FEATURE, SHARE_LINKS_FEATURE } from '../features';
 import { QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
@@ -52,6 +52,17 @@ const TABS: { key: Tab; label: string }[] = [
   { key: 'quality', label: 'Quality rules' },
   { key: 'danger', label: 'Danger Zone' },
 ];
+
+// The line under each section's title: what the section is for.
+const TAB_BLURBS: Record<Tab, string> = {
+  general: 'Where this project sits among the workspace\'s projects, and the parties its requirements refer to.',
+  members: 'Who can read and change this project: people, teams and share links.',
+  repos: 'The code repositories this project\'s agents and runners work in.',
+  agents: 'How agents working on this project authenticate.',
+  attributes: 'Typed fields this project adds to its artifacts.',
+  quality: 'The rules every requirement is checked against. Findings score a requirement; they never block a save.',
+  danger: 'Actions that cannot be undone.',
+};
 
 export const ProjectSettings: React.FC = () => {
   const params = useParams<{ projectId: string }>();
@@ -128,8 +139,6 @@ export const ProjectSettings: React.FC = () => {
   const [savingAuth, setSavingAuth] = useState(false);
 
   // General (REQ-144, REQ-147): the parent project and the reference parties.
-  const [allProjects, setAllProjects] = useState<Project[]>([]);
-  const [savingParent, setSavingParent] = useState(false);
   const [parties, setParties] = useState<Party[]>([]);
   const [partyName, setPartyName] = useState('');
   const [partyNote, setPartyNote] = useState('');
@@ -190,14 +199,7 @@ export const ProjectSettings: React.FC = () => {
     } catch {
       // Non-fatal: the Agents tab just shows a loading state.
     }
-    // The other projects of the workspace, for the parent picker and the
-    // list of child projects; the parties this project recognises as owners.
-    try {
-      const res = await projectAPI.list();
-      setAllProjects(res.data || []);
-    } catch {
-      setAllProjects([]);
-    }
+    // The parties this project recognises as owners.
     try {
       const res = await projectAPI.parties(projectId);
       setParties(res.data?.parties || []);
@@ -205,42 +207,6 @@ export const ProjectSettings: React.FC = () => {
       setParties([]);
     }
   }, [projectId]);
-
-  // Projects that cannot be this one's parent: itself and everything filed
-  // under it, since placing it under a descendant would close a loop.
-  const descendantIds = (() => {
-    const out = new Set<string>([projectId || '']);
-    let grew = true;
-    while (grew) {
-      grew = false;
-      for (const p of allProjects) {
-        if (p.parent_project_id && out.has(p.parent_project_id) && !out.has(p.id)) {
-          out.add(p.id);
-          grew = true;
-        }
-      }
-    }
-    return out;
-  })();
-  const parentCandidates = allProjects.filter(
-    (p) => !descendantIds.has(p.id) && (!project || p.org_id === project.org_id)
-  );
-  const childProjects = allProjects.filter((p) => p.parent_project_id === projectId);
-
-  const handleSetParent = async (parentId: string) => {
-    if (!projectId || !project) return;
-    setSavingParent(true);
-    setError('');
-    try {
-      const res = await projectAPI.update(projectId, { parent_project_id: parentId });
-      setProject(res.data);
-      flash(parentId ? 'Parent project set.' : 'Parent project cleared.');
-    } catch (err: any) {
-      setError(`Failed to set the parent project: ${apiErrorMessage(err)}`);
-    } finally {
-      setSavingParent(false);
-    }
-  };
 
   const saveParties = async (next: Party[]) => {
     if (!projectId) return;
@@ -667,63 +633,46 @@ export const ProjectSettings: React.FC = () => {
   // -------------------------------------------------------------------------
 
   return (
-    <div style={{ padding: 24, maxWidth: 900, margin: '0 auto' }}>
-      <h2 style={{ color: 'var(--text)', marginBottom: 16 }}>Project settings</h2>
-
-      <div className="tab-strip" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            role="tab"
-            id={tabId(t.key)}
-            aria-selected={tab === t.key}
-            aria-controls={PANEL_ID}
-            onClick={() => setTab(t.key)}
-            style={{
-              background: 'none',
-              border: 'none',
-              borderBottom: tab === t.key ? '2px solid var(--accent)' : '2px solid transparent',
-              marginBottom: -2,
-              padding: '10px 16px',
-              fontSize: 14,
-              fontWeight: tab === t.key ? 600 : 400,
-              color: tab === t.key ? 'var(--text)' : t.key === 'danger' ? 'var(--danger)' : 'var(--text-muted)',
-              cursor: 'pointer',
-              width: 'auto',
-            }}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
-      {notice && (
-        <div
-          style={{
-            background: 'var(--tint-green)',
-            border: '1px solid var(--success)',
-            color: 'var(--success-text)',
-            padding: '10px 14px',
-            borderRadius: 4,
-            marginBottom: 16,
-            fontSize: 13,
-          }}
-        >
-          {notice}
-        </div>
-      )}
-
-      <div role="tabpanel" id={PANEL_ID} aria-labelledby={tabId(tab)}>
+    <SettingsLayout
+      group="Project"
+      sections={TABS.map((t) => ({ key: t.key, label: t.label, danger: t.key === 'danger' }))}
+      active={tab}
+      onSelect={(key) => setTab(key as Tab)}
+      tabId={(key) => tabId(key as Tab)}
+      panelId={PANEL_ID}
+      helpPane={(key) => `settings.${key}`}
+      head={
+        <>
+          <div className="ov-settings-head">
+            <span className="ov-page-sub">Project settings</span>
+            <h2>{TABS.find((t) => t.key === tab)?.label}</h2>
+            <p>{TAB_BLURBS[tab]}</p>
+          </div>
+          <ErrorBanner message={error} onDismiss={() => setError('')} />
+          {notice && (
+            <div
+              role="status"
+              style={{
+                background: 'var(--tint-green)',
+                border: '1px solid var(--tint-green-border)',
+                color: 'var(--success-text)',
+                padding: '10px 14px',
+                borderRadius: 6,
+                fontSize: 13,
+              }}
+            >
+              {notice}
+            </div>
+          )}
+        </>
+      }
+    >
+      <div role="tabpanel" id={PANEL_ID} aria-labelledby={tabId(tab)} data-help-pane={`settings.${tab}`}>
         {tab === 'general' && (
           <GeneralTab
             flowDown={flowDown}
             ownersOn={ownersOn}
             project={project}
-            parentCandidates={parentCandidates}
-            childProjects={childProjects}
-            savingParent={savingParent}
-            handleSetParent={handleSetParent}
             parties={parties}
             savingParties={savingParties}
             saveParties={saveParties}
@@ -824,6 +773,6 @@ export const ProjectSettings: React.FC = () => {
 
         {tab === 'danger' && <DangerTab deleting={deleting} handleDeleteProject={handleDeleteProject} />}
       </div>
-    </div>
+    </SettingsLayout>
   );
 };

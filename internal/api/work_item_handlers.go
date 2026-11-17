@@ -42,9 +42,6 @@ func (h *Handler) CreateWorkItem(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if !h.assigneeCrewChecked(w, r, projectID, req.AssigneeType, req.AssigneeID) {
-		return
-	}
 	item, err := h.WorkItemService.Create(req, CurrentUserID(r), Actor(r))
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -107,17 +104,6 @@ func (h *Handler) UpdateWorkItem(w http.ResponseWriter, r *http.Request) {
 	}
 	var req workitems.UpdateWorkItemRequest
 	if !decodeJSON(w, r, &req) {
-		return
-	}
-	// An update that sends no assignee_type keeps the item's. One that
-	// re-sends the item's own assignee stores nothing new, so it is not
-	// checked again: an editor who may not know of the crew keeps it.
-	assigneeType := req.AssigneeType
-	if assigneeType == "" {
-		assigneeType = item.AssigneeType
-	}
-	unchanged := assigneeType == item.AssigneeType && req.AssigneeID != nil && item.AssigneeID != nil && *req.AssigneeID == *item.AssigneeID
-	if !unchanged && !h.assigneeCrewChecked(w, r, item.ProjectID, assigneeType, req.AssigneeID) {
 		return
 	}
 	updated, err := h.WorkItemService.Update(id, req, Actor(r))

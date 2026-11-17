@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="creating-a-card">
+  <title>Creating a card</title>
+  <shortdesc>The composer takes:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="board.add-card"/>
+  </prolog>
+  <conbody>
+    <ul>
+      <li><b>Title</b> (required) and an optional description.</li>
+      <li><b>Assignee</b> — Unassigned, <i>Me</i>, or any <b>agent</b>.</li>
+      <li><b>Artifact IDs</b> — optional comma-separated artifact IDs to attach the relevant requirements to the card.</li>
+    </ul>
+  </conbody>
+</concept>

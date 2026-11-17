@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="platform-admin">
+  <title>Platform admin</title>
+  <shortdesc>A <b>platform admin</b> runs the deployment itself. The role passes every check — every workspace, every project, every setting — so it is held by few people. It is separate from being a workspace admin.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="admin"/>
+  </prolog>
+  <conbody/>
+</concept>

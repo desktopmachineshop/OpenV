@@ -22,7 +22,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/projects"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 )
@@ -125,14 +124,12 @@ func (launchArtifacts) ListArtifacts(projectID, artifactType string) ([]*artifac
 
 // launchFixture is workspace org-1 with project proj-1, where "editor" edits
 // proj-1 and "member" is a plain member of org-1; the agents "reviewer"
-// (proposal mode), "helper" (direct mode) and the requirements copilot; the
-// workspace-wide crew crew-1, whose entry node is helper; test run trun-1 in
+// (proposal mode), "helper" (direct mode) and the requirements copilot; test run trun-1 in
 // proj-1, in progress; the failed run run-failed of proj-1, which a retry
 // re-enqueues; the automation auto-1 of helper pinned to proj-1; and the
 // guided session gs-1 of proj-1; and the interview iv-1 of proj-1.
 func launchFixture() (*Handler, *fakeRunService, *launchGuided) {
 	project := "proj-1"
-	entry := "crew-1-entry"
 	helper := "agent-direct"
 	runs := &fakeRunService{byID: map[string]*agentruns.Run{
 		"run-failed": {ID: "run-failed", OrgID: "org-1", AgentID: helper, ProjectID: &project, Status: agentruns.StatusFailed},
@@ -150,11 +147,7 @@ func launchFixture() (*Handler, *fakeRunService, *launchGuided) {
 			"org-1": {"editor": orgs.RoleMember, "member": orgs.RoleMember},
 		}},
 		MemberService: &fakeMemberService{roles: map[string]map[string]string{project: {"editor": members.RoleEditor}}},
-		TeamService: &fakeCrewGraphs{graphs: map[string]*teams.TeamGraph{"crew-1": {
-			Team:  &teams.Team{ID: "crew-1", OrgID: "org-1", Name: "Crew", EntryNodeID: &entry},
-			Nodes: []*teams.Node{{ID: entry, TeamID: "crew-1", NodeType: teams.NodeAgent, AgentID: helper}},
-		}}},
-		VVService: &launchTestRuns{run: &vv.TestRun{ID: "trun-1", ProjectID: project, Name: "Run", Status: vv.RunStatusInProgress}},
+		VVService:     &launchTestRuns{run: &vv.TestRun{ID: "trun-1", ProjectID: project, Name: "Run", Status: vv.RunStatusInProgress}},
 		AutomationService: &launchAutomations{byID: map[string]*automations.Automation{
 			"auto-1": {ID: "auto-1", OrgID: "org-1", Name: "Nightly", AgentID: &helper, ProjectID: &project, Kind: "manual"},
 		}},
@@ -186,8 +179,6 @@ var launchRoutes = []launchRoute{
 		map[string]string{"slug": "helper"}, `{"project_id":"proj-1","prompt":"Summarise the project."}`, false},
 	{"POST /api/v1/agents/{slug}/runs with no project", (*Handler).LaunchAgentRun,
 		map[string]string{"slug": "helper"}, `{"prompt":"Tidy the workspace."}`, false},
-	{"POST /api/v1/crews/{id}/runs", (*Handler).LaunchTeamRun,
-		map[string]string{"id": "crew-1"}, `{"project_id":"proj-1","prompt":"Summarise as a crew."}`, false},
 	{"POST /api/v1/test-runs/{id}/agent-run", (*Handler).LaunchTestRunAgent,
 		map[string]string{"id": "trun-1"}, `{"agent_slug":"helper"}`, false},
 	{"POST /api/v1/agent-runs/{id}/retry", (*Handler).RetryAgentRun,
@@ -242,7 +233,7 @@ func asPerson(userID, orgID string) func(context.Context) context.Context {
 
 // TestProposalModeRunsLaunchNoRuns is the regression test for a
 // proposal-mode run's token that launched runs: LaunchAgentRun,
-// LaunchTeamRun and LaunchTestRunAgent asked a project editor's role alone,
+// LaunchTeamRun (a crew's launch, gone since) and LaunchTestRunAgent asked a project editor's role alone,
 // which a run has in its own project, and the assistant's chat turns the
 // same, while DraftTestCases alone asked whether the run was review-gated,
 // so a proposal-mode agent could set going a direct-mode agent's run, a
@@ -285,7 +276,7 @@ func TestProposalModeRunsLaunchNoRuns(t *testing.T) {
 // TestARunsLaunchRecordsItsParent is the regression test for a launch by a
 // run's token that the run tree did not show: the new run carried no
 // launcher and no parent, so nothing tied it to the run that set it going. A
-// direct-mode run's launch, of an agent, a crew, a test run's agent, the
+// direct-mode run's launch, of an agent, a test run's agent, the
 // draft of test cases or an assistant turn, now records the launching run as
 // its parent (ParentRunID, as a delegation does); a person's launch records
 // none. The retry and run-now take a person's session, and still answer a

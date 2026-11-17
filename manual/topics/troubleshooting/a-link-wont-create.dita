@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="a-link-wont-create">
+  <title>A link won't create</title>
+  <shortdesc>Link types are directional and type-checked — for example <i>verifies</i> only goes from a test-case to a requirement. Check the table in <i>Traceability links</i>; the link panel only offers valid combinations, and the server explains rejections.</shortdesc>
+  <conbody/>
+</concept>

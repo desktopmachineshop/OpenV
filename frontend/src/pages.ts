@@ -16,7 +16,7 @@
 // beside its <Route> in App.tsx. projectPath() builds the URL of a project's
 // page for new code; existing call sites keep their template strings.
 import type { FeatureKey } from './generated/contract';
-import { TODO_LIST_FEATURE } from './features';
+import { GANTT_PLAN_FEATURE, REDESIGN_PAGES_FEATURE, TARGET_RELEASES_FEATURE, TODO_LIST_FEATURE } from './features';
 
 /** The labelled groups of the project menu, in the order it draws them. */
 export type NavGroup = 'Define' | 'Verify' | 'Plan' | 'Agents';
@@ -71,6 +71,14 @@ const NOT_WRITTEN: PageHelp = { fallback: 'no topic is written for the page' };
 export const PAGES: readonly Page[] = [
   {
     scope: 'project',
+    path: 'home',
+    load: 'lazy',
+    public: false,
+    help: { topic: 'home' },
+    nav: { group: 'Define', label: 'Summary', feature: REDESIGN_PAGES_FEATURE },
+  },
+  {
+    scope: 'project',
     path: '',
     load: 'eager',
     public: false,
@@ -95,6 +103,14 @@ export const PAGES: readonly Page[] = [
   },
   {
     scope: 'project',
+    path: 'design',
+    load: 'lazy',
+    public: false,
+    help: { topic: 'design' },
+    nav: { group: 'Define', label: 'Design', feature: REDESIGN_PAGES_FEATURE },
+  },
+  {
+    scope: 'project',
     path: 'interviews',
     load: 'eager',
     public: false,
@@ -111,10 +127,26 @@ export const PAGES: readonly Page[] = [
   },
   {
     scope: 'project',
+    path: 'tests',
+    load: 'lazy',
+    public: false,
+    help: { topic: 'tests' },
+    nav: { group: 'Verify', label: 'Tests', feature: REDESIGN_PAGES_FEATURE },
+  },
+  {
+    scope: 'project',
+    path: 'baselines',
+    load: 'lazy',
+    public: false,
+    help: { topic: 'baselines' },
+    nav: { group: 'Verify', label: 'Baselines', feature: REDESIGN_PAGES_FEATURE },
+  },
+  {
+    scope: 'project',
     path: 'evidence',
     load: 'eager',
     public: false,
-    help: NOT_WRITTEN,
+    help: { topic: 'evidence' },
     nav: { group: 'Verify', label: 'Evidence' },
   },
   {
@@ -130,7 +162,7 @@ export const PAGES: readonly Page[] = [
     path: 'impact',
     load: 'lazy',
     public: false,
-    help: NOT_WRITTEN,
+    help: { topic: 'impact' },
     nav: { group: 'Verify', label: 'Impact' },
   },
   {
@@ -138,7 +170,7 @@ export const PAGES: readonly Page[] = [
     path: 'review',
     load: 'lazy',
     public: false,
-    help: NOT_WRITTEN,
+    help: { topic: 'review' },
     nav: { group: 'Verify', label: 'Review Queue' },
   },
   {
@@ -154,8 +186,24 @@ export const PAGES: readonly Page[] = [
     path: 'todos',
     load: 'eager',
     public: false,
-    help: NOT_WRITTEN,
+    help: { topic: 'todos' },
     nav: { group: 'Plan', label: 'To-dos', feature: TODO_LIST_FEATURE },
+  },
+  {
+    scope: 'project',
+    path: 'gantt',
+    load: 'lazy',
+    public: false,
+    help: { topic: 'gantt' },
+    nav: { group: 'Plan', label: 'Gantt', feature: GANTT_PLAN_FEATURE },
+  },
+  {
+    scope: 'project',
+    path: 'releases',
+    load: 'lazy',
+    public: false,
+    help: { topic: 'releases' },
+    nav: { group: 'Plan', label: 'Releases', feature: TARGET_RELEASES_FEATURE },
   },
   {
     scope: 'project',
@@ -164,14 +212,6 @@ export const PAGES: readonly Page[] = [
     public: false,
     help: { topic: 'agents' },
     nav: { group: 'Agents', label: 'Agents' },
-  },
-  {
-    scope: 'project',
-    path: 'crew',
-    load: 'lazy',
-    public: false,
-    help: { topic: 'crew' },
-    nav: { group: 'Agents', label: 'Crew' },
   },
   {
     scope: 'project',
@@ -208,7 +248,8 @@ export const PAGES: readonly Page[] = [
 
   { scope: 'project', path: 'baselines/:baselineId/compare', load: 'lazy', public: false, help: { topic: 'baselines' } },
   { scope: 'project', path: 'vv/runs/:runId', load: 'lazy', public: false, help: { topic: 'vv' } },
-  { scope: 'project', path: 'crew/network', load: 'lazy', public: false, help: { topic: 'crew' } },
+  { scope: 'project', path: 'crew', load: 'redirect', public: false, help: NOT_WRITTEN },
+  { scope: 'project', path: 'crew/network', load: 'redirect', public: false, help: NOT_WRITTEN },
   { scope: 'project', path: 'team', load: 'redirect', public: false, help: NOT_WRITTEN },
   { scope: 'project', path: 'team/network', load: 'redirect', public: false, help: NOT_WRITTEN },
 
@@ -221,13 +262,17 @@ export const PAGES: readonly Page[] = [
   { scope: 'site', path: 'open-source/:id', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: '', load: 'eager', public: true, help: NO_PANEL },
   { scope: 'site', path: 'projects', load: 'eager', public: false, help: { topic: 'projects' } },
-  { scope: 'site', path: 'org/settings', load: 'eager', public: false, help: NO_PANEL },
-  { scope: 'site', path: 'org/runs', load: 'lazy', public: false, help: NO_PANEL },
+  { scope: 'site', path: 'org/settings', load: 'eager', public: false, help: { topic: 'org/settings' } },
+  { scope: 'site', path: 'org/runs', load: 'lazy', public: false, help: { topic: 'org/runs' } },
+  { scope: 'site', path: 'org/plan', load: 'lazy', public: false, help: { topic: 'org/plan' } },
+  { scope: 'site', path: 'org/plan/tasks', load: 'lazy', public: false, help: { topic: 'org/plan/tasks' } },
+  { scope: 'site', path: 'org/agents', load: 'lazy', public: false, help: { topic: 'org/agents' } },
+  { scope: 'site', path: 'org/todos', load: 'lazy', public: false, help: { topic: 'org/todos' } },
   { scope: 'site', path: 'manual', load: 'lazy', public: true, help: NO_PANEL },
   { scope: 'site', path: 'manual/:chapterSlug', load: 'lazy', public: true, help: NO_PANEL },
-  { scope: 'site', path: 'whats-new', load: 'lazy', public: false, help: NO_PANEL },
+  { scope: 'site', path: 'whats-new', load: 'lazy', public: false, help: { topic: 'whats-new' } },
   { scope: 'site', path: 'connect', load: 'lazy', public: false, help: NO_PANEL },
-  { scope: 'site', path: 'admin', load: 'lazy', public: false, help: NO_PANEL },
+  { scope: 'site', path: 'admin', load: 'lazy', public: false, help: { topic: 'admin' } },
 ];
 
 /** The full route pattern of a page, as react-router matches it. */

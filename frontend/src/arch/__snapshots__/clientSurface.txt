@@ -1,12 +1,16 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 222; members of exported objects: 306
+exports: 283; members of exported objects: 353
 
+interface AdminUsage
 interface AdminUser
 interface AdminWorkspace
 interface AgentDef
+interface AgentPlacement
 interface AgentRun
+interface AgentStats
+interface AgentStatsResponse
 interface AppNotification
 interface Artifact
 type      ArtifactStatus
@@ -24,21 +28,19 @@ interface BaselineDiffArtifact
 interface BaselineDiffLink
 interface BaselineDiffModified
 interface BaselineDiffRef
+interface BaselinePlan
+interface BaselineTaskChange
+interface BaselineTaskMoment
 interface BillingSnapshot
 interface BillingState
 interface BulkProposalOutcome
 interface ChatterEntry
+interface CommentRead
 interface ConnectedApp
 interface ConnectedAppWorkspace
 interface ConnectorPairing
 interface CoverageEntry
 interface CoverageReport
-interface Crew
-interface CrewEdge
-interface CrewGraph
-interface CrewImportResult
-interface CrewNode
-interface CrewTemplate
 const     DEFAULT_MIN_PASSWORD_LENGTH
 interface DefaultWorkspace
 interface DomainEvent
@@ -59,8 +61,13 @@ interface EvidenceFile
 type      ExecutionMethod
 interface GuidedChatMessage
 interface GuidedSession
+interface HelpHit
+interface HelpRelated
+interface HelpResults
+interface HelpTopic
 interface HostedRunnerRecord
 interface HostedRunnerStatus
+interface IdentityLinkPreview
 type      ImpactDirection
 interface ImpactGroup
 interface ImpactNode
@@ -74,7 +81,11 @@ interface LimitUsage
 interface Link
 interface LinkTypeRule
 interface LinkedArtifact
+type      MasterLevels
+interface MasterPlan
+interface MasterProject
 interface MatrixRow
+interface MyPlanTasks
 interface NoteMention
 interface NoteTodo
 interface NotificationList
@@ -95,13 +106,38 @@ interface OrgUsageSummary
 interface OrgUsageTotals
 const     PLANS
 interface Party
-interface PortableCrew
-interface PortableCrewEdge
-interface PortableCrewNode
+interface PlanAssignment
+interface PlanBaselineInfo
+interface PlanBaselineTask
+type      PlanConstraintType
+interface PlanCriterion
+interface PlanCriterionResult
+interface PlanEarnedValue
+type      PlanExportFormat
+interface PlanExternalLink
+interface PlanHoliday
+type      PlanLagUnit
+interface PlanMetric
+interface PlanMetricValue
+interface PlanMilestone
+interface PlanMilestoneInput
+interface PlanPerson
+interface PlanRelationship
+type      PlanRelationshipDirection
+type      PlanRelationshipType
+interface PlanResourceLoad
+type      PlanResourceType
+interface PlanScheduleInput
+type      PlanSchedulingMode
+interface PlanSettings
+interface PlanTask
+interface PlanTaskTodo
+interface PlanTimeOff
 interface ProductProfile
 interface Project
 interface ProjectExport
 interface ProjectMember
+interface ProjectPlan
 interface Proposal
 interface ProviderAPIKeys
 interface ProviderLogin
@@ -123,9 +159,15 @@ interface QualityScore
 type      QualitySeverity
 interface Refinement
 interface RegisterResult
+interface ReleaseBurnUpPoint
 interface ReleaseCategory
 interface ReleaseEntry
 interface ReleaseInfo
+interface ReleaseOverview
+interface ReleaseProgress
+interface ReleaseProgressEntry
+interface ReleaseRange
+interface ReleaseSummaryCounts
 interface RepoConnection
 interface ReviewQueue
 interface ReviewRoundResult
@@ -134,6 +176,8 @@ interface RunnerPoolLoad
 type      RunnerPoolStatus
 interface RunnerSession
 interface RunnerSessionPayload
+interface SavedSearch
+interface SearchFacets
 interface SearchHit
 type      SearchMode
 interface SearchResponse
@@ -144,16 +188,27 @@ interface SharedProductVotes
 interface SharedProject
 interface SiteVisit
 interface StableRelease
+interface StoredPlanMilestone
 interface StoredProviderAPIKey
 interface SuspectLink
+const     TARGET_RELEASE_ATTR
+const     TARGET_RELEASE_UNTIL_ATTR
+interface TargetRelease
+interface TargetReleaseInput
+type      TargetReleaseStatus
 interface TeamGrant
 interface Template
 interface TestResult
 interface TestRun
+interface Todo
+interface TodoInput
 type      UploadProgressHandler
+interface UsagePace
+type      UsageTrend
 interface User
 interface UserDashboard
 interface UserDashboardPoint
+interface UserUsage
 interface VisitorBreakdownRow
 interface VisitorDashboard
 interface WorkItem
@@ -163,10 +218,13 @@ interface WorkerStatus
 interface WorkerStatusQueue
 interface WorkerStatusWorker
 interface WorkspaceLimits
+interface WorkspacePlanCalendar
+interface WorkspaceUsage
 const     adminAPI
             .issuePasswordReset
             .setAdmin
             .setPlan
+            .usage
             .userMetrics
             .users
             .visitorMetrics
@@ -180,6 +238,7 @@ const     agentRunsAPI
             .streamUrl
             .tree
 const     agentsAPI
+            .arrange
             .create
             .draftTestCases
             .get
@@ -188,6 +247,7 @@ const     agentsAPI
             .raw
             .remove
             .saveRaw
+            .stats
             .sync
             .update
 const     artifactAPI
@@ -198,6 +258,7 @@ const     artifactAPI
             .getVersions
             .list
             .listPage
+            .reinstate
             .restoreVersion
             .update
 const     attachmentAPI
@@ -223,8 +284,10 @@ const     authAPI
             .acceptShareLink
             .changeVerificationEmail
             .config
+            .confirmIdentityLink
             .confirmPasswordReset
             .googleLoginUrl
+            .identityLink
             .invitation
             .listUsers
             .login
@@ -267,6 +330,9 @@ const     cloudRunnerAPI
             .extend
             .get
             .start
+const     commentReadAPI
+            .list
+            .set
 const     connectedAppsAPI
             .consent
             .decide
@@ -278,24 +344,6 @@ const     connectorAPI
             .downloadAvailable
             .downloadURL
             .startLink
-const     crewTemplatesAPI
-            .list
-const     crewsAPI
-            .addEdge
-            .addNode
-            .clone
-            .create
-            .exportDownload
-            .get
-            .import
-            .launchRun
-            .list
-            .remove
-            .removeEdge
-            .removeNode
-            .update
-            .updateEdge
-            .updateNode
 const     default
 const     defaultWorkspaceAPI
             .get
@@ -332,6 +380,10 @@ const     guidedAPI
             .saveStep
             .sendMessage
             .start
+const     helpAPI
+            .context
+            .search
+            .topic
 const     hostedRunnerAPI
             .enable
             .get
@@ -412,6 +464,38 @@ const     orgsAPI
             .usage
 const     passwordAPI
             .change
+const     planAPI
+            .addTimeOff
+            .addTodo
+            .createMilestone
+            .deleteBaseline
+            .export
+            .get
+            .importMSProject
+            .level
+            .listTodos
+            .master
+            .mine
+            .recalculate
+            .relate
+            .relateExternal
+            .removeMilestone
+            .removePlanned
+            .removeTimeOff
+            .rescheduleRemaining
+            .saveBaseline
+            .schedule
+            .setReleaseCriteria
+            .setReleaseWaitsFor
+            .setResource
+            .setSettings
+            .setWorkingDays
+            .setWorkspaceWorkingDays
+            .staffPlanned
+            .unrelate
+            .unrelateExternal
+            .updateMilestone
+            .workspaceCalendar
 const     productProfileAPI
             .get
             .update
@@ -426,7 +510,9 @@ const     projectAPI
             .linkedArtifacts
             .list
             .parties
+            .priorityDetection
             .setParties
+            .setPriorityDetection
             .update
 const     projectTeamAccessAPI
             .grant
@@ -474,6 +560,14 @@ const     qualityRulesAPI
             .setForWorkspace
 const     releaseAPI
             .current
+const     releasesAPI
+            .create
+            .list
+            .overview
+            .progress
+            .remove
+            .reorder
+            .update
 const     repoConnectionsAPI
             .create
             .list
@@ -484,6 +578,10 @@ const     resolveAvatarUrl
 const     reviewAPI
             .get
             .startRound
+const     savedSearchAPI
+            .create
+            .delete
+            .list
 const     searchAPI
             .global
 const     shareLinkAPI
@@ -503,6 +601,16 @@ const     templateAPI
             .create
             .createProject
             .list
+const     todosAPI
+            .createPersonal
+            .createProject
+            .get
+            .listMine
+            .listProject
+            .promote
+            .remove
+            .setDone
+            .update
 const     vvAPI
             .coverage
             .createRun

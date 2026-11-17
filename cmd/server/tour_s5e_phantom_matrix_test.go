@@ -48,11 +48,10 @@ import (
 //   - the order of guard, lookup and decode: a 400 "invalid request body"
 //     where a column should have been refused is a decode before the guard
 //     (POST /artifacts, /links, /chatter, /projects, /templates... to every
-//     column past the middleware, bearers included, but for the run token and
-//     the worker key on the three project creates, POST /projects,
-//     /projects/import and /templates/{id}/projects, which refuse them first
-//     with 403 "agent runs cannot create projects" and "runner keys cannot
-//     create projects", REQ-42); a workspace-admin guard
+//     column past the middleware, bearers included, but for the run token
+//     on the three project creates, POST /projects, /projects/import and
+//     /templates/{id}/projects, which refuse it first with 403 "agent runs
+//     cannot create projects", REQ-42); a workspace-admin guard
 //     before the decode shows as the viewer's and editor's 403 beside the
 //     owner's and outsider's 400; a lookup first as the lookup's 404 to all;
 //   - the credential-scoped routes: the worker routes refuse everyone but a
@@ -270,7 +269,6 @@ func phantomMatrixScopedRows(named scopedID, path func(string) []tourOpt) []phan
 		{"GET /api/v1/proposals", "project_id=%s"},
 		{"GET /api/v1/agent-runs", "project_id=%s"},
 		{"GET /api/v1/automations", "project_id=%s"},
-		{"GET /api/v1/crews", "project_id=%s"},
 	} {
 		out = append(out, phantomMatrixScopedRow{r.route, []tourOpt{query(fmt.Sprintf(r.query, named.query))}, true})
 	}
@@ -293,10 +291,6 @@ func phantomMatrixScopedRows(named scopedID, path func(string) []tourOpt) []phan
 		{"POST /api/v1/automations", []tourOpt{jsonBody(`{"project_id":"` + id + `","agent_id":"` + id + `",` +
 			`"kind":"manual","name":"Tour"}`)}},
 		{"POST /api/v1/chatter", []tourOpt{jsonBody(`{"artifact_id":"` + id + `","body":"Tour"}`)}},
-		{"POST /api/v1/crews", []tourOpt{jsonBody(`{"project_id":"` + id + `","name":"Tour"}`)}},
-		{"POST /api/v1/teams", []tourOpt{jsonBody(`{"project_id":"` + id + `","name":"Tour"}`)}},
-		{"POST /api/v1/crews/import", []tourOpt{query("project_id=" + named.query), jsonBody(`{}`)}},
-		{"POST /api/v1/teams/import", []tourOpt{query("project_id=" + named.query), jsonBody(`{}`)}},
 		{"POST /api/v1/guided-sessions", []tourOpt{jsonBody(`{"project_id":"` + id + `"}`)}},
 		{"POST /api/v1/proposals/bulk", []tourOpt{jsonBody(`{"action":"approve","ids":["` + id + `"]}`)}},
 		{"POST /api/v1/templates", []tourOpt{jsonBody(`{"project_id":"` + id + `","name":"Tour"}`)}},

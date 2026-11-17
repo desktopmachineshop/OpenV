@@ -180,7 +180,7 @@ const Wall: React.FC<{ consumed: boolean }> = ({ consumed }) => {
       await authAPI.logout();
     } finally {
       setCurrentUser(null);
-      navigate('/login');
+      navigate('/login?signed_out=1');
     }
   };
 

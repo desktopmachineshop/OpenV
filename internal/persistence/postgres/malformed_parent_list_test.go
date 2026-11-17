@@ -55,7 +55,6 @@ func parentLists(db *sql.DB) []parentList {
 	repoConnRepo := NewRepoConnectionRepository(db)
 	runnerRepo := NewRunnerSessionRepository(db)
 	shareLinkRepo := NewShareLinkRepository(db)
-	teamRepo := NewTeamRepository(db)
 	templateRepo := NewTemplateRepository(db)
 	vvRepo := NewVVRepository(db)
 	workerKeyRepo := NewWorkerKeyRepository(db)
@@ -128,9 +127,6 @@ func parentLists(db *sql.DB) []parentList {
 		{"the local paths in a project", func(id string) (interface{}, error) { return repoConnRepo.UserPaths(other, id) }},
 		{"a workspace's live runner leases", func(id string) (interface{}, error) { return runnerRepo.ListLiveSessions(id) }},
 		{"a project's share links", func(id string) (interface{}, error) { return shareLinkRepo.ListByProject(id) }},
-		{"a workspace's crews", func(id string) (interface{}, error) { return teamRepo.ListTeams(id, "") }},
-		{"a crew's nodes", func(id string) (interface{}, error) { return teamRepo.ListNodesByTeam(id) }},
-		{"a crew's edges", func(id string) (interface{}, error) { return teamRepo.ListEdgesByTeam(id) }},
 		{"a workspace's templates", func(id string) (interface{}, error) { return templateRepo.List(id) }},
 		{"a project's test runs", func(id string) (interface{}, error) { return vvRepo.ListRunsByProject(id) }},
 		{"a test run's results", func(id string) (interface{}, error) { return vvRepo.ListResultsByRun(id) }},
@@ -149,7 +145,6 @@ func parentLists(db *sql.DB) []parentList {
 		{"an artifact's versions", func(id string) (interface{}, error) { return artifactRepo.FindVersionsByID(id) }},
 		{"a project's automations", func(id string) (interface{}, error) { return NewAutomationRepository(db).List(other, id) }},
 		{"a run's proposals", func(id string) (interface{}, error) { return NewProposalRepository(db).List("", "", "", id) }},
-		{"a project's crews", func(id string) (interface{}, error) { return teamRepo.ListTeams(other, id) }},
 	}
 }
 

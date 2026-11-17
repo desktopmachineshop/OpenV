@@ -93,6 +93,20 @@ func (r *OrgRepository) PurgeOrg(id string) ([]string, error) {
 	}
 	defer tx.Rollback()
 
+	files, err := purgeOrgTx(tx, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+	return files, nil
+}
+
+// purgeOrgTx is PurgeOrg's work inside a transaction the caller owns, so an
+// account deletion (user_deletion_repository.go) purges the workspaces it
+// takes in the same transaction as the rest of the account.
+func purgeOrgTx(tx *sql.Tx, id string) ([]string, error) {
 	// artifact_embeddings only exists when the pgvector migration ran.
 	var embeddingsTable sql.NullString
 	if err := tx.QueryRow(`SELECT to_regclass('artifact_embeddings')::text`).Scan(&embeddingsTable); err != nil {
@@ -106,6 +120,7 @@ func (r *OrgRepository) PurgeOrg(id string) ([]string, error) {
 
 	var files storedFiles
 	for _, stmt := range purgeOrgStatements {
+		var err error
 		if strings.Contains(stmt, " RETURNING ") {
 			err = files.collect(tx, stmt, id)
 		} else {
@@ -114,9 +129,6 @@ func (r *OrgRepository) PurgeOrg(id string) ([]string, error) {
 		if err != nil {
 			return nil, fmt.Errorf("purge org %s: %q: %w", id, stmt, err)
 		}
-	}
-	if err := tx.Commit(); err != nil {
-		return nil, err
 	}
 	return files.sorted(), nil
 }

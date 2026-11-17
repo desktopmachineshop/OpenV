@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="where-does-an-agents-change-actually-land">
+  <title>Where does an agent's change actually land?</title>
+  <shortdesc>With <i>proposal</i> write mode (the default) every agent write waits under <b>Pending approvals</b> on the Runs page until you approve it. If you can't find an agent's output, check there first.</shortdesc>
+  <conbody/>
+</concept>

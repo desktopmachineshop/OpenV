@@ -34,13 +34,8 @@ func decode(t *testing.T, raw []byte) map[string]interface{} {
 func TestMemberToolsLeaveOutRunOnlyAndWritingTools(t *testing.T) {
 	all := Tools()
 	full := MemberTools(all, false)
-	if len(full) != len(all)-1 {
-		t.Fatalf("member tools = %d, want every tool but delegate_to_agent (%d)", len(full), len(all)-1)
-	}
-	for _, tool := range full {
-		if tool.Name == "delegate_to_agent" {
-			t.Fatal("delegate_to_agent offered to a member")
-		}
+	if len(full) != len(all) {
+		t.Fatalf("member tools = %d, want every tool (%d): none is run-only", len(full), len(all))
 	}
 	for _, tool := range MemberTools(all, true) {
 		if !tool.ReadOnly {

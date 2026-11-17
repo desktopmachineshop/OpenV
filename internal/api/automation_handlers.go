@@ -47,7 +47,7 @@ func (h *Handler) CreateAutomation(w http.ResponseWriter, r *http.Request) {
 	if !h.requireAutomationWrite(w, r, req.ProjectID, req.OrgID, notFound{}) {
 		return
 	}
-	if problem := h.automationPlacement(req.OrgID, req.ProjectID, req.AgentID, req.TeamID); problem != "" {
+	if problem := h.automationPlacement(req.OrgID, req.ProjectID, req.AgentID); problem != "" {
 		writeJSONError(w, http.StatusBadRequest, problem)
 		return
 	}
@@ -108,19 +108,16 @@ func (h *Handler) UpdateAutomation(w http.ResponseWriter, r *http.Request) {
 	// Where it is to run, checked when the scope or the target changes, so
 	// that an edit of anything else never refuses an automation saved
 	// before the check existed.
-	project, agent, team := automation.ProjectID, automation.AgentID, automation.TeamID
+	project, agent := automation.ProjectID, automation.AgentID
 	if req.ProjectID != nil {
 		project = req.ProjectID
 	}
 	if req.AgentID != nil {
 		agent = req.AgentID
 	}
-	if req.TeamID != nil {
-		team = req.TeamID
-	}
-	retargeted := scopeOf(agent) != scopeOf(automation.AgentID) || scopeOf(team) != scopeOf(automation.TeamID)
+	retargeted := scopeOf(agent) != scopeOf(automation.AgentID)
 	if moved || retargeted {
-		if problem := h.automationPlacement(automation.OrgID, project, agent, team); problem != "" {
+		if problem := h.automationPlacement(automation.OrgID, project, agent); problem != "" {
 			writeJSONError(w, http.StatusBadRequest, problem)
 			return
 		}
@@ -154,36 +151,19 @@ func (h *Handler) DeleteAutomation(w http.ResponseWriter, r *http.Request) {
 
 // automationPlacement answers what is wrong with where an automation is to
 // run, or "" when nothing is: its project must be one of its workspace's,
-// and its target one that its scope can launch, an agent of the workspace,
-// or a crew of the workspace that is pinned to no project or, for a
-// project's automation, to that project. A whole-workspace automation runs
-// in the project of each event that fires it, so a crew pinned to one
-// project cannot serve it. An agent or crew of another workspace answers
-// as one no row has (I3). With no target, or two, it answers "" and leaves
-// the refusal to the service.
-func (h *Handler) automationPlacement(orgID string, projectID, agentID, teamID *string) string {
+// and its agent one of the workspace's. An agent of another workspace
+// answers as one no row has (I3). With no agent it answers "" and leaves the
+// refusal to the service. Crews, once a target too, are gone (issue 732).
+func (h *Handler) automationPlacement(orgID string, projectID, agentID *string) string {
 	project := scopeOf(projectID)
 	if project != "" {
 		if p, err := h.ProjectService.GetProject(project); err != nil || p == nil || p.OrgID != orgID {
 			return "project does not belong to this workspace"
 		}
 	}
-	agent, team := scopeOf(agentID), scopeOf(teamID)
-	switch {
-	case agent != "" && team == "":
+	if agent := scopeOf(agentID); agent != "" {
 		if a, err := h.AgentService.Get(agent); err != nil || a == nil || a.OrgID != orgID {
 			return "agent not found"
-		}
-	case team != "" && agent == "":
-		graph, err := h.TeamService.GetTeam(team)
-		if err != nil || graph == nil || graph.Team == nil || (graph.Team.OrgID != "" && graph.Team.OrgID != orgID) {
-			return "crew not found"
-		}
-		if pin := h.teamPin(graph.Team); pin != "" && pin != project {
-			if project == "" {
-				return "a crew pinned to a project cannot run an automation for the whole workspace"
-			}
-			return "the crew is pinned to another project"
 		}
 	}
 	return ""
@@ -213,7 +193,7 @@ func (h *Handler) RunAutomationNow(w http.ResponseWriter, r *http.Request) {
 	if !h.requireAutomationWrite(w, r, automation.ProjectID, automation.OrgID, missing("automation not found")) {
 		return
 	}
-	agentID, teamID, teamNodeID, err := scheduler.ResolveTarget(automation, h.TeamService)
+	agentID, err := scheduler.ResolveTarget(automation)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
@@ -230,8 +210,6 @@ func (h *Handler) RunAutomationNow(w http.ResponseWriter, r *http.Request) {
 		AgentID:      agentID,
 		ProjectID:    automation.ProjectID,
 		AutomationID: &automationID,
-		TeamID:       teamID,
-		TeamNodeID:   teamNodeID,
 		Prompt:       prompt,
 		LaunchedBy:   CurrentUserID(r),
 	})

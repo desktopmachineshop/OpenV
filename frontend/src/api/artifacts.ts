@@ -8,6 +8,7 @@ import type {
   Artifact,
   ArtifactStatus,
   ChatterEntry,
+  CommentRead,
   DuplicatesResponse,
   Link,
   LinkedArtifact,
@@ -17,6 +18,8 @@ import type {
   QualityScore,
   ReviewQueue,
   ReviewRoundResult,
+  SavedSearch,
+  SearchFacets,
   SearchMode,
   SearchResponse,
 } from './types/artifacts';
@@ -92,8 +95,12 @@ export const artifactAPI = {
   // (400 unknown status, 409 illegal transition, 403 insufficient role).
   changeStatus: (id: string, status: ArtifactStatus) =>
     client.put<Artifact>(`/api/v1/artifacts/${id}/status`, { status }),
+  // Archives the artifact: it leaves the project and keeps every version.
   delete: (id: string) =>
     client.delete(`/api/v1/artifacts/${id}`),
+  // Brings an archived artifact back: its last version again, live.
+  reinstate: (id: string) =>
+    client.post<Artifact>(`/api/v1/artifacts/${id}/reinstate`),
   getVersions: (id: string) =>
     client.get<Artifact[]>(`/api/v1/artifacts/${id}/versions`),
   restoreVersion: (id: string, version: number) =>
@@ -147,6 +154,18 @@ export const chatterAPI = {
     client.get<ChatterEntry[]>('/api/v1/chatter', { params: { artifact_id: artifactId } }),
 };
 
+// When the member last read each artifact's comments (comment-reads). A
+// comment written after its artifact's read_at is unread; an artifact with no
+// row has every comment unread. A write without read_at is now.
+export const commentReadAPI = {
+  list: (artifactIds: string[]) =>
+    client.get<{ comment_reads: CommentRead[] }>('/api/v1/me/comment-reads', {
+      params: { artifact_ids: artifactIds.join(',') },
+    }),
+  set: (reads: { artifact_id: string; read_at?: string }[]) =>
+    client.put<{ comment_reads: CommentRead[] }>('/api/v1/me/comment-reads', { reads }),
+};
+
 // An empty rule set clears the level's override, so it inherits again.
 export const qualityRulesAPI = {
   forProject: (projectId: string) =>
@@ -170,15 +189,39 @@ export const qualityAPI = {
     client.get<QualityScore>(`/api/v1/artifacts/${artifactId}/quality`),
 };
 
+// A facet list as GET /api/v1/search reads it: comma-separated.
+const facetParam = (values?: string[]) => (values && values.length ? values.join(',') : undefined);
+
 export const searchAPI = {
-  global: (q: string, opts?: { limit?: number; mode?: SearchMode }) =>
-    client.get<SearchResponse>('/api/v1/search', {
+  global: (q: string, opts?: { limit?: number; mode?: SearchMode } & SearchFacets) => {
+    const facets: Record<string, string> = {};
+    const set = (key: string, value: string | undefined) => {
+      if (value) facets[key] = value;
+    };
+    set('project', facetParam(opts?.projects));
+    set('type', facetParam(opts?.types));
+    set('status', facetParam(opts?.statuses));
+    set('owner', facetParam(opts?.owners));
+    if (opts?.facets) facets.facets = '1';
+    return client.get<SearchResponse>('/api/v1/search', {
       params: {
         q,
         ...(opts?.limit ? { limit: opts.limit } : {}),
         ...(opts?.mode ? { mode: opts.mode } : {}),
+        ...facets,
       },
-    }),
+    });
+  },
+};
+
+// A member's saved searches (issue #722): per user, active workspace and
+// scope. Saving under a name already used replaces that search.
+export const savedSearchAPI = {
+  list: (scope: string) =>
+    client.get<{ saved_searches: SavedSearch[] }>('/api/v1/me/saved-searches', { params: { scope } }),
+  create: (body: { scope: string; name: string; value: Record<string, unknown>; shared?: boolean }) =>
+    client.post<SavedSearch>('/api/v1/me/saved-searches', body),
+  delete: (id: string) => client.delete(`/api/v1/me/saved-searches/${id}`),
 };
 
 export const duplicatesAPI = {

@@ -22,7 +22,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/reports"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 )
 
 // newTestHandler builds the Handler a test drives: a zero Handler with each
@@ -74,10 +73,6 @@ func withReportService(s reports.Service) func(*Handler) {
 
 func withDownloadService(s downloads.Service) func(*Handler) {
 	return func(h *Handler) { h.DownloadService = s }
-}
-
-func withTeamService(s teams.Service) func(*Handler) {
-	return func(h *Handler) { h.TeamService = s }
 }
 
 func withAgentService(s agents.Service) func(*Handler) {
@@ -148,13 +143,15 @@ func (f *fakeProjectService) ListProjectsByOrg(orgID string) ([]*projects.Projec
 type fakeOrgService struct {
 	// It answers methods of Workspaces, Membership, ChannelSettings and
 	// Alerts below. BillingStore's are left to the fakes that embed this one
-	// (billingOrgFake, purchaseOrgFake, planOrgFake); it is embedded so that
-	// the fake, with all five, is an orgs.Service.
+	// (billingOrgFake, purchaseOrgFake, planOrgFake), and Notices to none: the
+	// API sends no notices. Both are embedded so that the fake, with all six,
+	// is an orgs.Service.
 	orgs.Workspaces
 	orgs.Membership
 	orgs.BillingStore
 	orgs.ChannelSettings
 	orgs.Alerts
+	orgs.Notices
 
 	// roles maps orgID -> userID -> role
 	roles map[string]map[string]string
@@ -477,6 +474,16 @@ type fakeArtifactService struct {
 	artifacts.Service
 	byID       map[string]*artifacts.Artifact
 	updateReqs []artifacts.UpdateArtifactRequest
+	// versions holds the history of artifacts byID does not: a deleted
+	// artifact's rows, newest first, which the soft delete keeps.
+	versions map[string][]*artifacts.Artifact
+}
+
+func (f *fakeArtifactService) GetArtifactVersions(id string) ([]*artifacts.Artifact, error) {
+	if a, ok := f.byID[id]; ok {
+		return []*artifacts.Artifact{a}, nil
+	}
+	return f.versions[id], nil
 }
 
 func (f *fakeArtifactService) GetArtifact(id string) (*artifacts.Artifact, error) {

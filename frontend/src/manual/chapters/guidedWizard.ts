@@ -8,7 +8,7 @@ entries you can add with one click.
 
 ## Starting, resuming, modifying
 
-Open **Guided Definition** from the project sidebar (the Overview page also
+Open **Guided Definition** from the project menu (the Overview page also
 has a shortcut whose label reflects where you are: *Start*, *Resume*, or
 *Modify guided definition*).
 
@@ -76,16 +76,78 @@ everything you've entered so far.
 - The assistant is nudged automatically when you advance or skip a step, so it
   follows along with context.
 
-The same assistant is also in the **Notes** panel on the Requirements page,
-under its own tab beside History. It is one conversation per project, so what
-you asked in the wizard is there in the notes and the other way round. With an
-artifact selected the assistant is told which one you are reading and answers
-about it; with nothing selected it answers for the project as a whole. An
-artifact's history stays where it was — it belongs to that artifact, the
-conversation does not.
+### The V&V Assistant on every page
 
-Suggestion cards appear in the notes chat too, but they can only be added from
-the wizard, which is where the entry sections they fill in live.
+The same assistant is on every page of the app, behind
+the **✦ Assistant** button in the bottom corner. The small arrow at its side tucks it into a tab on the edge of the window, which brings it back, and your browser remembers which. It opens a chat panel over the
+page:
+
+- **One conversation per project.** What you asked in the wizard is there on
+  every page and the other way round, and the panel keeps the conversation
+  open while you move between pages. On the workspace Home, choose the
+  project at the top of the panel.
+- **Looking at:** under the title says what the assistant is told you are
+  reading: the requirement open in the Requirements page (it reads the whole
+  artifact), or the page you are on. **✕** stops sending it, until you open
+  something else.
+- **⤢** expands the panel, **⇆** moves it to the other corner when it covers
+  something you need, and dragging its top corner resizes it. **—** or
+  **Esc** minimises it back to the button, and the conversation is still
+  there when you open it again.
+- **Alt+A** (Option+A on a Mac) opens the panel and puts the cursor in the
+  message box.
+- On a phone it opens as a sheet from the bottom of the screen.
+- The quick actions fit where you are: *Review this* and *How would I verify
+  it?* beside a requirement, *Gap analysis* and *Draft tests* for the project
+  as a whole.
+
+Suggestion cards beside the project add a draft artifact, or make the change
+they describe, when you press their button, and only then. Ask for any change
+you could make yourself and the assistant answers with a card for it:
+
+- **Release**: add a target release, or change one's name, date or status.
+- **Release target**: put artifacts in a release, optionally until a later
+  one, or clear their own targeting so they follow their parent's.
+- **Link**: add a traceability link, remove one, or confirm a suspect link.
+- **Review status**: move artifacts to draft, in review, approved or
+  superseded. A change the review workflow does not allow is refused on the
+  card, with the reason.
+- **Archive**: archive artifacts, which keeps their history so they can be
+  reinstated. **Apply all** never includes an archive card; each one is
+  applied by its own button.
+- **Comment**: post a comment on an artifact, in your name.
+- **To-do** and **Board task**: raise a to-do or add a task to the board,
+  assigned to a member and with a due date if the card names them.
+- **Baseline**, **Review round** and **Test run**: capture a baseline, send
+  every draft for review, or record a test run's results.
+- **Board task** can also place the task on the plan: a start date, a
+  duration, the task it is a sub-task of, its milestone and the tasks it
+  waits on. Ask the assistant to plan a piece of work and it proposes the
+  tasks in order, each waiting on the one before.
+- **Plan task**: change a task that exists, named by its title or outline
+  number: its dates, duration, effort, percentage complete, deadline, parent
+  task, milestone, the tasks it waits on, its title or its board column.
+- **Milestone**: add a milestone with a date and completion criteria, or
+  change one. A release's milestone takes its name and date from the
+  release.
+- **Task to-do** and **To-do**: add a to-do to a task, which counts toward
+  its progress, and tick a to-do off or open it again.
+- **Plan**: recalculate the plan, level it, save a baseline of it, or move
+  work that has not started up to the status date.
+
+Each card does what the same action on its page would, with your access: a
+change you could not make there is refused on the card too. Project
+settings, members, uploads and evidence files stay on their own pages. Other pages can
+start a turn for you: **Draft tests** on the V&V dashboard's *Top gaps* card
+opens the panel and asks for test cases for those gaps (see *V&V* → *Gaps*).
+
+Starting a conversation needs editor access to the project, and a workspace
+its plan has made read-only cannot start one. In either case the panel says so
+and what to do instead of a chat.
+
+On a workspace still on an earlier release, the assistant is a tab of the
+**Notes** panel on the Requirements page instead, beside the artifact's
+History.
 
 Assistant turns execute on an agent runner like any other agent work. If no
 runner is online the panel says so and pauses replies — messages you send are

@@ -1,0 +1,66 @@
+name: Docs
+
+# The user manual (manual/, an OpenD project) travels with the code
+# (docs/docs-maintenance.md):
+# - manual/ is what scripts/manual/docs.py generates from the chapters the
+#   app serves today, until the help drawer reads it from OpenD;
+# - it passes OpenD's own validation, as the docs site's build will;
+# - a pull request that changes what users see (a new feature in the
+#   release notes, frontend/src/pages.ts, the feature registry) changes the
+#   manual too, or carries the no-docs-change label.
+# On master the first two run, and Promote to release, which refuses a
+# master head whose checks are not green, therefore never ships a release
+# whose docs would not build.
+#
+# Apart from ci.yml, like release-notes.yml, so a label change re-runs only
+# this job; it reads the labels from the API when it runs.
+on:
+  push:
+    branches: [master]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+concurrency:
+  group: docs-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  docs:
+    name: Docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # GitHub's merge commit and its parents: HEAD^1 is the base.
+          fetch-depth: 2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Script self-test
+        run: python3 -m unittest scripts/manual/docs_test.py
+
+      - name: The manual matches the chapters
+        run: python3 scripts/manual/docs.py sync --check
+
+      - name: OpenD validates the manual
+        run: scripts/manual/validate.sh
+
+      - name: Pull request updates the manual
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          labels=$(gh api "repos/$REPO/pulls/$PR" --jq '.labels[].name')
+          if grep -qx 'no-docs-change' <<<"$labels"; then
+            echo "no-docs-change label present; not requiring a manual update"
+            exit 0
+          fi
+          python3 scripts/manual/docs.py check-pr --base HEAD^1

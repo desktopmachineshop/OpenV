@@ -1,0 +1,35 @@
+# The OpenV user manual, an OpenD project published at docs.openv.app and shown
+# in the app's help drawer. Preview it with the OpenD CLI: opend preview manual
+title: OpenV User Manual
+
+# The OpenV release this branch documents, as major.minor. Promote to release
+# stamps it when it cuts a version, and each docs/<minor> branch publishes as
+# its own release line (see docs/docs-maintenance.md).
+release: '0.36'
+
+map: maps/manual.ditamap
+
+# Allowed values for each filtering attribute. Any other value is a validation error.
+#   product   the OpenV plan family a workspace is on: free (Personal), lite
+#             (Business Lite), business, enterprise, self-host (the open-source
+#             distribution, including dedicated instances).
+#   audience  internal: maintainer notes, removed by the build filter.
+# Release gating needs no attribute: each OpenV minor version has its own docs.
+attributes:
+  product: [free, lite, business, enterprise, self-host]
+  audience: [internal]
+
+# Applied to every reader at build time.
+buildFilter: filters/publish.ditaval
+
+# How the docs site is set up (OpenD ADR 0017): OpenD applies this block
+# whenever the newest docs line goes live, and the site's console shows these
+# settings as set here. Each docs/<minor> branch is its own release line; the
+# public site serves anonymous visitors the free plan's manual on the newest
+# line, and its version menu lists every live line.
+site:
+  releaseRefs: ['docs/*']
+  releaseLines: minor
+  access: public
+  publicEntitlements: { products: [free], version: latest }
+  versionPicker: { mode: live }

@@ -24,6 +24,7 @@ var areaGuides = []string{
 	"frontend/src/api",
 	"e2e",
 	"scripts",
+	"manual",
 }
 
 const (

@@ -31,6 +31,7 @@ var pinnedEventTypes = []pinnedConst{
 	{"ArtifactDeleted", ArtifactDeleted, "artifact.deleted"},
 	{"ArtifactStatusChanged", ArtifactStatusChanged, "artifact.status_changed"},
 	{"ArtifactRestored", ArtifactRestored, "artifact.restored"},
+	{"ArtifactReinstated", ArtifactReinstated, "artifact.reinstated"},
 	{"LinkCreated", LinkCreated, "link.created"},
 	{"LinkUpdated", LinkUpdated, "link.updated"},
 	{"LinkDeleted", LinkDeleted, "link.deleted"},
@@ -62,7 +63,7 @@ var pinnedActors = []pinnedConst{
 }
 
 // pinnedEventTypeCount is the size of the vocabulary the refactor plan names.
-const pinnedEventTypeCount = 27
+const pinnedEventTypeCount = 28
 
 // TestEventTypesArePinned checks each pinned constant's value against its
 // literal, and that the package declares no constant the lists leave out.

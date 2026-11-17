@@ -138,6 +138,24 @@ describe('QualityRulesEditor severities', () => {
     expect(overrideNotes()).toEqual([]);
   });
 
+  it('turns a rule off and on again with its switch', async () => {
+    api.forWorkspace.mockResolvedValue(response(null, null));
+    await render(<QualityRulesEditor level="workspace" id="org-1" canEdit />);
+
+    const toggle = () => container.querySelector<HTMLInputElement>('input[role="switch"]')!;
+    expect(toggle().checked).toBe(true);
+    act(() => {
+      toggle().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    expect(weakWordSelect().value).toBe('off');
+    expect(toggle().checked).toBe(false);
+    act(() => {
+      toggle().dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    });
+    // Back on, the rule speaks at the level it would have had.
+    expect(weakWordSelect().value).toBe('warning');
+  });
+
   it('saves only the severities that differ from the workspace', async () => {
     api.forProject.mockResolvedValue(response({ severities: { 'weak-word': 'off' } }, null));
     api.setForProject.mockResolvedValue(

@@ -71,7 +71,15 @@ func (h *Handler) GlobalSearch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if query == "" {
+	// The chip search bar's facets (issue #722): project, type, status and
+	// owner chips, and facets=1 for each hit's status and owner. A workspace
+	// that has not received the bar searches exactly as before.
+	facets := searchFacets{}
+	if org := ActiveOrg(r); org != "" && hasSearchFacets(params) && h.featureEnabled(r, org, release.FeatureChipSearch) {
+		facets = parseSearchFacets(params)
+	}
+
+	if query == "" && !facets.filtered() {
 		writeSearchResponse(w, modeKeyword, nil)
 		return
 	}
@@ -80,6 +88,7 @@ func (h *Handler) GlobalSearch(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return // response already written (error) — or empty scope below
 	}
+	projectIDs = facets.narrowProjects(projectIDs)
 	if len(projectIDs) == 0 {
 		writeSearchResponse(w, modeKeyword, nil)
 		return
@@ -96,8 +105,18 @@ func (h *Handler) GlobalSearch(w http.ResponseWriter, r *http.Request) {
 	// ranks an exact one first — serves it whatever mode was asked for.
 	opts := artifacts.SearchOptions{
 		MatchRefs: h.featureEnabled(r, ActiveOrg(r), release.FeatureSearchByRef),
+		Types:     facets.types,
+		Statuses:  facets.statuses,
+		Owners:    facets.owners,
+		Facets:    facets.carry,
 	}
 	switch {
+	// Nearest-neighbour ranking cannot narrow by status or owner, and a
+	// search of facets alone has no phrase to embed: the keyword path, which
+	// filters in SQL, serves a faceted search whatever mode was asked for.
+	case opts.Filtered() || query == "":
+		hits, err = h.keywordSearch(projectIDs, query, limit, opts)
+		modeUsed = modeKeyword
 	case opts.MatchRefs && artifacts.NormalizeRef(query) != "":
 		hits, err = h.keywordSearch(projectIDs, query, limit, opts)
 		modeUsed = modeKeyword
@@ -322,4 +341,78 @@ func writeSearchResponse(w http.ResponseWriter, modeUsed string, hits []*artifac
 		hits = []*artifacts.SearchHit{}
 	}
 	writeJSONOK(w, searchResponse{ModeUsed: modeUsed, Hits: hits})
+}
+
+// searchFacets is what the chip search bar narrows GET /search by.
+type searchFacets struct {
+	projects []string
+	types    []string
+	statuses []string
+	owners   []string
+	carry    bool
+}
+
+// searchFacetParams are the query parameters that carry facets.
+var searchFacetParams = []string{"project", "type", "status", "owner", "facets"}
+
+func hasSearchFacets(params map[string][]string) bool {
+	for _, k := range searchFacetParams {
+		if len(params[k]) > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// facetValues reads a repeated or comma-separated parameter, trimmed, with
+// blanks and repeats dropped.
+func facetValues(params map[string][]string, key string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, raw := range params[key] {
+		for _, v := range strings.Split(raw, ",") {
+			v = strings.TrimSpace(v)
+			if v != "" && !seen[v] {
+				seen[v] = true
+				out = append(out, v)
+			}
+		}
+	}
+	return out
+}
+
+func parseSearchFacets(params map[string][]string) searchFacets {
+	carry := strings.TrimSpace(strings.Join(params["facets"], ""))
+	return searchFacets{
+		projects: facetValues(params, "project"),
+		types:    facetValues(params, "type"),
+		statuses: facetValues(params, "status"),
+		owners:   facetValues(params, "owner"),
+		carry:    carry == "1" || strings.EqualFold(carry, "true"),
+	}
+}
+
+// filtered reports whether a facet narrows the search.
+func (f searchFacets) filtered() bool {
+	return len(f.projects) > 0 || len(f.types) > 0 || len(f.statuses) > 0 || len(f.owners) > 0
+}
+
+// narrowProjects keeps the searchable projects a project chip names; a
+// project the caller cannot search stays out, so naming one finds nothing
+// rather than reaching it.
+func (f searchFacets) narrowProjects(ids []string) []string {
+	if len(f.projects) == 0 {
+		return ids
+	}
+	want := map[string]bool{}
+	for _, p := range f.projects {
+		want[p] = true
+	}
+	kept := make([]string, 0, len(ids))
+	for _, id := range ids {
+		if want[id] {
+			kept = append(kept, id)
+		}
+	}
+	return kept
 }

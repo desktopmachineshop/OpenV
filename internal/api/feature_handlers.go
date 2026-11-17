@@ -9,10 +9,12 @@ package api
 import (
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 
+	"github.com/openv/requirements-platform/internal/domain/help"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/release"
 )
@@ -161,4 +163,141 @@ func (h *Handler) SetMyStablePreview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSONBare(w, h.resolveFeatures(org, CurrentUser(r).ID))
+}
+
+// In-app help from the user manual on OpenD (docs/plans/opend-help.md).
+//
+// The browser asks OpenV, never the docs site: these routes fetch the
+// manual's topics for the workspace's profile — the docs line of the release
+// its members are on, and its plan family — and answer them sanitized.
+// Without OPENV_DOCS_URL and OPENV_DOCS_EMBED_SECRET every route answers
+// 404 and the app keeps the help it ships.
+
+func (h *Handler) registerHelpRoutes(router *mux.Router) {
+	router.HandleFunc("/api/v1/orgs/{id}/help/context", h.GetHelpContext).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}/help/topic", h.GetHelpTopic).Methods("GET")
+	router.HandleFunc("/api/v1/orgs/{id}/help/search", h.SearchHelp).Methods("GET")
+}
+
+// helpProfile decides which docs the caller reads in workspace orgID, or
+// answers the request itself and returns false.
+func (h *Handler) helpProfile(w http.ResponseWriter, r *http.Request) (help.Profile, bool) {
+	orgID := mux.Vars(r)["id"]
+	if !h.requireOrgRole(w, r, orgID, orgs.RoleMember) {
+		return help.Profile{}, false
+	}
+	// Off where no docs site is configured, and for a member whose channel
+	// has not reached the feature yet: the panel then keeps its summary.
+	if h.HelpService == nil || !h.featureEnabled(r, orgID, release.FeatureManualHelp) {
+		writeJSONError(w, http.StatusNotFound, "help is not configured")
+		return help.Profile{}, false
+	}
+	org, err := h.OrgService.Get(orgID)
+	if err != nil || org == nil {
+		writeJSONError(w, http.StatusNotFound, "workspace not found")
+		return help.Profile{}, false
+	}
+	// The release whose features this member sees: the stable release on
+	// the stable channel (the next one when they preview it), otherwise the
+	// release this server runs.
+	version := h.resolveFeatures(org, CurrentUser(r).ID).StableRelease
+	if version == "" && h.ReleaseService != nil {
+		if cur := h.ReleaseService.Current(); cur != nil {
+			version = cur.Version
+		}
+	}
+	line := help.Line(version)
+	if line == "" {
+		writeJSONError(w, http.StatusNotFound, "no release to show help for")
+		return help.Profile{}, false
+	}
+	return help.Profile{Line: line, Plan: help.PlanFamily(org.BilledPlan)}, true
+}
+
+// writeHelpError answers a help failure: 404 when the manual has nothing
+// for the request, 502 when the docs site could not answer.
+func writeHelpError(w http.ResponseWriter, err error) {
+	if errors.Is(err, help.ErrNotFound) {
+		writeJSONError(w, http.StatusNotFound, "no help for this")
+		return
+	}
+	writeJSONError(w, http.StatusBadGateway, "the help could not be loaded")
+}
+
+// GetHelpContext answers the topic for ?key= (a context key the page or a
+// help link names) or, without one, for ?path= (the app path, which the
+// manual's help-contexts.yaml maps to a key), with the optional activity
+// signals ?focus=, ?action= and ?pane= tried first.
+func (h *Handler) GetHelpContext(w http.ResponseWriter, r *http.Request) {
+	profile, ok := h.helpProfile(w, r)
+	if !ok {
+		return
+	}
+	key := strings.TrimSpace(r.URL.Query().Get("key"))
+	path := strings.TrimSpace(r.URL.Query().Get("path"))
+	if key == "" && path == "" {
+		writeJSONError(w, http.StatusBadRequest, "key or path is required")
+		return
+	}
+	req := help.Request{Key: key, Path: path}
+	// What the reader is doing on the page, most specific first: the
+	// section with focus, the button pressed last, the tab. OpenD answers
+	// the first whose help the workspace may read. Anything that is not a
+	// context key is dropped, and nothing is forwarded until the member's
+	// channel has the feature.
+	if h.featureEnabled(r, mux.Vars(r)["id"], release.FeatureHelpActivity) {
+		q := r.URL.Query()
+		req.Focus, req.Action, req.Pane = signal(q.Get("focus")), signal(q.Get("action")), signal(q.Get("pane"))
+	}
+	topic, err := h.HelpService.Context(r.Context(), profile, req)
+	if err != nil {
+		writeHelpError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "private, no-store")
+	writeJSONBare(w, topic)
+}
+
+// signal is v when it is a context key OpenD may be sent, otherwise "".
+func signal(v string) string {
+	v = strings.TrimSpace(v)
+	if !help.ValidSignal(v) {
+		return ""
+	}
+	return v
+}
+
+// GetHelpTopic answers one topic by its page id: ?id=topics/vv/test-runs.
+func (h *Handler) GetHelpTopic(w http.ResponseWriter, r *http.Request) {
+	profile, ok := h.helpProfile(w, r)
+	if !ok {
+		return
+	}
+	topic, err := h.HelpService.TopicByID(r.Context(), profile, r.URL.Query().Get("id"))
+	if err != nil {
+		writeHelpError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "private, no-store")
+	writeJSONBare(w, topic)
+}
+
+// SearchHelp searches the topics the workspace may read: ?q=.
+func (h *Handler) SearchHelp(w http.ResponseWriter, r *http.Request) {
+	profile, ok := h.helpProfile(w, r)
+	if !ok {
+		return
+	}
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q == "" || len(q) > 200 {
+		writeJSONError(w, http.StatusBadRequest, "q must be 1 to 200 characters")
+		return
+	}
+	results, err := h.HelpService.Search(r.Context(), profile, q)
+	if err != nil {
+		writeHelpError(w, err)
+		return
+	}
+	w.Header().Set("Cache-Control", "private, no-store")
+	writeJSONBare(w, results)
 }

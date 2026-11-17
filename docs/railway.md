@@ -403,7 +403,14 @@ branch instead:
   with `fix: true` to designate the newest release at once. The API's
   stable scheduler then moves each stable-channel workspace to it at that
   workspace's upgrade window, with the notes of every release since the
-  previous stable merged group by group.
+  previous stable merged group by group. It pushes `release` but does not
+  tag the release, publish its manual line or point openv-hosted at it:
+  run **Promote to release** after it to ship it to openv.app. Promote ships
+  a version that is cut but not yet tagged as it stands, and a stable marker
+  cut after its version was tagged by pinning openv-hosted to the marker's
+  commit (the tag stays where it was). Both workflows
+  judge master by the CI of the code under the pipeline's own commits
+  (`scripts/release_ci.py judged-commit`), which carry none.
 - **Nightly automation**: the **Nightly promotion** workflow
   (`.github/workflows/nightly-promote.yml`) runs at 03:00 UTC and is a
   no-op until staging exists (below).
@@ -416,6 +423,45 @@ Set each Railway service's **Settings → Source → Branch** to `release`
 (create the branch first: `git push origin master:release`). The
 promotion workflow needs no Railway-side configuration — Railway just sees
 a normal push to the connected branch.
+
+## openv-hosted
+
+openv.app is OpenV plus a private layer, the
+[`openv-hosted`](https://github.com/desktopmachineshop/openv-hosted)
+repository (`docs/plans/hosted-edition-separation.md`): billing as a server
+module, and the marketing site laid over the frontend. Once its cut-over is
+done, Railway builds the API and frontend services from that repository
+(`Dockerfile.api`, `Dockerfile.frontend`), each image OpenV at the ref
+openv-hosted's `OPENV_VERSION` names. The runner pool service keeps
+building from this repository.
+
+- **Production** builds openv-hosted's `release` branch. *Promote to
+  release* still cuts and tags the release here. Its last step opens a pull
+  request into that branch setting `OPENV_VERSION` to the new tag (or, for
+  a stable marker cut after the tag, to the full id of the commit carrying
+  it), waits for
+  openv-hosted's CI on it and merges it when that passes. That merge is the
+  production deploy. If the CI fails, the pull request stays open, the step
+  fails and production keeps the previous release. The workflow merges the
+  pull request itself because GitHub's auto-merge is not offered for a
+  private repository on the free plan.
+- **Staging** builds openv-hosted's `main`. On every merge to `master`,
+  `hosted-staging.yml` commits the merged commit to `main`'s
+  `OPENV_VERSION`, so staging runs exactly the commit *Staging smoke* waits
+  for. Both images report that OpenV commit (`/build.json` and the API's
+  build). The pin commit is marked `[skip ci]`: openv-hosted is private, so
+  its Actions minutes are billed, and the commit has already passed CI
+  here. openv-hosted's CI still runs on the release pull request.
+- **openv-hosted's own changes** (billing, the site) merge to `main` and
+  reach staging there. To ship one, merge `main` into `release` and keep
+  `release`'s `OPENV_VERSION`.
+- Both steps use the **`OPENV_HOSTED_TOKEN`** repository secret: a
+  fine-grained token on openv-hosted only. It needs read and write on
+  *Contents* and *Pull requests*, plus read on *Actions* and *Commit
+  statuses* so the promotion can follow the pull request's CI: it waits on
+  the Actions runs of the pull request's commit, since this token cannot
+  read the check results themselves. Without the
+  secret, both steps do nothing and `OPENV_VERSION` is set by hand.
 
 ## Staging
 

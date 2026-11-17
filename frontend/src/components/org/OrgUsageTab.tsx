@@ -137,7 +137,7 @@ export const OrgUsageTab: React.FC<OrgUsageTabProps> = ({ org }) => {
     <>
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
 
-      <div className="card" style={{ marginBottom: 16 }}>
+      <div className="card">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <h3 style={{ flex: 1, margin: 0 }}>Monthly budget</h3>
           {isAdmin && !editing && (

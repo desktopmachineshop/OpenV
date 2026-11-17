@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="project-access-members">
+  <title>Project access (members)</title>
+  <shortdesc>Project membership is managed in <b>Settings → Access</b> inside the project:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="settings.members"/>
+  </prolog>
+  <conbody>
+    <ul>
+      <li><b>Add a member by email.</b> The person must already have an OpenV account — if no account exists for that email you'll see a message asking them to sign up first.</li>
+      <li>Each member has a <b>role</b> — <b>viewer</b>, <b>reviewer</b>, <b>editor</b>, or <b>owner</b> (the add form defaults to editor; whoever creates a project becomes its owner) — you can change it from the members table, and members can be removed. A <b>reviewer</b> reads everything a viewer reads and adds notes, comments and mentions, but cannot change the text, the links, a status or a setting.</li>
+      <li><b>Team access</b> grants a whole workspace team access to the project at once, with a role per grant. Teams themselves are defined in Workspace settings — see <i>Workspace settings &amp; teams</i>.</li>
+    </ul>
+  </conbody>
+</concept>

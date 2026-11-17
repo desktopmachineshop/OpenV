@@ -1,0 +1,134 @@
+// User manual chapter: the project pages Home, Design, Tests and Baselines.
+const content = `
+# Home, Design, Tests and Baselines
+
+Four project pages bring together what you would otherwise collect from
+several others. A project's own Home is part of its **Overview**, first under **Plan** in the project
+menu; **Tests** and **Baselines** under **Verify**; design items are read in **Requirements**. They show what the
+project already holds; you edit artifacts, record results and capture
+baselines where you always have.
+
+## Home
+
+The workspace's **Home**, at the top of the rail, gathers what needs you across every project. A project's
+own Home is the right-hand side of its **Overview** (on a phone, its top): the project's figures as four
+tiles, **Needs you** and **Recent activity**. The old Summary address opens the Overview.
+
+**Needs you** lists what waits on the team. Click a line to open the
+artifact it names; the button on the right says what it does. **Review
+all** in its header opens the **Review Queue**.
+
+- **approve**: an artifact in review; **Review** opens it.
+- **suspect**: a link whose ends changed after it was made. **Still valid**
+  confirms the link still holds and **Remove** deletes it, after you
+  confirm, right there on the line; the line leaves the list.
+- **test run**: a run still in progress, with how many test cases are left.
+- **failing**: a test case whose last result is a fail, and the
+  requirements it verifies.
+- **comment**: a comment on an artifact that you have not read, by someone
+  other than you; **Open** opens the artifact with its notes showing, which
+  marks them read. **Mark read** clears the artifact's comments from the
+  list without opening it, **Mark all read** in the header clears them all,
+  and **Undo** on the line they leave puts them back.
+- **proposal**: a change an agent has proposed; **Review** opens the agent
+  runs, where you approve or reject it.
+
+**Recent activity** shows the newest events of the project, who did what to
+which artifact; click one to open what it is about. **Full history** opens
+the **Activity** page.
+
+## Activity log
+
+**Activity**, beside **Settings** in the project's rail, is the project's
+whole history, newest first, under a header for each day (**Today**,
+**Yesterday**, then the date). Each event reads as a sentence in the words
+Home uses: who did it, with their picture or a mark for an agent, a runner
+or the system; what they did, coloured like its dot on Home; and the thing
+they did it to, by its reference and title, as a link that opens it.
+**Type** narrows the log to one kind of event.
+
+Click **▸** at the end of an event for its detail:
+
+- a status change shows the old and new status as chips, with the version;
+- an edit shows what changed: the title and the text word by word, struck
+  out in red and added in green, and each attribute before and after;
+- a link shows both ends and its type, such as TC-177 —verifies→ REQ-229;
+- a board move shows the column the card moved to;
+- a test result shows pass or fail, the test case and a link to the run;
+- an agent run shows its status, how long it took, what it cost and a link
+  to the run;
+- anything else lists what was recorded with it.
+
+**Show raw event** shows the event exactly as it is stored, for debugging.
+
+## Design
+
+Design items are read in **Requirements**; there is no separate Design page,
+and its old address opens Requirements with the **Type: Design item** filter
+on. Switch to **Tree** to see the items nested as they are in the document:
+an item under another is drawn under it.
+
+Select an item to read it in the detail panel: its text straight under its
+title, its attributes, the requirements it **satisfies** (and anything else
+it links to, such as the hazards it mitigates), and **Verified through**:
+the test cases that verify those requirements, each with its last result.
+Test cases verify requirements rather than design items, so this is the
+evidence that reaches the item through them.
+
+To see what a change would touch, run **Impact** from a requirement the item
+satisfies: it flows down to the item and what it links to.
+
+## Tests
+
+**Tests** starts with the project's newest test runs as cards. Each bar
+shows the run's passes in green, fails in red and blocked results in amber
+out of every test case in the project; the rest are still to go. Select a
+card to open the run and record results.
+
+Below, **Test cases** lists every test case with its method (automated,
+manual or physical), the requirements it **verifies**, its **last result**
+and the run that recorded it, and its number of **steps**: the numbered
+steps in its text. **Last result: fail, blocked** narrows the list to what
+needs attention, and **Method** to one kind of test. The **Runs** tab lists
+the newest runs as a table.
+
+On a phone, Tests leads with the run in progress and a button to continue
+it, then the recent runs and the test cases failing or blocked.
+
+## Baselines page
+
+**Baselines** lists the project's baselines as a timeline, newest first, with
+the **Working copy**, the project as it is now, at the top. Select a
+baseline to compare from it; it is marked **from**, and what it is compared
+to is marked **to**. Choose what to compare to under **Compare to**: the
+working copy or another baseline.
+
+The comparison counts the artifacts **added**, **changed** and **removed**,
+and lists every change with the fields that changed. **Text only** narrows
+the list to changes of title or text, and **Links** to links added or
+removed. **Hide status-only** leaves out the artifacts whose only change is
+their review status, such as a whole project approved at once; it shows how
+many there are.
+
+A baseline records the project's plan as well as its artifacts, so the
+comparison also says how far the project got. **Plan**, above the list of
+changes, gives the plan's progress, its tasks done, how many were late and
+its finish date on each side, and names each milestone or release that was
+met, moved or added between them. **Tasks that changed** lists each task
+that was added, removed, finished or moved, with how many days later or
+earlier it now ends, the ones that slipped furthest first. The timeline shows the plan's progress at
+each baseline. A baseline taken before plans were recorded has no plan to
+show, and the page says so. A baseline saved from the Gantt's **Tracking**
+is the same baseline, and is listed here.
+
+Select a change to read its text word by word: removed words are struck out
+in red and added words underlined in green. On a computer a long list of
+changes scrolls on its own, with its column headings kept in view, and the
+selected change's text stays on screen below it. With a change selected,
+**↑** and **↓** move to the previous and next change, **Home** and **End**
+to the first and last, and the text follows. When you compare to the working
+copy, the links of that artifact that are suspect now are named under it.
+**Open the full comparison** opens the comparison page with every link, and the same **Plan** figures above them.
+`;
+
+export default content;

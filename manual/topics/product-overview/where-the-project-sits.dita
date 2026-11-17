@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="where-the-project-sits">
+  <title>Where the project sits</title>
+  <conbody>
+    <p>At the top of the page, <b>Part of</b> names the project this one belongs under, and <b>Child projects</b> links to the projects that belong under it. A subsystem or supplier project sits under the system it is part of: its requirements can then <i>refine</i> the parent's, and the parent's V&amp;V rolls those refinements up. Choose another project under <b>Part of</b> to move it, or <b>No parent</b> to make it top-level. A project cannot go under itself or under one of its own children. This used to be set in project settings.</p>
+  </conbody>
+</concept>

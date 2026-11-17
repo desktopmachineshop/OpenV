@@ -57,6 +57,7 @@ func (h *Handler) registerAuthRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/auth/google", h.GoogleLogin).Methods("GET")
 	router.HandleFunc("/api/v1/auth/google/callback", h.GoogleCallback).Methods("GET")
 	h.registerOIDCRoutes(router)
+	h.registerIdentityLinkRoutes(router)
 
 	router.HandleFunc("/api/v1/users", h.ListUsers).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/members", h.ListProjectMembers).Methods("GET")
@@ -66,7 +67,7 @@ func (h *Handler) registerAuthRoutes(router *mux.Router) {
 }
 
 // provisionPersonalWorkspace ensures a new user's personal org exists and is
-// seeded with default agents/crew. Failures are non-fatal (retried on next
+// seeded with default agents. Failures are non-fatal (retried on next
 // login via the middleware's personal-org fallback).
 func (h *Handler) provisionPersonalWorkspace(userID, displayName string) {
 	if h.OrgService == nil {
@@ -84,17 +85,27 @@ func (h *Handler) provisionPersonalWorkspace(userID, displayName string) {
 	}
 }
 
-// AuthConfig tells the login page which sign-in methods are available.
+// AuthConfig tells the login page which sign-in methods are available. On a
+// deployment that signs everyone in through its provider only
+// (OPENV_OIDC_ONLY), oidc_only is true and password sign-in and Google read
+// as unavailable, so the page goes straight to the provider.
 func (h *Handler) AuthConfig(w http.ResponseWriter, r *http.Request) {
+	only := h.ssoOnly()
 	resp := map[string]any{
-		"google_enabled":     h.GoogleOAuth != nil && h.GoogleOAuth.ClientID != "",
+		"google_enabled":     h.GoogleOAuth != nil && h.GoogleOAuth.ClientID != "" && !only,
 		"oidc_enabled":       h.OIDC.Enabled(),
+		"oidc_only":          only,
 		"oidc_provider_name": "",
+		// Whether the page offers the email and password form, to sign in
+		// and to sign up.
+		"password_enabled": !only,
 		// Tells the SPA whether an unverified account meets the wall, so it
 		// never walls anyone on a deployment that cannot send the link.
 		"email_verification_required": h.EmailVerification.Required,
 		// Whether the sign-in page can offer an emailed password reset
-		// (REQ-158); without a mailer a platform admin mints the link.
+		// (REQ-158); without a mailer a platform admin mints the link. In
+		// every mode: with single sign-on the only way in, the reset serves
+		// the step that links the provider to a password account.
 		"password_reset_email": h.Mailer != nil && h.Mailer.Enabled(),
 		// Whether the page should offer a sign-up form at all (REQ-95).
 		"registration": h.registrationPolicy(),
@@ -192,6 +203,9 @@ type registerResponse struct {
 
 // Register creates a password account and logs it in.
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
+	if h.ownSignInRefused(w) {
+		return
+	}
 	var req struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -282,6 +296,9 @@ func (h *Handler) verifiedByInvitation(user *users.User, outcome string) *users.
 
 // Login authenticates email/password credentials.
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
+	if h.ownSignInRefused(w) {
+		return
+	}
 	var req struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
@@ -371,6 +388,9 @@ func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusNotFound, "google sign-in is not configured")
 		return
 	}
+	if h.ownSignInRefused(w) {
+		return
+	}
 	if !h.throttleSSO(w, r) {
 		return
 	}
@@ -396,6 +416,9 @@ func (h *Handler) GoogleLogin(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 	if h.GoogleOAuth == nil || h.GoogleOAuth.ClientID == "" {
 		writeJSONError(w, http.StatusNotFound, "google sign-in is not configured")
+		return
+	}
+	if h.ownSignInRefused(w) {
 		return
 	}
 	if !h.throttleSSO(w, r) {
@@ -446,10 +469,12 @@ func (h *Handler) GoogleCallback(w http.ResponseWriter, r *http.Request) {
 
 	googleUser, token, err := h.UserService.LoginWithGoogle(info.Email, info.Name, info.Picture)
 	if err != nil {
-		// An email already registered via a different sign-in method is a
-		// client-visible 409, not a 500 (issue #242): we refuse to auto-link.
+		// An email already registered via a different sign-in method is
+		// never entered on the email alone (issue #242): a password account
+		// is offered the link, confirmed with its password; any other is a
+		// client-visible 409.
 		if errors.Is(err, users.ErrProviderMismatch) {
-			writeJSONError(w, http.StatusConflict, err.Error())
+			h.offerIdentityLink(w, r, users.ProviderGoogle, info.Email, h.GoogleOAuth.FrontendURL)
 			return
 		}
 		respondInternal(w, r, "failed to sign in with google", err)

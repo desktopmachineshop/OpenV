@@ -26,7 +26,7 @@ export const renderStubsStep = ({
   setStubSelected,
 }: StubsStepProps): React.ReactElement => {
   return (
-    <div className="card">
+    <div className="card" data-help-key="guided.steps.stubs">
       <h3>Verification stubs (optional)</h3>
       <div style={helpText}>
         Requirements with verification method <strong>test</strong> are listed below. Checked

@@ -21,6 +21,11 @@
 # - the shipped commit is tagged `v<version>`, so a release is a point in
 #   history you can check out and compare against rather than only a branch
 #   position and a notes section
+# - the user manual ships with the code: master's Docs check (OpenD
+#   validates manual/) is among the checks that must be green, the release
+#   commit stamps the manual's `release:` with the version's line, and the
+#   shipped commit is pushed to `docs/<major.minor>`, the branch the docs
+#   site publishes that line from (docs/docs-maintenance.md)
 
 name: Promote to release
 
@@ -54,8 +59,11 @@ jobs:
           # must be excluded or promotion can never pass.
           SELF_PATH: .github/workflows/promote-release.yml
         run: |
-          sha=$(git rev-parse HEAD)
-          echo "Promoting master commit $sha"
+          # The pipeline's own commits (a cut, a stable marker, a manual
+          # stamp) are pushed with the workflow token and so carry no CI;
+          # judge the code under them (scripts/release_ci.py).
+          sha=$(python3 scripts/release_ci.py judged-commit)
+          echo "Promoting master $(git rev-parse --short HEAD), judged by the CI of $sha"
 
           # Judge the commit by the workflows *this repository* defines.
           #
@@ -133,7 +141,25 @@ jobs:
             git add RELEASE_NOTES.md frontend/src/site/changelog/releases.json
             git commit -m "Release $(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
           fi
-          python3 scripts/release_notes.py check-release --released /tmp/released-notes.md RELEASE_NOTES.md
+          # A version already cut but never shipped (Cut stable release cuts
+          # and marks one, but only this workflow tags it, publishes its
+          # manual and points openv.app at it) is shipped as it stands: its
+          # tag is what says it went out.
+          version=$(python3 scripts/release_notes.py version RELEASE_NOTES.md)
+          if [ -n "$version" ] && ! git ls-remote --exit-code --tags origin "refs/tags/v${version}" >/dev/null 2>&1; then
+            python3 scripts/release_notes.py check RELEASE_NOTES.md
+            echo "v${version} is cut but not yet shipped: promoting it as it stands."
+          elif [ -n "$version" ] && git show "v${version}:RELEASE_NOTES.md" > /tmp/tagged-notes.md 2>/dev/null \
+            && [ "$(python3 scripts/release_notes.py stable-version RELEASE_NOTES.md)" != "$(python3 scripts/release_notes.py stable-version /tmp/tagged-notes.md)" ]; then
+            # Cut stable release marked a version stable after its tag was
+            # made, so what openv.app runs (the tag) still names the previous
+            # stable release. Ship the marker: openv-hosted is pinned to this
+            # commit below, since the tag stays where it was.
+            python3 scripts/release_notes.py check RELEASE_NOTES.md
+            echo "v${version} is shipped but its stable marker is not: promoting the marker."
+          else
+            python3 scripts/release_notes.py check-release --released /tmp/released-notes.md RELEASE_NOTES.md
+          fi
 
       # A release that carries a security fix becomes the stable release in
       # this same promotion, so stable-channel workspaces are told about it
@@ -151,6 +177,19 @@ jobs:
             python3 scripts/release_notes.py site RELEASE_NOTES.md
             git add RELEASE_NOTES.md frontend/src/site/changelog/releases.json
             git commit -m "Stable release $after (security fix)"
+          fi
+
+      # The manual on master describes master, so the release commit names
+      # the line it now documents: 0.24 for 0.24.0 and every 0.24.x after.
+      # A patch release leaves it as it is.
+      - name: Stamp the manual's release line
+        run: |
+          python3 scripts/manual/docs.py stamp RELEASE_NOTES.md manual/opend.config.yaml
+          if ! git diff --quiet -- manual/opend.config.yaml; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add manual/opend.config.yaml
+            git commit -m "Manual documents $(python3 scripts/manual/docs.py line RELEASE_NOTES.md)"
           fi
 
       - name: Push release
@@ -189,3 +228,127 @@ jobs:
           git push origin "refs/tags/${tag}"
           echo "Tagged $(git rev-parse --short HEAD) as ${tag}"
           echo "Tagged \`${tag}\` at \`$(git rev-parse --short HEAD)\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # The docs site publishes each minor line from its own branch, so a
+      # workspace on 0.22 keeps the 0.22 manual while nightly reads 0.24.
+      # The branch follows the newest release of its line: a patch release
+      # moves it on. Forced, because a docs fix backported to the line
+      # (docs/docs-maintenance.md) is a cherry-pick of a master commit this
+      # release already carries, so moving past it loses nothing. Like the
+      # tag, after the push: only a release that shipped gets its docs.
+      - name: Publish the manual's release line
+        run: |
+          line=$(python3 scripts/manual/docs.py line RELEASE_NOTES.md)
+          git push --force origin "HEAD:refs/heads/docs/${line}"
+          echo "Manual for ${line} published from \`docs/${line}\` at \`$(git rev-parse --short HEAD)\`" >> "$GITHUB_STEP_SUMMARY"
+
+      # openv.app's production builds openv-hosted's `release` branch, which
+      # pins the OpenV release it runs (its OPENV_VERSION; docs/railway.md
+      # "openv-hosted"). Pointing it
+      # at the tag just made is what ships the release there: a pull request
+      # this step merges once openv-hosted's CI passes, and Railway deploys
+      # the merge. It waits for that CI itself: GitHub's auto-merge is not
+      # offered for a private repository on the free plan. A red CI leaves
+      # the pull request open and fails the step. Without the
+      # OPENV_HOSTED_TOKEN secret (a token that may push to openv-hosted and
+      # open pull requests there) the step says so and does nothing; the
+      # release is still tagged.
+      - name: Ship the release to openv.app (openv-hosted)
+        timeout-minutes: 30
+        env:
+          GH_TOKEN: ${{ secrets.OPENV_HOSTED_TOKEN }}
+          HOSTED_REPO: desktopmachineshop/OpenV-hosted
+        run: |
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::warning::OPENV_HOSTED_TOKEN is not set: openv-hosted was not pointed at this release; set its OPENV_VERSION by hand."
+            exit 0
+          fi
+          tag="v$(python3 scripts/release_notes.py version RELEASE_NOTES.md)"
+          # Pin the tag when it names what is shipping. A stable marker cut
+          # after the tag is a later commit the tag does not reach, so then
+          # pin that commit's full id (openv-hosted takes a tag or a commit).
+          if [ "$(git rev-parse "${tag}^{commit}" 2>/dev/null)" != "$(git rev-parse HEAD)" ]; then
+            tag="$(git rev-parse HEAD)"
+          fi
+          branch="openv-${tag}"
+          dir="$(mktemp -d)"
+          git clone --quiet --depth 1 --branch release "https://x-access-token:${GH_TOKEN}@github.com/${HOSTED_REPO}.git" "$dir"
+          cd "$dir"
+          if [ "$(tr -d ' \n' < OPENV_VERSION)" = "$tag" ]; then
+            echo "openv-hosted already runs ${tag}."
+            exit 0
+          fi
+          git checkout --quiet -b "$branch"
+          echo "$tag" > OPENV_VERSION
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit --quiet -am "Run OpenV ${tag}"
+          git push --quiet --force origin "$branch"
+          # A GitHub call can drop its connection ("EOF") although the work is
+          # fine; 0.28.1's merge did, failing a release whose openv-hosted CI
+          # had passed. Each call below is retried, and the ones that change
+          # something first ask whether an earlier attempt already did.
+          pr_field() { gh pr view "$branch" --repo "$HOSTED_REPO" --json "$1" --jq ".$1" 2>/dev/null; }
+          url=""
+          for attempt in 1 2 3 4 5; do
+            url="$(pr_field url || true)"
+            [ -n "$url" ] && break
+            url="$(gh pr create --repo "$HOSTED_REPO" --base release --head "$branch" \
+              --title "Run OpenV ${tag}" \
+              --body "OpenV's *Promote to release* shipped ${tag}; this points openv.app at it. The promotion merges it once CI passes, and Railway deploys the merge.")" && break
+            url=""
+            echo "Opening the openv-hosted pull request failed (attempt ${attempt}); retrying."
+            sleep $((attempt * 10))
+          done
+          if [ -z "$url" ]; then
+            echo "::error::Could not open a pull request on ${HOSTED_REPO} for ${branch}: openv.app still runs the previous release. Open and merge it by hand."
+            echo "openv-hosted: ${branch} pushed, no pull request" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          # Wait for openv-hosted's CI on the pull request's commit. It reads
+          # the Actions runs (the token needs Actions: read on openv-hosted),
+          # not the check results, which need a permission the token lacks.
+          sha="$(git rev-parse HEAD)"
+          runs="repos/${HOSTED_REPO}/actions/runs?head_sha=${sha}&per_page=50"
+          verdict=""
+          misses=0
+          for _ in $(seq 100); do
+            # One failed read is a dropped connection; five in a row is the
+            # token lacking Actions: read.
+            if ! out="$(gh api "$runs" --jq '[.workflow_runs[] | {status, conclusion}]' 2>&1)"; then
+              misses=$((misses + 1))
+              if [ "$misses" -ge 5 ]; then
+                echo "::error::Could not read openv-hosted's Actions runs (${out}). Give OPENV_HOSTED_TOKEN Actions: read on ${HOSTED_REPO}, then merge ${url} by hand once its CI is green."
+                echo "openv-hosted: ${url}, CI not readable, not merged" >> "$GITHUB_STEP_SUMMARY"
+                exit 1
+              fi
+              echo "Reading openv-hosted's Actions runs failed (${out}); retrying."
+              sleep 15
+              continue
+            fi
+            misses=0
+            verdict="$(jq -r 'if length == 0 then "none"
+              elif any(.[]; .status != "completed") then "running"
+              elif all(.[]; .conclusion == "success" or .conclusion == "skipped" or .conclusion == "neutral") then "success"
+              else "failure" end' <<<"$out")"
+            case "$verdict" in success|failure) break ;; esac
+            sleep 15
+          done
+          if [ "$verdict" != "success" ]; then
+            echo "::error::openv-hosted's CI on ${url} ended ${verdict:-unknown}: openv.app still runs the previous release. Fix it there and merge the pull request by hand."
+            echo "openv-hosted: ${url}, CI ${verdict:-unknown}, not merged" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          merged=""
+          for attempt in 1 2 3 4 5; do
+            if [ "$(pr_field state || true)" = "MERGED" ]; then merged=1; break; fi
+            if gh pr merge --repo "$HOSTED_REPO" --merge "$url"; then merged=1; break; fi
+            echo "Merging ${url} failed (attempt ${attempt}); retrying."
+            sleep $((attempt * 10))
+          done
+          if [ -z "$merged" ] && [ "$(pr_field state || true)" != "MERGED" ]; then
+            echo "::error::Could not merge ${url}, whose CI passed: openv.app still runs the previous release. Merge it by hand."
+            echo "openv-hosted: ${url}, CI success, not merged" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          gh api -X DELETE "repos/${HOSTED_REPO}/git/refs/heads/${branch}" >/dev/null || true
+          echo "openv-hosted: ${url}, merged; Railway deploys it" >> "$GITHUB_STEP_SUMMARY"

@@ -83,6 +83,9 @@ export type COMPAT_EXCEPTIONS = {
   Attachment: {
     kind: ['narrowed', 'AttachmentKind is the four values of attachments.Kind, which Attachment.MarshalJSON writes as a string'];
   };
+  Baseline: {
+    plan: ['narrowed', 'Go writes the raw JSON of a plan.Moment, which the API marshals onto the baseline; BaselinePlan is its shape'];
+  };
   AppNotification: {
     entity_ref: ['narrowed', 'Go writes null for a nil map; notifications.New makes it {}'];
   };
@@ -93,6 +96,7 @@ export type COMPAT_EXCEPTIONS = {
     actor_name: ['client-side', 'eventView (internal/api) adds it beside the events.Event it embeds, for the activity log'];
     entity_kind: ['client-side', 'eventView (internal/api) adds it beside the events.Event it embeds, for the activity log'];
     entity_name: ['client-side', 'eventView (internal/api) adds it beside the events.Event it embeds, for the activity log'];
+    archived_artifacts: ['client-side', 'eventView (internal/api) adds it beside the events.Event it embeds: the archived artifacts the event names'];
   };
 };
 

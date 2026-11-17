@@ -11,8 +11,9 @@ import {
 } from '../components/agents/RunTable';
 import { ProposalReviewPanel } from '../components/agents/ProposalReviewPanel';
 import { RunnerConnectPrompt } from '../components/RunnerConnectPrompt';
-import { ErrorBanner } from '../components/ui';
+import { ErrorBanner, buttonStyle, chipStyle } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
+import { useUiRefresh } from '../hooks/useUiRefresh';
 
 // Cap the 5s poll: this page re-fetches every run in the project on a timer,
 // which is unbounded as run history grows. 200 covers the visible table; the
@@ -53,18 +54,23 @@ export const AgentRunsPage: React.FC = () => {
   const error = raised?.projectId === projectId ? raised.message : '';
 
   const selectedRunId = searchParams.get('run');
+  // ?agent=<id>: one agent's runs and proposals, as a card of the Agents
+  // page opens them.
+  const agentFilter = searchParams.get('agent');
   useCloseRunOnSwitch(projectId);
   // A phone shows the three columns that identify a run; the rest is in the
   // detail. A compact viewport opens that detail as a sheet over the list.
   const { isPhone, isCompact } = useViewport();
+  const refresh = useUiRefresh();
 
   useEffect(() => {
     if (!projectId) return;
-    const query: { project_id: string; status?: string; limit: number } = {
+    const query: { project_id: string; status?: string; agent_id?: string; limit: number } = {
       project_id: projectId,
       limit: RUNS_POLL_LIMIT,
     };
     if (statusFilter !== 'all') query.status = statusFilter;
+    if (agentFilter) query.agent_id = agentFilter;
     // A switch of project or workspace, or another filter, starts a new
     // poll: what the old one still has on its way is dropped (pollGuard).
     const runsGuard = pollGuard();
@@ -102,7 +108,7 @@ export const AgentRunsPage: React.FC = () => {
       statusGuard.close();
       window.clearInterval(timer);
     };
-  }, [projectId, statusFilter, activeOrgId]);
+  }, [projectId, statusFilter, activeOrgId, agentFilter]);
 
   // Auto-prompt the Agent Connector the first time runs are queued with no
   // runner online (covers every launch path — they all land on this page).
@@ -119,6 +125,15 @@ export const AgentRunsPage: React.FC = () => {
     }
   }, [workerStatus]);
 
+  const clearAgent = () =>
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.delete('agent');
+      return next;
+    });
+  const agentRuns = agentFilter && runs ? new Set(runs.map((r) => r.id)) : undefined;
+  const agentName = runs?.find((r) => r.agent_id === agentFilter)?.agent_name;
+
   const selectRun = (runId: string | null) => {
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
@@ -129,26 +144,42 @@ export const AgentRunsPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Runs</h2>
+    <div className="ov-gutter" style={{ padding: 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
+      <div
+        data-help-key="agent-runs.list"
+        style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}
+      >
+        <h2 className="ov-page-title" style={{ color: 'var(--text)', margin: 0, fontSize: 20, fontWeight: 700 }}>Runs</h2>
         <button
+          data-help-key="agent-runs.approvals"
           onClick={() => setShowProposals(!showProposals)}
+          aria-expanded={showProposals}
+          title={showProposals ? 'Hide the proposals waiting for review' : 'Show the proposals waiting for review'}
           style={{
-            background: pendingCount > 0 ? 'var(--warning)' : 'var(--neutral-soft)',
-            color: pendingCount > 0 ? '#fff' : 'var(--text-muted)',
-            border: 'none',
-            padding: '6px 14px',
-            borderRadius: 14,
-            cursor: 'pointer',
+            ...chipStyle(pendingCount > 0 ? 'agent' : 'neutral', 'md'),
+            minHeight: 32,
+            padding: '0 12px',
             fontSize: 13,
-            fontWeight: 600,
+            cursor: 'pointer',
           }}
         >
           Pending approvals ({pendingCount})
         </button>
+        {agentFilter && (
+          <span className="run-agent-filter" style={chipStyle('agent', 'md')}>
+            Runs of {agentName || 'one agent'}
+            <button
+              type="button"
+              aria-label="Show every agent's runs"
+              onClick={clearAgent}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', padding: '0 0 0 4px' }}
+            >
+              ×
+            </button>
+          </span>
+        )}
         <div style={{ flex: 1 }} />
-        <RunStatusFilter value={statusFilter} onChange={setStatusFilter} />
+        <RunStatusFilter value={statusFilter} onChange={setStatusFilter} chips={refresh} />
       </div>
 
       <ErrorBanner message={error} onDismiss={() => setRaised(null)} style={{ marginBottom: 8 }} />
@@ -159,7 +190,7 @@ export const AgentRunsPage: React.FC = () => {
           <div
             style={{
               background: 'var(--tint-yellow)',
-              border: '1px solid var(--warning)',
+              border: '1px solid var(--tint-yellow-border)',
               color: 'var(--warning-text)',
               padding: '10px 14px',
               borderRadius: 4,
@@ -171,17 +202,7 @@ export const AgentRunsPage: React.FC = () => {
             no runner is online.{' '}
             <button
               onClick={() => setShowConnect(true)}
-              style={{
-                background: 'var(--warning)',
-                color: '#fff',
-                border: 'none',
-                padding: '4px 12px',
-                borderRadius: 4,
-                cursor: 'pointer',
-                fontSize: 12.5,
-                fontWeight: 600,
-                marginRight: 8,
-              }}
+              style={{ ...buttonStyle('secondary', { compact: true }), minHeight: 32, marginRight: 8 }}
             >
               Open Agent Connector
             </button>
@@ -212,7 +233,7 @@ export const AgentRunsPage: React.FC = () => {
           <div
             style={{
               background: 'var(--tint-blue)',
-              border: '1px solid var(--accent)',
+              border: '1px solid var(--tint-blue-border)',
               color: 'var(--accent-text)',
               padding: '10px 14px',
               borderRadius: 4,
@@ -225,16 +246,22 @@ export const AgentRunsPage: React.FC = () => {
         )}
 
       {showProposals && projectId && (
-        <ProposalReviewPanel projectId={projectId} onCountChange={setPendingCount} />
+        <ProposalReviewPanel
+          projectId={projectId}
+          onCountChange={setPendingCount}
+          onOpenRun={(id) => selectRun(id)}
+          onlyRuns={agentRuns}
+        />
       )}
 
       <div style={{ display: 'flex', gap: 16, flex: 1, minHeight: 0 }}>
-        <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }}>
+        <div style={{ flex: 1, overflowY: 'auto', minWidth: 0 }} data-help-key="agent-runs.list">
           <RunTable
             runs={runs}
             selectedRunId={selectedRunId}
             onSelect={selectRun}
             isPhone={isPhone}
+            rows={refresh && isPhone}
             emptyText="No runs yet. Launch an agent from the Agents page or the board."
           />
         </div>

@@ -345,6 +345,21 @@
       "read_by": "server",
       "text": "Interview event-stream connects per client address per hour, steady state."
     },
+    "OPENV_DOCS_ADMIN_TOKEN": {
+      "area": "frontend-shell",
+      "read_by": "server",
+      "text": "The docs site's `OPEND_ADMIN_TOKEN`, read only when `OPENV_DOCS_URL` and `OPENV_DOCS_EMBED_SECRET` are set. With it the server creates each help profile (an OpenD organization and service reader per docs line and plan family) the first time it asks for help; without it the docs site's operator creates them. Secret."
+    },
+    "OPENV_DOCS_EMBED_SECRET": {
+      "area": "frontend-shell",
+      "read_by": "server",
+      "text": "The docs site's `OPEND_EMBED_SECRET`, which signs the embed tokens the in-app help reads the manual with, per docs line and plan family. Without it the help reads the site's public view, which needs nothing from the docs site but its address. Secret."
+    },
+    "OPENV_DOCS_URL": {
+      "area": "frontend-shell",
+      "read_by": "server",
+      "text": "The OpenD docs site that publishes the user manual (`manual/`), such as `https://docs.openv.app`, without a trailing slash: the in-app help reads each workspace's manual from it (`docs/plans/opend-help.md`). Help from the docs site is on only when this is set; otherwise the app keeps the help it ships."
+    },
     "OPENV_INVITE_BURST": {
       "area": "tenancy-identity",
       "read_by": "server",
@@ -417,12 +432,17 @@
     "OPENV_OIDC_ISSUER": {
       "area": "tenancy-identity",
       "read_by": "server",
-      "text": "Turns on single sign-on with one OIDC identity provider, found by discovery at this issuer URL; unset, the OIDC endpoints answer that it is not configured."
+      "text": "Turns on single sign-on with one OIDC identity provider, found by discovery at this issuer URL; unset, the OIDC endpoints answer that it is not configured. Sign-in sends a PKCE challenge (S256). For Desktop Machine Shop accounts, the issuer is the OpenD control plane's `PUBLIC_URL`, with the client registered there (OpenD-hosted ADR 0009). The provider may also remove accounts through `POST /api/v1/auth/oidc/account-deletion` (DMSid ADR 0002): register `$PUBLIC_URL/api/v1/auth/oidc/account-deletion` as the client's deletion URI."
     },
     "OPENV_OIDC_NAME": {
       "area": "tenancy-identity",
       "read_by": "server",
       "text": "The provider's name on the sign-in button."
+    },
+    "OPENV_OIDC_ONLY": {
+      "area": "tenancy-identity",
+      "read_by": "server",
+      "text": "`true` makes single sign-on through the OIDC provider the only way in: the sign-in and sign-up pages go straight to the provider (sign-up asks it for its sign-up page with `prompt=create`), and password sign-in and sign-up and Google sign-in are refused. An account made with a password still links the provider with its password once; the password reset stays open for that step, sets the password only and signs nobody in. Needs `OPENV_OIDC_ISSUER` and `OPENV_OIDC_CLIENT_ID`; without them the server refuses to start."
     },
     "OPENV_OIDC_REDIRECT_URL": {
       "area": "tenancy-identity",

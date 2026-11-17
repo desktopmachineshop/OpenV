@@ -456,7 +456,7 @@ func (h *Handler) GetGaps(w http.ResponseWriter, r *http.Request) {
 	writeJSONBare(w, vv.GapAnalysis(export, coverage))
 }
 
-// GetImpact returns the change-impact set for one artifact: the artifacts
+// GetImpact returns the change-impact set for one requirement: the artifacts
 // reachable through the traceability link graph, grouped by type, in the
 // requested direction. downstream = artifacts that depend on the seed (what a
 // change to it could break); upstream = the artifacts the seed itself depends
@@ -482,15 +482,21 @@ func (h *Handler) GetImpact(w http.ResponseWriter, r *http.Request) {
 	}
 	// The seed must belong to the authorized project (or baseline snapshot);
 	// this also stops IDs from other projects being probed.
-	found := false
+	var seed *artifacts.Artifact
 	for _, a := range export.Artifacts {
 		if a != nil && a.ID == artifactID {
-			found = true
+			seed = a
 			break
 		}
 	}
-	if !found {
+	if seed == nil {
 		writeJSONError(w, http.StatusNotFound, "artifact not found in project")
+		return
+	}
+	// Impact analysis starts from a requirement; the walk from it then
+	// reaches every artifact type its links lead to.
+	if seed.Type != artifacts.TypeRequirement {
+		writeJSONError(w, http.StatusBadRequest, "impact analysis starts from a requirement")
 		return
 	}
 	writeJSONBare(w, vv.ComputeImpact(export, artifactID, r.URL.Query().Get("direction")))

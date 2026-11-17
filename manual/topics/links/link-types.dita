@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="link-types">
+  <title>Link types</title>
+  <conbody>
+    <simpletable>
+      <sthead><stentry>Type</stentry><stentry>Direction</stentry><stentry>Meaning</stentry></sthead>
+      <strow><stentry>verifies</stentry><stentry>test-case → requirement</stentry><stentry>The test demonstrates the requirement is met</stentry></strow>
+      <strow><stentry>validates</stentry><stentry>test-case → user-need</stentry><stentry>The test confirms the user need is met</stentry></strow>
+      <strow><stentry>satisfies</stentry><stentry>design-item → requirement</stentry><stentry>The design fulfills the requirement</stentry></strow>
+      <strow><stentry>mitigates</stentry><stentry>design-item → hazard</stentry><stentry>The design reduces or eliminates the hazard</stentry></strow>
+      <strow><stentry>decomposes-to</stentry><stentry>requirement → requirement</stentry><stentry>Parent requirement broken into sub-requirements</stentry></strow>
+      <strow><stentry>derives-from</stentry><stentry>requirement → user-need</stentry><stentry>The requirement originates from a user need</stentry></strow>
+      <strow><stentry>impacts</stentry><stentry>any → any</stentry><stentry>A change to one artifact affects the other</stentry></strow>
+      <strow><stentry>relates-to</stentry><stentry>any ↔ any</stentry><stentry>Loose, non-semantic association</stentry></strow>
+    </simpletable>
+    <p>Direction matters: a <i>verifies</i> link always goes <b>from</b> the test case <b>to</b> the requirement. When you look at the requirement, the same link is shown with its inverse label ("verified by").</p>
+  </conbody>
+</concept>

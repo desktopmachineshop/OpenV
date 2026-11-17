@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="duration-and-effort">
+  <title>Duration and effort</title>
+  <shortdesc>A task has a <b>duration</b>: how many <xref href="#working-days" scope="external" format="html">working days</xref> it runs, counting its first and its last. A task from Monday 1 March to Friday 5 March has a duration of 5 days. The task keeps its duration, so its dates move together:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt.schedule"/>
+  </prolog>
+  <conbody>
+    <simpletable>
+      <sthead><stentry>You change</stentry><stentry>What follows</stentry></sthead>
+      <strow><stentry><b>Start</b></stentry><stentry>The due date moves, the same number of working days later or earlier</stentry></strow>
+      <strow><stentry><b>Due</b></stentry><stentry>The start moves with it</stentry></strow>
+      <strow><stentry><b>Duration</b></stentry><stentry>The due date moves; the start stays</stentry></strow>
+      <strow><stentry>The bar, by dragging it</stentry><stentry>Both dates move</stentry></strow>
+      <strow><stentry>One end of the bar, by dragging it</stentry><stentry>The duration changes</stentry></strow>
+    </simpletable>
+    <p>Tick <b>Elapsed time</b> for a task whose duration is time that simply passes, such as paint curing or a delivery: its duration then counts calendar days, weekends and holidays included.</p>
+    <p>A <b>Deadline</b> is the day a task should be finished by. It moves nothing: it is a marker, a small triangle above the task's row on the chart, green while the task is on course and red once the task ends after it or the day has passed with the task not done, when the panel also says <b>Deadline missed</b>.</p>
+    <p>A task with no dates yet can still be given a duration: it takes effect when the task gets a start or a due date. If a card's due date is changed on the board, the task's duration becomes what its two dates now span.</p>
+    <p><b>Effort</b> is the work in the task, in days of one person's time, and may be a part of a day. It is separate from the duration: three people working for two days is a duration of 2 and an effort of 6. The figures above the chart add up the effort of every task.</p>
+  </conbody>
+</concept>

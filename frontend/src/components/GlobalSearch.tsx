@@ -14,7 +14,9 @@ export const SEARCH_BY_REF_FEATURE: FeatureKey = 'search-by-ref';
 // lives in the project sidebar header, queries GET /api/v1/search (debounced),
 // and shows a dropdown of results grouped by project. Selecting a result deep
 // links into that project's requirements view (?artifact= is the shareable
-// selection param handled by ModuleView).
+// selection param handled by ModuleView). It is a box to find an artifact
+// and jump to it, not a filter: it never narrows the page it sits on, so it
+// has no chips. Filtering is the list's own chip search bar.
 export const GlobalSearch: React.FC = () => {
   const navigate = useNavigate();
   const refSearchOn = useFeature(SEARCH_BY_REF_FEATURE);
@@ -128,7 +130,7 @@ export const GlobalSearch: React.FC = () => {
   let flatIndex = -1;
 
   return (
-    <div ref={containerRef} style={{ position: 'relative' }}>
+    <div ref={containerRef} style={{ position: 'relative' }} data-help-key="requirements.search">
       <input
         ref={inputRef}
         type="search"

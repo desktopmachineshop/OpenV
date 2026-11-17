@@ -23,7 +23,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
@@ -34,11 +33,10 @@ import (
 // project role for an account no row has is that account's 404.
 
 // unreachableFixture is project P (proj-1) of workspace W (org-1), with an
-// artifact, a run and a proposal in it, and W's people-team team-1, its
-// workspace-wide crew crew-1, attribute definition def-1 and an unscoped
-// run, which "stranger" cannot reach: it belongs to workspace org-own only,
-// as editor of its project proj-own, where it has an interview, and as the
-// admin of org-own, whose workspace-wide crew crew-own it may copy. Org-own
+// artifact, a run and a proposal in it, and W's people-team team-1,
+// attribute definition def-1 and an unscoped run, which "stranger" cannot
+// reach: it belongs to workspace org-own only, as editor of its project
+// proj-own, where it has an interview, and as the admin of org-own. Org-own
 // also has a run in proj-own, run-own, and one in its project proj-sib,
 // run-sib. The projects are the real service's over a map, so an update
 // checks a parent as it does against the database.
@@ -51,11 +49,7 @@ func unreachableFixture() *Handler {
 			"proj-own": {ID: "proj-own", OrgID: "org-own"},
 			"proj-sib": {ID: "proj-sib", OrgID: "org-own"},
 		}),
-		OrgTeamService: mapOrgTeams{byID: map[string]*orgs.OrgTeam{"team-1": {ID: "team-1", OrgID: "org-1"}}},
-		TeamService: &fakeCrewGraphs{graphs: map[string]*teams.TeamGraph{
-			"crew-own": {Team: &teams.Team{ID: "crew-own", OrgID: ownOrg, Name: "Own"}},
-			"crew-1":   {Team: &teams.Team{ID: "crew-1", OrgID: w, Name: "W's"}},
-		}},
+		OrgTeamService:   mapOrgTeams{byID: map[string]*orgs.OrgTeam{"team-1": {ID: "team-1", OrgID: "org-1"}}},
 		InterviewService: &oneInterview{interview: &interviews.Interview{ID: "iv-own", ProjectID: "proj-own"}},
 		AttributeService: &fakeAttributeService{byID: map[string]*attributes.Definition{
 			"def-1": {ID: "def-1", OrgID: &w, Key: "w"},
@@ -179,14 +173,6 @@ func TestAResourceTheCallerCannotReachAnswersAsOneNoRowHas(t *testing.T) {
 			return w
 		}
 	}
-	// inQuery sends the id as the query's project_id.
-	inQuery := func(handler func(*Handler) http.HandlerFunc, body string) send {
-		return func(h *Handler, id string) *httptest.ResponseRecorder {
-			w := httptest.NewRecorder()
-			handler(h)(w, asStranger(http.MethodPost, "/?project_id="+id, body, nil))
-			return w
-		}
-	}
 	for _, tc := range []struct {
 		name       string
 		real       string
@@ -212,12 +198,6 @@ func TestAResourceTheCallerCannotReachAnswersAsOneNoRowHas(t *testing.T) {
 			`{"from_id":"ID","to_id":"art-own","type":"relates-to"}`), http.StatusBadRequest, "source artifact not found"},
 		{"a link's target", "art-1", body(func(h *Handler) http.HandlerFunc { return h.CreateLink },
 			`{"from_id":"art-own","to_id":"ID","type":"relates-to"}`), http.StatusBadRequest, "target artifact not found"},
-		{"a crew's pin", "proj-1", body(func(h *Handler) http.HandlerFunc { return h.CreateTeam },
-			`{"name":"Crew","project_id":"ID"}`), http.StatusBadRequest, "project not found"},
-		{"a crew copy's pin", "proj-1", on(func(h *Handler) http.HandlerFunc { return h.CloneTeam },
-			http.MethodPost, "crew-own", `{"name":"Copy","project_id":"ID"}`), http.StatusBadRequest, "project not found"},
-		{"a crew import's pin", "proj-1", inQuery(func(h *Handler) http.HandlerFunc { return h.ImportCrew }, `{}`),
-			http.StatusBadRequest, "project not found"},
 		{"an artifact's update", "art-1", pathWith(func(h *Handler) http.HandlerFunc { return h.UpdateArtifact },
 			http.MethodPut, `{"title":"Renamed"}`), http.StatusNotFound, "artifact not found"},
 		{"an artifact's restore", "art-1", pathWith(func(h *Handler) http.HandlerFunc { return h.RestoreArtifactVersion },
@@ -226,8 +206,6 @@ func TestAResourceTheCallerCannotReachAnswersAsOneNoRowHas(t *testing.T) {
 			http.MethodPut, "proj-own", `{"parent_project_id":"ID"}`), http.StatusBadRequest, "parent project not found"},
 		{"a people-team granted a project", "team-1", on(func(h *Handler) http.HandlerFunc { return h.GrantProjectTeamAccess },
 			http.MethodPut, "proj-own", `{"org_team_id":"ID","role":"viewer"}`), http.StatusNotFound, "team not found"},
-		{"a work item's crew assignee", "crew-1", on(func(h *Handler) http.HandlerFunc { return h.CreateWorkItem },
-			http.MethodPost, "proj-own", `{"title":"T","assignee_type":"team","assignee_id":"ID"}`), http.StatusNotFound, "team not found"},
 		{"a new interview's persona", "art-1", on(func(h *Handler) http.HandlerFunc { return h.CreateInterview },
 			http.MethodPost, "proj-own", `{"name":"I","persona_artifact_id":"ID"}`), http.StatusBadRequest, "persona artifact not found"},
 		{"an interview's persona", "art-1", on(func(h *Handler) http.HandlerFunc { return h.SetInterviewPersona },
@@ -304,10 +282,6 @@ func TestAnotherWorkspacesKeyOrRunAnswersAsForAnIDNoRowHas(t *testing.T) {
 			http.MethodPut, ownKey, "def-1", `404 {"error":"attribute definition not found"}`},
 		{"a workspace-wide definition's delete, a run token", func(h *Handler) http.HandlerFunc { return h.DeleteAttributeDefinition },
 			http.MethodDelete, ownRun, "def-1", `404 {"error":"attribute definition not found"}`},
-		{"another workspace's run, polled as a delegation", func(h *Handler) http.HandlerFunc { return h.DelegateStatus },
-			http.MethodGet, ownRun, "run-1", `404 {"error":"agent run not found"}`},
-		{"a sibling project's run, polled as a delegation", func(h *Handler) http.HandlerFunc { return h.DelegateStatus },
-			http.MethodGet, ownRun, "run-sib", `404 {"error":"agent run not found"}`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			answer := func(w *httptest.ResponseRecorder) string {
@@ -322,22 +296,17 @@ func TestAnotherWorkspacesKeyOrRunAnswersAsForAnIDNoRowHas(t *testing.T) {
 		})
 	}
 
-	// W's own key and a run of its own project keep what they got: the
-	// guard's 401 for a caller with no session, and a run of the caller's
-	// project that is not its child the delegation's 403.
+	// W's own key keeps what it got: the guard's 401 for a caller with no
+	// session.
 	wKey := with(ctxWorkerOrg, "org-1")
 	if w := send(func(h *Handler) http.HandlerFunc { return h.UpdateOrgTeam }, http.MethodPut, wKey, "team-1"); w.Code != http.StatusUnauthorized {
 		t.Fatalf("W's key on W's people-team: %d %q, want the guard's 401", w.Code, w.Body.String())
 	}
-	sibRun := with(ctxRun, &agentruns.Run{ID: "run-other", OrgID: "org-own", ProjectID: func() *string { p := "proj-sib"; return &p }()})
-	if w := send(func(h *Handler) http.HandlerFunc { return h.DelegateStatus }, http.MethodGet, sibRun, "run-sib"); w.Code != http.StatusForbidden {
-		t.Fatalf("a run of the caller's own project, not its child: %d %q, want 403", w.Code, w.Body.String())
-	}
 }
 
 // What the body names in a project or workspace the caller does reach is
-// refused for what it is: a parent, a people-team, a work item's crew
-// assignee or a persona of another workspace or project.
+// refused for what it is: a parent, a people-team or a persona of another
+// workspace or project.
 func TestWhatTheCallerReachesElsewhereIsRefusedAsSuch(t *testing.T) {
 	h := unreachableFixture()
 	h.OrgService.(*roleAnyOrgs).roles["org-1"]["stranger"] = orgs.RoleMember
@@ -354,8 +323,6 @@ func TestWhatTheCallerReachesElsewhereIsRefusedAsSuch(t *testing.T) {
 			`400 {"error":"a parent project must be in the same workspace"}`},
 		{"a people-team", h.GrantProjectTeamAccess, http.MethodPut, "proj-own", `{"org_team_id":"team-1","role":"viewer"}`,
 			`400 {"error":"team belongs to a different workspace"}`},
-		{"a work item's crew assignee", h.CreateWorkItem, http.MethodPost, "proj-own",
-			`{"title":"T","assignee_type":"team","assignee_id":"crew-1"}`, `400 {"error":"team belongs to a different workspace"}`},
 		{"a persona", h.CreateInterview, http.MethodPost, "proj-own", `{"name":"I","persona_artifact_id":"art-1"}`,
 			`400 {"error":"persona artifact belongs to a different project"}`},
 	} {

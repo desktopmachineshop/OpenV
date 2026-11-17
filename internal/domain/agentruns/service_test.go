@@ -333,7 +333,7 @@ func TestLaunchCapturesReproducibilitySnapshot(t *testing.T) {
 // TestRetryEnqueuesFreshRunWithProvenance locks in the retry contract: a NEW
 // queued run copying org/agent/project/prompt, launched by the retrying user
 // (not the original launcher), with retried_from_run_id set — and none of the
-// source's automation/crew/delegation/kanban links or terminal state.
+// source's automation/delegation/kanban links or terminal state.
 func TestRetryEnqueuesFreshRunWithProvenance(t *testing.T) {
 	project := "proj-1"
 	source := &Run{
@@ -342,7 +342,6 @@ func TestRetryEnqueuesFreshRunWithProvenance(t *testing.T) {
 		AgentID:      "agent-1",
 		ProjectID:    &project,
 		AutomationID: strptr("auto-1"),
-		TeamID:       strptr("team-1"),
 		ParentRunID:  strptr("parent-1"),
 		WorkItemID:   strptr("card-1"),
 		Status:       StatusFailed,
@@ -375,8 +374,8 @@ func TestRetryEnqueuesFreshRunWithProvenance(t *testing.T) {
 	if run.LaunchedBy == nil || *run.LaunchedBy != "retrying-user" {
 		t.Errorf("launched_by = %v, want the retrying user", run.LaunchedBy)
 	}
-	if run.AutomationID != nil || run.TeamID != nil || run.ParentRunID != nil || run.WorkItemID != nil {
-		t.Errorf("automation/crew/delegation/kanban links must not be copied: %+v", run)
+	if run.AutomationID != nil || run.ParentRunID != nil || run.WorkItemID != nil {
+		t.Errorf("automation/delegation/kanban links must not be copied: %+v", run)
 	}
 	if run.Priority != PriorityNormal {
 		t.Errorf("priority = %d, want normal for a manual retry", run.Priority)
@@ -1143,5 +1142,20 @@ func TestTruncateRuneSafety(t *testing.T) {
 	got := Truncate("aéé", 3)
 	if got != "aé…" {
 		t.Errorf("Truncate = %q, want %q", got, "aé…")
+	}
+}
+
+// An archived agent cannot be run: the launch is refused before a run or a
+// token exists.
+func TestLaunchRefusesAnArchivedAgent(t *testing.T) {
+	catalog := &fakeAgentCatalog{byID: map[string]*agents.Agent{"agent-1": {ID: "agent-1", Name: "Chief of Staff", Provider: "claude", Archived: true}}}
+	repo := &fakeRunRepo{runs: map[string]*Run{}, logs: map[string][]LogEntry{}}
+	svc := NewDefaultService(repo, catalog, nil)
+	_, _, err := svc.Launch(LaunchRequest{OrgID: "org-1", AgentID: "agent-1", Prompt: "plan it"})
+	if !errors.Is(err, agents.ErrArchived) {
+		t.Fatalf("launch = %v, want agents.ErrArchived", err)
+	}
+	if len(repo.runs) != 0 {
+		t.Fatalf("a run was stored for an archived agent: %d", len(repo.runs))
 	}
 }

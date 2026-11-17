@@ -4,6 +4,9 @@ import { Org, OrgInvitation, OrgMember, User, orgsAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import { ErrorBanner, useConfirm } from '../ui';
 import { Avatar } from '../Avatar';
+import { InvitationRows, MemberRows } from './OrgMembersRows';
+import { useUiRefresh } from '../../hooks/useUiRefresh';
+import { useViewport } from '../../hooks/useViewport';
 
 const th: React.CSSProperties = {
   textAlign: 'left',
@@ -29,6 +32,9 @@ interface OrgMembersTabProps {
 export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, currentUser }) => {
   const navigate = useNavigate();
   const confirm = useConfirm();
+  const refresh = useUiRefresh();
+  const { isPhone } = useViewport();
+  const rows = refresh && isPhone;
   const [members, setMembers] = useState<OrgMember[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -217,6 +223,8 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
         <h3>Workspace members</h3>
         {loading ? (
           <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading members…</div>
+        ) : rows ? (
+          <MemberRows members={members} selfId={currentUser?.id} isAdmin={isAdmin} onRole={handleSetRole} onRemove={handleRemove} />
         ) : (
           <div className="table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -291,6 +299,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
             People who have been invited but have not joined yet. An invitation expires after seven
             days; revoking one stops its link working immediately.
           </p>
+          {rows ? <InvitationRows invitations={invitations} onRevoke={handleRevokeInvitation} /> : (
           <div className="table-scroll">
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <thead>
@@ -320,6 +329,7 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
               </tbody>
             </table>
           </div>
+          )}
         </div>
       )}
 

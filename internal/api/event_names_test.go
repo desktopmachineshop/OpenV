@@ -67,6 +67,8 @@ func namingHandler(t *testing.T) (*Handler, *fakeNameUserService) {
 			"a1": {ID: "a1", Ref: "REQ-12", Title: "The positioner shall comply with UL1740"},
 			"a2": {ID: "a2", Ref: "TC-3", Title: "Compliance test"},
 			"a3": {ID: "a3", Title: "Untitled ref-less artifact"},
+		}, versions: map[string][]*artifacts.Artifact{
+			"gone": {{ID: "gone", Ref: "REQ-7", Title: "Brake within 2 m", Version: 3}, {ID: "gone", Ref: "REQ-7", Title: "Brake", Version: 2}},
 		}}
 		h.WorkItemService = &fakeNameWorkItemService{byID: map[string]*workitems.WorkItem{
 			"w1": {ID: "w1", Title: "Wire the safety interlock"},
@@ -189,6 +191,24 @@ func TestDecorateEventsNames(t *testing.T) {
 			entityKind: "artifact", entityName: "Untitled ref-less artifact",
 		},
 		{
+			name: "a deleted artifact is named by its last version, marked deleted",
+			event: events.Event{
+				EventType: events.ArtifactUpdated, EntityID: "gone", Actor: "user:u1",
+				Payload: map[string]interface{}{"title": "Brake"},
+			},
+			actorKind: "user", actorID: "u1", actorName: "Dana Ross",
+			entityKind: "artifact", entityName: "REQ-7 Brake within 2 m (archived)",
+		},
+		{
+			name: "a link names both ends, a deleted one marked",
+			event: events.Event{
+				EventType: events.LinkDeleted, EntityID: "l1", Actor: "user:u1",
+				Payload: map[string]interface{}{"link_type": "verifies", "from_id": "a2", "to_id": "gone"},
+			},
+			actorKind: "user", actorID: "u1", actorName: "Dana Ross",
+			entityKind: "verifies", entityName: "TC-3 Compliance test → REQ-7 Brake within 2 m (archived)",
+		},
+		{
 			name:      "unknown user leaves the name empty rather than inventing one",
 			event:     events.Event{EventType: events.ArtifactDeleted, EntityID: "missing", Actor: "user:ghost"},
 			actorKind: "user", actorID: "ghost", actorName: "",
@@ -298,5 +318,25 @@ func TestListDomainEventsServesNames(t *testing.T) {
 		if got, _ := list[0][key].(string); got != wantVal {
 			t.Errorf("%s = %q, want %q", key, got, wantVal)
 		}
+	}
+}
+
+// The ids of deleted artifacts an event names ride along, so a client opens
+// their history instead of guessing from a name.
+func TestDecorateEventsListsArchivedArtifacts(t *testing.T) {
+	h, _ := namingHandler(t)
+	got := h.decorateEvents([]events.Event{
+		{EventType: events.LinkCreated, EntityID: "l1", Payload: map[string]interface{}{"from_id": "gone", "to_id": "a1"}},
+		{EventType: events.ChatterCreated, EntityID: "c1", Payload: map[string]interface{}{"artifact_id": "gone"}},
+		{EventType: events.ArtifactUpdated, EntityID: "a1"},
+	})
+	if len(got[0].ArchivedArtifacts) != 1 || got[0].ArchivedArtifacts[0] != "gone" {
+		t.Errorf("link: deleted = %v, want [gone]", got[0].ArchivedArtifacts)
+	}
+	if len(got[1].ArchivedArtifacts) != 1 {
+		t.Errorf("comment: deleted = %v, want [gone]", got[1].ArchivedArtifacts)
+	}
+	if got[2].ArchivedArtifacts != nil {
+		t.Errorf("a live artifact is listed as deleted: %v", got[2].ArchivedArtifacts)
 	}
 }

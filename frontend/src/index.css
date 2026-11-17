@@ -80,34 +80,41 @@ code {
   background-color: var(--accent-strong);
 }
 
+/* One action colour (the design system): .button is a page's primary action
+   in the accent blue, bold so white on it reads; .button-secondary is a quiet
+   outline for everything beside it. Destructive actions keep their own red. */
 .button {
-  background-color: var(--success);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
+  background-color: var(--accent-strong);
+  color: #fff;
+  border: 1px solid var(--accent-strong);
+  padding: 8px 16px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  transition: background-color 0.3s;
+  font-weight: 600;
+  transition: background-color 0.2s, border-color 0.2s;
 }
 
 .button:hover {
-  background-color: var(--success-strong);
+  background-color: var(--accent);
+  border-color: var(--accent);
 }
 
 .button-secondary {
-  background-color: var(--neutral);
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 4px;
+  background-color: var(--surface);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 8px 16px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
-  transition: background-color 0.3s;
+  font-weight: 600;
+  transition: background-color 0.2s;
 }
 
 .button-secondary:hover {
-  background-color: var(--text-muted);
+  background-color: var(--surface-hover);
+  color: var(--text);
 }
 
 .form-group {
@@ -254,6 +261,39 @@ input:focus, textarea:focus, select:focus {
   }
 }
 
+/* One gutter for every page of the refreshed interface (ui-refresh): 16px
+   on a computer, 12px on a narrow screen, whatever padding the page was
+   written with. A page's root carries ov-gutter. */
+.ov-refresh .ov-gutter {
+  padding: 16px !important;
+}
+@media (max-width: 900px) {
+  .ov-refresh .ov-gutter {
+    padding: 12px !important;
+  }
+  .ov-refresh .ov-page {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .ov-refresh .ov-settings.is-phone .ov-settings-main {
+    padding: 12px 12px 16px;
+  }
+}
+
+/* A small control drawn for a mouse (a zoom button, a chip's cross) that a
+   finger must also hit: at least 24px each way, and 36px on a touch screen. */
+.ov-tap {
+  min-width: 24px;
+  min-height: 24px;
+}
+@media (hover: none) and (pointer: coarse) {
+  .ov-tap {
+    /* Over an inline minimum drawn for a mouse. */
+    min-width: 36px !important;
+    min-height: 36px !important;
+  }
+}
+
 /* A sheet of actions on a phone: every control full width and tall enough
    to tap, in the order the toolbar showed them. */
 .action-sheet {
@@ -362,7 +402,10 @@ textarea {
   box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.ag-theme-quartz {
+/* The grid's own stylesheet arrives with the lazy views that draw one, so
+   after this file: the doubled class outranks its defaults, which a single
+   class lost to and left the grid white on the dark theme. */
+.ag-theme-quartz.ag-theme-quartz {
   --ag-background-color: var(--surface);
   --ag-border-color: var(--border);
   --ag-header-background-color: var(--surface-inset);
@@ -374,6 +417,9 @@ textarea {
   --ag-control-panel-background-color: var(--surface-alt);
   --ag-tooltip-background-color: var(--surface-alt);
   --ag-input-background-color: var(--surface);
+  --ag-selected-row-background-color: var(--tint-blue);
+  --ag-active-color: var(--accent);
+  color-scheme: inherit;
 }
 
 /* Markdown Content Styling */
@@ -582,4 +628,1423 @@ textarea {
 }
 .panel-edge-strip:hover .panel-edge-strip-knob {
   opacity: 1;
+}
+
+/* The compact project layout (compact-layout feature key; ProjectLayoutRail.tsx
+   and ProjectLayoutTabs.tsx): a 64 px icon rail, one top bar, and on a phone
+   a tab bar along the bottom. The rail and the bar use the sidebar's tokens,
+   so both themes follow; the top bar sits on the page's surface. */
+.ov-layout {
+  display: flex;
+  overflow: hidden;
+}
+.ov-layout-column {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ov-layout-main {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg-app);
+}
+.ov-rail {
+  position: relative;
+  z-index: 900;
+  flex: 0 0 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 0;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text-dim);
+}
+.ov-rail-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  margin-top: 6px;
+}
+.ov-rail-item {
+  width: 54px;
+  min-height: 48px;
+  padding: 6px 0 5px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--sidebar-text-dim);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.15;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.ov-rail-item span {
+  max-width: 52px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-rail-item:hover,
+.ov-rail-item[aria-expanded='true'] {
+  background: var(--sidebar-menu-bg);
+  color: var(--sidebar-text);
+}
+.ov-rail-item.active,
+.ov-rail-item.is-current {
+  background: var(--sidebar-menu-bg);
+  color: #fff;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+.ov-rail-item:focus-visible,
+.ov-rail-flyout-link:focus-visible,
+.ov-tabbar-item:focus-visible,
+.ov-topbar-help:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.ov-rail-rule {
+  /* A rule that reads against the dark rail: wider, two pixels, and in the
+     rail's faint text color rather than its border, which all but vanished. */
+  width: 44px;
+  height: 2px;
+  margin: 8px 0;
+  border-radius: 1px;
+  background: var(--sidebar-text-faint);
+  opacity: 0.55;
+}
+.ov-rail-flyout {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 64px;
+  width: 232px;
+  box-sizing: border-box;
+  padding: 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  background: var(--sidebar-menu-bg);
+  border-left: 1px solid var(--sidebar-border);
+  box-shadow: 6px 0 18px rgba(0, 0, 0, 0.18);
+}
+.ov-rail-flyout-title {
+  padding: 4px 10px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--sidebar-text-faint);
+}
+.ov-rail-flyout-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: var(--sidebar-text);
+  font-size: 14px;
+  text-decoration: none;
+}
+.ov-rail-flyout-link:hover {
+  background: var(--sidebar-bg);
+}
+.ov-rail-flyout-link.active {
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-weight: 600;
+}
+.ov-topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 12px 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+}
+.ov-topbar-org {
+  /* The workspace name takes the room it needs and gives it up, with an
+     ellipsis, only when the bar runs out (#727); the search keeps its
+     minimum. A narrow window keeps the old cap for the account controls. */
+  min-width: 0;
+  flex: 0 1 auto;
+}
+@media (max-width: 640px) {
+  .ov-topbar-org {
+    max-width: 42vw;
+  }
+}
+.ov-topbar-sep {
+  color: var(--neutral-mid);
+  flex-shrink: 0;
+}
+.ov-topbar-crumbs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1 1 auto;
+  font-size: 14px;
+}
+.ov-topbar-project {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-weight: 600;
+  text-decoration: none;
+}
+.ov-topbar-project:hover {
+  text-decoration: underline;
+}
+/* The project switcher (ProjectLayoutSwitcher): the project crumb is a
+   button that opens the workspace's projects, on every page with the bar. */
+.ov-project-switcher {
+  position: relative;
+  min-width: 0;
+  display: flex;
+}
+button.ov-topbar-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 100%;
+  min-height: 32px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+button.ov-topbar-project:hover,
+button.ov-topbar-project[aria-expanded='true'] {
+  text-decoration: none;
+  background: var(--surface-hover);
+}
+.ov-project-switcher-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-project-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 1000;
+  width: 280px;
+  max-width: calc(100vw - 24px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+.ov-project-list-items {
+  max-height: 320px;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+.ov-project-list-foot {
+  border-top: 1px solid var(--border-soft);
+  padding: 4px 0;
+}
+.ov-project-list-link {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 12px;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-project-list-link:hover,
+.ov-project-list-link:focus-visible {
+  background: var(--surface-hover);
+  text-decoration: none;
+}
+.ov-project-list-link[aria-current='true'] {
+  background: var(--tint-blue);
+  box-shadow: inset 3px 0 0 var(--accent);
+  font-weight: 600;
+}
+.ov-project-list-link.is-new {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+.ov-project-list-note {
+  display: block;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ov-project-switcher.is-dark button.ov-topbar-project {
+  color: var(--sidebar-text);
+  padding: 0 4px 0 0;
+  min-height: 36px;
+  font-size: 14px;
+}
+.ov-project-switcher.is-dark button.ov-topbar-project:hover,
+.ov-project-switcher.is-dark button.ov-topbar-project[aria-expanded='true'] {
+  background: transparent;
+  text-decoration: underline;
+}
+.ov-phone-header-ws {
+  padding-left: 12px;
+  min-height: 64px;
+}
+.ov-phone-account {
+  display: inline-flex;
+  margin-left: 6px;
+}
+/* The help button of a workspace page's phone header: the size of the bell
+   beside it, so the header's three controls are evenly spaced. */
+.ov-phone-icon {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  /* The bell's colour, so the two icons read as a pair. */
+  color: var(--sidebar-text-dim);
+  font-size: 20px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* A workspace page's rail (ProjectLayoutWorkspace) is fixed to the left
+   edge and the page is padded past it, so the page keeps its own layout. */
+.ov-rail.ov-rail-fixed {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 64px;
+}
+body.ov-has-rail {
+  padding-left: 64px;
+}
+
+.ov-topbar-page {
+  flex-shrink: 0;
+  color: var(--text-secondary);
+}
+.ov-topbar-search {
+  flex: 0 1 320px;
+  min-width: 160px;
+}
+/* GlobalSearch draws its box for the dark sidebar; on the light bar it takes
+   the page's field colours instead. */
+.ov-topbar-search input[type='search'] {
+  background: var(--surface-alt) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+  padding: 6px 10px !important;
+  font-size: 13px !important;
+}
+.ov-topbar-search input[type='search']:focus {
+  border-color: var(--accent) !important;
+}
+.ov-topbar-help {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.ov-topbar-help:hover,
+.ov-topbar-help[aria-expanded='true'] {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+.ov-tabbar {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  min-height: 56px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+}
+.ov-tabbar-item {
+  min-height: 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+.ov-tabbar-item.active {
+  color: var(--accent-strong);
+  font-weight: 700;
+}
+
+/* ---- The compact page vocabulary (Reviews, Settings and the pages brought
+   to the same look): a page head with a 20px title, cards with a 1px border
+   and a 6px radius, uppercase 11px section labels, chip tabs on a phone. */
+.ov-page {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.ov-page-head {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
+.ov-page-head h1,
+.ov-page-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+.ov-page-sub {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.ov-section-label {
+  margin: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+.ov-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-width: 0;
+}
+.ov-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.ov-card-head h2,
+.ov-card-head h3 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ov-dense-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.ov-dense-table th {
+  text-align: left;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-alt);
+}
+.ov-dense-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: middle;
+}
+.ov-ref {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-text);
+}
+.ov-chip-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 16px;
+  margin: 0 -16px;
+  overflow-x: auto;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  scrollbar-width: none;
+}
+.ov-chip-tab {
+  flex: none;
+  width: auto;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.ov-chip-tab[aria-selected='true'] {
+  background: var(--sidebar-bg);
+  border-color: var(--sidebar-bg);
+  color: #fff;
+  font-weight: 600;
+}
+.ov-chip-tab:focus-visible,
+.ov-settings-nav-item:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* The review board. */
+.ov-review.is-phone {
+  padding-top: 0;
+}
+.ov-review.is-phone > .ov-page-head {
+  padding-top: 12px;
+}
+.ov-review-summary {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+}
+.ov-board {
+  display: grid;
+  grid-template-columns: repeat(var(--ov-board-cols, 4), minmax(260px, 1fr));
+  gap: 12px;
+  align-items: start;
+  overflow-x: auto;
+}
+.ov-review.is-phone .ov-board {
+  grid-template-columns: minmax(0, 1fr);
+  overflow-x: visible;
+}
+.ov-board-col {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  min-width: 0;
+  background: var(--surface-inset);
+  border-radius: 8px;
+}
+.ov-board-col.is-phone {
+  padding: 0;
+  gap: 10px;
+  background: none;
+}
+.ov-board-col.is-phone > .ov-board-col-head {
+  display: none;
+}
+.ov-board-col-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+}
+.ov-board-col-head h3 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.ov-board-dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.ov-board-count {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.ov-board-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 0 4px;
+}
+.ov-board-selectall {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 4px 0 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.ov-board-empty {
+  padding: 8px 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.ov-board-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  color: var(--text);
+}
+.ov-board-card:hover {
+  border-color: var(--neutral-mid);
+}
+.ov-board-card.is-phone {
+  gap: 8px;
+  padding: 12px;
+}
+.ov-board-card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.ov-board-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.ov-board-title {
+  display: inline-block;
+  padding: 4px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+a.ov-board-title:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+.ov-board-card.is-phone .ov-board-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+.ov-board-card.is-phone a.ov-board-title {
+  padding: 7px 0;
+  margin: -7px 0;
+}
+.ov-board-note {
+  font-size: 12px;
+  color: var(--text-body);
+  overflow-wrap: anywhere;
+}
+.ov-board-card.is-phone .ov-board-note {
+  font-size: 13px;
+}
+.ov-board-link-end {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.ov-board-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-top: 2px;
+}
+.ov-board-card.is-phone .ov-board-actions {
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+/* The phone top bar: the project small above the page's name. */
+.ov-phone-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 56px;
+  padding-right: 8px;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  flex-shrink: 0;
+}
+.ov-phone-title {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.ov-phone-title-project,
+.ov-phone-title-page {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ov-phone-title-project {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sidebar-text-dim);
+}
+.ov-phone-title-page {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+/* Settings: a left sub-nav and the open section at a reading measure. */
+.ov-settings {
+  display: flex;
+  align-items: stretch;
+  min-height: 100%;
+}
+.ov-settings-nav {
+  flex: 0 0 210px;
+  box-sizing: border-box;
+  padding: 12px 8px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ov-settings-nav .ov-settings-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.ov-settings-nav-item {
+  width: 100%;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.ov-settings-nav-item:hover {
+  background: var(--surface-hover);
+}
+.ov-settings-nav-item[aria-selected='true'] {
+  background: var(--tint-blue);
+  color: var(--accent-text);
+}
+.ov-settings-nav-item.is-danger {
+  margin-top: 12px;
+  color: var(--danger-strong);
+}
+.ov-settings-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 16px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.ov-settings-main > * {
+  max-width: 960px;
+  width: 100%;
+  box-sizing: border-box;
+}
+/* A settings pane's cards are spaced by their own margin, the same 12 px
+   whether the pane lists them directly or wraps some in a section of its
+   own (workspace settings is not a tabpanel; several panes nest a group of
+   cards in one element), so no pane can lose or double its gaps. */
+.ov-settings-main [role='tabpanel'],
+.ov-settings-main .ov-settings-panel {
+  display: block;
+}
+.ov-settings-main .card {
+  margin: 0 0 12px;
+  padding: 16px;
+  border-radius: 6px;
+  box-shadow: none;
+}
+.ov-settings-main .card h3 {
+  font-size: 15px;
+  font-weight: 600;
+}
+.ov-settings-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ov-settings-head h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text);
+}
+.ov-settings-head p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-body);
+}
+.ov-settings.is-phone {
+  display: block;
+}
+.ov-settings.is-phone .ov-chip-tabs {
+  margin: 0;
+}
+.ov-settings.is-phone .ov-settings-tabs {
+  display: flex;
+  gap: 6px;
+}
+.ov-settings.is-phone .ov-chip-tab.is-danger {
+  color: var(--danger-strong);
+}
+.ov-settings.is-phone .ov-chip-tab.is-danger[aria-selected='true'] {
+  color: #fff;
+}
+.ov-settings.is-phone .ov-settings-main {
+  padding: 12px 16px 16px;
+}
+.ov-settings.is-phone .ov-settings-main .card {
+  padding: 12px;
+}
+
+/* A switch: a checkbox drawn as a toggle, as the rules of the design are. */
+input[type='checkbox'].ov-switch {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  position: relative;
+  width: 36px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--neutral-mid);
+  border-radius: 999px;
+  background: var(--neutral-soft);
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+input[type='checkbox'].ov-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+  transition: transform 0.15s;
+}
+input[type='checkbox'].ov-switch:checked {
+  background: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+input[type='checkbox'].ov-switch:checked::after {
+  transform: translateX(16px);
+}
+input[type='checkbox'].ov-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+input[type='checkbox'].ov-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* The quality rules: one row per rule, a switch, the rule, its severity. */
+.ov-rule-list {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+}
+.ov-rule-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.ov-rule-row:last-child {
+  border-bottom: none;
+}
+.ov-rule-row select {
+  height: 30px;
+  padding: 0 6px;
+}
+
+.ov-board-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.ov-page.is-phone > .ov-page-head > .ov-page-sub {
+  display: none;
+}
+.ov-settings {
+  flex: 1 1 auto;
+}
+
+/* The More page: the project menu on a phone in the compact layout. */
+.ov-more {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg-app);
+  color: var(--text);
+}
+.ov-more-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  min-height: 56px;
+  padding: env(safe-area-inset-top, 0px) 4px 0 16px;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+}
+.ov-more-title {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 700;
+}
+.ov-more-close {
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: none;
+  color: var(--sidebar-text);
+  font-size: 20px;
+  cursor: pointer;
+}
+.ov-more-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 12px 16px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ov-more-body > *,
+.ov-more-nav > * {
+  flex-shrink: 0;
+}
+.ov-more-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.ov-more-project {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.ov-more-project-tile {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--sidebar-bg);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+.ov-more-row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 15px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.ov-more-meta {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+.ov-more-tools {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px;
+  overflow: visible;
+}
+.ov-more-search input[type='search'] {
+  background: var(--surface-alt) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+.ov-more-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.ov-more-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ov-more-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  margin: 0;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-align: left;
+  cursor: pointer;
+}
+.ov-more-label.is-static {
+  cursor: default;
+  min-height: 0;
+}
+.ov-more-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-soft);
+  color: var(--text);
+  text-decoration: none;
+}
+.ov-more-row:last-child {
+  border-bottom: none;
+}
+.ov-more-row.active {
+  background: var(--tint-blue);
+}
+.ov-more-row.active .ov-more-row-text {
+  font-weight: 700;
+  color: var(--accent-text);
+}
+.ov-more-icon {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--tint-blue);
+  color: var(--accent-text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ov-more-you {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: var(--sidebar-bg);
+  color: var(--sidebar-text);
+}
+.ov-more-row:focus-visible,
+.ov-more-project:focus-visible,
+.ov-more-label:focus-visible,
+.ov-more-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Prose and single fields keep to a reading measure inside a settings card. */
+.ov-settings-main p {
+  max-width: 72ch;
+}
+.ov-settings-main select,
+.ov-settings-main input:not([type='checkbox']):not([type='radio']) {
+  max-width: 480px;
+}
+
+/* A dense row that reacts to the pointer: the V&V tables and lists, and the
+   requirements table, tree and phone list. The hover tint leaves a selected
+   row's blue alone, and the keyboard gets a visible focus ring (the
+   requirements rows take Enter, the arrows and Alt+arrows). */
+.ov-row:hover:not([aria-selected="true"]) {
+  background-color: var(--surface-hover) !important;
+}
+
+.ov-row:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* The V&V dashboard's gap rows: the ✦ that drafts tests for one gap in the
+   floating assistant shows on hover and on focus, and always on a touch
+   screen, which cannot hover. */
+.vv-gap-row .vv-gap-ask {
+  opacity: 0;
+}
+.vv-gap-row:hover .vv-gap-ask,
+.vv-gap-row:focus-within .vv-gap-ask {
+  opacity: 1;
+}
+.vv-gap-row:hover {
+  background-color: var(--surface-hover);
+}
+@media (hover: none) {
+  .vv-gap-row .vv-gap-ask {
+    opacity: 1;
+  }
+}
+
+/* ---- The refreshed shell (the ui-refresh feature key): the row of the
+   current group's pages, the page's name shown once, and the phone's More
+   page as tiles. */
+.ov-grouptabs {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  gap: 22px;
+  min-height: 38px;
+  padding: 0 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ov-grouptabs::-webkit-scrollbar {
+  display: none;
+}
+.ov-grouptabs-group {
+  align-self: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.ov-grouptabs-link {
+  display: flex;
+  align-items: center;
+  flex: none;
+  padding: 0 2px;
+  border-bottom: 2px solid transparent;
+  color: var(--text-muted);
+  font-size: 13.5px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.ov-grouptabs-link:hover {
+  color: var(--text);
+}
+.ov-grouptabs-link.active {
+  border-bottom-color: var(--accent);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+.ov-grouptabs-link:focus-visible,
+.ov-more-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+/* The row names the page, so a page's own heading of the same name is kept
+   for assistive technology and taken out of the layout. */
+.ov-refresh .ov-page-title {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  white-space: nowrap;
+}
+.ov-phone-shell {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.ov-phone-shell .ov-grouptabs {
+  min-height: 44px;
+}
+/* On a phone the bar underneath already names the group. */
+.ov-phone-shell .ov-grouptabs-group {
+  display: none;
+}
+.ov-phone-shell .ov-grouptabs {
+  gap: 10px;
+  padding: 0 10px;
+}
+.ov-phone-shell .ov-grouptabs-link {
+  min-width: 32px;
+  justify-content: center;
+  padding: 0 6px;
+  font-size: 14px;
+}
+.ov-phone-header-refresh {
+  padding-left: 16px;
+}
+.ov-phone-header-refresh .ov-phone-title-page {
+  font-size: 16px;
+}
+.ov-phone-main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg-app);
+}
+.ov-more-refresh {
+  flex: 1;
+  height: auto;
+}
+.ov-more-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+.ov-more-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 60px;
+  padding: 6px 2px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.2;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+.ov-more-tile svg {
+  color: var(--accent-strong);
+}
+.ov-more-tile.active {
+  border-color: var(--tint-blue-border);
+  background: var(--tint-blue);
+  color: var(--accent-text);
+  font-weight: 700;
+}
+/* Four tiles a row fit "Requirements" down to about 360 px; below that, three. */
+@media (max-width: 359px) {
+  .ov-more-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+/* A row that held a title and its actions keeps the actions at its end once
+   the title is out of the layout. */
+.ov-refresh .ov-page-title + :is(button, a, div):last-child {
+  margin-left: auto;
+}
+/* Room under the last row of More for what floats over the page's corner
+   (the assistant's button), so the account menu is never under it. */
+.ov-more-refresh .ov-more-body {
+  padding-bottom: 88px;
+}
+
+/* ---- The action menu (components/ui/ActionMenu.tsx): a popover under its
+   trigger on a computer, a sheet from the bottom of the screen on a phone. */
+.ov-action-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  padding: 4px 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+.ov-action-menu.is-sheet {
+  position: fixed;
+  top: auto;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1601;
+  padding: 8px 0 12px;
+  border: none;
+  border-radius: 14px 14px 0 0;
+  box-shadow: 0 -6px 24px rgba(0, 0, 0, 0.2);
+}
+.ov-action-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 1600;
+  background: var(--overlay);
+}
+.ov-action-item {
+  display: block;
+  width: 100%;
+  padding: 7px 12px;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.ov-action-menu.is-sheet .ov-action-item {
+  min-height: 48px;
+  padding: 0 20px;
+  font-size: 15px;
+}
+.ov-action-item:hover:not(:disabled),
+.ov-action-item:focus-visible {
+  background: var(--surface-hover);
+  outline: none;
+}
+.ov-action-item.is-danger {
+  color: var(--danger-strong);
+}
+.ov-action-item:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+.ov-toolbar-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 1000;
+  width: 260px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+}
+.ov-toolbar-menu.action-sheet > button,
+.ov-toolbar-menu.action-sheet > select {
+  min-height: 32px;
+  font-size: 13px;
+}
+/* An open artifact on a phone is a screen of its own (usePushedScreen): the
+   shell's row of pages and its bottom bar step aside for it. */
+.ov-pushed .ov-phone-shell > .ov-grouptabs,
+.ov-pushed .ov-phone-shell > .ov-tabbar {
+  display: none;
+}
+
+/* The Overview of the refreshed interface: what the product is on the left,
+   where the project stands on the right; stacked on a narrow screen, with
+   what needs you first. */
+.ov-overview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 400px);
+  gap: 16px;
+  align-items: start;
+}
+.ov-overview-status {
+  position: sticky;
+  top: 16px;
+  min-width: 0;
+}
+@media (max-width: 900px) {
+  .ov-overview {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ov-overview-status {
+    position: static;
+    order: -1;
+  }
+}
+
+/* The bottom bar of a workspace page on a phone (ui-refresh): fixed to the
+   foot of the window, with the page padded clear of it. Inside a project the
+   bar is a row of the shell's column instead. */
+.ov-tabbar-fixed {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 890;
+}
+body.ov-has-tabbar {
+  padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+}
+.ov-tabbar-item.is-disabled {
+  color: var(--neutral-mid);
+  cursor: default;
+}
+/* More is the last cell of the bar's grid: the menu's wrapper fills the cell
+   and its sheet opens over the page. */
+.ov-tabbar > span:has(> .ov-tabbar-item) {
+  display: flex;
+}
+.ov-tabbar > span > .ov-tabbar-item {
+  flex: 1;
 }

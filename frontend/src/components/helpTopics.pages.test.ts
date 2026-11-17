@@ -3,8 +3,7 @@ import { helpTopicForPath } from './helpTopics';
 // The help topic of every page of a project, by the first segment after the
 // project id (refactor plan X17's characterization). helpTopics.test.ts pins
 // the mapping's shape; this pins which topic each page reaches, including the
-// four pages with no topic of their own (evidence, review, todos, impact),
-// which fall back to the overview's, and the routes the menu does not list.
+// overview, whose topic is the default, and the routes the menu does not list.
 // A page registry that names each page's topic must say what is here.
 describe('the help topic of each project page', () => {
   it.each([
@@ -13,21 +12,25 @@ describe('the help topic of each project page', () => {
     ['requirements', 'Requirements'],
     ['interviews', 'Interviews'],
     ['vv', 'V&V'],
-    ['evidence', 'Project overview'],
+    ['evidence', 'Evidence'],
     ['matrix', 'Traceability Matrix'],
-    ['impact', 'Project overview'],
-    ['review', 'Project overview'],
+    ['impact', 'Impact analysis'],
+    ['review', 'Review Queue'],
     ['board', 'Board'],
-    ['todos', 'Project overview'],
+    ['todos', 'To-dos'],
     ['agents', 'Agents'],
-    ['crew', 'Crew'],
+    ['crew', 'Project overview'],
     ['automations', 'Automations'],
     ['agent-runs', 'Runs'],
     ['activity', 'Activity'],
     ['settings', 'Project Settings'],
-    ['crew/network', 'Crew'],
+    ['crew/network', 'Project overview'],
     ['vv/runs/r1', 'V&V'],
-    ['baselines/b1/compare', 'Baseline comparison'],
+    ['home', 'Home'],
+    ['design', 'Design'],
+    ['tests', 'Tests'],
+    ['baselines', 'Baselines'],
+    ['baselines/b1/compare', 'Baselines'],
     ['team', 'Project overview'],
     ['team/network', 'Project overview'],
   ])('/projects/p1/%s shows %j', (segment, title) => {

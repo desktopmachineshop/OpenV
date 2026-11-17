@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="columns">
+  <title>Columns</title>
+  <shortdesc>Backlog · To Do · In Progress · Review · Done. Each column shows its card count and has a <b>+ Add card</b> composer at the bottom.</shortdesc>
+  <conbody/>
+</concept>

@@ -19,7 +19,7 @@ func (a *app) realtime() {
 	a.sseHub = api.NewSSEHub()
 	a.runService.AddSubscriber(a.sseHub)
 	a.metricsCollector.WatchSSEConnections(a.sseHub.ActiveConnections)
-	a.hooks = orchestration.NewHooks(a.runService, a.teamService, a.workItemService, a.interviewService, a.guidedService, a.projectService, a.sseHub, handoffReach(a.projectService, a.orgService, a.memberService))
+	a.hooks = orchestration.NewHooks(a.runService, a.workItemService, a.interviewService, a.guidedService, a.projectService, a.sseHub)
 	a.runService.AddSubscriber(a.hooks)
 	a.hooks.SubscribeBus(a.bus)
 }

@@ -58,7 +58,7 @@ func TestReadOnlyToolNames(t *testing.T) {
 	// A writer is not read-only, prefixed or not. confirm_link especially:
 	// clearing a suspect flag is the assertion that someone re-read the trace,
 	// which is the last thing a least-privilege agent should be able to do.
-	for _, w := range []string{"create_artifact", "confirm_link", ToolPrefix + "record_candidate_need", ToolPrefix + "delegate_to_agent"} {
+	for _, w := range []string{"create_artifact", "confirm_link", ToolPrefix + "record_candidate_need"} {
 		if ReadOnly(w) {
 			t.Errorf("ReadOnly(%q) = true, want false", w)
 		}

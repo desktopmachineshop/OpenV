@@ -36,6 +36,11 @@ export interface AuthConfig {
   google_enabled: boolean;
   oidc_enabled: boolean;
   oidc_provider_name: string;
+  // Single sign-on is the only way in (OPENV_OIDC_ONLY): the sign-in page
+  // goes straight to the provider. Absent from an older server.
+  oidc_only?: boolean;
+  // Whether the email and password form is offered, to sign in and sign up.
+  password_enabled?: boolean;
   email_verification_required: boolean;
   // Whether the sign-in page can email a password reset link (REQ-158).
   // Without a mailer, a platform admin mints the link instead.
@@ -46,6 +51,14 @@ export interface AuthConfig {
   // What this deployment offers ('hosted', 'billing'); absent from an
   // older server, which the app takes as offering everything.
   capabilities?: string[];
+}
+
+// A pending link of a single sign-on provider to a password account: the
+// provider's callback met an account with this address that was made with a
+// password, and the account's password confirms the link.
+export interface IdentityLinkPreview {
+  provider: 'google' | 'oidc';
+  email: string;
 }
 
 // What a sign-up that carried an invite token did with it. Absent when the

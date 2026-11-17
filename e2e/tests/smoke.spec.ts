@@ -1,5 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
-import { makeRunId, openModule } from './helpers';
+import { chooseOption, makeRunId, openModule, openRequirementsToolbar } from './helpers';
 
 // OpenV E2E smoke journey (issue #135).
 //
@@ -65,7 +65,9 @@ test('signs in and lands in a workspace', async () => {
     // <provider>" where SSO is configured, and getByRole matches a substring
     // by default.
     await page.getByRole('button', { name: 'Sign in', exact: true }).click();
-    await expect(page).toHaveURL(/\/projects$/);
+    // A pre-provisioned account has projects, so signing in may land on the
+    // last one's Home (the redesign) rather than the projects list.
+    await expect(page).toHaveURL(/\/projects(\/[0-9a-f-]{36}\/home)?$/);
     // The account's real display name, which later steps assert against (a
     // baseline says who captured it). The suite picked the name on the
     // register path; here the deployment owns it.
@@ -89,11 +91,14 @@ test('signs in and lands in a workspace', async () => {
   // Registration auto-provisions "<name>'s Space" as a personal workspace;
   // the org switcher shows it with a "personal" pill. Only a freshly
   // registered account is known to have exactly that.
-  await expect(page.getByText(`${user.name}'s Space`)).toBeVisible();
+  await expect(page.getByText(`${user.name}'s Space`).first()).toBeVisible();
   await expect(page.getByText('personal', { exact: true })).toBeVisible();
 });
 
 test('creates a project', async () => {
+  // The projects list, opened on purpose: signing in may have landed on a
+  // project's Home.
+  if (signsIn) await page.goto('/projects');
   // A fresh account renders the button twice (empty-state placeholder and
   // the footer action row) — either one opens the same form.
   await page.getByRole('button', { name: '+ New Project' }).first().click();
@@ -115,7 +120,7 @@ test('creates a requirement and a user need', async () => {
 
   // Requirement via the New Artifact form (default type is "requirement").
   await page.getByRole('button', { name: '+ New Artifact' }).click();
-  await page.locator('#type').selectOption('requirement');
+  await chooseOption(page, '#type', 'requirement');
   await page.locator('#title').fill(reqTitle);
   await page.locator('#body').fill('The system shall be smoke-testable end to end.');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -126,7 +131,7 @@ test('creates a requirement and a user need', async () => {
   // link rules require the type), so it is created through the UI like the
   // requirement above.
   await page.getByRole('button', { name: '+ New Artifact' }).click();
-  await page.locator('#type').selectOption('user-need');
+  await chooseOption(page, '#type', 'user-need');
   await page.locator('#title').fill(needTitle);
   await page.locator('#body').fill('As a maintainer, I need an E2E smoke pack so that regressions surface early.');
   await page.getByRole('button', { name: 'Create', exact: true }).click();
@@ -170,6 +175,7 @@ test('links the requirement to the user need (derives-from)', async () => {
 });
 
 test('captures a baseline via the prompt dialog', async () => {
+  await openRequirementsToolbar(page);
   await page.getByRole('button', { name: 'Capture Baseline' }).click();
 
   const dialog = page.getByRole('dialog');
@@ -178,6 +184,7 @@ test('captures a baseline via the prompt dialog', async () => {
   await dialog.getByRole('button', { name: 'OK' }).click();
 
   // The new baseline appears in the baseline selector.
+  await openRequirementsToolbar(page);
   const baselineSelect = page.locator('select[title="Select baseline"]');
   const baselineOption = baselineSelect.locator('option', { hasText: baselineName });
   await expect(baselineOption).toHaveCount(1);
@@ -231,9 +238,10 @@ test('downloads the project as JSON through the wizard', async () => {
   const card = page.locator('.project-card').filter({ hasText: projectName });
   await expect(card).toBeVisible();
 
-  // One download button per project now, and the format is chosen in the
-  // wizard it opens rather than by picking a different button.
-  await card.getByTitle(/^Download this project/).click();
+  // A project's actions are one menu, and the format is chosen in the
+  // wizard Download opens rather than by picking a different button.
+  await card.getByRole('button', { name: `Actions for ${projectName}` }).click();
+  await card.getByRole('menuitem', { name: 'Download' }).click();
   const wizard = page.getByRole('dialog');
   await expect(wizard).toBeVisible();
   await wizard.getByText('JSON data').click();

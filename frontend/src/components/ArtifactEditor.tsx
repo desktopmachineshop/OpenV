@@ -16,6 +16,7 @@ import {
 } from '../api/client';
 import { ImageGallery } from './ImageGallery';
 import { LinkPanel } from './LinkPanel';
+import { ArtifactReleaseRange } from './ArtifactReleaseRange';
 import {
   applyLinkDeletion,
   createPendingLinkId,
@@ -23,6 +24,11 @@ import {
 } from '../utils/pendingLinks';
 import { FIGURE_CITATIONS_FEATURE } from './attachmentKinds';
 import { TokenMenu } from './ui/TokenMenu';
+import { Picker } from './ui/Picker';
+import { ArtifactPriorityField } from './ArtifactPriorityField';
+import { PRIORITY_ATTR } from './artifactPriority';
+import { ownerOptions as buildOwnerOptions, parentOptions, typeOptions } from './artifactEditorOptions';
+import { useAppStore } from '../state/store';
 import {
   ReferenceCandidate,
   ReferenceQuery,
@@ -126,7 +132,14 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   const effectiveProjectId = projectId || artifact?.project_id;
   // Who can own an artifact (REQ-147): the project's parties (the workspace
   // first) and its members, offered as suggestions; any name is accepted.
-  const [ownerOptions, setOwnerOptions] = useState<string[]>([]);
+  const [owners, setOwners] = useState<{ parties: string[]; members: string[] }>({ parties: [], members: [] });
+  const ownerOptions = useMemo(() => buildOwnerOptions(owners.parties, owners.members), [owners]);
+  const metaTypes = useAppStore((s) => s.meta?.artifactTypes);
+  const types = useMemo(() => typeOptions(metaTypes || []), [metaTypes]);
+  const parents = useMemo(() => parentOptions(artifacts, artifact?.id), [artifacts, artifact?.id]);
+  // Whether the artifact had a priority when the form opened: detection then
+  // leaves it alone (ArtifactPriorityField).
+  const [hadPriority] = useState(() => Boolean(artifact?.attributes?.[PRIORITY_ATTR]));
   const ownersOn = useFeature(ARTIFACT_OWNERS_FEATURE);
   const flowDown = useFeature(FLOW_DOWN_FEATURE);
   useEffect(() => {
@@ -137,7 +150,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
       membersAPI.list(effectiveProjectId).then((r) => (r.data || []).map((m) => m.user_name || m.user_email || '')).catch(() => [] as string[]),
     ]).then(([parties, people]) => {
       if (cancelled) return;
-      setOwnerOptions(Array.from(new Set([...parties, ...people].filter(Boolean))));
+      setOwners({ parties: parties.filter(Boolean), members: people.filter(Boolean) });
     });
     return () => {
       cancelled = true;
@@ -178,6 +191,16 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
       attributes: { ...(prev.attributes || {}), [key]: value },
     }));
   };
+
+  // Detection calls this from an effect, so it keeps one identity.
+  const setPriority = React.useCallback((value: string | undefined) => {
+    setFormData((prev) => {
+      const attributes = { ...(prev.attributes || {}) };
+      if (value) attributes[PRIORITY_ATTR] = value;
+      else delete attributes[PRIORITY_ATTR];
+      return { ...prev, attributes };
+    });
+  }, []);
 
   // Track pending link changes during edit
   const [pendingLinkAdds, setPendingLinkAdds] = useState<Partial<Link>[]>([]);
@@ -321,7 +344,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
   return (
     <>
       {artifact && (
-        <div className="card" style={{ marginBottom: '20px' }}>
+        <div className="card" style={{ marginBottom: '20px' }} data-help-pane="requirements.versions">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div>
               <h3 style={{ margin: '0 0 8px 0' }}>{formData.title || 'Untitled Artifact'}</h3>
@@ -352,99 +375,79 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
         </div>
       )}
 
-      <div className="card">
+      {/* Editing is the manual's "Editing, versions & history"; a new
+          artifact is "Creating & organizing artifacts". */}
+      <div className="card" data-help-pane={artifact ? 'requirements.versions' : 'requirements.create'}>
         <h3>{artifact ? 'Edit Artifact Details' : 'New Artifact'}</h3>
-        <form onSubmit={handleSubmit}>
+        <form
+          onSubmit={handleSubmit}
+          data-help-key={artifact ? 'requirements.versions' : 'requirements.create'}
+        >
           <div className="form-group">
             <label htmlFor="parent_id">Parent Artifact (Optional)</label>
-            <select
+            <Picker
               id="parent_id"
-              name="parent_id"
               value={formData.parent_id || ''}
-              onChange={handleChange}
-            >
-              <option value="">None (Top Level)</option>
-              {artifacts
-                .filter((a) => a.id !== artifact?.id)
-                .map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.title || 'Untitled'} ({a.type})
-                  </option>
-                ))}
-            </select>
+              noneLabel="None (Top Level)"
+              options={parents}
+              onChange={(v) => setFormData((prev) => ({ ...prev, parent_id: v }))}
+            />
           </div>
 
           <div className="form-group">
             <label htmlFor="type">Type</label>
-            <select
+            {/* The options are the backend catalogue (internal/domain/artifacts/
+                types.go) through the generated contract, so a type the server
+                knows is never missing here. */}
+            <Picker
               id="type"
-              name="type"
               value={formData.type || ''}
-              onChange={handleChange}
-            >
-              {/* Mirrors the backend type catalog (internal/domain/artifacts/
-                  types.go). persona/user-need were missing here even though
-                  the derives-from and validates link rules target user-need,
-                  which made those links impossible to create through this UI. */}
-              <option value="heading">Heading</option>
-              <option value="description">Description</option>
-              <option value="persona">Persona</option>
-              <option value="user-need">User Need</option>
-              <option value="requirement">Requirement</option>
-              <option value="test-case">Test Case</option>
-              <option value="hazard">Hazard</option>
-              <option value="design-item">Design Item</option>
-              <option value="other">Other</option>
-            </select>
+              options={types}
+              onChange={(v) => setFormData((prev) => ({ ...prev, type: v }))}
+            />
           </div>
+
+          {formData.type === 'requirement' && !applicableDefs.some((d) => d.key === PRIORITY_ATTR) && (
+            <ArtifactPriorityField
+              projectId={effectiveProjectId}
+              text={`${formData.title || ''}\n${formData.body || ''}`}
+              value={typeof formData.attributes?.[PRIORITY_ATTR] === 'string' ? (formData.attributes[PRIORITY_ATTR] as string) : ''}
+              initiallySet={hadPriority}
+              onChange={setPriority}
+            />
+          )}
 
           {ownersOn && (
           <div className="form-group">
             <label htmlFor="owner">Owner</label>
-            <input
+            <Picker
               id="owner"
-              name="owner"
-              list="artifact-owner-options"
+              freeText
               value={(formData.attributes?.owner as string) || ''}
-              onChange={(e) =>
-                setFormData({
-                  ...formData,
-                  attributes: { ...(formData.attributes || {}), owner: e.target.value },
-                })
-              }
+              options={ownerOptions}
               placeholder="The party or member responsible for this artifact"
+              onChange={(v) => setAttribute('owner', v)}
             />
-            <datalist id="artifact-owner-options">
-              {ownerOptions.map((o) => (
-                <option key={o} value={o} />
-              ))}
-            </datalist>
           </div>
           )}
+
+          <ArtifactReleaseRange
+            projectId={effectiveProjectId}
+            parentId={formData.parent_id}
+            attributes={formData.attributes || {}}
+            artifacts={artifacts}
+            onChange={setAttribute}
+          />
 
           {formData.type === 'test-case' && (
             <div className="form-group">
               <label htmlFor="execution_method">How is this verified?</label>
-              <select
+              <Picker
                 id="execution_method"
-                name="execution_method"
                 value={executionMethodOf(formData)}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    attributes: {
-                      ...(formData.attributes || {}),
-                      execution_method: e.target.value as ExecutionMethod,
-                    },
-                  })
-                }
-              >
-                {EXECUTION_METHODS.map((m) => (
-                  <option key={m.value} value={m.value}>
-                    {m.label}
-                  </option>
-                ))}
-              </select>
+                options={EXECUTION_METHODS.map((m) => ({ value: m.value, label: m.label, hint: m.hint }))}
+                onChange={(v) => setAttribute('execution_method', v as ExecutionMethod)}
+              />
               <small style={{ color: 'var(--text-muted)', fontSize: 12 }}>
                 {EXECUTION_METHODS.find((m) => m.value === executionMethodOf(formData))?.hint}
                 {executionMethodOf(formData) !== 'automated' &&
@@ -466,7 +469,7 @@ export const ArtifactEditor: React.FC<ArtifactEditorProps> = ({
             />
           </div>
 
-          <div className="form-group" style={{ position: 'relative' }}>
+          <div className="form-group" style={{ position: 'relative' }} data-help-key="requirements.references">
             <label htmlFor="body">Description</label>
             <textarea
               id="body"
@@ -609,18 +612,13 @@ const AttributeField: React.FC<{
     return (
       <div className="form-group">
         {label}
-        <select
+        <Picker
           id={`attr-${def.key}`}
           value={typeof value === 'string' ? value : ''}
-          onChange={(e) => onChange(e.target.value)}
-        >
-          <option value="">— Select —</option>
-          {def.enum_values.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
-          ))}
-        </select>
+          noneLabel="— Select —"
+          options={def.enum_values.map((opt) => ({ value: opt, label: opt }))}
+          onChange={onChange}
+        />
       </div>
     );
   }

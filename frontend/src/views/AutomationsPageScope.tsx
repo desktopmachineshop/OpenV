@@ -30,8 +30,7 @@ const SCOPE_HINTS: Record<AutomationScope, string> = {
   project: 'Runs for this project alone: on its events, and in it.',
   workspace:
     'Runs for every project of the workspace, in the project of the event that fires it, and on ' +
-    'workspace membership and invitation events. A crew made in one project cannot run it; the ' +
-    "workspace's own crews, such as its default crew, can.",
+    'workspace membership and invitation events.',
 };
 
 interface ScopeFieldProps {
@@ -49,7 +48,7 @@ interface ScopeFieldProps {
 export const ScopeField: React.FC<ScopeFieldProps> = ({ scope, canChoose, onChange }) => {
   if (!canChoose && scope === 'project') return null;
   return (
-    <div className="form-group">
+    <div className="form-group" data-help-pane="automations.create" data-help-key="automations.create">
       <label>Covers</label>
       {canChoose ? (
         <SegmentedControl

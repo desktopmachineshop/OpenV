@@ -1,0 +1,42 @@
+{
+  "title": "Review and approve from your phone",
+  "description": "The Desktop CNC Mill's requirements on a phone: a requirement with its trace, sent for review, and approved from the review queue.",
+  "viewport": "phone",
+  "steps": [
+    {
+      "id": "intro",
+      "do": [["goto", "/projects/{Desktop CNC Mill}/requirements"], ["click", "button[aria-label^='Tuck']"], ["see", "text=Workshop owner"], ["shot", "phone-requirements"]],
+      "say": "OpenV works on a phone. This is the Desktop CNC Mill's requirements list, with each artifact's reference, status and trace."
+    },
+    {
+      "id": "open",
+      "do": [["click", "text=Positioning accuracy"], ["wait", 1200], ["shot", "phone-requirement"]],
+      "say": "Tap a requirement to read it in full, with its quality score and the requirements in other projects that refine it."
+    },
+    {
+      "id": "scroll",
+      "do": [["wheel", 500], ["wait", 800]],
+      "say": "Its trace and its verification follow below, the same as on a computer."
+    },
+    {
+      "id": "submit",
+      "do": [["click", "button:has-text('Submit for review')"], ["wait", 1000]],
+      "say": "When it is ready, send it for review. The reviewers are notified on their own phones."
+    },
+    {
+      "id": "queue",
+      "do": [["goto", "/projects/{Desktop CNC Mill}/review"], ["see", "text=Positioning accuracy"], ["shot", "phone-review-queue"]],
+      "say": "The review queue lists everything waiting: requirements in review, links flagged as suspect, and changes since the last baseline."
+    },
+    {
+      "id": "approve",
+      "do": [["click", "button:has-text('Approve')"], ["wait", 1200]],
+      "say": "Approve it with a thumb. The approval goes into the requirement's history with your name and the time."
+    },
+    {
+      "id": "close",
+      "do": [["click", "button:has-text('Approved')"], ["wait", 1000]],
+      "say": "Install OpenV from the browser to your home screen, and notifications arrive as pushes."
+    }
+  ]
+}

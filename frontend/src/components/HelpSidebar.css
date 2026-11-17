@@ -220,3 +220,136 @@ body.sidebar-expanded {
     padding-right: 0;
   }
 }
+
+/* Help from the user manual on OpenD (DocsHelp). */
+.help-docs-search {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.help-docs-search input {
+  flex: 1;
+  min-width: 0;
+}
+
+.help-docs-back,
+.help-docs-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.help-docs-back {
+  margin-bottom: 12px;
+}
+
+.help-docs-back:hover,
+.help-docs-link:hover {
+  text-decoration: underline;
+}
+
+.help-docs-back:focus-visible,
+.help-docs-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.help-docs-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.help-docs-list li {
+  margin-bottom: 10px;
+}
+
+.help-docs-list p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.help-docs-empty {
+  color: var(--text-secondary);
+}
+
+.help-docs-body {
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--text);
+  margin-bottom: 20px;
+}
+
+.help-docs-body article,
+.help-docs-body section {
+  margin: 0;
+}
+
+.help-docs-body h1,
+.help-docs-body h2 {
+  display: none; /* the topic's own title is the panel's heading */
+}
+
+.help-docs-body h3,
+.help-docs-body h4 {
+  font-size: 15px;
+  margin: 18px 0 8px;
+}
+
+.help-docs-body ul,
+.help-docs-body ol {
+  padding-left: 20px;
+}
+
+.help-docs-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  margin: 10px 0;
+  display: block;
+  overflow-x: auto;
+}
+
+.help-docs-body th,
+.help-docs-body td {
+  border: 1px solid var(--neutral-soft);
+  padding: 4px 6px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.help-docs-body code {
+  font-size: 12.5px;
+}
+
+.help-docs-body aside {
+  border-left: 3px solid var(--accent);
+  padding: 6px 10px;
+  margin: 10px 0;
+  color: var(--text-secondary);
+}
+
+.help-docs-body a {
+  color: var(--accent);
+}
+
+.help-docs-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--neutral-soft);
+  padding-top: 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.help-docs-footer a {
+  color: var(--accent);
+}

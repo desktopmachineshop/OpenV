@@ -7,6 +7,7 @@ import { searchAPI } from '../api/client';
 vi.mock('../api/client', async (orig) => mockApi(await orig()));
 
 let refSearchOn = true;
+// The top bar is the plain jump box whatever the chip-search feature says.
 vi.mock('../hooks/useFeature', () => ({ useFeature: () => refSearchOn }));
 
 const navigate = vi.fn();
@@ -106,5 +107,14 @@ describe('GlobalSearch ref results', () => {
     });
     const input = container.querySelector('input') as HTMLInputElement;
     expect(input.placeholder).toBe('Search artifacts…');
+  });
+
+  // The top bar finds and jumps; it never filters the page, so it offers no
+  // chips even where the list has the chip search bar.
+  it('is a plain jump box, with no chips, where the chip search bar is on', async () => {
+    await search('noise', [hit()]);
+    expect(container.querySelector('input[type="search"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Active filters"]')).toBeNull();
+    expect(container.querySelector('[aria-label="Filters, group by and saved searches"]')).toBeNull();
   });
 });

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="making-room">
+  <title>Making room</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="requirements.layout"/>
+  </prolog>
+  <conbody>
+    <p>The project menu takes only a narrow rail at the left of the page (see <i>Getting started</i> → <i>Finding your way around</i>). There is no third column: the artifact's History is part of the detail panel, and the V&amp;V Assistant floats over the page and minimises back to its button, so the list and the detail panel share the whole width. Drag the detail panel's left edge to change how it is shared. The list fills the height of the page, so a taller window shows more of it rather than more empty space.</p>
+    <p>On a workspace still on an earlier release, the comments and the assistant are in a <b>Notes</b> panel at the far right instead, which is <b>Pinned</b>, <b>Auto-hide</b> (a strip at the edge that opens the panel over the document on hover) or <b>Hidden</b>, chosen from the button in its header.</p>
+    <p>Nothing on the page is sized to the browser window, so the window itself never scrolls: the tree and the document each scroll inside their own column, and the toolbar takes a second row on a narrow window without pushing anything off the bottom.</p>
+  </conbody>
+</concept>

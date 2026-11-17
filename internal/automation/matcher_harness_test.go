@@ -15,7 +15,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	domainevents "github.com/openv/requirements-platform/internal/domain/events"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 )
 
 // The stand-ins of refactor plan S11's trigger-matcher tests. Each embeds
@@ -188,22 +187,6 @@ func (f *matcherRuns) countsAsked() []countCall {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return append([]countCall(nil), f.countArgs...)
-}
-
-// matcherTeams serves crew-1, whose entry node node-entry is agent-entry's,
-// and crew-headless, which has no entry node.
-type matcherTeams struct{ teams.Service }
-
-func (matcherTeams) GetTeam(id string) (*teams.TeamGraph, error) {
-	entry := "node-entry"
-	switch id {
-	case "crew-1":
-		return &teams.TeamGraph{Team: &teams.Team{ID: id, OrgID: "org-1", EntryNodeID: &entry},
-			Nodes: []*teams.Node{{ID: entry, TeamID: id, NodeType: teams.NodeAgent, AgentID: "agent-entry"}}}, nil
-	case "crew-headless":
-		return &teams.TeamGraph{Team: &teams.Team{ID: id, OrgID: "org-1"}}, nil
-	}
-	return nil, fmt.Errorf("team %s not found", id)
 }
 
 // onArtifacts is an enabled triggered automation of workspace org-1 on

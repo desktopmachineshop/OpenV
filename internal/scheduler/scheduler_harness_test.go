@@ -13,7 +13,6 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/automations"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 )
 
 // The stand-ins of refactor plan S11's scheduler tests. Each embeds its
@@ -285,51 +284,6 @@ func (f *schedRuns) requests() []agentruns.LaunchRequest {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return append([]agentruns.LaunchRequest(nil), f.launched...)
-}
-
-// schedTeams serves crew graphs and records the crews asked for.
-type schedTeams struct {
-	teams.Service
-
-	mu     sync.Mutex
-	graphs map[string]*teams.TeamGraph
-	asked  []string
-}
-
-func (f *schedTeams) GetTeam(id string) (*teams.TeamGraph, error) {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	f.asked = append(f.asked, id)
-	if g, ok := f.graphs[id]; ok {
-		return g, nil
-	}
-	return nil, fmt.Errorf("team %s not found", id)
-}
-
-func (f *schedTeams) crewsAsked() []string {
-	f.mu.Lock()
-	defer f.mu.Unlock()
-	return append([]string(nil), f.asked...)
-}
-
-// crewGraphs is crew-1, whose entry node node-entry is agent-entry's (a
-// second node, node-review, is agent-review's); crew-headless, which has no
-// entry node; and crew-stale, whose entry node names a node the crew no
-// longer has (as when the entry agent was deleted and its node cascaded
-// away, refactor plan S5d).
-func crewGraphs() *schedTeams {
-	entry, stale := "node-entry", "node-gone"
-	return &schedTeams{graphs: map[string]*teams.TeamGraph{
-		"crew-1": {Team: &teams.Team{ID: "crew-1", OrgID: "org-1", Name: "Crew", EntryNodeID: &entry},
-			Nodes: []*teams.Node{
-				{ID: "node-review", TeamID: "crew-1", NodeType: teams.NodeAgent, AgentID: "agent-review"},
-				{ID: entry, TeamID: "crew-1", NodeType: teams.NodeAgent, AgentID: "agent-entry"},
-			}},
-		"crew-headless": {Team: &teams.Team{ID: "crew-headless", OrgID: "org-1", Name: "Headless"},
-			Nodes: []*teams.Node{{ID: "node-a", TeamID: "crew-headless", NodeType: teams.NodeAgent, AgentID: "agent-a"}}},
-		"crew-stale": {Team: &teams.Team{ID: "crew-stale", OrgID: "org-1", Name: "Stale", EntryNodeID: &stale},
-			Nodes: []*teams.Node{{ID: "node-b", TeamID: "crew-stale", NodeType: teams.NodeAgent, AgentID: "agent-b"}}},
-	}}
 }
 
 // scheduled is an enabled scheduled automation of workspace org-1 pinned to

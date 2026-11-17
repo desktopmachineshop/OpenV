@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="scheduling-tasks">
+  <title>Scheduling tasks</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="gantt.task"/>
+    <resourceid appname="openv-web" appid="gantt.add-task"/>
+  </prolog>
+  <conbody>
+    <p><b>Add task</b> makes a card in the board's To Do column and places it on the plan, with a start and a due date if you give them. Or add one in the chart itself: type a title in the last row of the outline, <b>Add a task…</b>, and press Enter. The task appears as a new row with no dates, ready to be scheduled on the timeline.</p>
+    <p>To move a task, drag its bar. To change one date, drag that end of the bar. Both move in whole days.</p>
+    <p>To place a task that has no dates, use its empty row on the timeline:</p>
+    <ul>
+      <li><b>Click</b> a date, and the task is scheduled for the period of the scale that holds it: that day at <b>Days</b>, that week at <b>Weeks</b>, that month at <b>Months</b>, that quarter at <b>Quarters</b>. The row shows the period as you point at it.</li>
+      <li><b>Drag</b> across the row, and the task is scheduled for the range you drag over, drawn as it grows with its dates beside it.</li>
+    </ul>
+    <p>Select a task, by its title in the outline or by its bar, to see it beside the chart. <b>Open the full task</b> in that panel, like the open button on the row, shows everything else about it. <b>Ctrl</b>-click (<b>Cmd</b> on a Mac) a row or a bar to add a task to those selected, or to drop it, and <b>Shift</b>-click to take every task between, on the Gantt and on the Timeline. With several selected, the panel lists them, assigns them all to a milestone and moves their dates by a number of days; a plain click goes back to one. In the panel you can:</p>
+    <ul>
+      <li>set its <b>Start</b> and <b>Due</b> dates, its <b>Duration</b> and its <b>Effort</b>: see <xref href="#duration-and-effort" scope="external" format="html">Duration and effort</xref>. The due date is the card's own, so the board shows the same day;</li>
+      <li>make it a <b>sub-task of</b> another task, or a top-level task again;</li>
+      <li>assign it to a <b>milestone</b>: see <xref href="#assigning-tasks-to-a-milestone" scope="external" format="html">Assigning tasks to a milestone</xref>;</li>
+      <li>set its <b>relationships</b> to other tasks, whichever of the two drives;</li>
+      <li>add <b>to-dos</b> and tick them off;</li>
+      <li>add <b>sub-tasks</b>.</li>
+    </ul>
+    <p><b>Sub-task of</b> and the task chooser under <b>Relationships</b> are searchable: open one and type part of a task's name or its outline number to narrow a long plan to the task you want.</p>
+    <p>A task cannot start after it is due, or be a sub-task of one of its own sub-tasks.</p>
+  </conbody>
+</concept>

@@ -20,6 +20,7 @@ vi.mock('../api/client', async (orig) =>
 vi.mock('react-router-dom', () => ({
   useNavigate: () => vi.fn(),
   useSearchParams: () => [new URLSearchParams(), () => {}],
+  useLocation: () => ({ pathname: '/projects', search: '', hash: '', state: null, key: 'default' }),
 }));
 
 // The store answers a selector too (useFeature reads the gates through one);

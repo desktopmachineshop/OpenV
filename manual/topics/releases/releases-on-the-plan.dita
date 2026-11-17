@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="releases-on-the-plan">
+  <title>Releases on the plan</title>
+  <shortdesc>Each release is also a milestone on the <b>Gantt</b> page, at its target date, where its progress is measured against criteria you can set. See <xref href="https://openv.app/manual/gantt" scope="external" format="html">The plan (Gantt)</xref>.</shortdesc>
+  <conbody/>
+</concept>

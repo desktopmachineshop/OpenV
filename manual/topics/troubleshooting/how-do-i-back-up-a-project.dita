@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="how-do-i-back-up-a-project">
+  <title>How do I back up a project?</title>
+  <shortdesc>Use <b>↓ JSON</b> (Export project as JSON) on the Projects page — it downloads the full project as JSON, which <b>↑ Import Project</b> can restore on any server. (<b>↓ CSV</b> is a flat, one-way spreadsheet export and cannot be re-imported.)</shortdesc>
+  <conbody/>
+</concept>

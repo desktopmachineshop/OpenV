@@ -10,7 +10,7 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
-import { ErrorBanner, useConfirm, usePrompt } from '../components/ui';
+import { ErrorBanner, useConfirm, usePrompt, chipStyle, toneForColor, buttonStyle } from '../components/ui';
 
 const sectionTitle: React.CSSProperties = {
   fontSize: 16,
@@ -21,15 +21,9 @@ const sectionTitle: React.CSSProperties = {
 
 const smallInput: React.CSSProperties = { padding: '6px 8px', fontSize: 13 };
 
-const chip = (bg: string): React.CSSProperties => ({
-  display: 'inline-block',
-  padding: '2px 8px',
-  borderRadius: 10,
-  fontSize: 12,
-  fontWeight: 600,
-  color: '#fff',
-  background: bg,
-});
+// A status pill in the tinted chip of the shared look; the colour names the
+// tone it used to be filled with.
+const chip = (bg: string): React.CSSProperties => chipStyle(toneForColor(bg));
 
 // Dedicated home of the user-interviews feature: create interviews, share
 // invite links, browse sessions and transcripts, and link personas.
@@ -210,8 +204,8 @@ export const InterviewsPage: React.FC = () => {
   }
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
-      <h2 style={{ color: 'var(--text)', marginBottom: 4 }}>Interviews</h2>
+    <div className="ov-gutter" style={{ padding: 16, maxWidth: 1100, margin: '0 auto' }}>
+      <h2 className="ov-page-title" style={{ color: 'var(--text)', marginBottom: 4, fontSize: 20, fontWeight: 700 }}>Interviews</h2>
       <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
         Create user interviews, share invite links, and review what an AI interviewer learned.
       </p>
@@ -239,9 +233,10 @@ export const InterviewsPage: React.FC = () => {
               </select>
             )}
             <button
-              className="button-secondary"
-              style={{ padding: '6px 14px', background: 'var(--accent)' }}
+              className="button"
+              style={{ padding: '6px 14px' }}
               onClick={() => setShowNewInterview(!showNewInterview)}
+              data-help-key="interviews.create"
             >
               {showNewInterview ? 'Cancel' : '+ New interview'}
             </button>
@@ -249,7 +244,11 @@ export const InterviewsPage: React.FC = () => {
         </div>
 
         {showNewInterview && (
-          <form onSubmit={createInterview} style={{ background: 'var(--surface-alt)', borderRadius: 4, padding: 14, marginBottom: 14 }}>
+          <form
+            onSubmit={createInterview}
+            style={{ background: 'var(--surface-alt)', borderRadius: 4, padding: 14, marginBottom: 14 }}
+            data-help-key="interviews.create"
+          >
             <div className="form-group">
               <label htmlFor="new-interview-name">Interview name *</label>
               <input
@@ -319,13 +318,13 @@ export const InterviewsPage: React.FC = () => {
                     e.stopPropagation();
                     copyInviteLink(iv);
                   }}
+                  data-help-key="interviews.invite"
                 >
                   {copiedInterviewId === iv.id ? '✓ Copied!' : 'Copy invite link'}
                 </button>
                 {iv.status !== 'closed' && (
                   <button
-                    className="button-secondary"
-                    style={{ padding: '5px 10px', fontSize: 12, background: 'var(--danger)' }}
+                    style={{ ...buttonStyle('danger', { compact: true }), minHeight: 32 }}
                     onClick={(e) => {
                       e.stopPropagation();
                       closeInterview(iv);
@@ -336,7 +335,7 @@ export const InterviewsPage: React.FC = () => {
                 )}
               </div>
               {expandedInterviewId === iv.id && (
-                <div style={{ borderTop: '1px solid var(--border-soft)', padding: '10px 12px' }}>
+                <div style={{ borderTop: '1px solid var(--border-soft)', padding: '10px 12px' }} data-help-key="interviews.sessions">
                   {iv.brief && (
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 8, whiteSpace: 'pre-wrap' }}>{iv.brief}</div>
                   )}

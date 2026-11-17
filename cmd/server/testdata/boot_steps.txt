@@ -82,7 +82,6 @@ func main()
     call internal/domain/providers.NewSealer
     if
       call os.Exit
-  call (*internal/domain/teams.DefaultService).SetMemberValidator
   call (*internal/domain/proposals.DefaultService).OnResolved
   call (*internal/domain/orgs.DefaultService).ListAll
   if
@@ -132,9 +131,13 @@ func main()
           call (*internal/persistence/postgres.UserRepository).DeleteExpiredSessions
           call (*internal/persistence/postgres.UserRepository).DeleteSpentEmailVerifications
           call (*internal/persistence/postgres.UserRepository).DeleteSpentPasswordResets
+          call (*internal/persistence/postgres.UserRepository).DeleteSpentIdentityLinks
           call (*internal/domain/invitations.DefaultService).PurgeExpired
           if
             call (internal/domain/runnersessions.Service).Sweep
+  call (*internal/config.Config).OIDCOnlyUnusable
+  if
+    call os.Exit
   call (*internal/config.Config).Billing
   if
     call os.Exit

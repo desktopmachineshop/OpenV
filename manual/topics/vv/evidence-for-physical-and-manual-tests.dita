@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="evidence-for-physical-and-manual-tests">
+  <title>Evidence for physical and manual tests</title>
+  <shortdesc>An automated test is its own evidence: the run either passed or it did not. A <b>physical</b> or <b>manual</b> test case is different — somebody goes to a rig or inspects the thing, and what they bring back is the only reason to believe the result. The <b>Evidence</b> view is where that lives.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="evidence"/>
+  </prolog>
+  <conbody>
+    <p>An <b>evidence bundle</b> is one capture session, not one result. Record it once:</p>
+    <ul>
+      <li><b>What was done</b> — "Noise sweep, 90 minutes, all load conditions".</li>
+      <li><b>What was observed</b> — a written account. For an inspection or a demonstration this may be the whole of the evidence; files are optional.</li>
+      <li><b>When</b> and <b>who</b> — the capture date, and who carried it out. "Who" is free text, because the person on the rig is often not an OpenV user.</li>
+      <li><b>Conditions</b> — rig, serial numbers, calibration date, ambient temperature, entered one per line as <codeph>name: value</codeph>.</li>
+      <li><b>Files</b> — the dataset itself, in any format. Each file's SHA-256 is recorded at upload so it can be checked against the record later.</li>
+    </ul>
+    <p>Each bundle gets a citable reference like <b>EVD-1</b>, unique in the project and never reused, so a capture named in a report still means the same thing a year later.</p>
+    <section id="citing-a-capture">
+      <title>Citing a capture</title>
+      <p>One long run on a rig usually answers <b>several</b> test cases at once — a single noise sweep is the evidence for the idle, half-load and full-load conditions alike. So a bundle is recorded once and <b>cited</b> from each result: open the run, click the <b>Evidence</b> cell on a row, and pick the capture.</p>
+      <p>Rows whose test case is physical or manual say <i>evidence needed</i> until something is cited, so a result that nothing backs is visible at a glance.</p>
+      <p>Removing a citation says this result no longer rests on that capture. It does <b>not</b> delete the capture, which other results may still cite. Deleting the bundle itself is the destructive path, and the confirmation names the results that will lose their evidence.</p>
+    </section>
+    <section id="limits">
+      <title>Limits</title>
+      <p>Each file is capped (200 MB by default) and each workspace has a total evidence allowance; an upload that would exceed it is refused with a message saying how much is in use. Ask an administrator if you need more.</p>
+    </section>
+  </conbody>
+</concept>

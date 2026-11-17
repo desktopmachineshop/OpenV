@@ -29,7 +29,11 @@ var Columns = []string{ColumnBacklog, ColumnTodo, ColumnInProgress, ColumnReview
 const (
 	AssigneeUser  = "user"
 	AssigneeAgent = "agent"
-	AssigneeTeam  = "team"
+	// AssigneeTeam was a crew ("team" was a crew's wire name). Crews are
+	// gone (issue 732): no card may be assigned to one, and migration 0069
+	// moved the cards that were onto the crew's entry agent or left them
+	// unassigned. Kept for the rows a later read may still meet.
+	AssigneeTeam = "team"
 )
 
 // Activity kinds.
@@ -46,7 +50,7 @@ const (
 var (
 	ErrNotFound            = errors.New("work item not found")
 	ErrInvalidColumn       = errors.New("invalid board column")
-	ErrInvalidAssigneeType = errors.New("invalid assignee_type: must be user, agent or team")
+	ErrInvalidAssigneeType = errors.New("invalid assignee_type: must be user or agent")
 )
 
 // WorkItem is a kanban card on the project board. The board column is stored
@@ -120,10 +124,10 @@ func ValidColumn(column string) bool {
 }
 
 // ValidAssigneeType reports whether the value is a known assignee type: a
-// person, an agent or a crew ("team" is a crew's wire name).
+// person or an agent.
 func ValidAssigneeType(assigneeType string) bool {
 	switch assigneeType {
-	case AssigneeUser, AssigneeAgent, AssigneeTeam:
+	case AssigneeUser, AssigneeAgent:
 		return true
 	}
 	return false

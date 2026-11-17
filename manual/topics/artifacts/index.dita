@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="artifacts">
+  <title>Requirements &amp; artifacts</title>
+  <shortdesc>The <b>Requirements</b> view is the heart of a project: a tree of artifacts with an editor, version history, image attachments, comments, and baselines.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="requirements"/>
+  </prolog>
+  <conbody/>
+</concept>

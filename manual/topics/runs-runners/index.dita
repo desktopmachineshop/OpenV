@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="runs-runners">
+  <title>Runs &amp; runners</title>
+  <shortdesc>Every piece of agent work is a <b>run</b>. Runs are executed by <b>runners</b> — worker processes that drive an AI vendor CLI on a real machine. The server itself never runs a model; it queues work and reviews results.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="agent-runs"/>
+  </prolog>
+  <conbody/>
+</concept>

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="everything-is-read-only-all-of-a-sudden">
+  <title>Everything is read-only all of a sudden</title>
+  <shortdesc>You're probably viewing a <b>baseline</b>. Baselines are immutable snapshots — switch the baseline selector back to <b>Live</b> to edit. Completed or aborted <b>test runs</b> are read-only too.</shortdesc>
+  <conbody/>
+</concept>

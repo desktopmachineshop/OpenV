@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="where-links-come-from-automatically">
+  <title>Where links come from automatically</title>
+  <conbody>
+    <ul>
+      <li>The <b>guided wizard</b> creates links as it materializes drafts: user needs <i>relate to</i> their persona, requirements <i>derive from</i> their need, and verification stubs <i>verify</i> their requirement.</li>
+      <li><b>Agents</b> can propose links; with the default proposal write mode you approve them before they land (see <i>Runs &amp; runners</i>).</li>
+    </ul>
+  </conbody>
+</concept>

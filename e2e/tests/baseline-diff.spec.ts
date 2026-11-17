@@ -1,12 +1,13 @@
 import { test, expect, Page } from '@playwright/test';
 import {
+  createProject,
+  createRequirement,
   makeRunId,
   makeUser,
-  registerUser,
-  createProject,
-  openRequirements,
-  createRequirement,
   openArtifactForEdit,
+  openRequirements,
+  openRequirementsToolbar,
+  registerUser,
 } from './helpers';
 
 // Baseline-diff journey (issue #189).
@@ -48,6 +49,7 @@ test('sets up a project with one requirement', async () => {
 });
 
 test('captures a baseline of the current state', async () => {
+  await openRequirementsToolbar(page);
   await page.getByRole('button', { name: 'Capture Baseline' }).click();
 
   const dialog = page.getByRole('dialog');
@@ -56,6 +58,7 @@ test('captures a baseline of the current state', async () => {
   await dialog.getByRole('button', { name: 'OK' }).click();
 
   // The new baseline appears in the baseline selector.
+  await openRequirementsToolbar(page);
   const baselineSelect = page.locator('select[title="Select baseline"]');
   await expect(baselineSelect.locator('option', { hasText: baselineName })).toHaveCount(1);
 });
@@ -75,6 +78,7 @@ test('edits the requirement title after the baseline', async () => {
 test('Compare shows the edit in the Modified section (old -> new title)', async () => {
   // With "Live Project" selected, Compare diffs the newest baseline against
   // live and navigates into the compare view.
+  await openRequirementsToolbar(page);
   await page.getByRole('button', { name: 'Compare' }).click();
 
   await expect(page).toHaveURL(new RegExp(`/projects/${projectId}/baselines/[0-9a-f-]{36}/compare`));

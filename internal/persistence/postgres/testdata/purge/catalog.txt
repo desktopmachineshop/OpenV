@@ -26,6 +26,7 @@ automations scope org_id,project_id deleted
 baselines scope project_id cascade from projects
 boot_tasks scope - not reached
 chatter scope artifact_id deleted
+comment_reads scope artifact_id,org_id,project_id cascade from organizations,projects
 connected_app_workspaces scope org_id cascade from connected_apps,organizations
 connected_apps scope org_id cascade from organizations
 connector_pairings scope org_id cascade from organizations
@@ -37,6 +38,7 @@ evidence_files scope - deleted
 guided_session_messages scope - cascade from guided_sessions
 guided_sessions scope org_id,project_id deleted
 hosted_workers scope org_id cascade from organizations
+identity_link_requests scope - not reached
 interview_invites scope - cascade from interviews
 interview_messages scope - cascade from interview_sessions
 interview_sessions scope - cascade from interviews
@@ -53,6 +55,18 @@ org_team_members scope - cascade from org_teams
 org_teams scope org_id cascade from organizations
 organizations scope - deleted
 password_resets scope - not reached
+plan_assignments scope project_id cascade from projects,work_items
+plan_baselines scope project_id cascade from projects
+plan_dependencies scope project_id cascade from projects,work_items
+plan_external_links scope - cascade from work_items
+plan_holidays scope project_id cascade from projects
+plan_milestones scope project_id cascade from projects
+plan_org_calendar scope org_id cascade from organizations
+plan_resources scope project_id cascade from projects
+plan_settings scope project_id cascade from projects
+plan_task_todos scope project_id cascade from projects,todos,work_items
+plan_tasks scope project_id cascade from projects,work_items
+plan_time_off scope org_id cascade from organizations
 product_profiles scope project_id cascade from projects
 project_members scope project_id cascade from projects
 project_share_links scope project_id cascade from projects
@@ -67,6 +81,7 @@ release_schedule scope org_id cascade from organizations
 repo_connections scope project_id cascade from projects
 runner_pool_nodes scope - not reached
 runner_sessions scope org_id cascade from organizations
+saved_searches scope org_id cascade from organizations
 schema_migrations scope - not reached
 sessions scope - not reached
 shared_product_reports scope - not reached
@@ -74,13 +89,17 @@ shared_product_votes scope - not reached
 shared_products scope - not reached
 site_visit_days scope - not reached
 site_visitors scope - not reached
+target_releases scope project_id cascade from projects
 templates scope org_id deleted
 test_results scope - cascade from test_runs
 test_runs scope project_id deleted
+todos scope org_id,project_id cascade from organizations
 user_activity_days scope - not reached
+user_identities scope - not reached
 user_provider_tokens scope - not reached
 user_repo_paths scope - cascade from repo_connections
 users scope - not reached
 work_item_activity scope - cascade from work_items
 work_items scope project_id deleted
 worker_keys scope org_id cascade from organizations
+workspace_notices scope org_id cascade from organizations

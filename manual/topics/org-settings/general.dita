@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="general">
+  <title>General</title>
+  <conbody>
+    <ul>
+      <li><b>Workspace name</b> — admins can rename the workspace.</li>
+      <li><b>Plan</b> — the workspace's plan. Every workspace is on the free plan while OpenV is in alpha, with every feature included; the hosted-runner limits in force are listed on the <xref href="https://openv.app/pricing" scope="external" format="html">pricing page</xref>.</li>
+      <li><b>Details</b> — workspace ID, slug, and creation date.</li>
+    </ul>
+  </conbody>
+</concept>

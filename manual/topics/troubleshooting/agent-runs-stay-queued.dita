@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="agent-runs-stay-queued">
+  <title>Agent runs stay "queued"</title>
+  <shortdesc>No runner is online to claim them. The Runs page shows a banner with an <b>Open Agent Connector</b> button — open (or install and pair) the connector, or ask an admin to provision the hosted runner. See <i>Runs &amp; runners</i>.</shortdesc>
+  <conbody/>
+</concept>

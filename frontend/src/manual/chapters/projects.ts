@@ -7,22 +7,70 @@ artifacts, traceability links, board, agents, runs, interviews, and V&V data.
 
 ## The Projects page
 
-After signing in you land on the Projects page for the active workspace. Each
-project appears as a card showing its name, description, short ID, and creation
-date. Hovering a card reveals its action buttons:
+When you sign in, OpenV opens **Home**: the Projects page of the active
+workspace, which brings everything in it together. **Home** is at the top
+of the rail on every page.
 
-| Icon | Action |
+- Along the top are the workspace's figures: how many artifacts its projects
+  hold, the share of their requirements that are **traced** (a test case
+  verifies them) and **verified**, and how many test cases fail.
+- **Needs you** lists what waits on you across every project, each line
+  naming its project: artifacts in review to approve, suspect links to
+  confirm, test runs in progress, failing test cases and comments you have
+  not read (never your own).
+  Click a line to open the artifact it names (for a link, the artifact the
+  link starts from). The button on the right says what it does: **Review**
+  and **Open** open the artifact, **Continue** the test run. A suspect link
+  has two buttons instead: **✓** confirms that the link still holds, and
+  **✗** removes the link once you confirm it. Either way the line leaves the
+  list there and then. A comment has **Mark read**, which takes every
+  unread comment on that artifact off the list without opening it, and
+  **Mark all read**, in the panel's header, clears every comment at once.
+  Each leaves a line saying what was marked, with **Undo** to put it back.
+  **Review all**, in the panel's header, opens the review queue of the
+  project with the most waiting.
+- **Activity** shows the newest events across the workspace's projects, who
+  did what to which artifact. Click an event to open what it is about: the
+  artifact, a link's source artifact, the board, the agent run, the test
+  run, the baseline, or a comment with its notes open. An artifact archived
+  since is still named, with **(archived)** after it, and opens read-only
+  from its history, where **Reinstate** brings it back. A removed link opens the artifact it came from as it
+  was while it still had that link, so you can see what was there. When agents have proposed
+  changes, a card below it counts the proposals waiting.
+- **Projects**, below them, is where you pick a project, and **+ New
+  project** in its header starts one. Each row shows the project's name and
+  how many artifacts it holds, a one-line description, and two bars: the
+  share of its requirements that are traced (a test case or a manual
+  verification stands behind them) and the share verified (their tests
+  pass, or they are verified by hand). A project with no requirements yet
+  says so instead. The project you opened last is marked with a blue edge.
+  A project that has a parent (set on its **Overview**) is listed under
+  it, indented, and the arrow before a parent's name folds its children
+  away; the fold is remembered in this browser.
+  The **⋯** button at the end of a row opens its actions by name:
+
+| Action | What it does |
 | --- | --- |
-| ⧉ | **Save as template** — snapshot this project as a reusable template |
-| ✎ | **Edit project** — rename it or change the description |
-| ↓ | **Download** — opens the download wizard (format, sections, attachments) |
-| ✕ | **Delete project** — removes the project and all its artifacts |
+| **New child project** | start a project under this one: the form opens with this project as its parent |
+| **Edit project** | rename it or change the description |
+| **Download** | opens the download wizard (format, sections, attachments) |
+| **Save as template** | snapshot this project as a reusable template |
+| **Delete project** | removes the project and all its artifacts |
 
-Click anywhere else on the card to open the project.
+A workspace with no activity yet shows no Activity panel: **Needs you**
+takes the width until there is something to report.
+
+Click anywhere else on the row to open the project.
+
+On a computer or tablet, Home fits the window: the page itself does not
+scroll. **Needs you**, **Activity** and **Projects** share the height below
+the figures, and each scrolls on its own when it has more than fits, so
+**Needs you** lists everything waiting rather than the first few. A very
+short window, or a form open below the list, scrolls the page as before.
 
 ## Creating a project
 
-Click **+ New Project**. The form offers a **Project Type**:
+Click **+ New Project**. **Parent project** places the new project in the hierarchy: leave it at *None* for a top-level project, or choose the project it belongs under. **New child project**, in a project's **⋯** menu, opens the form with that project already chosen. The form then offers a **Project Type**:
 
 - **Blank Project** — start empty; enter a name and optional description.
 - **Templates** — start from a template you previously saved with ⧉.
@@ -104,6 +152,20 @@ a two-step wizard.
   actually holds are offered. Ticking any makes the download a **.zip**: the
   document plus an \`attachments/\` folder, each file named by its figure
   reference where it has one.
+- **Plan and tasks** — tick **The plan and its tasks** to bring the
+  project's plan along: every task with its dates, effort, progress and who
+  it is assigned to, and the milestones. It travels as a file in a
+  \`plan/\` folder beside the document, in the format nearest the one you
+  chose: JSON, CSV or a workbook beside those, a PDF beside a PDF or Word
+  specification, and Microsoft Project XML beside ReqIF. It also makes the
+  download a **.zip**. It is offered for the project as it stands, when it
+  has a task or a milestone, and not for a baseline.
+- **Child projects** — tick **The projects under this one** to take them
+  along: each project beneath this one that you can read, every level
+  down, travels as its own download with the same format and choices, in
+  a folder of its name under \`projects/\` in the **.zip**, with its own
+  plan if you ticked the plan. It is offered for a project that has
+  projects under it, and not for a baseline.
 
 The line at the foot of the wizard says what you are about to get — "1 of 3
 sections, no headings, with figures" — and the button refuses to download a
@@ -131,7 +193,9 @@ the live project.
 
 ## Inside a project
 
-Opening a project shows the dark left sidebar with the project's modules:
+Opening a project shows the project menu with its pages, grouped under
+**Plan**, **Define**, **Verify** and **Agents** on the rail down the left (see
+*Getting started* → *Finding your way around*):
 
 | Entry | What it is |
 | --- | --- |
@@ -139,17 +203,28 @@ Opening a project shows the dark left sidebar with the project's modules:
 | Requirements | The artifact tree — create, edit, link, baseline |
 | Guided Definition | Step-by-step wizard from framing to committed requirements |
 | V&V | Coverage, gaps, test runs, PDF report |
-| Matrix | Traceability matrix grid |
+| Traceability | Traceability matrix grid |
 | Board | Kanban board with human and agent assignees |
-| Crew | Crew builder — org chart of agents and people |
 | Agents | Agent definitions and launcher |
 | Automations | Scheduled and event-triggered agent runs |
 | Runs | Agent run history and proposal review |
-| Settings | Project access, repositories, agent auth, danger zone |
+| Settings | Project access, repositories, agent auth, attributes, quality rules, danger zone |
 
-The project name under the workspace switcher takes you back to all projects.
-Your user block at the bottom of the sidebar opens **Settings** (personal
-runner and agent sign-ins) and **Sign out**.
+**Settings** lists its sections down the left — General, Access,
+Repositories, Agents, Attributes, Quality rules and, set apart in red, Danger
+Zone — with the open one beside them under its own title and a line on what
+it is for (on a phone the sections are a row of tabs along the top). In
+**Quality rules** each wording check has a switch: off silences it, on brings
+it back at the level it would speak at, and the menu beside it sets that
+level — error, warning or info. Below the rules, **Priority from the
+requirement text** lets a requirement's Priority follow its *shall*, *should*
+or *may* until someone picks one (see *Editing, versions & history* in the
+Requirements chapter). It is off until an editor turns it on.
+
+**Projects** at the top of the rail takes you back to all projects. The
+account menu at the right end of the top bar (on a phone, your name at the
+foot of **More**) opens **Settings** (personal runner and agent
+sign-ins) and **Sign out**.
 
 ## Project access (members)
 

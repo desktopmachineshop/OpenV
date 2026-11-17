@@ -5,6 +5,9 @@ package main
 import (
 	"fmt"
 	"testing"
+	"time"
+
+	"golang.org/x/oauth2"
 )
 
 // TestTourS5cSelfHostedCrossSiteSso is the S5c tour's self-hosted,
@@ -56,9 +59,11 @@ import (
 //     unavailable;
 //   - OIDC sign-on against the stand-in: a start while the provider's
 //     discovery fails (502), then the redirect to the provider's authorization
-//     endpoint with its state and nonce in cookies (Secure, SameSite=None,
-//     Partitioned) and the redirect_uri on PUBLIC_URL; each refusal of the
-//     callback in the handler's order (the state, the nonce cookie, the code,
+//     endpoint with its state, nonce and PKCE verifier in cookies (Secure,
+//     SameSite=None, Partitioned), the verifier's S256 challenge and the
+//     redirect_uri on PUBLIC_URL; each refusal of the
+//     callback in the handler's order, each sending the browser to the
+//     sign-in page with ?error= (the state, the nonce cookie, the code,
 //     the token exchange, a token answer with no id_token, an id_token that
 //     does not verify, signed by a key the provider does not publish or
 //     issued to another client, the id_token's nonce, claims that do not
@@ -73,8 +78,11 @@ import (
 //     refused, the account's password change refused (409 no_password), and
 //     a password sign-in to it refused as a wrong password is (401); an
 //     address nobody invited signing in, since the registration policy is
-//     never consulted for single sign-on; and the first account signing in
-//     again, publishing nothing;
+//     never consulted for single sign-on; the provider removing that
+//     account (dms-id ADR 0002): an ID token passed off as a deletion token
+//     refused as invalid, a deletion token removing it, its session gone,
+//     and the same token again answering not_found; and the first account
+//     signing in again, publishing nothing;
 //   - Google sign-on on the same server: the start, whose state cookie is
 //     Secure, SameSite=None and Partitioned and whose redirect_uri is on
 //     PUBLIC_URL, and a callback that makes an account (the closed
@@ -88,7 +96,8 @@ import (
 //     Google's).
 //
 // Nondeterminism: ids, sessions, tokens and minted times (the generic
-// tokens); the OIDC state and nonce (captured from the login's cookies); a
+// tokens); the OIDC state, nonce and PKCE verifier (captured from the login's
+// cookies) and the verifier's challenge; a
 // workspace slug's last 8 hex digits (the area's own pattern). The stand-in's
 // requests carry the client's credentials (the test values tour-oidc and x)
 // and the codes the area issued; the id_token the stand-in signs never
@@ -212,6 +221,10 @@ func selfHostedCrossSiteSsoTour(tr *tour, idp *tourIdP, google *tourGoogle) {
 	nonce := start.captureCookie("oidc.nonce", "openv_oidc_nonce")
 	state := withCookie("openv_oidc_state", "{{oidc.state}}")
 	nonceCookie := withCookie("openv_oidc_nonce", "{{oidc.nonce}}")
+	// The PKCE verifier rides in its own cookie; the redirect carries its S256.
+	verifier := start.captureCookie("oidc.pkce", "openv_oidc_pkce")
+	tr.remember("oidc.pkce_challenge", oauth2.S256ChallengeFromVerifier(verifier))
+	verifierCookie := withCookie("openv_oidc_pkce", "{{oidc.pkce}}")
 	verified := func(email, name string) map[string]any {
 		return map[string]any{"nonce": nonce, "email": email, "email_verified": true, "name": name}
 	}
@@ -231,32 +244,33 @@ func selfHostedCrossSiteSsoTour(tr *tour, idp *tourIdP, google *tourGoogle) {
 	idp.issue("tour-code-sso-again", verified("sso-user@example.com", "Tour SSO User"))
 
 	selfHostedCrossSiteSsoCallback(tr, "a state other than the cookie's", "state=not-the-state&code=tour-code-sso",
-		state, nonceCookie)
+		state, nonceCookie, verifierCookie)
 	selfHostedCrossSiteSsoCallback(tr, "no nonce cookie", "state={{oidc.state}}&code=tour-code-sso", state)
 	selfHostedCrossSiteSsoCallback(tr, "no code: refused after the flow cookies are cleared", "state={{oidc.state}}",
-		state, nonceCookie)
+		state, nonceCookie, verifierCookie)
 	selfHostedCrossSiteSsoCallback(tr, "a code the provider refuses: the token exchange fails",
-		"state={{oidc.state}}&code=tour-code-refused", state, nonceCookie)
+		"state={{oidc.state}}&code=tour-code-refused", state, nonceCookie, verifierCookie)
 	selfHostedCrossSiteSsoCallback(tr, "a token answer with no id_token",
-		"state={{oidc.state}}&code=tour-code-no-id-token", state, nonceCookie)
+		"state={{oidc.state}}&code=tour-code-no-id-token", state, nonceCookie, verifierCookie)
 	selfHostedCrossSiteSsoCallback(tr, "an id_token signed by a key the provider's JWKS does not publish: it does not "+
 		"verify (the first verification fetches the JWKS)", "state={{oidc.state}}&code=tour-code-foreign-key", state,
-		nonceCookie)
+		nonceCookie, verifierCookie)
 	selfHostedCrossSiteSsoCallback(tr, "an id_token issued to another client: it does not verify",
-		"state={{oidc.state}}&code=tour-code-other-client", state, nonceCookie)
+		"state={{oidc.state}}&code=tour-code-other-client", state, nonceCookie, verifierCookie)
 	selfHostedCrossSiteSsoCallback(tr, "an id_token bound to another nonce",
-		"state={{oidc.state}}&code=tour-code-other-nonce", state, nonceCookie)
+		"state={{oidc.state}}&code=tour-code-other-nonce", state, nonceCookie, verifierCookie)
 	selfHostedCrossSiteSsoCallback(tr, "an id_token whose claims do not decode: the email claim is a number",
-		"state={{oidc.state}}&code=tour-code-bad-claims", state, nonceCookie)
+		"state={{oidc.state}}&code=tour-code-bad-claims", state, nonceCookie, verifierCookie)
 	selfHostedCrossSiteSsoCallback(tr, "an id_token with no email claim", "state={{oidc.state}}&code=tour-code-no-email",
-		state, nonceCookie)
+		state, nonceCookie, verifierCookie)
 	selfHostedCrossSiteSsoCallback(tr, "an address the provider does not assert as verified",
-		"state={{oidc.state}}&code=tour-code-unverified", state, nonceCookie)
-	selfHostedCrossSiteSsoCallback(tr, "an address a password account holds: never linked",
-		"state={{oidc.state}}&code=tour-code-password", state, nonceCookie)
+		"state={{oidc.state}}&code=tour-code-unverified", state, nonceCookie, verifierCookie)
+	selfHostedCrossSiteSsoCallback(tr, "an address a password account holds: no session, a link request in a "+
+		"cross-site cookie, and the sign-in page to confirm it on (the sessions area confirms one)",
+		"state={{oidc.state}}&code=tour-code-password", state, nonceCookie, verifierCookie)
 	ok := selfHostedCrossSiteSsoCallback(tr, "a verified address: the account is made, joins W by its pending "+
 		"invitation, and is sent to http://localhost:3000 (Q12's second chain)",
-		"state={{oidc.state}}&code=tour-code-sso", state, nonceCookie)
+		"state={{oidc.state}}&code=tour-code-sso", state, nonceCookie, verifierCookie)
 	sso := tr.adopt(ok, "sso", fmt.Sprintf("the account the OIDC sign-on made (step %d)", ok.step.n))
 	tr.step("the account the sign-on made", sso, "GET /api/v1/auth/me")
 	tr.step("its workspaces: its personal one and W, each on the nightly channel, locked (Q5)", sso, "GET /api/v1/orgs")
@@ -270,11 +284,30 @@ func selfHostedCrossSiteSsoTour(tr *tour, idp *tourIdP, google *tourGoogle) {
 		"identity provider it was made through (OpenV REQ-18)", anon, "POST /api/v1/auth/login",
 		jsonBody(`{"email":"sso-user@example.com","password":"tour password 1"}`))
 	un := selfHostedCrossSiteSsoCallback(tr, "an address nobody invited: the account is made, since single sign-on "+
-		"never consults the closed registration", "state={{oidc.state}}&code=tour-code-uninvited", state, nonceCookie)
+		"never consults the closed registration", "state={{oidc.state}}&code=tour-code-uninvited", state, nonceCookie, verifierCookie)
 	uninvited := tr.adopt(un, "uninvited", fmt.Sprintf("the account an uninvited OIDC sign-on made (step %d)", un.step.n))
 	tr.step("its workspaces: its personal one alone", uninvited, "GET /api/v1/orgs")
+
+	// The provider removes an account (dms-id ADR 0002): a deletion token
+	// for the uninvited account's address, then the same again, and an ID
+	// token passed off as one.
+	deletionForm := func(name, token string) tourOpt {
+		tr.remember(name, token)
+		return rawBody("application/x-www-form-urlencoded", []byte("deletion_token="+token))
+	}
+	tr.step("the provider sends an ID token as a deletion token: refused as invalid, its typ is not "+
+		"account-deletion+jwt", anon, "POST /api/v1/auth/oidc/account-deletion",
+		deletionForm("deletion.id_token", idp.sign(map[string]any{"iss": idp.issuer(), "aud": "tour-oidc",
+			"sub": "tour-subject-x", "email": "sso-uninvited@example.com", "exp": time.Now().Add(time.Hour).Unix()})))
+	gone := idp.signDeletion("SSO-Uninvited@example.com")
+	tr.step("the provider removes the uninvited account: deleted, its session ended and its personal workspace "+
+		"purged", anon, "POST /api/v1/auth/oidc/account-deletion",
+		deletionForm("deletion.token", gone))
+	tr.step("the removed account's session is gone", uninvited, "GET /api/v1/auth/me")
+	tr.step("the same request again: not_found, nothing left to remove", anon,
+		"POST /api/v1/auth/oidc/account-deletion", deletionForm("deletion.token", gone))
 	selfHostedCrossSiteSsoCallback(tr, "the first address signs in again: a new session, and nothing published",
-		"state={{oidc.state}}&code=tour-code-sso-again", state, nonceCookie)
+		"state={{oidc.state}}&code=tour-code-sso-again", state, nonceCookie, verifierCookie)
 
 	// Google sign-on on the same server (I8, Q12): its state cookie under
 	// cross-site cookies, its redirect_uri on PUBLIC_URL, and its landing on
@@ -307,8 +340,10 @@ func selfHostedCrossSiteSsoTour(tr *tour, idp *tourIdP, google *tourGoogle) {
 	for i := 1; i < 20; i++ {
 		tr.probe(anon, "GET /api/v1/auth/oidc/login", fromQ)
 	}
-	tr.step("the 20th OIDC sign-on start from address Q: the last its budget allows", anon,
+	qStart := tr.step("the 20th OIDC sign-on start from address Q: the last its budget allows", anon,
 		"GET /api/v1/auth/oidc/login", fromQ, onceSSO, note("19 starts went before it, as probes"))
+	qVerifier := qStart.captureCookie("oidc.pkce_q", "openv_oidc_pkce")
+	tr.remember("oidc.pkce_q_challenge", oauth2.S256ChallengeFromVerifier(qVerifier))
 	selfHostedCrossSiteSsoCallback(tr, "the callback from Q: refused, the bucket the starts spent (Q18)",
-		"state={{oidc.state}}&code=tour-code-sso-again", state, nonceCookie, fromQ)
+		"state={{oidc.state}}&code=tour-code-sso-again", state, nonceCookie, verifierCookie, fromQ)
 }

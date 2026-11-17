@@ -1,3 +1,4 @@
+import { useUiRefresh } from '../hooks/useUiRefresh';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
@@ -5,11 +6,9 @@ import {
   agentsAPI,
   Automation,
   automationsAPI,
-  Crew,
-  crewsAPI,
 } from '../api/client';
 import { useAppStore } from '../state/store';
-import { ErrorBanner, Modal, SegmentedControl, useConfirm } from '../components/ui';
+import { ErrorBanner, Modal, SegmentedControl, useConfirm, chipStyle, toneForColor, buttonStyle } from '../components/ui';
 import { useFeature } from '../hooks/useFeature';
 import { WORKSPACE_AUTOMATIONS_FEATURE } from '../features';
 import { useViewport } from '../hooks/useViewport';
@@ -19,7 +18,6 @@ import {
   automationPayload,
   coversProject,
   CRON_PRESETS,
-  crewsForScope,
   emptyForm,
   FormState,
   kindColor,
@@ -36,6 +34,7 @@ export const AutomationsPage: React.FC = () => {
   // A phone lists name, kind, the switch and the actions; the target, the
   // schedule and the run times are in the editor a tap away.
   const { isPhone } = useViewport();
+  const refresh = useUiRefresh();
   const columns = isPhone
     ? ['Name', 'Kind', 'Enabled', '']
     : ['Name', 'Kind', 'Target', 'Schedule / Event', 'Enabled', 'Last run', 'Next run', ''];
@@ -61,7 +60,6 @@ export const AutomationsPage: React.FC = () => {
 
   const [automations, setAutomations] = useState<Automation[]>([]);
   const [agents, setAgents] = useState<AgentDef[]>([]);
-  const [crews, setCrews] = useState<Crew[]>([]);
   const [error, setError] = useState('');
   const [form, setForm] = useState<FormState | null>(null);
   const [saving, setSaving] = useState(false);
@@ -78,14 +76,13 @@ export const AutomationsPage: React.FC = () => {
     // activeOrgId: the list is scoped by the X-Org-ID header the API client
     // injects, so refetch when the active workspace changes (e.g.
     // ProjectLayout's cross-org deep-link sync, issue #99). The effect below
-    // also re-runs via this callback, refreshing agents and crews too.
+    // also re-runs via this callback, refreshing the agents too.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, activeOrgId]);
 
   useEffect(() => {
     load();
     agentsAPI.list().then((res) => setAgents(res.data || [])).catch(() => setAgents([]));
-    crewsAPI.list(projectId || undefined).then((res) => setCrews(res.data || [])).catch(() => setCrews([]));
   }, [load, projectId]);
 
   const agentName = useMemo(() => {
@@ -95,14 +92,6 @@ export const AutomationsPage: React.FC = () => {
     });
     return (id: string) => m[id] || id;
   }, [agents]);
-
-  const crewName = useMemo(() => {
-    const m: Record<string, string> = {};
-    crews.forEach((c) => {
-      m[c.id] = c.name;
-    });
-    return (id: string) => m[id] || id;
-  }, [crews]);
 
   const set = (update: Partial<FormState>) =>
     setForm((f) => (f ? { ...f, ...update } : f));
@@ -166,22 +155,17 @@ export const AutomationsPage: React.FC = () => {
   };
 
   const targetLabel = (a: Automation): string => {
-    if (a.team_id) return `👥 ${crewName(a.team_id)}`;
-    if (a.agent_id) return `🤖 ${agentName(a.agent_id)}`;
-    return '—';
+    if (a.agent_id) return `${refresh ? '' : '🤖 '}${agentName(a.agent_id)}`;
+    // An automation of a crew whose crew had no entry agent was switched off
+    // when crews went: it waits for an agent.
+    return 'No agent: choose one';
   };
 
   // A whole-workspace automation is its workspace admins' to change; the
   // rest of the workspace sees it listed.
   const writable = (a: Automation): boolean => Boolean(a.project_id) || isAdmin;
 
-  // A whole-workspace automation cannot keep a crew made in one project.
-  const setScope = (scope: AutomationScope) =>
-    setForm((f) => {
-      if (!f) return f;
-      const keeps = crewsForScope(crews, scope).some((c) => c.id === f.team_id);
-      return { ...f, scope, team_id: keeps ? f.team_id : '' };
-    });
+  const setScope = (scope: AutomationScope) => setForm((f) => (f ? { ...f, scope } : f));
 
   const scheduleLabel = (a: Automation): string => {
     if (a.kind === 'scheduled') return a.cron_expr || '—';
@@ -190,10 +174,10 @@ export const AutomationsPage: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="ov-gutter" style={{ padding: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-        <h2 style={{ color: 'var(--text)', margin: 0, flex: 1 }}>Automations</h2>
-        <button className="button" onClick={() => setForm(emptyForm())}>
+        <h2 className="ov-page-title" style={{ color: 'var(--text)', margin: 0, flex: 1, fontSize: 20, fontWeight: 700 }}>Automations</h2>
+        <button className="button" data-help-key="automations.create" onClick={() => setForm(emptyForm())}>
           New automation
         </button>
       </div>
@@ -201,7 +185,7 @@ export const AutomationsPage: React.FC = () => {
       <ErrorBanner message={error} onDismiss={() => setError('')} />
 
       <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', marginBottom: 20 }}>
-      <div className="table-container" style={{ flex: 1, minWidth: 0 }}>
+      <div className="table-container" style={{ flex: 1, minWidth: 0 }} data-help-key="automations">
         <div className="table-scroll">
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
@@ -242,17 +226,7 @@ export const AutomationsPage: React.FC = () => {
                   {!a.project_id && <WorkspaceScopePill />}
                 </td>
                 <td style={{ padding: '9px 12px', borderBottom: '1px solid var(--neutral-soft)' }}>
-                  <span
-                    style={{
-                      display: 'inline-block',
-                      padding: '2px 10px',
-                      borderRadius: 12,
-                      background: kindColor(a.kind),
-                      color: '#fff',
-                      fontSize: 12,
-                      fontWeight: 600,
-                    }}
-                  >
+                  <span style={chipStyle(toneForColor(kindColor(a.kind)))}>
                     {kindLabel(a.kind)}
                   </span>
                 </td>
@@ -311,22 +285,14 @@ export const AutomationsPage: React.FC = () => {
                   <div style={{ display: 'flex', gap: 6, flexDirection: isPhone ? 'column' : 'row' }}>
                   <button
                     className="button"
+                    data-help-key="automations.runs"
                     style={{ padding: '4px 10px', fontSize: 12, minHeight: 36 }}
                     onClick={() => runNow(a)}
                   >
                     Run now
                   </button>
                   <button
-                    style={{
-                      padding: '4px 10px',
-                      fontSize: 12,
-                      minHeight: 36,
-                      background: 'var(--danger)',
-                      color: '#fff',
-                      border: 'none',
-                      borderRadius: 4,
-                      cursor: 'pointer',
-                    }}
+                    style={{ ...buttonStyle('danger', { compact: true }), minHeight: 36 }}
                     onClick={() => remove(a)}
                   >
                     Delete
@@ -358,48 +324,33 @@ export const AutomationsPage: React.FC = () => {
           width={720}
           onClose={() => setForm(null)}
         >
-          <div className="form-group">
+          {/* Modal takes no extra props: each part of the form carries the pane. */}
+          <div className="form-group" data-help-pane="automations.create" data-help-key="automations.create">
             <label>Name</label>
             <input value={form.name} onChange={(e) => set({ name: e.target.value })} />
           </div>
 
           <ScopeField scope={form.scope} canChoose={canChooseScope} onChange={setScope} />
 
-          <div className="form-group">
-            <label>Target</label>
-            <div style={{ marginBottom: 8 }}>
-              <SegmentedControl
-                aria-label="Automation target"
-                options={[
-                  { value: 'agent', label: 'Agent' },
-                  { value: 'team', label: 'Crew' },
-                ]}
-                value={form.targetKind}
-                onChange={(targetKind) => set({ targetKind })}
-              />
-            </div>
-            {form.targetKind === 'agent' ? (
-              <select value={form.agent_id} onChange={(e) => set({ agent_id: e.target.value })}>
-                <option value="">Choose agent…</option>
-                {agents.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <select value={form.team_id} onChange={(e) => set({ team_id: e.target.value })}>
-                <option value="">Choose crew…</option>
-                {crewsForScope(crews, form.scope).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            )}
+          <div className="form-group" data-help-pane="automations.create" data-help-key="automations.create">
+            <label>Agent</label>
+            <select
+              aria-label="Automation agent"
+              value={form.agent_id}
+              onChange={(e) => set({ agent_id: e.target.value })}
+            >
+              <option value="">Choose agent…</option>
+              {/* An archived agent stays listed for the automation that names
+                  it, marked, but it cannot run until it is reinstated. */}
+              {agents.map((a) => (
+                <option key={a.id} value={a.id} disabled={a.archived && form.agent_id !== a.id}>
+                  {a.archived ? `${a.name} (archived)` : a.name}
+                </option>
+              ))}
+            </select>
           </div>
 
-          <div className="form-group">
+          <div className="form-group" data-help-pane="automations.create" data-help-key="automations.kinds">
             <label>Kind</label>
             <SegmentedControl
               aria-label="Automation kind"
@@ -413,7 +364,7 @@ export const AutomationsPage: React.FC = () => {
           </div>
 
           {form.kind === 'scheduled' && (
-            <div className="form-group">
+            <div className="form-group" data-help-pane="automations.create" data-help-key="automations.kinds">
               <label>Cron expression</label>
               <div style={{ display: 'flex', gap: 8 }}>
                 <input
@@ -445,7 +396,7 @@ export const AutomationsPage: React.FC = () => {
 
           {form.kind === 'triggered' && (
             <>
-              <div className="form-group">
+              <div className="form-group" data-help-pane="automations.create" data-help-key="automations.triggers">
                 <label>Event type</label>
                 <select value={form.event_type} onChange={(e) => set({ event_type: e.target.value })}>
                   {EVENT_TYPES.map((et) => (
@@ -455,7 +406,7 @@ export const AutomationsPage: React.FC = () => {
                   ))}
                 </select>
               </div>
-              <div className="form-group">
+              <div className="form-group" data-help-pane="automations.create" data-help-key="automations.triggers">
                 <label>Event filter (optional key/value matches)</label>
                 {form.filters.map((f, idx) => (
                   <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 6 }}>
@@ -498,7 +449,7 @@ export const AutomationsPage: React.FC = () => {
                   + Add filter
                 </button>
               </div>
-              <div style={{ display: 'flex', gap: 14 }}>
+              <div style={{ display: 'flex', gap: 14 }} data-help-pane="automations.create" data-help-key="automations.triggers">
                 <div className="form-group" style={{ flex: 1 }}>
                   <label>Cooldown (seconds)</label>
                   <input
@@ -519,7 +470,7 @@ export const AutomationsPage: React.FC = () => {
             </>
           )}
 
-          <div className="form-group">
+          <div className="form-group" data-help-pane="automations.create" data-help-key="automations.create">
             <label>Prompt template</label>
             <textarea
               value={form.prompt_template}
@@ -534,7 +485,7 @@ export const AutomationsPage: React.FC = () => {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }} data-help-pane="automations.create" data-help-key="automations.create">
             <button className="button-secondary" onClick={() => setForm(null)}>
               Cancel
             </button>

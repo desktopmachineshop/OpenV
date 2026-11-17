@@ -106,9 +106,10 @@ describe('ReviewQueue decisions', () => {
     Array.from(container.querySelectorAll('button')).filter((b) =>
       (b.textContent || '').includes(text),
     );
-  /** A row's own Approve / Send back, in table order. */
+  /** A card's own Approve / Send back, in the In review column's order. */
+  const column = (name: string) => container.querySelector(`section[aria-label="${name}"]`)!;
   const rowButton = (row: number, text: string) => {
-    const rows = Array.from(container.querySelectorAll('tbody tr'));
+    const rows = Array.from(column('In review').querySelectorAll('article'));
     return exact(rows[row], text)[0];
   };
   const dialog = () => container.querySelector('[role="dialog"]');
@@ -162,9 +163,11 @@ describe('ReviewQueue decisions', () => {
     await mount();
     await click(rowButton(0, 'Approve'));
     expect(changeStatus).toHaveBeenCalledWith('a1', 'approved');
-    expect(container.textContent).not.toContain('Seal integrity');
+    expect(column('In review').textContent).not.toContain('Seal integrity');
+    // It moves to the Approved column, a record of the session.
+    expect(column('Approved').textContent).toContain('Seal integrity');
     // The others are untouched.
-    expect(container.textContent).toContain('Purge cycle');
+    expect(column('In review').textContent).toContain('Purge cycle');
   });
 
   it('asks for a reason before sending one back, then posts it and drafts it', async () => {
@@ -187,7 +190,10 @@ describe('ReviewQueue decisions', () => {
       expect.objectContaining({ artifactId: 'a1', message: 'Needs a tolerance. @dana' }),
     );
     expect(changeStatus).toHaveBeenCalledWith('a1', 'draft');
-    expect(container.textContent).not.toContain('Seal integrity');
+    expect(column('In review').textContent).not.toContain('Seal integrity');
+    // It moves to Changes requested, with the reason the author will read.
+    expect(column('Changes requested').textContent).toContain('Seal integrity');
+    expect(column('Changes requested').textContent).toContain('Needs a tolerance. @dana');
   });
 
   it('posts the reason before moving the status, so a rejection is never silent', async () => {
@@ -201,7 +207,7 @@ describe('ReviewQueue decisions', () => {
     // artifact back in draft with no word on why.
     expect(changeStatus).not.toHaveBeenCalled();
     expect(container.textContent).toContain('could not be sent back');
-    expect(container.textContent).toContain('Seal integrity');
+    expect(column('In review').textContent).toContain('Seal integrity');
   });
 
   it('select-all ticks every row and bulk approve applies to the selection', async () => {
@@ -258,7 +264,8 @@ describe('ReviewQueue decisions', () => {
     await mount();
     await click(rowButton(0, 'Approve'));
     expect(container.textContent).toContain('could not be approved');
-    expect(container.textContent).toContain('Seal integrity');
+    expect(column('In review').textContent).toContain('Seal integrity');
+    expect(column('Approved').textContent).not.toContain('Seal integrity');
   });
 
   it('still lists the queue when the figures cannot be read', async () => {
@@ -276,5 +283,7 @@ describe('ReviewQueue decisions', () => {
     expect(container.querySelector('input[aria-label="Select all artifacts in review"]')).toBeNull();
     expect(exact(container, 'Approve').length).toBe(0);
     expect(buttons('Approve selected').length).toBe(0);
+    // With nothing decided here, the board has no decision columns.
+    expect(container.querySelector('section[aria-label="Approved"]')).toBeNull();
   });
 });

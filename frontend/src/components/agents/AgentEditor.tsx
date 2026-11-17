@@ -43,6 +43,7 @@ interface FormState {
   write_mode: 'proposal' | 'direct';
   repo_access: boolean;
   locked: boolean;
+  archived: boolean;
   max_turns: number;
   timeout_seconds: number;
   allowed_tools: string;
@@ -59,6 +60,7 @@ const toForm = (agent: AgentDef | null): FormState => ({
   write_mode: agent?.write_mode || 'proposal',
   repo_access: agent?.repo_access || false,
   locked: agent?.locked || false,
+  archived: agent?.archived || false,
   max_turns: agent?.max_turns ?? 30,
   timeout_seconds: agent?.timeout_seconds ?? 600,
   allowed_tools: (agent?.allowed_tools || []).join(', '),
@@ -138,10 +140,16 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
       write_mode: form.write_mode,
       repo_access: form.repo_access,
       locked: form.locked,
+      archived: form.archived,
       max_turns: Number(form.max_turns) || 0,
       timeout_seconds: Number(form.timeout_seconds) || 0,
       allowed_tools: allowedTools,
       system_prompt: form.system_prompt,
+      // The agent's place in the hierarchy travels unchanged: the Agents
+      // page's Edit mode arranges it, and a save here must not undo that.
+      reports_to: agent?.reports_to || '',
+      group_name: agent?.group_name || '',
+      sort_order: agent?.sort_order ?? 0,
     };
     try {
       if (isNew) {
@@ -181,7 +189,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
   );
 
   return (
-    <div className="card measure" style={{ marginBottom: 0 }}>
+    <div className="card measure" style={{ marginBottom: 0 }} data-help-pane="agents.editor" data-help-key="agents.editor">
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <h3 style={{ margin: 0, flex: '1 1 160px', minWidth: 0, overflowWrap: 'anywhere' }}>{isNew ? 'New agent' : `Edit: ${agent?.name}`}</h3>
         {!isNew && (
@@ -261,7 +269,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 style={{ fontSize: 13 }}
               />
             </div>
-            <div className="form-group">
+            <div className="form-group" data-help-key="agents.model">
               <label>Provider</label>
               <select
                 value={form.provider}
@@ -275,7 +283,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 ))}
               </select>
             </div>
-            <div className="form-group">
+            <div className="form-group" data-help-key="agents.model">
               <label>Model</label>
               <ModelSelect
                 value={form.model}
@@ -289,7 +297,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 style={{ fontSize: 13 }}
               />
             </div>
-            <div className="form-group">
+            <div className="form-group" data-help-key="agents.model">
               <label>Effort</label>
               <select
                 value={form.effort}
@@ -305,7 +313,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 ))}
               </select>
             </div>
-            <div className="form-group">
+            <div className="form-group" data-help-key="agents.write-mode">
               <label>Write mode</label>
               <select
                 value={form.write_mode}
@@ -316,7 +324,11 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 <option value="direct">direct (writes immediately)</option>
               </select>
             </div>
-            <div className="form-group" style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 24 }}>
+            <div
+              className="form-group"
+              data-help-key="agents.repos"
+              style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 24 }}
+            >
               <input
                 id="repo-access"
                 type="checkbox"
@@ -346,7 +358,11 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                 style={{ fontSize: 13 }}
               />
             </div>
-            <div className="form-group" style={{ gridColumn: isPhone ? undefined : '1 / span 2' }}>
+            <div
+              className="form-group"
+              data-help-key="agents.allowlist"
+              style={{ gridColumn: isPhone ? undefined : '1 / span 2' }}
+            >
               <label>Allowed tools (comma-separated, required)</label>
               <input
                 value={form.allowed_tools}
@@ -358,7 +374,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                   borderColor: allowedTools.length === 0 ? 'var(--danger)' : undefined,
                 }}
               />
-              <div style={{ fontSize: 11.5, color: 'var(--text-muted)', marginTop: 4 }}>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                 {allowedTools.length === 0
                   ? 'Required: an empty list means the vendor CLI runs with every tool it has, so the agent cannot be saved without one.'
                   : 'mcp__openv__* grants the OpenV tools. Add vendor tools (Read, Edit, WebSearch…) only where this agent needs them.'}
@@ -382,6 +398,26 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
                     where you have not changed them. Lock it and they never will — this agent
                     then changes only when someone here changes it. You can unlock it again at
                     any time.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="form-group" style={{ gridColumn: isPhone ? undefined : '1 / span 2' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <input
+                  id="agent-archived"
+                  type="checkbox"
+                  checked={form.archived}
+                  onChange={(e) => set({ archived: e.target.checked })}
+                  style={{ width: 'auto', marginTop: 3 }}
+                />
+                <div>
+                  <label htmlFor="agent-archived" style={{ margin: 0, fontWeight: 400 }}>
+                    Archive this agent
+                  </label>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4, maxWidth: 'var(--measure-field)' }}>
+                    An archived agent leaves the team and cannot be run, and its runs and proposals are kept.
+                    Reinstate it from the Archived list at any time.
                   </div>
                 </div>
               </div>

@@ -52,7 +52,7 @@ type Pending =
  *   if (!(await confirm({ message: 'Delete this?', danger: true }))) return;
  *
  *   const prompt = usePrompt();
- *   const name = await prompt({ title: 'New crew', label: 'Name' });
+ *   const name = await prompt({ title: 'New folder', label: 'Name' });
  *   if (name === null) return; // cancelled
  */
 export const DialogProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

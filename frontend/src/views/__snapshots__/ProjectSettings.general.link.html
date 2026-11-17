@@ -1,36 +1,29 @@
-<div style="padding: 24px; max-width: 900px; margin: 0px auto;">
-<h2 style="color: var(--text); margin-bottom: 16px;">Project settings</h2>
-<div class="tab-strip" role="tablist">
-<button role="tab" id="project-settings-tab-general" aria-selected="true" aria-controls="project-settings-panel" style="background: none; border-top: medium; border-right: medium; border-bottom: 2px solid var(--accent); border-left: medium; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 600; color: var(--text); cursor: pointer; width: auto;">General</button>
-<button role="tab" id="project-settings-tab-members" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Access</button>
-<button role="tab" id="project-settings-tab-repos" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Repositories</button>
-<button role="tab" id="project-settings-tab-agents" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Agents</button>
-<button role="tab" id="project-settings-tab-attributes" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Attributes</button>
-<button role="tab" id="project-settings-tab-quality" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--text-muted); cursor: pointer; width: auto;">Quality rules</button>
-<button role="tab" id="project-settings-tab-danger" aria-selected="false" aria-controls="project-settings-panel" style="background: none; border-width: medium medium 2px; border-style: none none solid; border-color: currentcolor currentcolor transparent; border-image: none; margin-bottom: -2px; padding: 10px 16px; font-size: 14px; font-weight: 400; color: var(--danger); cursor: pointer; width: auto;">Danger Zone</button>
+<div class="ov-settings">
+<nav class="ov-settings-nav" aria-label="Settings sections">
+<span class="ov-section-label">Project</span>
+<div class="ov-settings-tabs" role="tablist" aria-label="Project settings sections" aria-orientation="vertical">
+<button role="tab" id="project-settings-tab-general" aria-selected="true" aria-controls="project-settings-panel" data-help-pane="settings.general" class="ov-settings-nav-item" style="font-weight: 600;">General</button>
+<button role="tab" id="project-settings-tab-members" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.members" class="ov-settings-nav-item" style="font-weight: 400;">Access</button>
+<button role="tab" id="project-settings-tab-repos" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.repos" class="ov-settings-nav-item" style="font-weight: 400;">Repositories</button>
+<button role="tab" id="project-settings-tab-agents" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.agents" class="ov-settings-nav-item" style="font-weight: 400;">Agents</button>
+<button role="tab" id="project-settings-tab-attributes" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.attributes" class="ov-settings-nav-item" style="font-weight: 400;">Attributes</button>
+<button role="tab" id="project-settings-tab-quality" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.quality" class="ov-settings-nav-item" style="font-weight: 400;">Quality rules</button>
+<button role="tab" id="project-settings-tab-danger" aria-selected="false" aria-controls="project-settings-panel" data-help-pane="settings.danger" class="ov-settings-nav-item is-danger" style="font-weight: 400;">Danger Zone</button>
 </div>
-<div role="tabpanel" id="project-settings-panel" aria-labelledby="project-settings-tab-general">
-<div class="card">
+</nav>
+<div class="ov-settings-main">
+<div class="ov-settings-head">
+<span class="ov-page-sub">Project settings</span>
+<h2>General</h2>
+<p>Where this project sits among the workspace's projects, and the parties its requirements refer to.</p>
+</div>
+<div role="tabpanel" id="project-settings-panel" aria-labelledby="project-settings-tab-general" data-help-pane="settings.general">
+<div class="card" data-help-key="settings.general.parent">
 <h3>Parent project</h3>
 <p style="font-size: 13px; color: var(--text-muted);">A subsystem or supplier project sits under the system it belongs to. Requirements here can then <em>refine</em> the parent's requirements, and the parent's V&amp;V rolls those refinements up. A supplier works in the child project with editor rights there and viewer rights on the parent.</p>
-<div style="max-width: 420px;" class="form-group">
-<label for="parent-project">This project refines</label>
-<select id="parent-project">
-<option value="">None (top-level project)</option>
-<option value="p0">Vehicle</option>
-<option value="p5">Chassis</option>
-</select>
+<p style="font-size: 13px;">A project's parent is set on its <a href="/projects/p1" data-discover="true">Overview</a>, where its child projects are listed too. A new child project is started from the parent's menu on the projects page.</p>
 </div>
-<div style="font-size: 13px; color: var(--text);">
-<div style="color: var(--text-muted); margin-bottom: 4px;">Child projects</div>
-<ul style="margin: 0px; padding-left: 1.2em;">
-<li>
-<a href="/projects/p2/settings?tab=general" data-discover="true">Impeller</a>
-</li>
-</ul>
-</div>
-</div>
-<div class="card">
+<div class="card" data-help-key="settings.general.parties">
 <h3>Reference parties</h3>
 <p style="font-size: 13px; color: var(--text-muted);">Who can own an artifact here besides the members: the organisations, teams and suppliers this project works with. The workspace's own company is always first. An artifact's owner is picked from this list and the members, and a download can be narrowed to one owner's share of the project.</p>
 <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px;">
@@ -65,6 +58,7 @@
 <input placeholder="Note (optional)" style="flex: 2 1 240px;" value="">
 <button type="submit" class="button" style="width: auto;" disabled="">Add party</button>
 </form>
+</div>
 </div>
 </div>
 </div>

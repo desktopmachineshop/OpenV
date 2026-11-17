@@ -5,10 +5,14 @@ import {
   NoteTodo as NoteTodoRef,
   ProjectMember,
   membersAPI,
+  todosAPI,
   workItemsAPI,
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
+import { TODOS_FEATURE } from '../features';
+import { useAppStore } from '../state/store';
 import { DEFAULT_TODO_COLUMN, columnFor } from './kanban/columns';
+import { TODO_TEXT_LIMIT, todoStatusFor, todoTextFromNote } from './todos/todoText';
 
 /** How much of a note becomes a to-do title before it is cut short. */
 const TITLE_LIMIT = 120;
@@ -54,10 +58,15 @@ export const NoteTodoChip: React.FC<{ projectId: string; todo: NoteTodoRef }> = 
   projectId,
   todo,
 }) => {
-  const col = columnFor(todo.status);
+  // A to-do of its own (todo_id) is open or done; a note raised before
+  // to-dos had a table names the board card it raised, with its column.
+  const col = todo.todo_id ? todoStatusFor(todo.status) : columnFor(todo.status);
+  const to = todo.todo_id
+    ? `/projects/${projectId}/todos?todo=${encodeURIComponent(todo.todo_id)}`
+    : `/projects/${projectId}/todos?item=${encodeURIComponent(todo.work_item_id || '')}`;
   return (
     <Link
-      to={`/projects/${projectId}/todos?item=${encodeURIComponent(todo.work_item_id)}`}
+      to={to}
       title={`To-do: ${todo.title}${todo.assignee_name ? ` — ${todo.assignee_name}` : ''}`}
       style={{
         display: 'inline-flex',
@@ -106,8 +115,20 @@ export const createNoteTodo = (
   projectId: string,
   entry: Pick<ChatterEntry, 'id' | 'artifact_id' | 'message'>,
   options: { title?: string; assigneeId?: string | null; dueDate?: string | null } = {}
-) =>
-  workItemsAPI.create(projectId, {
+) => {
+  // With the todos feature (issue #731) a note raises a to-do of its own,
+  // off the board; without it, a card in the board's To Do column as before.
+  // Read from the store rather than a hook: the "@@" shortcut raises one
+  // from outside a component's render.
+  if (useAppStore.getState().features?.features[TODOS_FEATURE]) {
+    return todosAPI.createProject(projectId, {
+      text: options.title || todoTextFromNote(entry.message),
+      assignee_id: options.assigneeId || null,
+      due_date: options.dueDate || null,
+      source_chatter_id: entry.id,
+    });
+  }
+  return workItemsAPI.create(projectId, {
     title: options.title || noteTitle(entry.message),
     description: entry.message,
     column: DEFAULT_TODO_COLUMN,
@@ -117,6 +138,7 @@ export const createNoteTodo = (
     source_chatter_id: entry.id,
     due_date: options.dueDate || null,
   });
+};
 
 /**
  * The "Add to-do" control on a note.
@@ -138,13 +160,15 @@ export const AddTodoControl: React.FC<AddTodoProps> = ({ projectId, entry, onCre
 
   const mentioned = entry.mentions && entry.mentions.length > 0 ? entry.mentions[0] : undefined;
 
+  const asTodo = useAppStore((s) => Boolean(s.features?.features[TODOS_FEATURE]));
+
   const start = useCallback(() => {
-    setTitle(noteTitle(entry.message));
+    setTitle(asTodo ? todoTextFromNote(entry.message) : noteTitle(entry.message));
     setAssignee(mentioned?.user_id || '');
     setDue('');
     setError('');
     setOpen(true);
-  }, [entry.message, mentioned]);
+  }, [entry.message, mentioned, asTodo]);
 
   // The member list is only needed once someone opens the form, and only
   // to let them pick somebody other than whoever the note named.
@@ -167,7 +191,7 @@ export const AddTodoControl: React.FC<AddTodoProps> = ({ projectId, entry, onCre
   const submit = async () => {
     const trimmed = title.trim();
     if (!trimmed) {
-      setError('Give the to-do a title.');
+      setError(asTodo ? 'Say what the to-do is.' : 'Give the to-do a title.');
       return;
     }
     setSaving(true);
@@ -233,12 +257,23 @@ export const AddTodoControl: React.FC<AddTodoProps> = ({ projectId, entry, onCre
     >
       <label style={{ fontSize: 11, color: 'var(--text-muted)' }}>
         To-do
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          style={fieldStyle}
-          autoFocus
-        />
+        {asTodo ? (
+          <textarea
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            maxLength={TODO_TEXT_LIMIT}
+            rows={3}
+            style={{ ...fieldStyle, resize: 'vertical' }}
+            autoFocus
+          />
+        ) : (
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            style={fieldStyle}
+            autoFocus
+          />
+        )}
       </label>
       <label style={{ fontSize: 11, color: 'var(--text-muted)' }}>
         For

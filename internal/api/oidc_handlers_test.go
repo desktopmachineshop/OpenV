@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/oauth2"
+
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
@@ -33,6 +35,8 @@ type oidcStub struct {
 	// idToken is the raw ID token the /token endpoint returns; the test sets it
 	// per case (controlling nonce/email/verified).
 	idToken string
+	// verifier is the PKCE code_verifier the last token request carried.
+	verifier string
 }
 
 func newOIDCStub(t *testing.T, clientID string) *oidcStub {
@@ -66,6 +70,8 @@ func newOIDCStub(t *testing.T, clientID string) *oidcStub {
 		})
 	})
 	mux.HandleFunc("/token", func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		stub.verifier = r.PostForm.Get("code_verifier")
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
 			"access_token": "stub-access-token",
@@ -124,12 +130,40 @@ func (s *oidcStub) config(clientID, redirectURL string) *OIDCConfig {
 // --- in-memory users.Repository --------------------------------------------
 
 type memUserRepo struct {
-	users    map[string]*users.User
-	sessions map[string]*users.Session
+	users      map[string]*users.User
+	sessions   map[string]*users.Session
+	links      map[string]*users.IdentityLink  // by token hash
+	identities map[string]bool                 // by user id + "/" + provider
+	resets     map[string]*users.PasswordReset // by token hash
 }
 
 func newMemUserRepo() *memUserRepo {
-	return &memUserRepo{users: map[string]*users.User{}, sessions: map[string]*users.Session{}}
+	return &memUserRepo{users: map[string]*users.User{}, sessions: map[string]*users.Session{},
+		links: map[string]*users.IdentityLink{}, identities: map[string]bool{},
+		resets: map[string]*users.PasswordReset{}}
+}
+
+func (m *memUserRepo) HasIdentity(userID, provider string) (bool, error) {
+	return m.identities[userID+"/"+provider], nil
+}
+func (m *memUserRepo) SaveIdentityLink(l *users.IdentityLink) error {
+	m.links[l.TokenHash] = l
+	return nil
+}
+func (m *memUserRepo) FindIdentityLink(hash string, now time.Time) (*users.IdentityLink, error) {
+	if l := m.links[hash]; l != nil && !l.Used && l.ExpiresAt.After(now) {
+		return l, nil
+	}
+	return nil, nil
+}
+func (m *memUserRepo) LinkIdentity(hash string, now time.Time) (*users.IdentityLink, error) {
+	l, _ := m.FindIdentityLink(hash, now)
+	if l == nil {
+		return nil, nil
+	}
+	l.Used = true
+	m.identities[l.UserID+"/"+l.Provider] = true
+	return l, nil
 }
 
 func (m *memUserRepo) SaveUser(u *users.User) error   { m.users[u.ID] = u; return nil }
@@ -161,9 +195,17 @@ func (m *memUserRepo) SaveEmailVerification(*users.EmailVerification) error {
 func (m *memUserRepo) ConsumeEmailVerification(string, time.Time) (*users.User, error) {
 	return nil, nil
 }
-func (m *memUserRepo) SavePasswordReset(*users.PasswordReset) error { return nil }
-func (m *memUserRepo) ConsumePasswordReset(string, time.Time) (*users.PasswordReset, error) {
-	return nil, nil
+func (m *memUserRepo) SavePasswordReset(r *users.PasswordReset) error {
+	m.resets[r.TokenHash] = r
+	return nil
+}
+func (m *memUserRepo) ConsumePasswordReset(hash string, now time.Time) (*users.PasswordReset, error) {
+	r := m.resets[hash]
+	if r == nil || r.Used || !r.ExpiresAt.After(now) {
+		return nil, nil
+	}
+	r.Used = true
+	return r, nil
 }
 func (m *memUserRepo) MarkEmailVerified(userID string, at time.Time) error {
 	if u := m.users[userID]; u != nil {
@@ -259,6 +301,56 @@ func TestOIDCLoginBuildsAuthorizeURL(t *testing.T) {
 	if cookies[oidcNonceCookie] != nonce {
 		t.Errorf("nonce cookie %q != authorize nonce %q", cookies[oidcNonceCookie], nonce)
 	}
+	// PKCE: the challenge is the S256 of the verifier kept for the callback.
+	if q.Get("code_challenge_method") != "S256" {
+		t.Errorf("code_challenge_method = %q, want S256", q.Get("code_challenge_method"))
+	}
+	if v := cookies[oidcVerifierCookie]; v == "" || q.Get("code_challenge") != oauth2.S256ChallengeFromVerifier(v) {
+		t.Errorf("code_challenge %q does not match the verifier cookie %q", q.Get("code_challenge"), v)
+	}
+}
+
+// testVerifier is the PKCE code verifier the callback tests' browser holds.
+const testVerifier = "test-code-verifier-0123456789-0123456789-0123456789"
+
+// TestOIDCCallbackSendsCodeVerifier: the token request carries the verifier
+// from the cookie, and a callback without one exchanges nothing.
+func TestOIDCCallbackSendsCodeVerifier(t *testing.T) {
+	stub := newOIDCStub(t, "client-abc")
+	h, repo := newOIDCTestHandler(t, stub.config("client-abc", "https://app/api/v1/auth/oidc/callback"))
+	stub.idToken = stub.signIDToken(t, map[string]any{
+		"email":          "pkce@example.com",
+		"email_verified": true,
+		"nonce":          "n",
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=c&state=s", nil)
+	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "s"})
+	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: "n"})
+	rec := httptest.NewRecorder()
+	h.OIDCCallback(rec, req)
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/login?error=sso_failed" {
+		t.Fatalf("expected the sign-in page with sso_failed without a code verifier, got %d %q", rec.Code, rec.Header().Get("Location"))
+	}
+	if stub.verifier != "" {
+		t.Fatal("a callback without a code verifier must not exchange the code")
+	}
+
+	req = httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=c&state=s", nil)
+	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "s"})
+	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: "n"})
+	req.AddCookie(&http.Cookie{Name: oidcVerifierCookie, Value: testVerifier})
+	rec = httptest.NewRecorder()
+	h.OIDCCallback(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("expected 302, got %d (%s)", rec.Code, rec.Body.String())
+	}
+	if stub.verifier != testVerifier {
+		t.Errorf("token request code_verifier = %q, want the cookie's", stub.verifier)
+	}
+	if u, _ := repo.FindUserByEmail("pkce@example.com"); u == nil {
+		t.Error("user not created")
+	}
 }
 
 func TestOIDCCallbackCreatesUserAndSession(t *testing.T) {
@@ -277,6 +369,7 @@ func TestOIDCCallbackCreatesUserAndSession(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=authcode&state=xyz", nil)
 	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "xyz"})
 	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: nonce})
+	req.AddCookie(&http.Cookie{Name: oidcVerifierCookie, Value: testVerifier})
 	rec := httptest.NewRecorder()
 	h.OIDCCallback(rec, req)
 
@@ -366,18 +459,16 @@ func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=authcode&state=xyz", nil)
 			req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "xyz"})
 			req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: nonce})
+			req.AddCookie(&http.Cookie{Name: oidcVerifierCookie, Value: testVerifier})
 			rec := httptest.NewRecorder()
 			h.OIDCCallback(rec, req)
 
 			if tc.wantRejected {
-				if rec.Code != http.StatusForbidden {
-					t.Fatalf("expected 403 for unverified email, got %d (%s)", rec.Code, rec.Body.String())
+				if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/login?error=sso_unverified" {
+					t.Fatalf("expected the sign-in page with sso_unverified, got %d %q", rec.Code, rec.Header().Get("Location"))
 				}
 				if u, _ := repo.FindUserByEmail("verify@example.com"); u != nil {
 					t.Error("no account should be provisioned for an unverified email")
-				}
-				if !strings.Contains(rec.Body.String(), "verif") {
-					t.Errorf("error should mention verification: %s", rec.Body.String())
 				}
 				if len(invites.accepted) != 0 {
 					t.Errorf("an unverified claim joined an invited workspace: %v", invites.accepted)
@@ -400,19 +491,22 @@ func TestOIDCCallbackRequiresVerifiedEmail(t *testing.T) {
 }
 
 // TestOIDCCallbackRejectsCrossProviderAccount: an OIDC login whose email
-// already belongs to an account created with a DIFFERENT provider is rejected
-// with 409 and does not log in or re-label the account (issue #242).
+// already belongs to an account created with a DIFFERENT provider and no
+// password is rejected with 409 and does not log in or re-label the account
+// (issue #242). A password account is offered a link instead
+// (auth_link_handlers_test.go).
 func TestOIDCCallbackRejectsCrossProviderAccount(t *testing.T) {
 	stub := newOIDCStub(t, "client-abc")
 	cfg := stub.config("client-abc", "https://app/api/v1/auth/oidc/callback")
 	h, repo := newOIDCTestHandler(t, cfg)
 
-	// Pre-existing password account with the same email.
-	existing, err := h.UserService.Register("collide@example.com", "hunter2pw", "Pw User")
+	// Pre-existing Google account with the same email: it has no password
+	// to confirm a link with.
+	existing, _, err := h.UserService.LoginWithGoogle("collide@example.com", "Google User", "")
 	if err != nil {
-		t.Fatalf("seed password account: %v", err)
+		t.Fatalf("seed google account: %v", err)
 	}
-	if existing.AuthProvider != users.ProviderPassword {
+	if existing.AuthProvider != users.ProviderGoogle {
 		t.Fatalf("precondition: seeded account provider = %q", existing.AuthProvider)
 	}
 
@@ -426,28 +520,29 @@ func TestOIDCCallbackRejectsCrossProviderAccount(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=authcode&state=xyz", nil)
 	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "xyz"})
 	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: nonce})
+	req.AddCookie(&http.Cookie{Name: oidcVerifierCookie, Value: testVerifier})
 	rec := httptest.NewRecorder()
 	h.OIDCCallback(rec, req)
 
-	if rec.Code != http.StatusConflict {
-		t.Fatalf("expected 409 for cross-provider collision, got %d (%s)", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/login?error=sso_conflict" {
+		t.Fatalf("expected the sign-in page with sso_conflict, got %d %q", rec.Code, rec.Header().Get("Location"))
 	}
-	// No session cookie was issued.
+	// No session cookie and no link request were issued.
 	for _, c := range rec.Result().Cookies() {
-		if c.Name == SessionCookieName && c.Value != "" {
-			t.Error("a session cookie was issued despite the provider collision")
+		if (c.Name == SessionCookieName || c.Name == identityLinkCookie) && c.Value != "" {
+			t.Errorf("cookie %s was issued despite the provider collision", c.Name)
 		}
 	}
-	// The existing account is untouched: still a password account, name not
+	// The existing account is untouched: still a Google account, name not
 	// overwritten by the OIDC claim.
 	after, _ := repo.FindUserByEmail("collide@example.com")
 	if after == nil {
 		t.Fatal("existing account vanished")
 	}
-	if after.AuthProvider != users.ProviderPassword {
-		t.Errorf("account was re-labelled to %q; must keep %q", after.AuthProvider, users.ProviderPassword)
+	if after.AuthProvider != users.ProviderGoogle {
+		t.Errorf("account was re-labelled to %q; must keep %q", after.AuthProvider, users.ProviderGoogle)
 	}
-	if after.Name != "Pw User" {
+	if after.Name != "Google User" {
 		t.Errorf("account name overwritten to %q by rejected login", after.Name)
 	}
 }
@@ -467,11 +562,12 @@ func TestOIDCCallbackRejectsBadNonce(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=authcode&state=xyz", nil)
 	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "xyz"})
 	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: "session-nonce"})
+	req.AddCookie(&http.Cookie{Name: oidcVerifierCookie, Value: testVerifier})
 	rec := httptest.NewRecorder()
 	h.OIDCCallback(rec, req)
 
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 for nonce mismatch, got %d (%s)", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/login?error=sso_failed" {
+		t.Fatalf("expected the sign-in page with sso_failed for a nonce mismatch, got %d %q", rec.Code, rec.Header().Get("Location"))
 	}
 	if u, _ := repo.FindUserByEmail("mallory@example.com"); u != nil {
 		t.Error("user should not be created on nonce mismatch")
@@ -487,14 +583,15 @@ func TestOIDCCallbackRejectsBadState(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/oidc/callback?code=c&state=fromquery", nil)
 	req.AddCookie(&http.Cookie{Name: oidcStateCookie, Value: "different"})
 	req.AddCookie(&http.Cookie{Name: oidcNonceCookie, Value: "n"})
+	req.AddCookie(&http.Cookie{Name: oidcVerifierCookie, Value: testVerifier})
 	rec := httptest.NewRecorder()
 	h.OIDCCallback(rec, req)
 
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400 for state mismatch, got %d", rec.Code)
+	if rec.Code != http.StatusFound || rec.Header().Get("Location") != "/login?error=sso_failed" {
+		t.Fatalf("expected the sign-in page with sso_failed for a state mismatch, got %d %q", rec.Code, rec.Header().Get("Location"))
 	}
-	if !strings.Contains(rec.Body.String(), "state") {
-		t.Errorf("error should mention state: %s", rec.Body.String())
+	if responseCookie(rec, SessionCookieName) != nil {
+		t.Error("a state mismatch opened a session")
 	}
 }
 

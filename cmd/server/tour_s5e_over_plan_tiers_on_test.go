@@ -270,8 +270,6 @@ func (x *overPlanTiersOn) refusals() {
 	tr.step(exempt+"org:admin, revoke W's spare worker key k2", o, "DELETE /api/v1/orgs/{id}/worker-keys/{keyId}",
 		at("id", "{{w}}", "keyId", "{{k2.key}}"))
 	tr.step(gate+"org:admin, sync W's agent files", o, "POST /api/v1/agents/sync")
-	tr.step(gate+"org:admin, import a workspace-wide crew (no project_id: the workspace admin's guard, before the "+
-		"body is read)", o, "POST /api/v1/crews/import", jsonBody(`{"name":"Tour Over crew"}`))
 
 	// org:member, as m1.
 	tr.step(exempt+"org:member, m1 makes W its session's active workspace", m1, "POST /api/v1/orgs/{id}/activate", inW)

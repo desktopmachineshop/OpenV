@@ -21,5 +21,8 @@ __pycache__/
 # slash, so a worktree's symlinked frontend/node_modules is ignored too.
 node_modules
 
+# OpenD, built by scripts/manual/validate.sh to validate the user manual.
+/.cache/
+
 # Runtime data the API writes when run from the checkout (DATA_DIR, default ./data): per-workspace agent files.
 /data/

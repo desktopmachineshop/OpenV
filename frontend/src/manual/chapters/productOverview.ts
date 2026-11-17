@@ -2,18 +2,37 @@
 const content = `
 # Product Overview
 
-The **Overview** page (the project's landing page) is the single source of
-truth for what the product is and how success is measured.
+The **Overview** page is the project's landing page, first under **Plan**.
+It says what the product is and where the project stands: the product's
+definition, metrics, constraints, personas and needs on the left, and on the
+right the project's figures, what needs you and its latest activity. On a
+phone, where the project stands comes first.
 
-## Quick links
+## Where the project sits
 
-At the top: a shortcut into the guided definition (labeled *Start*, *Resume*,
-or *Modify guided definition* depending on where the project is), the **V&V
-dashboard**, and the **Board**.
+At the top of the page, **Part of** names the project this one belongs
+under, and **Child projects** links to the projects that belong under it. A
+subsystem or supplier project sits under the system it is part of: its
+requirements can then *refine* the parent's, and the parent's V&V rolls
+those refinements up. Choose another project under **Part of** to move it,
+or **No parent** to make it top-level. A project cannot go under itself or
+under one of its own children. This used to be set in project settings.
+
+## Where the project stands
+
+Four tiles give the share of requirements **traced** and **verified**, how
+many tests are **failing** and how many links are **suspect**; each opens the
+page behind its number. **Needs you** lists what waits on the team: reviews,
+suspect links, test runs in progress, failing tests, unread comments and the
+changes agents have proposed (see *Home* in the project pages chapter for
+each kind of line). **Recent activity** shows the newest events, and **Full
+history** opens the **Activity** page.
 
 ## Product definition
 
-Three fields, editable in place with **Edit**:
+Three fields, editable in place with **Edit**; beside it is the way into the
+guided definition (labeled *Start*, *Resume* or *Modify guided definition*
+depending on where the project is):
 
 - **Vision** — what the world looks like once this product succeeds.
 - **Problem statement** — what problem, for whom, and why now.
