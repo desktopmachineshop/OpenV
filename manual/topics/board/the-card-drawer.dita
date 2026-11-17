@@ -13,5 +13,6 @@
       <li>Follow its <b>History</b> — comments, moves, status changes, and agent run events — and add your own comments. It is the same History an artifact has: <b>Comments</b>, <b>Changes</b> and <b>All</b> choose what it lists, and with the card opened in full it is a card of its own.</li>
       <li>Delete the card.</li>
     </ul>
+    <p>Opened in full on a computer, the card also shows everything the plan holds on it, on the right: its <b>schedule</b> (start, due date, duration, effort and deadline), the task it is a sub-task of, who is assigned and what has been done, its <b>milestone</b>, its <b>relationships</b> with other tasks, its to-dos and its <b>sub-tasks</b>. It is the same panel the <b>Gantt</b> page shows for the task, and a change made in either place shows in both: see <xref href="https://openv.app/manual/gantt" scope="external" format="html">The plan (Gantt)</xref>. Selecting a sub-task or a related task there opens that card.</p>
   </conbody>
 </concept>

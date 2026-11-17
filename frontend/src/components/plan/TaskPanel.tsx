@@ -62,6 +62,8 @@ export interface TaskPanelProps {
   onSelectTask: (task: PlanTask) => void;
   /** Opens the task in full: its description, assignee, linked artifacts and activity. */
   onOpenTask?: (task: PlanTask) => void;
+  /** On the board, where the panel sits beside the card: the link out goes to the Gantt. */
+  planLink?: boolean;
   onClose: () => void;
 }
 
@@ -355,6 +357,7 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
   onTickTodo,
   onSelectTask,
   onOpenTask,
+  planLink,
   onClose,
 }) => {
   const parents = useMemo(() => {
@@ -404,8 +407,8 @@ export const TaskPanel: React.FC<TaskPanelProps> = ({
               Open the full task
             </button>
           ) : (
-            <Link to={`/projects/${projectId}/board`} style={{ fontSize: 12, marginLeft: 'auto' }}>
-              Open the board
+            <Link to={`/projects/${projectId}/${planLink ? 'gantt' : 'board'}`} style={{ fontSize: 12, marginLeft: 'auto' }}>
+              {planLink ? 'Open the Gantt' : 'Open the board'}
             </Link>
           )}
         </div>

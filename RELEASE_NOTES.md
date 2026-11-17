@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### Bug fixes
+
+- **A card opened in full on the board shows its plan.** The board's
+  card showed only its description, linked artifacts, to-dos and
+  history, while the same task opened in full on the Gantt also showed
+  its schedule, milestone, relationships, resources and sub-tasks. The
+  board's full card now shows the same panel beside it, and you can
+  change the plan from there.
+
 ## 0.36.3 — 2026-11-17
 
 ### Bug fixes

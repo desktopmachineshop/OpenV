@@ -15,6 +15,9 @@ import {
 } from '../api/client';
 import { useAppStore } from '../state/store';
 import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
+import { CardPlan } from '../components/kanban/CardPlan';
+import { GANTT_PLAN_FEATURE } from '../features';
+import { useFeature } from '../hooks/useFeature';
 import { OpenIcon } from '../components/ui/OpenIcon';
 import { BOARD_COLUMNS } from '../components/kanban/columns';
 import { AgentGlyph, ArtifactPicker, ErrorBanner, Modal, SegmentedControl, chipStyle } from '../components/ui';
@@ -56,6 +59,9 @@ export const KanbanBoard: React.FC = () => {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // A card opens beside the board, which keeps its place; its open mark opens it in full.
   const [full, setFull] = useState(false);
+  // Opened in full, a card shows what the plan holds on it, as the Gantt's full task does.
+  const ganttPlan = useFeature(GANTT_PLAN_FEATURE);
+  const [cardVersion, setCardVersion] = useState(0);
   const [composers, setComposers] = useState<Record<string, ComposerState>>({});
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const dragItemId = useRef<string | null>(null);
@@ -538,7 +544,8 @@ export const KanbanBoard: React.FC = () => {
       </div>
       {selectedId && projectId && (
         <WorkItemDrawer workItemId={selectedId} projectId={projectId} artifactMap={artifactMap} mode={full ? 'pane' : phone ? undefined : 'docked'} onExpand={full ? undefined : () => setFull(true)}
-          onClose={() => (setSelectedId(null), setFull(false))} onChanged={loadItems} onDeleted={() => (setSelectedId(null), setFull(false), loadItems())} />
+          aside={full && ganttPlan && !phone ? <CardPlan projectId={projectId} workItemId={selectedId} version={cardVersion} onChanged={loadItems} onSelectTask={setSelectedId} onClose={() => setFull(false)} /> : undefined}
+          onClose={() => (setSelectedId(null), setFull(false))} onChanged={() => (loadItems(), setCardVersion((v) => v + 1))} onDeleted={() => (setSelectedId(null), setFull(false), loadItems())} />
       )}
       </div>
 
