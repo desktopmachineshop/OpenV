@@ -182,7 +182,7 @@ func TestPublicModeAsksForTheLineAndReportsTheOneServed(t *testing.T) {
 	srv, seen := publicOpenD(t, "0.23", "0.22")
 	s := NewService(Config{URL: srv.URL}, nil)
 	for _, c := range []struct{ asked, served string }{{"0.22", "0.22"}, {"0.24", "0.23"}} {
-		topic, err := s.Context(context.Background(), Profile{Line: c.asked, Plan: "free"}, "vv.runs", "")
+		topic, err := s.Context(context.Background(), Profile{Line: c.asked, Plan: "free"}, Request{Key: "vv.runs"})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -190,7 +190,7 @@ func TestPublicModeAsksForTheLineAndReportsTheOneServed(t *testing.T) {
 			t.Fatalf("asked %s: topic = %+v", c.asked, topic)
 		}
 	}
-	if _, err := s.Context(context.Background(), Profile{Line: "0.22", Plan: "business"}, "vv.runs", ""); err != nil {
+	if _, err := s.Context(context.Background(), Profile{Line: "0.22", Plan: "business"}, Request{Key: "vv.runs"}); err != nil {
 		t.Fatal(err)
 	}
 	if len(*seen) != 2 || !strings.Contains((*seen)[0], "version=0.22") {
@@ -207,7 +207,7 @@ func TestPublicModeAsksForTheLineAndReportsTheOneServed(t *testing.T) {
 func TestContextProvisionsTheProfileAndSanitizes(t *testing.T) {
 	f, _ := newFake(t, "0.23")
 	s := service(f, "admin")
-	topic, err := s.Context(context.Background(), Profile{Line: "0.23", Plan: "business"}, "vv.runs", "")
+	topic, err := s.Context(context.Background(), Profile{Line: "0.23", Plan: "business"}, Request{Key: "vv.runs"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -233,7 +233,7 @@ func TestContextProvisionsTheProfileAndSanitizes(t *testing.T) {
 func TestFallsBackToTheNewestPublishedLine(t *testing.T) {
 	f, _ := newFake(t, "0.21")
 	s := service(f, "admin")
-	topic, err := s.Context(context.Background(), Profile{Line: "0.23", Plan: "free"}, "vv", "")
+	topic, err := s.Context(context.Background(), Profile{Line: "0.23", Plan: "free"}, Request{Key: "vv"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -252,7 +252,7 @@ func TestFallsBackToTheNewestPublishedLine(t *testing.T) {
 
 func TestNoHelpForAContextIsNotFound(t *testing.T) {
 	f, _ := newFake(t, "0.23")
-	_, err := service(f, "admin").Context(context.Background(), Profile{Line: "0.23", Plan: "free"}, "nothing", "")
+	_, err := service(f, "admin").Context(context.Background(), Profile{Line: "0.23", Plan: "free"}, Request{Key: "nothing"})
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
@@ -260,7 +260,7 @@ func TestNoHelpForAContextIsNotFound(t *testing.T) {
 
 func TestNothingPublishedAtAllIsNotFound(t *testing.T) {
 	f, _ := newFake(t)
-	_, err := service(f, "admin").Context(context.Background(), Profile{Line: "0.3", Plan: "free"}, "vv", "")
+	_, err := service(f, "admin").Context(context.Background(), Profile{Line: "0.3", Plan: "free"}, Request{Key: "vv"})
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound", err)
 	}
@@ -288,7 +288,7 @@ func TestAnswersAreCachedPerProfile(t *testing.T) {
 
 func TestWithoutAnAdminTokenAnUnknownProfileIsUnavailable(t *testing.T) {
 	f, _ := newFake(t, "0.23")
-	_, err := service(f, "").Context(context.Background(), Profile{Line: "0.23", Plan: "free"}, "vv", "")
+	_, err := service(f, "").Context(context.Background(), Profile{Line: "0.23", Plan: "free"}, Request{Key: "vv"})
 	if !errors.Is(err, ErrUnavailable) {
 		t.Fatalf("err = %v, want ErrUnavailable", err)
 	}
@@ -344,6 +344,46 @@ func TestSanitize(t *testing.T) {
 	for in, want := range cases {
 		if got := Sanitize(in, docs); got != want {
 			t.Errorf("Sanitize(%s)\n got %s\nwant %s", in, got, want)
+		}
+	}
+}
+
+// TestContextForwardsActivitySignals: focus, action and pane reach OpenD
+// beside the view when they are keys, values that are not are dropped, and
+// the answer says which signal OpenD used.
+func TestContextForwardsActivitySignals(t *testing.T) {
+	var query string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		query = r.URL.RawQuery
+		_ = json.NewEncoder(w).Encode(map[string]any{"key": "settings.members", "via": "key", "signal": "pane",
+			"topicId": "topics/projects/project-access-members", "title": "Project access", "html": "<p>x</p>"})
+	}))
+	t.Cleanup(srv.Close)
+	s := NewService(Config{URL: srv.URL}, nil)
+	topic, err := s.Context(context.Background(), Profile{Line: "0.25", Plan: "free"}, Request{
+		Path: "/projects/p1/settings", Focus: "settings.share-links", Action: "<script>", Pane: "settings.members",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"path=%2Fprojects%2Fp1%2Fsettings", "focus=settings.share-links", "pane=settings.members"} {
+		if !strings.Contains(query, want) {
+			t.Errorf("query %q lacks %q", query, want)
+		}
+	}
+	if strings.Contains(query, "action=") {
+		t.Errorf("query %q forwarded an action that is not a key", query)
+	}
+	if topic.Signal != "pane" {
+		t.Errorf("signal = %q, want pane", topic.Signal)
+	}
+}
+
+func TestValidSignal(t *testing.T) {
+	for v, want := range map[string]bool{"settings.share-links": true, "a_b": true, "": false, "a b": false,
+		"a/b": false, "<x>": false, strings.Repeat("a", MaxSignal): true, strings.Repeat("a", MaxSignal+1): false} {
+		if got := ValidSignal(v); got != want {
+			t.Errorf("ValidSignal(%q) = %v, want %v", v, got, want)
 		}
 	}
 }

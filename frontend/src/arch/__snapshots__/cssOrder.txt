@@ -15,9 +15,10 @@
   3  components/HelpSidebar.css
   4  components/ProjectList.css
 
-## Lazy modules (29), by path, and the stylesheets each adds, in cascade order
+## Lazy modules (40), by path, and the stylesheets each adds, in cascade order
   components/admin/VisitorDashboard.tsx  (none)
   components/org/OrgBillingTab.tsx  (none)
+  components/wizard/FloatingAssistant.tsx  (none)
   site/Changelog.tsx  (none)
   site/CompareHub.tsx  (none)
   site/ComparePage.tsx  (none)
@@ -31,21 +32,31 @@
   site/WhitePapers.tsx  (none)
   site/routes.tsx  (none)
   views/ActivityLog.tsx  (none)
+  views/AgentsWorkspace.tsx  (none)
   views/BaselineCompare.tsx  (none)
-  views/CrewBuilder.tsx  (none)
+  views/BaselinesPage.tsx  (none)
+  views/DesignItems.tsx  (none)
+  views/Gantt.tsx  (none)
+  views/GanttWorkspace.tsx  (none)
+  views/GanttWorkspaceTasks.tsx  (none)
   views/ImpactView.tsx  (none)
   views/Landing.tsx  (none)
   views/ManualView.tsx  (none)
   views/ModuleView.tsx
     components/ImageGallery.css
     components/ImageLightbox.css
+  views/MyTodos.tsx  (none)
   views/OAuthConsent.tsx  (none)
   views/PlatformAdmin.tsx  (none)
+  views/ProjectHome.tsx  (none)
+  views/ProjectHomeStatus.tsx  (none)
+  views/Releases.tsx  (none)
   views/ReviewQueue.tsx  (none)
   views/SharedProjectView.tsx  (none)
   views/TestRunView.tsx
     ag-grid-community/styles/ag-grid.css
     ag-grid-community/styles/ag-theme-quartz.css
+  views/TestsPage.tsx  (none)
   views/TraceabilityMatrix.tsx
     ag-grid-community/styles/ag-grid.css
     ag-grid-community/styles/ag-theme-quartz.css

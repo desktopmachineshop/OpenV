@@ -63,6 +63,32 @@ var Registry = []Feature{
 	// features endpoint and What's new, and the flow is unconditional.
 	{Key: FeatureLinkedSignIn, ShippedIn: "0.23.0", Summary: "Sign in with Google to an account you made with a password: confirm the password once, and either way signs you in after that"},
 	{Key: FeatureManualHelp, ShippedIn: "0.24.0", Summary: "The help panel shows the user manual's own page for the screen you are on, written for the release your workspace is on, with links between pages and a search of the manual"},
+	{Key: FeatureHelpActivity, ShippedIn: "0.25.0", Summary: "The help panel follows what you are working on: the tab you are in, the section you are working in and the button you pressed last open the manual's page for them"},
+	{Key: FeatureTargetReleases, ShippedIn: "0.26.0", Summary: "Target releases: plan requirements for MVP, V1.0 and later releases, and follow each release's review, verification and burn-up on its own page"},
+	{Key: FeatureCompactLayout, ShippedIn: "0.26.0", Summary: "A more compact project layout: a narrow icon rail and one top bar on a computer, tabs along the bottom on a phone, and ? or F1 for help on any page"},
+	{Key: FeatureRedesignPages, ShippedIn: "0.27.0", Summary: "Four new project pages: Home with what needs you, Design with the design items as a tree, Tests with the runs and test cases, and Baselines with a timeline and a word-by-word comparison"},
+	{Key: FeatureRequirementsTree, ShippedIn: "0.28.0", Summary: "The requirements Table folds under its headings, and a new Tree view draws the project as connected boxes coloured by type or status"},
+	{Key: FeatureFloatingAssistant, ShippedIn: "0.28.0", Summary: "The V&V Assistant floats over every project page and the workspace Home, keeps one conversation as you move around, and starts drafting tests for the V&V dashboard's gaps; an artifact's history and comments sit in its own pane"},
+	{Key: FeatureChipSearch, ShippedIn: "0.28.0", Summary: "One search bar with a chip for each filter: filter, group and save searches on the requirements list, and filter the top-bar search by project, type, status and owner"},
+	{Key: FeatureAgentHierarchy, ShippedIn: "0.28.0", Summary: "The Agents page shows your agents as a hierarchy of cards: a lead at the top, groups of specialists beneath it, and each card's runs, cost and proposals to approve over the last 7 days; Edit arranges who reports to whom"},
+	{Key: FeatureImpactPicker, ShippedIn: "0.28.0", Summary: "Impact analysis picks the requirement from a searchable table of the document, re-centres on any artifact in the tree, and shows the result as a table too"},
+	{Key: FeatureTodos, ShippedIn: "0.28.0", Summary: "To-dos of their own: one paragraph to tick off, kept off the board, in a project list and in My to-dos, with a promote to board task when one grows"},
+	{Key: FeatureEditorPickers, ShippedIn: "0.29.0", Summary: "Searchable dropdowns in the artifact editor that list every option, a Priority field on requirements that can follow the shall, should or may in their text, and Releases shown on every requirement"},
+	{Key: FeatureCommentReads, ShippedIn: "0.30.0", Summary: "Mark a comment read or unread: Needs you lists only the comments you have not read, opening them marks them read, and Mark unread keeps one there for later"},
+	{Key: FeatureAssistantFullScope, ShippedIn: "0.31.0", Summary: "The V&V Assistant offers a card for every change you can make to a project: releases and what each artifact targets, links, review status, deleting, comments, to-dos, board tasks, baselines, a review round and test results"},
+	{Key: FeatureFlatAgentTeam, ShippedIn: "0.31.0", Summary: "A flatter team of agents: the V&V Assistant you chat with, a Requirements Auditor, a Test Auditor, a Link Auditor and the interviewer; the agents they replace are archived with their history kept"},
+	{Key: FeatureAdminUsage, ShippedIn: "0.31.0", Summary: "Platform admins see how much each workspace and person uses OpenV, and whether that use is speeding up or slowing down, with workspaces grouped by plan and people filtered by plan or workspace"},
+	{Key: FeatureArtifactReinstate, ShippedIn: "0.31.0", Summary: "Removing an artifact archives it, as it always kept its history: open it from Activity and Reinstate brings it back as it was"},
+	{Key: FeatureGanttPlan, ShippedIn: "0.32.0", Summary: "A Gantt plan under Plan: the board's tasks on a timeline with sub-tasks, dependencies and progress from their to-dos, milestones with completion criteria read from the project's artifacts, each release as a milestone, and the plan exported as PDF, Excel, CSV or JSON"},
+	{Key: FeatureUIRefresh, ShippedIn: "0.33.0", Summary: "One navigation on every screen: Home, Plan, Define, Verify and Agents in the same order down the rail on a computer and along the bottom bar on a phone, the pages of the group you are in listed in a row under the top bar, and each page named once"},
+	{Key: FeaturePlanSizing, ShippedIn: "0.34.0", Summary: "Size a plan before it is staffed: planned resources stand in for people to be chosen later, with a rate and a capacity, and are handed to a person or an agent when one is chosen; and a plan's defaults say how new tasks are scheduled and whether their effort decides their duration"},
+	{Key: FeatureMilestoneLinks, ShippedIn: "0.34.0", Summary: "Milestones that wait for tasks: link tasks to a milestone from its panel or by dragging a link onto its diamond, and date it by the plan, on the day the last of them finishes, or keep its date fixed"},
+	{Key: FeatureWorkspacePlan, ShippedIn: "0.35.0", Summary: "A Plan page for the whole workspace: every project's plan on one chart, a line for each project with its top-level tasks and milestones on a shared time scale"},
+	{Key: FeatureJoinedBaselines, ShippedIn: "0.35.0", Summary: "One baseline for the project: a baseline records the plan with the artifacts, and comparing two shows how far the project got, its dates and its milestones, beside what changed in its definition"},
+	// A runner key has no session, so no channel gates what it does
+	// (featureEnabled): the key is registered so the features endpoint and
+	// What's new list it, and the create itself is unconditional.
+	{Key: FeatureKeyProjects, ShippedIn: "0.36.0", Summary: "Create a project with a runner key: scripts, and AI clients connected through the openv MCP server's new create_project tool, make projects and file them under a parent"},
 }
 
 // Feature keys the code gates on.
@@ -142,6 +168,14 @@ const (
 	// as the API already lists them to every member: a gate on reading would
 	// hide what an admin on another channel, or a preview, has made.
 	FeatureWorkspaceAutomations = "workspace-automations"
+	// FeatureChipSearch is the chip search bar (issue #722): the requirements
+	// list's filters, grouping and saved searches as chips in one bar, and
+	// the top-bar search's project, type, status and owner chips. It gates
+	// the BARS, SAVING a search (POST /me/saved-searches) and the facet
+	// parameters of GET /search. Listing and deleting saved searches are not
+	// gated, so a member can always see and remove what they saved, and a
+	// search without facets answers exactly as before.
+	FeatureChipSearch = "chip-search"
 	// FeatureWorkspaceRuns is the workspace Runs page (/org/runs): the runs
 	// with no project (a whole-workspace automation's, an invented
 	// product's, and those a project's delete left behind) beside the run
@@ -203,6 +237,132 @@ const (
 	// panel's DocsHelp. It gates both, per member, on top of the deployment's
 	// help-docs capability; without it the panel keeps its shipped summary.
 	FeatureManualHelp = "manual-help"
+	// FeatureHelpActivity is the help panel sending OpenD's activity
+	// signals (OpenD ADR 0018) with the page: the focused section, the last
+	// button pressed and the tab, from data-help-key and data-help-pane in
+	// the app's markup. It gates the panel's tracking and the signals
+	// GET /orgs/{id}/help/context forwards; without it help is per page.
+	FeatureHelpActivity = "help-activity"
+	// FeatureTargetReleases gates a project's target releases: the
+	// Releases page, the release range on an artifact, and their writes.
+	FeatureTargetReleases = "target-releases"
+	// FeatureCompactLayout is the project shell's compact layout: the icon
+	// rail with its group flyouts and the top bar on a wide screen, the tab
+	// bar along the bottom of a phone, and ? / F1 opening the help panel.
+	// Frontend only; without it the project keeps its sidebar.
+	FeatureCompactLayout = "compact-layout"
+	// FeatureRedesignPages gates the project pages of the redesign: Home,
+	// Design, Tests and Baselines. Each reads what the API already serves.
+	FeatureRedesignPages = "redesign-pages"
+	// FeatureRequirementsTree gates the requirements page's two views: the
+	// Table with the document's hierarchy folding under its headings and a
+	// fold-all / unfold-all button, and the Tree diagram. Without it the
+	// page keeps Table, Tree and Layers. Frontend only.
+	FeatureRequirementsTree = "requirements-tree"
+	// FeatureFloatingAssistant is the V&V Assistant as a floating chat on
+	// every project page and the workspace Home, one conversation across
+	// pages, with the V&V dashboard's gaps starting a turn in it; and the
+	// requirements page's History as a section of the artifact's pane, which
+	// retires the Notes side panel. Frontend only; without it the page keeps
+	// its Notes panel with the History and V&V Assistant tabs.
+	FeatureFloatingAssistant = "floating-assistant"
+	// FeatureAgentHierarchy gates the Agents page's hierarchy of cards and
+	// its Edit mode (PUT /agent-arrangement). Without it the page keeps its
+	// list; the agents' reports_to, group and sort order are kept either way.
+	FeatureAgentHierarchy = "agent-hierarchy"
+	// FeatureImpactPicker is the Impact Analysis page's picker pane and
+	// result table (issue #730): the requirements as the document's folding
+	// table, Ref and Title, under a chip search bar, in place of the
+	// dropdown; the result as a table beside the tree; and re-centring the
+	// impact on an artifact in it. Without it the page keeps the dropdown
+	// and the tree. Frontend only: the impact endpoint is unchanged.
+	FeatureImpactPicker = "impact-picker"
+	// FeatureTodos is the to-do as an entity of its own (issue #731): the
+	// project's to-do list, My to-dos, a note raising a to-do rather than a
+	// board card, and promoting a to-do to a board task. It gates CREATING
+	// one (both create endpoints and the controls); reading, ticking and
+	// editing a to-do are never gated, so one raised on nightly stays
+	// workable everywhere. Without it a note raises a work item as before.
+	FeatureTodos = "todos"
+	// FeatureEditorPickers gates the artifact editor's dropdowns
+	// (components/ui/Picker.tsx in the frontend), its built-in Priority field
+	// on requirements and the Releases field's empty state, and the project
+	// setting that lets Priority follow the requirement's normative keyword
+	// (settings.PriorityDetectionKey). Without it the editor keeps the
+	// browser's own selects. The stored priority attribute is never gated.
+	FeatureEditorPickers = "editor-pickers"
+	// FeatureCommentReads is comment read state on the Home pages: Needs you
+	// lists only the comments a member has not read, opening an artifact's
+	// comments marks them read, and Mark read, Mark all read and Mark unread
+	// set it by hand. It gates WRITING read state (PUT /me/comment-reads)
+	// and the controls; reading it is never gated. Without it Needs you lists
+	// the latest comments as before.
+	FeatureCommentReads = "comment-reads"
+	// FeatureAssistantFullScope is the V&V Assistant's cards for the rest of
+	// a project's API: creating and changing a target release, setting the
+	// releases artifacts target, adding, confirming and removing links,
+	// moving an artifact through review, deleting one, commenting, raising a
+	// to-do or a board task, capturing a baseline, starting a review round
+	// and recording a test run. Each is still a card the member applies, so
+	// the assistant writes nothing itself. It gates the prompt's shapes and
+	// the cards' Apply; without it the assistant has artifact, edit and move
+	// cards as before.
+	FeatureAssistantFullScope = "assistant-full-scope"
+	// FeatureFlatAgentTeam is the flat seeded team (internal/seeds): the V&V
+	// Assistant as the general agent, with a Requirements Auditor, a Test
+	// Auditor, a Link Auditor and the interviewer under it. It gates which
+	// team a workspace is seeded with at boot and at creation, and so the
+	// archiving of the earlier team's untouched agents. Archiving and
+	// unarchiving an agent by hand is not gated: it is a field of the agent.
+	FeatureFlatAgentTeam = "flat-agent-team"
+	// FeatureArtifactReinstate is bringing an archived artifact back (POST
+	// /artifacts/{id}/reinstate and its button on the archived artifact's
+	// page). It gates REINSTATING only: reading an archived artifact's
+	// history, and calling a delete archiving, are not gated.
+	FeatureArtifactReinstate = "artifact-reinstate"
+	// FeatureAdminUsage is the platform admin's usage view (GET
+	// /api/v1/admin/metrics/usage): counts per workspace and person, their
+	// weekly changes and pace, workspaces grouped by plan and type, and the
+	// people list filtered by plan or workspace. It is gated on the
+	// admin's active workspace.
+	FeatureAdminUsage = "admin-usage"
+	// FeatureGanttPlan is the project plan (internal/domain/plan): the Plan
+	// page with its Gantt, a task's schedule, sub-tasks, dependencies and
+	// to-dos, milestones and their criteria, and the plan's export. It gates
+	// the page and every write; reading a plan is not gated, and neither is
+	// the board, whose tasks the plan draws.
+	FeatureGanttPlan = "gantt-plan"
+	// FeatureUIRefresh is the refreshed project shell: the menu's groups in
+	// the order Plan, Define, Verify, Agents with Overview and Summary under
+	// Plan, a row of the current group's pages under the top bar, the phone's
+	// bottom bar as Home and those groups, and a page's name shown once.
+	// Frontend only, and only on top of the compact layout.
+	FeatureUIRefresh = "ui-refresh"
+	// FeaturePlanSizing is the plan's planned resources (placeholders for
+	// people to be chosen later, in the Resources dialog and a task's
+	// resources) and its Defaults dialog (the scheduling mode, and whether a
+	// new task's effort decides its duration). The plan's API accepts both
+	// either way; the key gates the interface.
+	FeaturePlanSizing = "plan-sizing"
+	// FeatureMilestoneLinks is the tasks a milestone waits for and its date
+	// by the plan: the Waits for section of a milestone's panel, links
+	// dropped on its diamond, and the lines drawn to it. The plan's API
+	// accepts both either way; the key gates the interface.
+	FeatureMilestoneLinks = "milestone-links"
+	// FeatureWorkspacePlan is the workspace's Plan page (/org/plan), the
+	// chart of every project's plan, and its entry in the workspace's
+	// menu. Frontend only: it reads the master plan the Gantt already has.
+	FeatureWorkspacePlan = "workspace-plan"
+	// FeatureJoinedBaselines is the plan on the Baselines page: where the
+	// project's plan stood on each side of a comparison. The server records
+	// the plan with every baseline either way; the key gates the page.
+	FeatureJoinedBaselines = "joined-baselines"
+	// FeatureKeyProjects is a project created with a runner key (POST
+	// /projects, a template's project, an import) and the MCP server's
+	// create_project tool. Nothing reads the key: a runner key acts for a
+	// workspace whose members may be on either channel, so the creates are
+	// unconditional.
+	FeatureKeyProjects = "key-projects"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

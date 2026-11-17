@@ -49,6 +49,13 @@ func rtSeedOrg(t *testing.T, db *sql.DB, id string) {
 	rtSeed(t, db, `INSERT INTO organizations (id, name, slug) VALUES ($1, 'Round trip', $2)`, id, "rt-"+id)
 }
 
+// rtSeedAgent is an agent row for another row to name (an agent_id is a
+// foreign key).
+func rtSeedAgent(t *testing.T, db *sql.DB, id, orgID, slug string) {
+	t.Helper()
+	rtSeed(t, db, `INSERT INTO agents (id, org_id, slug, name, provider) VALUES ($1, NULLIF($2, '')::uuid, $3, $3, 'claude')`, id, orgID, slug)
+}
+
 func rtSeedUser(t *testing.T, db *sql.DB, id, email, name, avatarURL string) {
 	t.Helper()
 	rtSeed(t, db, `INSERT INTO users (id, email, name, avatar_url, auth_provider, created_at, updated_at)

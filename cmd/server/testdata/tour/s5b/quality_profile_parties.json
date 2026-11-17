@@ -4441,6 +4441,174 @@
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
+    },
+    {
+      "n": 68,
+      "title": "P's priority detection: off until someone turns it on",
+      "actor": "owner",
+      "acting_in": "<studio>",
+      "route": "GET /api/v1/projects/{id}/priority-detection",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<p>/priority-detection"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 18,
+      "kind": "json",
+      "body": [
+        "{\"enabled\":false}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "enabled": false
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 69,
+      "title": "turn priority detection on",
+      "actor": "owner",
+      "acting_in": "<studio>",
+      "route": "PUT /api/v1/projects/{id}/priority-detection",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/projects/<p>/priority-detection",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"enabled\":true}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 17,
+      "kind": "json",
+      "body": [
+        "{\"enabled\":true}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "enabled": true
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 70,
+      "title": "the viewer reads it",
+      "actor": "viewer",
+      "route": "GET /api/v1/projects/{id}/priority-detection",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<p>/priority-detection"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 17,
+      "kind": "json",
+      "body": [
+        "{\"enabled\":true}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "enabled": true
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 71,
+      "title": "the viewer turns it off",
+      "actor": "viewer",
+      "route": "PUT /api/v1/projects/{id}/priority-detection",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/projects/<p>/priority-detection",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"enabled\":false}"
+      },
+      "status": 403,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 51,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"you do not have access to this project\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "you do not have access to this project"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 72,
+      "title": "a malformed body",
+      "actor": "owner",
+      "acting_in": "<studio>",
+      "route": "PUT /api/v1/projects/{id}/priority-detection",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/projects/<p>/priority-detection",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"enabled\":"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid request body\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid request body"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 73,
+      "title": "turn it off again: the key leaves P's settings",
+      "actor": "owner",
+      "acting_in": "<studio>",
+      "route": "PUT /api/v1/projects/{id}/priority-detection",
+      "request": {
+        "method": "PUT",
+        "path": "/api/v1/projects/<p>/priority-detection",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"enabled\":false}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 18,
+      "kind": "json",
+      "body": [
+        "{\"enabled\":false}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "enabled": false
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
     }
   ],
   "uploads": [],

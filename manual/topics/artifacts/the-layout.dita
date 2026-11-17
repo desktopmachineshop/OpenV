@@ -2,13 +2,14 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="the-layout">
   <title>The layout</title>
-  <shortdesc>The view has three resizable columns (drag the dividers to resize; widths are remembered):</shortdesc>
+  <shortdesc>The view has two parts side by side:</shortdesc>
   <conbody>
     <ul>
-      <li><b>Left</b> — the artifact list/tree with search and filters.</li>
-      <li><b>Center</b> — the selected artifact: header, body, links, attachments.</li>
-      <li><b>Right</b> — the <b>Chatter</b> panel: comments on the selected artifact.</li>
+      <li><b>The list</b> — every artifact in the project, as a <b>table</b> or a <b>tree</b> diagram (see below). Above it sit the project search and its filters (with the chip search bar, the bar alone, across the list's width; without it, the type tabs and the search box), and a line of figures for what is in view.</li>
+      <li><b>The detail panel</b> — on the right, the selected artifact: its status, quality and priority, its text, its place in the trace and its tests (see <i>The detail panel</i>). Drag its left edge to make it wider; the width is remembered.</li>
     </ul>
-    <p>The <b>?</b> button beside the notification bell opens a quick-reference help sidebar with artifact and link type definitions.</p>
+    <p>The selected artifact's comments and recorded changes are its <b>History</b>, the last section of the detail panel (see <i>History</i>). The V&amp;V Assistant floats over the page from the <b>✦ Assistant</b> button in the bottom corner (see <i>Guided definition &amp; the V&amp;V Assistant</i> → <i>The V&amp;V Assistant on every page</i>).</p>
+    <p>One bar runs across the top: the search and its filters, the <b>Table / Tree</b> switch, then <b>Working copy</b> (it reads <b>Baseline</b> while you view one), which opens the baseline picker with <b>Compare</b>, <b>Capture Baseline</b>, <b>Delete baseline</b>, <b>Draft test cases</b> and <b>↓ Download</b>, and one blue button, <b>+ New Artifact</b>, at its end.</p>
+    <p>The <b>?</b> button in the top bar (or <b>?</b> on the keyboard) opens the help panel for this page, with the artifact and link types.</p>
   </conbody>
 </concept>

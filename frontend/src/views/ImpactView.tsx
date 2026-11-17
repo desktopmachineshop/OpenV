@@ -1,15 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
-import {
-  Artifact,
-  artifactAPI,
-  ImpactDirection,
-  ImpactGroup,
-  ImpactReport,
-  vvAPI,
-} from '../api/client';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Artifact, artifactAPI, ImpactReport, vvAPI } from '../api/client';
+import { apiErrorMessage } from '../api/errors';
+import { SegmentedControl } from '../components/ui';
+import { useFeature } from '../hooks/useFeature';
+import { useViewport } from '../hooks/useViewport';
 import { useAppStore } from '../state/store';
-import type { ArtifactTypeValue } from '../generated/contract';
+import { ImpactDepth, impactShape, reportDepth } from './ImpactViewLayout';
+import { ImpactViewPicker } from './ImpactViewPicker';
+import { ImpactViewTable } from './ImpactViewTable';
+import { ImpactViewTree } from './ImpactViewTree';
+import type { ColourBy } from './moduleView/TreeDiagramView';
+import type { ArtifactTypeValue, FeatureKey } from '../generated/contract';
+
+/**
+ * The picker pane, the result table and re-centring (issue #730). Without
+ * it the page keeps the dropdown and the tree.
+ */
+export const IMPACT_PICKER_FEATURE: FeatureKey = 'impact-picker';
 
 // Human labels for artifact type buckets; unknown types fall back to the raw
 // value so the view never hides a group it can't name.
@@ -25,41 +33,32 @@ const TYPE_LABELS: Record<string, string> = {
   other: 'Other',
 } satisfies Record<ArtifactTypeValue, string>;
 
-const typeLabel = (type: string): string =>
-  TYPE_LABELS[type] || (type ? type : 'Unknown');
+const typeLabel = (type: string): string => (TYPE_LABELS[type] || (type ? type : 'Unknown')).replace(/s$/, '');
 
-const DIRECTIONS: { value: ImpactDirection; label: string }[] = [
-  { value: 'both', label: 'Both' },
-  { value: 'downstream', label: 'Downstream (dependents)' },
-  { value: 'upstream', label: 'Upstream (dependencies)' },
-];
-
-const badge = (background: string, color = 'var(--surface)'): React.CSSProperties => ({
-  display: 'inline-block',
-  padding: '1px 7px',
-  borderRadius: 8,
-  background,
-  color,
-  fontSize: 12,
-  fontWeight: 600,
-});
+type ResultView = 'tree' | 'table';
 
 export const ImpactView: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
-  const projectId = params.projectId || storeProjectId;
+  const projectId = params.projectId || storeProjectId || '';
+  const navigate = useNavigate();
+  const picker = useFeature(IMPACT_PICKER_FEATURE);
+  const { isPhone } = useViewport();
 
   const [searchParams, setSearchParams] = useSearchParams();
   const artifactId = searchParams.get('artifact') || '';
 
-  const [direction, setDirection] = useState<ImpactDirection>('both');
+  const [depth, setDepth] = useState<ImpactDepth>('all');
+  const [colourBy, setColourBy] = useState<ColourBy>('type');
+  const [view, setView] = useState<ResultView>('tree');
+  // On a phone a preselected artifact opens with the list folded away.
+  const [pickerOpen, setPickerOpen] = useState(() => !(isPhone && artifactId));
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [report, setReport] = useState<ImpactReport | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Load the artifact list once for the picker and for resolving titles/types
-  // of nodes the report may reference.
+  // The artifact list, for the picker and for each box's ref, title and status.
   useEffect(() => {
     if (!projectId) return;
     artifactAPI
@@ -75,17 +74,17 @@ export const ImpactView: React.FC = () => {
     }
     setLoading(true);
     vvAPI
-      .impact(projectId, artifactId, direction)
+      .impact(projectId, artifactId, 'both')
       .then((res) => {
         setReport(res.data);
         setError('');
       })
-      .catch((err: any) => {
+      .catch((err: unknown) => {
         setReport(null);
-        setError(err.response?.data?.error || err.message || 'Failed to load impact');
+        setError(apiErrorMessage(err, 'Failed to load impact'));
       })
       .finally(() => setLoading(false));
-  }, [projectId, artifactId, direction]);
+  }, [projectId, artifactId]);
 
   const selectArtifact = useCallback(
     (id: string) => {
@@ -97,170 +96,156 @@ export const ImpactView: React.FC = () => {
     [searchParams, setSearchParams]
   );
 
-  const seed = useMemo(
-    () => artifacts.find((a) => a.id === artifactId),
-    [artifacts, artifactId]
+  const requirements = useMemo(() => artifacts.filter((a) => a.type === 'requirement'), [artifacts]);
+  const byId = useMemo(() => {
+    const m: Record<string, Artifact> = {};
+    artifacts.forEach((a) => {
+      m[a.id] = a;
+    });
+    return m;
+  }, [artifacts]);
+  const seed = byId[artifactId];
+  const titleOf = useCallback((id: string) => byId[id]?.title || id, [byId]);
+
+  const impact = useMemo(
+    () =>
+      report ? impactShape(report, depth, { title: seed?.title || artifactId, type: seed?.type || 'requirement' }, titleOf) : null,
+    [report, depth, seed, artifactId, titleOf]
+  );
+  const deepest = report ? reportDepth(report) : 0;
+  const shown = impact ? new Set(impact.boxes.map((b) => b.id)).size : 0;
+  const open = (id: string) => navigate(`/projects/${projectId}/requirements?artifact=${id}`);
+  const centre = picker ? selectArtifact : undefined;
+
+  const depthOptions = ([1, 2, 3] as const)
+    .filter((d) => d < deepest)
+    .map((d) => ({ value: String(d), label: String(d), title: `${d} link${d === 1 ? '' : 's'} away` }))
+    .concat([{ value: 'all', label: 'All', title: 'The whole chain' }]);
+
+  const controls = (
+    <>
+      <span style={controlLabel}>Depth</span>
+      <SegmentedControl<string>
+        aria-label="Depth"
+        value={depth === 'all' || depth >= deepest ? 'all' : String(depth)}
+        onChange={(v) => setDepth(v === 'all' ? 'all' : (Number(v) as 1 | 2 | 3))}
+        options={depthOptions}
+      />
+      <span style={controlLabel}>Colour by</span>
+      <SegmentedControl<ColourBy>
+        aria-label="Colour by"
+        value={colourBy}
+        onChange={setColourBy}
+        options={[
+          { value: 'type', label: 'Type' },
+          { value: 'status', label: 'Status' },
+        ]}
+      />
+      {picker && (
+        <SegmentedControl<ResultView>
+          aria-label="Show the impact as"
+          value={view}
+          onChange={setView}
+          options={[
+            { value: 'tree', label: 'Tree' },
+            { value: 'table', label: 'Table' },
+          ]}
+        />
+      )}
+    </>
   );
 
-  const titleOf = useCallback(
-    (id: string) => artifacts.find((a) => a.id === id)?.title || id,
-    [artifacts]
+  const pickerPane = picker && pickerOpen && (
+    <ImpactViewPicker
+      artifacts={artifacts}
+      selectedId={artifactId}
+      onPick={(id) => {
+        selectArtifact(id);
+        if (isPhone) setPickerOpen(false);
+      }}
+      onCollapse={artifactId ? () => setPickerOpen(false) : undefined}
+      phone={isPhone}
+    />
   );
-
-  const renderGroups = (label: string, hint: string, groups: ImpactGroup[]) => {
-    const total = groups.reduce((n, g) => n + g.count, 0);
-    return (
-      <div style={{ flex: 1, minWidth: 320 }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 4 }}>
-          <h3 style={{ margin: 0, color: 'var(--text)' }}>{label}</h3>
-          <span style={badge('var(--accent)')}>{total}</span>
-        </div>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 12 }}>{hint}</div>
-        {total === 0 ? (
-          <div style={{ color: 'var(--neutral-mid)', fontSize: 13 }}>
-            No {label.toLowerCase()} artifacts.
-          </div>
-        ) : (
-          groups.map((group) => (
-            <div key={group.type} style={{ marginBottom: 18 }}>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: 0.4,
-                  color: 'var(--text-muted)',
-                  marginBottom: 6,
-                }}
-              >
-                {typeLabel(group.type)} ({group.count})
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {group.nodes.map((node) => (
-                  <Link
-                    key={node.artifact_id}
-                    to={`/projects/${projectId}/requirements?artifact=${node.artifact_id}`}
-                    title={
-                      'Path: ' +
-                      node.path.map((id) => titleOf(id)).join('  →  ')
-                    }
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                      padding: '8px 10px',
-                      background: 'var(--surface-alt)',
-                      border: '1px solid var(--border)',
-                      borderRadius: 6,
-                      textDecoration: 'none',
-                      color: 'var(--text)',
-                      fontSize: 13,
-                    }}
-                  >
-                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {node.title || node.artifact_id}
-                    </span>
-                    {node.via && (
-                      <span style={badge('var(--neutral-soft)', 'var(--text)')}>{node.via}</span>
-                    )}
-                    <span
-                      title={`${node.distance} hop${node.distance === 1 ? '' : 's'} away`}
-                      style={badge('var(--tint-blue, var(--surface-inset))', 'var(--text-muted)')}
-                    >
-                      {node.distance} hop{node.distance === 1 ? '' : 's'}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          ))
-        )}
-      </div>
-    );
-  };
-
-  const showDownstream = direction === 'both' || direction === 'downstream';
-  const showUpstream = direction === 'both' || direction === 'upstream';
 
   return (
-    <div style={{ padding: 24, display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Impact Analysis</h2>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Artifact</label>
-          <select
-            value={artifactId}
-            onChange={(e) => selectArtifact(e.target.value)}
-            style={{ minWidth: 260, padding: '6px 10px' }}
-          >
-            <option value="">Select an artifact…</option>
-            {artifacts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.title} ({a.type})
-              </option>
-            ))}
-          </select>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Direction</label>
-          <select
-            value={direction}
-            onChange={(e) => setDirection(e.target.value as ImpactDirection)}
-            style={{ minWidth: 200, padding: '6px 10px' }}
-          >
-            {DIRECTIONS.map((d) => (
-              <option key={d.value} value={d.value}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-        </div>
+    <div className="ov-gutter" style={{ padding: isPhone ? 12 : 24, display: 'flex', flexDirection: 'column', height: '100%', boxSizing: 'border-box' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 16, flexWrap: 'wrap' }} data-help-key="impact">
+        <h2 className="ov-page-title" style={{ color: 'var(--text)', margin: 0 }}>Impact Analysis</h2>
+        {!picker && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <label style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>Requirement</label>
+            <select value={artifactId} onChange={(e) => selectArtifact(e.target.value)} style={{ minWidth: 260, padding: '6px 10px' }}>
+              <option value="">Select a requirement…</option>
+              {requirements.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.ref ? `${a.ref} ` : ''}
+                  {a.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+        {picker && !pickerOpen && (
+          <button type="button" onClick={() => setPickerOpen(true)} style={showListButton} title="Show the requirements to pick from">
+            {isPhone ? 'Pick a requirement' : '› Show list'}
+          </button>
+        )}
       </div>
 
-      {error && <div style={{ color: 'var(--danger)', marginBottom: 10, fontSize: 13 }}>{error}</div>}
-      {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>Loading…</div>}
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: isPhone ? 'column' : 'row', gap: 16 }}>
+        {pickerPane}
+        <section aria-label="Impact" style={{ flex: 1, minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+          {error && <div style={{ color: 'var(--danger)', marginBottom: 10, fontSize: 13 }}>{error}</div>}
+          {loading && <div style={{ color: 'var(--text-muted)', marginBottom: 10 }}>Loading…</div>}
 
-      {!artifactId && (
-        <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 8 }}>
-          Pick an artifact above — or open this view from an artifact's{' '}
-          <em>Show impact</em> link — to trace what a change to it would affect.
-        </div>
-      )}
+          {!artifactId && (
+            <div style={{ color: 'var(--text-muted)', fontSize: 14, marginTop: 8 }}>
+              Pick a requirement {picker ? (isPhone ? 'from the list' : 'from the list on the left') : 'above'} — or open this view
+              from a requirement's <em>Show impact</em> link — to trace everything a change to it would affect, down to its design,
+              tests and hazards and up to its needs.
+            </div>
+          )}
 
-      {artifactId && report && (
-        <>
-          <div
-            style={{
-              background: 'var(--surface-alt)',
-              border: '1px solid var(--border)',
-              borderRadius: 6,
-              padding: '10px 14px',
-              marginBottom: 18,
-              fontSize: 13,
-              color: 'var(--text)',
-            }}
-          >
-            Impact of <strong>{seed?.title || artifactId}</strong>
-            {seed && <span style={{ color: 'var(--text-muted)' }}> ({seed.type})</span>} —{' '}
-            <strong>{report.total}</strong> affected artifact{report.total === 1 ? '' : 's'}.
-          </div>
-
-          <div style={{ display: 'flex', gap: 32, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-            {showDownstream &&
-              renderGroups(
-                'Downstream',
-                'Artifacts that depend on this one — what a change here could affect.',
-                report.downstream
+          {artifactId && report && impact && (
+            <>
+              <div role="status" style={summaryStyle}>
+                Impact of <strong>{seed ? `${seed.ref ? seed.ref + ' ' : ''}${seed.title}` : artifactId}</strong> —{' '}
+                <strong>{shown}</strong> affected artifact{shown === 1 ? '' : 's'}: {impact.upstream} upstream, {impact.downstream} downstream
+                {depth === 'all' || depth >= deepest ? ', through every link' : `, up to ${depth} link${depth === 1 ? '' : 's'} away`}.
+              </div>
+              {view === 'tree' ? (
+                <ImpactViewTree impact={impact} byId={byId} colourBy={colourBy} typeLabel={typeLabel} onOpen={open} onCentre={centre} controls={controls} />
+              ) : (
+                <>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingBottom: 8 }}>{controls}</div>
+                  <ImpactViewTable boxes={impact.boxes} byId={byId} projectId={projectId} typeLabel={typeLabel} onCentre={centre} />
+                </>
               )}
-            {showUpstream &&
-              renderGroups(
-                'Upstream',
-                'Artifacts this one depends on — its sources and rationale.',
-                report.upstream
-              )}
-          </div>
-        </>
-      )}
+            </>
+          )}
+        </section>
+      </div>
     </div>
   );
+};
+
+const controlLabel: React.CSSProperties = { fontSize: 12, color: 'var(--text-muted)' };
+const summaryStyle: React.CSSProperties = {
+  background: 'var(--surface-alt)',
+  border: '1px solid var(--border)',
+  borderRadius: 6,
+  padding: '10px 14px',
+  marginBottom: 14,
+  fontSize: 13,
+  color: 'var(--text)',
+};
+const showListButton: React.CSSProperties = {
+  padding: '4px 10px',
+  fontSize: 13,
+  border: '1px solid var(--border)',
+  borderRadius: 6,
+  background: 'var(--surface)',
+  color: 'var(--text-secondary)',
+  cursor: 'pointer',
 };

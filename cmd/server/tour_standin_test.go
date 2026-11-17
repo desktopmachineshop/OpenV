@@ -701,11 +701,27 @@ func (p *tourIdP) sign(claims map[string]any) string { return signRS256(p.key, c
 // signRS256 makes an RS256 JWT of claims with key, under the kid the
 // provider's JWKS publishes.
 func signRS256(key *rsa.PrivateKey, claims map[string]any) string {
+	return signRS256Typ(key, "JWT", claims)
+}
+
+// signDeletion makes the deletion token DMSid sends a product to remove the
+// account of email (dms-id ADR 0002): typ account-deletion+jwt, for the
+// provider's client, valid two minutes, with the account-deletion event.
+func (p *tourIdP) signDeletion(email string) string {
+	now := time.Now()
+	return signRS256Typ(p.key, "account-deletion+jwt", map[string]any{"iss": p.issuer(), "aud": p.clientID,
+		"iat": now.Unix(), "exp": now.Add(2 * time.Minute).Unix(), "jti": "tour-deletion-" + email,
+		"sub": "tour-subject-" + email, "email": email,
+		"events": map[string]any{"https://id.desktopmachineshop.com/events/account-deletion": map[string]any{}}})
+}
+
+// signRS256Typ is signRS256 under a header typ of its own.
+func signRS256Typ(key *rsa.PrivateKey, typ string, claims map[string]any) string {
 	enc := func(v any) string {
 		b, _ := json.Marshal(v)
 		return base64.RawURLEncoding.EncodeToString(b)
 	}
-	input := enc(map[string]string{"alg": "RS256", "typ": "JWT", "kid": "tour-idp"}) + "." + enc(claims)
+	input := enc(map[string]string{"alg": "RS256", "typ": typ, "kid": "tour-idp"}) + "." + enc(claims)
 	digest := sha256.Sum256([]byte(input))
 	sig, err := rsa.SignPKCS1v15(rand.Reader, key, crypto.SHA256, digest[:])
 	if err != nil {

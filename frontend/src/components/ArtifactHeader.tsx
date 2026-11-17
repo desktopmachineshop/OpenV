@@ -1,38 +1,15 @@
+import { apiErrorMessage } from '../api/errors';
+import { OpenIcon } from './ui/OpenIcon';
 import React, { useState, useEffect, useRef } from 'react';
 import { Artifact, ArtifactStatus, artifactAPI } from '../api/client';
-import { useAlert, useConfirm } from './ui';
+import { ActionMenu, Chip, buttonStyle, useAlert, useConfirm } from './ui';
 import { useViewport } from '../hooks/useViewport';
+import { ArtifactHeaderFacts } from './ArtifactHeaderFacts';
 import { ArtifactStepper, ArtifactStepperProps } from './ArtifactStepper';
-
-// Review state machine (mirrors internal/domain/artifacts/status.go):
-// draft <-> in_review -> approved -> superseded. The server is authoritative;
-// this map only decides which transition buttons to offer.
-const STATUS_META: Record<ArtifactStatus, { label: string; color: string }> = {
-  draft: { label: 'Draft', color: 'var(--neutral)' },
-  in_review: { label: 'In review', color: 'var(--warning)' },
-  approved: { label: 'Approved', color: 'var(--success)' },
-  superseded: { label: 'Superseded', color: 'var(--purple-soft)' },
-};
-
-const NEXT_STATUSES: Record<ArtifactStatus, ArtifactStatus[]> = {
-  draft: ['in_review'],
-  in_review: ['draft', 'approved'],
-  approved: ['superseded'],
-  superseded: [],
-};
-
-const TRANSITION_LABELS: Record<ArtifactStatus, string> = {
-  draft: 'Return to draft',
-  in_review: 'Submit for review',
-  approved: 'Approve',
-  superseded: 'Mark superseded',
-};
-
-// Legacy rows predate the status column; fall back to the attribute mirror.
-const statusOf = (artifact: Artifact): ArtifactStatus => {
-  const raw = artifact.status || artifact.attributes?.status;
-  return raw && raw in STATUS_META ? (raw as ArtifactStatus) : 'draft';
-};
+import { ArtifactVersionList } from './ArtifactVersionList';
+import { MONO, QualityChip } from './artifactCells';
+import { NEXT_STATUSES, TRANSITION_LABELS, isForward, useStatusChange } from './artifactStatusChange';
+import { QualityFacts, STATUS_META, priorityOf, statusOf } from '../utils/artifactFacts';
 
 interface ArtifactHeaderProps {
   artifact: Artifact;
@@ -58,6 +35,28 @@ interface ArtifactHeaderProps {
    * neither loads nor counts the live artifact's versions.
    */
   readOnly?: boolean;
+  /**
+   * When the artifact was archived, for one opened from its history (a link
+   * to it, an Activity line). Its versions are kept (REQ-4), so History
+   * still lists and previews them; nothing here changes it, and Reinstate
+   * (onReinstate) brings it back.
+   */
+  archivedAt?: string | null;
+  /** Reinstate an archived artifact; absent where the reader cannot. */
+  onReinstate?: () => Promise<void>;
+  /** The requirement's quality score, shown as a chip beside its status. */
+  quality?: QualityFacts;
+  /** A phone moves the review transitions into its bottom action bar. */
+  hideTransitions?: boolean;
+  /**
+   * The refreshed pane (ui-refresh): the artifact's text, passed as children,
+   * sits straight under its title; the facts fold to one line; and History
+   * and Archive move behind a ⋯ menu beside Edit.
+   */
+  statementFirst?: boolean;
+  /** Opens the artifact in full, over the page, with its History in a card of its own. */
+  onOpen?: () => void;
+  children?: React.ReactNode;
 }
 
 export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
@@ -70,6 +69,13 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
   onStatusChange,
   nav,
   readOnly = false,
+  archivedAt = null,
+  onReinstate,
+  quality,
+  hideTransitions = false,
+  statementFirst = false,
+  onOpen,
+  children,
 }) => {
   const confirm = useConfirm();
   const alertDialog = useAlert();
@@ -81,39 +87,15 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [localPreviewVersion, setLocalPreviewVersion] = useState<Artifact | null>(previewVersion || null);
   const [status, setStatus] = useState<ArtifactStatus>(statusOf(artifact));
-  const [changingStatus, setChangingStatus] = useState(false);
 
   // Display either preview or current artifact in header
   const displayArtifact = localPreviewVersion || artifact;
   const displayStatus = localPreviewVersion ? statusOf(localPreviewVersion) : status;
 
-  const handleStatusChange = async (next: ArtifactStatus) => {
-    if (next === 'approved' || next === 'superseded') {
-      const ok = await confirm({
-        title: TRANSITION_LABELS[next],
-        message:
-          next === 'approved'
-            ? 'Approve this artifact? Editing it later will return the new version to draft.'
-            : 'Mark this artifact as superseded? This is a terminal state.',
-        confirmLabel: TRANSITION_LABELS[next],
-      });
-      if (!ok) return;
-    }
-    try {
-      setChangingStatus(true);
-      const response = await artifactAPI.changeStatus(artifact.id, next);
-      setStatus(statusOf(response.data));
-      onStatusChange?.(response.data);
-    } catch (error: any) {
-      console.error('Failed to change artifact status', error);
-      await alertDialog({
-        title: 'Change status',
-        message: error?.response?.data?.error || 'Failed to change status.',
-      });
-    } finally {
-      setChangingStatus(false);
-    }
-  };
+  const { change: handleStatusChange, changing: changingStatus } = useStatusChange(artifact.id, (changed) => {
+    setStatus(statusOf(changed));
+    onStatusChange?.(changed);
+  });
 
   // Update local state when prop changes
   useEffect(() => {
@@ -193,279 +175,150 @@ export const ArtifactHeader: React.FC<ArtifactHeaderProps> = ({
     }
   };
 
+  const meta = STATUS_META[displayStatus];
+  const previewing = localPreviewVersion !== null;
+  const priority = priorityOf(displayArtifact);
+  const action = (kind: 'secondary' | 'danger', disabled = false): React.CSSProperties => ({
+    ...buttonStyle(kind, { compact: !touch, disabled }),
+    ...(touch ? { minHeight: 40 } : {}),
+    flex: isPhone ? '1 1 auto' : undefined,
+  });
   return (
-    <div className="card" style={{ marginBottom: '20px' }}>
-      {/* Above the title, in its own row. The title row below already reflows
-          to a column on a phone and already carries Edit / Delete / History;
-          putting the stepper in it would fight the title for width on a desktop
-          and land under those buttons on a phone, which is the opposite of
-          where a thumb is. */}
+    <div className="card" style={{ marginBottom: 12, padding: '12px 14px' }}>
+      {/* Above everything, in its own row, so it neither fights the title for
+          width on a desktop nor lands under the buttons on a phone. */}
       {nav && <ArtifactStepper {...nav} touch={touch} showKeyHints={!touch} />}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: isPhone ? 'column' : 'row',
-          justifyContent: 'space-between',
-          alignItems: isPhone ? 'stretch' : 'flex-start',
-          gap: isPhone ? '12px' : '20px',
-        }}
-      >
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {/* The stable reference leads the title: it is the address a
-              reader quotes in a review, a test result, or a report, and
-              unlike a section number it never changes or gets reused. */}
-          <h3 style={{ margin: '0 0 8px 0' }}>
-            {displayArtifact.ref && (
-              <code
-                style={{
-                  marginRight: 8,
-                  fontSize: '0.8em',
-                  color: 'var(--text-muted)',
-                  background: 'var(--surface-alt)',
-                  border: '1px solid var(--border-soft)',
-                  borderRadius: 3,
-                  padding: '0 5px',
-                }}
-                title="Stable reference — unique in this project and never reissued"
-              >
-                {displayArtifact.ref}
-              </code>
-            )}
-            {displayArtifact.title}
-          </h3>
-          <div style={{ display: 'flex', gap: '8px 10px', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap' }}>
-            <span
-              style={{
-                display: 'inline-block',
-                backgroundColor: 'var(--accent)',
-                color: 'var(--accent-fg)',
-                padding: '4px 8px',
-                borderRadius: '3px',
-                fontSize: '12px',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {displayArtifact.type}
-            </span>
-            <span
-              title={`Review status: ${STATUS_META[displayStatus].label}`}
-              style={{
-                display: 'inline-block',
-                backgroundColor: STATUS_META[displayStatus].color,
-                color: 'white',
-                padding: '4px 8px',
-                borderRadius: '3px',
-                fontSize: '12px',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {STATUS_META[displayStatus].label}
-            </span>
-            {typeof displayArtifact.attributes?.owner === 'string' && displayArtifact.attributes.owner && (
-              <span
-                className="badge"
-                title="Owner"
-                style={{ fontSize: '12px', whiteSpace: 'nowrap' }}
-              >
-                {displayArtifact.attributes.owner}
-              </span>
-            )}
-            <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-              Version {displayArtifact.version}
-            </span>
-            {!readOnly && displayArtifact.version > 1 && (
-              <span style={{ fontSize: '12px', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                • {versions.length} total
-              </span>
-            )}
-          </div>
-          {!readOnly && !localPreviewVersion && NEXT_STATUSES[status].length > 0 && (
-            <div style={{ display: 'flex', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
-              {NEXT_STATUSES[status].map((next) => (
-                <button
-                  key={next}
-                  onClick={() => handleStatusChange(next)}
-                  disabled={changingStatus}
-                  style={{
-                    backgroundColor: 'transparent',
-                    color: STATUS_META[next].color,
-                    border: `1px solid ${STATUS_META[next].color}`,
-                    padding: '6px 12px',
-                    minHeight: 36,
-                    borderRadius: '3px',
-                    cursor: changingStatus ? 'wait' : 'pointer',
-                    fontSize: '12px',
-                    opacity: changingStatus ? 0.6 : 1,
-                  }}
-                >
-                  {TRANSITION_LABELS[next]}
-                </button>
-              ))}
-            </div>
-          )}
-          <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-muted)' }}>
-            UID: <code style={{ backgroundColor: 'var(--neutral-soft)', padding: '2px 6px', borderRadius: '3px', wordBreak: 'break-all' }}>
-              {displayArtifact.id}
-            </code>
-          </p>
-        </div>
-
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        {/* The stable reference leads: it is the address a reader quotes in a
+            review, a test result or a report, and it never changes. */}
+        {displayArtifact.ref && (
+          <code
+            style={{ fontFamily: MONO, fontSize: 12, fontWeight: 600, color: 'var(--accent-text)', background: 'none', padding: 0 }}
+            title="Stable reference — unique in this project and never reissued"
+          >
+            {displayArtifact.ref}
+          </code>
+        )}
+        <span title={`Review status: ${meta.label}`} style={{ display: 'inline-flex' }}>
+          <Chip tone={meta.tone}>{meta.label.toLowerCase()}</Chip>
+        </span>
+        {archivedAt && <Chip tone="warning">archived</Chip>}
+        <QualityChip quality={quality} withBand={isPhone} />
+        {priority && <Chip tone="neutral">{priority}</Chip>}
+        <span style={{ flex: 1 }} />
         {!readOnly && (
-          <div style={{ display: 'flex', gap: '8px', flexDirection: isPhone ? 'row' : 'column', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => onEdit(displayArtifact)}
-              disabled={localPreviewVersion !== null}
-              style={{
-                backgroundColor: localPreviewVersion ? 'var(--neutral-mid)' : 'var(--accent)',
-                color: 'var(--accent-fg)',
-                border: 'none',
-                padding: '6px 12px',
-                minHeight: 36,
-                flex: isPhone ? '1 1 auto' : undefined,
-                borderRadius: '3px',
-                cursor: localPreviewVersion ? 'not-allowed' : 'pointer',
-                fontSize: '12px',
-                opacity: localPreviewVersion ? 0.6 : 1,
-              }}
-            >
-              Edit
-            </button>
-            <button
-              onClick={() => onDelete(displayArtifact.id)}
-              disabled={localPreviewVersion !== null}
-              style={{
-                backgroundColor: localPreviewVersion ? 'var(--neutral-mid)' : 'var(--danger)',
-                color: 'white',
-                border: 'none',
-                padding: '6px 12px',
-                minHeight: 36,
-                flex: isPhone ? '1 1 auto' : undefined,
-                borderRadius: '3px',
-                cursor: localPreviewVersion ? 'not-allowed' : 'pointer',
-                fontSize: '12px',
-                opacity: localPreviewVersion ? 0.6 : 1,
-              }}
-            >
-              Delete
-            </button>
-            {displayArtifact.version > 1 && (
+          <span style={{ display: 'flex', gap: 6, flexWrap: 'wrap', width: isPhone ? '100%' : undefined }}>
+            {!archivedAt && (
               <button
+                type="button"
+                data-help-key="requirements.versions"
+                onClick={() => onEdit(displayArtifact)}
+                disabled={previewing}
+                style={action('secondary', previewing)}
+              >
+                Edit
+              </button>
+            )}
+            {statementFirst && !archivedAt && (
+              <ActionMenu
+                label="More actions"
+                triggerStyle={{ ...action('secondary'), flex: 'none', minWidth: touch ? 44 : undefined }}
+                items={[
+                  ...(displayArtifact.version > 1
+                    ? [{ key: 'history', label: showVersions ? 'Hide history' : 'History', onSelect: () => setShowVersions(!showVersions) }]
+                    : []),
+                  { key: 'archive', label: 'Archive', danger: true, disabled: previewing, onSelect: () => onDelete(displayArtifact.id) },
+                ]}
+              />
+            )}
+            {/* An archived artifact is read through its history, so History stays a button there. */}
+            {(!statementFirst || archivedAt) && displayArtifact.version > 1 && (
+              <button
+                type="button"
+                data-help-key="requirements.versions"
+                aria-expanded={showVersions}
                 onClick={() => setShowVersions(!showVersions)}
-                style={{
-                  backgroundColor: 'var(--success)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '6px 12px',
-                  minHeight: 36,
-                  flex: isPhone ? '1 1 auto' : undefined,
-                  borderRadius: '3px',
-                  cursor: 'pointer',
-                  fontSize: '12px',
-                }}
+                style={action('secondary')}
               >
                 History
               </button>
             )}
-          </div>
+            {!statementFirst && !archivedAt && (
+              <button
+                type="button"
+                onClick={() => onDelete(displayArtifact.id)}
+                disabled={previewing}
+                style={action('danger', previewing)}
+              >
+                Archive
+              </button>
+            )}
+          </span>
         )}
       </div>
-
-      {/* Version History */}
-      {!readOnly && showVersions && artifact.version > 1 && (
-        <div
-          style={{
-            marginTop: '16px',
-            paddingTop: '16px',
-            borderTop: '1px solid var(--neutral-soft)',
-          }}
-        >
-          <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', color: 'var(--text)' }}>
-            Version History
-          </h4>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            {loadingVersions ? (
-              <p style={{ color: 'var(--text-muted)', fontSize: '12px' }}>Loading versions...</p>
-            ) : (
-              versions.map((v) => (
-                <div
-                  key={v.version}
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '8px',
-                    backgroundColor: !v.valid_to ? 'var(--neutral-soft)' : 'var(--surface-alt)',
-                    borderRadius: '3px',
-                    border: '1px solid var(--border)',
-                  }}
-                >
-                  <div style={{ fontSize: '12px' }}>
-                    <strong>Version {v.version}</strong>
-                    <span
-                      style={{
-                        marginLeft: '6px',
-                        color: STATUS_META[statusOf(v)].color,
-                        fontSize: '10px',
-                        fontWeight: 600,
-                      }}
-                    >
-                      {STATUS_META[statusOf(v)].label}
-                    </span>
-                    {!v.valid_to && (
-                      <span
-                        style={{
-                          marginLeft: '6px',
-                          backgroundColor: 'var(--success)',
-                          color: 'white',
-                          padding: '2px 6px',
-                          borderRadius: '3px',
-                          fontSize: '10px',
-                        }}
-                      >
-                        Current
-                      </span>
-                    )}
-                    <div style={{ color: 'var(--text-muted)', fontSize: '11px', marginTop: '2px' }}>
-                      Updated: {new Date(v.updated_at).toLocaleString()}
-                    </div>
-                  </div>
-                  {v.valid_to && (
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <button
-                        onClick={() => setLocalPreviewVersion(v)}
-                        style={{
-                          backgroundColor: 'var(--purple-soft)',
-                          color: 'white',
-                          border: 'none',
-                          padding: '4px 8px',
-                          borderRadius: '3px',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                        }}
-                      >
-                        Preview
-                      </button>
-                      <button
-                        onClick={() => handleVersionRestore(v.version)}
-                        style={{
-                          backgroundColor: 'var(--success)',
-                          color: 'white',
-                          border: 'none',
-                          padding: '4px 8px',
-                          borderRadius: '3px',
-                          cursor: 'pointer',
-                          fontSize: '11px',
-                        }}
-                      >
-                        Restore
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+      <h3 style={{ margin: '10px 0 8px', fontSize: isPhone ? 20 : 17, lineHeight: 1.3 }}>
+        {displayArtifact.title}
+        {onOpen && (
+          <button type="button" data-open-artifact={artifact.id} onClick={onOpen} aria-label={`Open ${artifact.ref} in full`} title="Open in full, with its history beside it" style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: '2px 6px', marginLeft: 4, verticalAlign: 'middle' }}>
+            <OpenIcon />
+          </button>
+        )}
+      </h3>
+      {archivedAt && (
+        <p role="note" style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ flex: 1, minWidth: 0 }}>
+            Archived {new Date(archivedAt).toLocaleString()}. You are reading its history: History lists every version.
+          </span>
+          {onReinstate && (
+            <button type="button" onClick={async () => {
+                try {
+                  await onReinstate();
+                } catch (err) {
+                  await alertDialog({ title: 'Reinstate', message: apiErrorMessage(err, 'The artifact could not be reinstated.') });
+                }
+              }}
+              style={action('secondary')}>
+              Reinstate
+            </button>
+          )}
+        </p>
+      )}
+      {statementFirst && !previewing && children}
+      <ArtifactHeaderFacts
+        artifact={displayArtifact}
+        versionCount={versions.length}
+        readOnly={readOnly}
+        isPhone={isPhone}
+        folded={statementFirst}
+      />
+      {!readOnly && !archivedAt && !hideTransitions && !localPreviewVersion && NEXT_STATUSES[status].length > 0 && (
+        <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap' }} data-help-key="review">
+          {NEXT_STATUSES[status].map((next) => (
+            <button
+              key={next}
+              type="button"
+              onClick={() => handleStatusChange(next)}
+              disabled={changingStatus}
+              style={{
+                ...buttonStyle(isForward(next) ? 'primary' : 'secondary', { compact: !touch }),
+                ...(touch ? { minHeight: 40 } : {}),
+                cursor: changingStatus ? 'wait' : 'pointer',
+                opacity: changingStatus ? 0.6 : 1,
+              }}
+            >
+              {TRANSITION_LABELS[next]}
+            </button>
+          ))}
         </div>
+      )}
+
+      {!readOnly && showVersions && artifact.version > 1 && (
+        <ArtifactVersionList
+          versions={versions}
+          loading={loadingVersions}
+          onPreview={(v) => setLocalPreviewVersion(v)}
+          onRestore={archivedAt ? undefined : handleVersionRestore}
+        />
       )}
     </div>
   );

@@ -4,11 +4,99 @@ const content = `
 
 Agents are AI workers that operate inside your projects — drafting
 requirements, reviewing for testability, running interviews, doing V&V chores.
-The **Agents** page in the project sidebar lists them and hosts the editor.
+The **Agents** page in the project menu lists them and hosts the editor.
+
+## The agent hierarchy
+
+The Agents page shows the workspace's agents as a hierarchy of cards: who
+leads, which group each specialist is in, and who reports to whom. It is a
+picture of how the work is divided; no agent starts another, and each run is
+a run of one agent.
+
+- **The top card** is the lead: an agent in no group that reports to no one.
+  Below the top cards, a line totals everything on the page.
+- **One column per group**, each with a coloured marker and a summary line
+  that totals the group's numbers. A group's colour comes from its name, so
+  it is the same for everyone and on every visit.
+- Inside a column, the group's **lead** comes first and the agents that
+  report to it are **indented beneath it**, joined by a guide line in the
+  group's colour; nesting can go deeper. An agent with no group of its own
+  sits in the group of the agent it reports to.
+
+Each card has a coloured top border and a chip for its group, and shows its
+**live numbers over the last 7 days**: **open** runs (queued, running or
+waiting for approval), **done** runs, their **cost**, and the proposals of its
+runs waiting **to approve**. The numbers refresh while the page is open.
+
+- **Click a card** to open the Runs page filtered to that agent: its runs, and
+  the proposals waiting from them. The chip at the top of the Runs page clears
+  the filter.
+- **Mission and tools** opens the agent's description, provider and model,
+  write mode and allowed tools on the card.
+- **▶ Launch** starts a run; **Edit agent** opens the editor.
+
+### Arranging the hierarchy
+
+A workspace admin clicks **Edit** (top right) to arrange the cards. Each card
+then shows:
+
+- **Reports to** — the agent it sits under, or *No one* to put it at the top.
+  An agent cannot report to itself or to an agent below it.
+- **Group** — type a group's name, pick an existing one, or clear it so the
+  agent takes the group of the agent it reports to.
+- **↑ ↓** — move it among the agents beside it.
+
+Each change is saved at once, to the agent's definition file
+(\`reports_to\`, \`group\` and \`sort_order\` in its frontmatter). Click
+**Done** to leave Edit mode.
+
+## The default agents
+
+Every workspace starts with a small, flat team, already arranged:
+
+- **V&V Assistant** on top: the general agent you chat with beside the
+  wizard and on every project page. It answers questions, reviews, and
+  proposes any change to the project as a card you apply.
+- **Requirements Auditor**: checks requirements and user needs against the
+  project's quality rules, and proposes rewrites.
+- **Test Auditor**: checks verification coverage and test cases, and drafts
+  missing test cases with their *verifies* links. **Draft test cases** runs
+  it.
+- **Link Auditor**: checks traceability (suspect, missing and mistyped links)
+  and proposes fixes.
+- **Requirements Interviewer**: holds elicitation interviews with the people
+  you invite.
+
+The three auditors write only proposals: nothing they change lands until
+someone approves it. Run one from its card with **▶ Launch run**, and say
+what to audit.
+
+A workspace that had the earlier team (Chief of Staff, Requirements Analyst,
+V&V Engineer, Developer, Reviewer and Test Case Author) moved to this one
+with the release: those agents were **archived**, not deleted, so their runs
+and proposals are kept. An agent your workspace had edited or locked, or that
+an automation runs, was left as it was; archive it yourself if you no longer
+need it.
+
+## Archived agents
+
+An archived agent is out of the team: it leaves the hierarchy and cannot be
+run, and its runs and proposals stay. They are listed under **Archived**
+beneath the hierarchy; **Reinstate** puts one back where it was. To archive
+an agent, open it with **Edit** and tick **Archive this agent**. Archiving
+is the way to retire an agent you may want back: deleting one also deletes
+its runs and the automations that use it.
+
+On a phone the groups stack in one column; tap a group's header to fold it.
+
+Crews, the graphs of agents the Crew page used to build, have been removed;
+the hierarchy is how agents are arranged now.
 
 ## The agent list
 
-Each agent card shows:
+Where the page shows a list instead of the hierarchy (a workspace on the
+stable channel until its stable release has the hierarchy), each agent card
+shows:
 
 - Its **provider** badge (which AI vendor/CLI runs it).
 - Its **write mode** badge — *proposal* (orange) or *direct* (red).

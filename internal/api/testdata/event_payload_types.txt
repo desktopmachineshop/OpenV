@@ -14,13 +14,6 @@ agentrun.finished             (org)              org-1                    POST /
 agentrun.finished             agent_id           string                   POST /api/v1/agent-runs/{id}/finish
 agentrun.finished             launched_by        string                   POST /api/v1/agent-runs/{id}/finish
 agentrun.finished             status             string                   POST /api/v1/agent-runs/{id}/finish
-agentrun.successors_skipped   (actor)            agent:run-live           crew run finished over budget (orchestration hooks)
-agentrun.successors_skipped   (org)              org-1                    crew run finished over budget (orchestration hooks)
-agentrun.successors_skipped   agent_id           string                   crew run finished over budget (orchestration hooks)
-agentrun.successors_skipped   reason             string                   crew run finished over budget (orchestration hooks)
-agentrun.successors_skipped   successors         []string                 crew run finished over budget (orchestration hooks)
-agentrun.successors_skipped   team_id            string                   crew run finished over budget (orchestration hooks)
-agentrun.successors_skipped   team_node_ids      []string                 crew run finished over budget (orchestration hooks)
 artifact.created              (actor)            system                   proposal applier CreateArtifact
 artifact.created              (actor)            user:u-admin             POST /api/v1/artifacts
 artifact.created              (org)              org-1                    POST /api/v1/artifacts
@@ -37,6 +30,11 @@ artifact.deleted              (org)              org-1                    DELETE
 artifact.deleted              (org)              org-1                    proposal applier DeleteArtifact
 artifact.deleted              artifact_type      string                   proposal applier DeleteArtifact
 artifact.deleted              title              string                   proposal applier DeleteArtifact
+artifact.reinstated           (actor)            user:u-admin             POST /api/v1/artifacts/{id}/reinstate
+artifact.reinstated           (org)              org-1                    POST /api/v1/artifacts/{id}/reinstate
+artifact.reinstated           artifact_type      string                   POST /api/v1/artifacts/{id}/reinstate
+artifact.reinstated           title              string                   POST /api/v1/artifacts/{id}/reinstate
+artifact.reinstated           version            int                      POST /api/v1/artifacts/{id}/reinstate
 artifact.restored             (actor)            user:u-admin             POST /api/v1/artifacts/{id}/restore
 artifact.restored             (org)              org-1                    POST /api/v1/artifacts/{id}/restore
 artifact.restored             artifact_type      string                   POST /api/v1/artifacts/{id}/restore
@@ -136,9 +134,13 @@ org.member_added              (org)              org-1                    POST /
 org.member_added              role               string                   POST /api/v1/orgs/{id}/members (address with an account)
 org.member_added              user_id            string                   POST /api/v1/orgs/{id}/members (address with an account)
 org.member_removed            (actor)            user:u-admin             DELETE /api/v1/orgs/{id}/members/{userId}
+org.member_removed            (actor)            user:u-known             account removed at the identity provider's request
 org.member_removed            (org)              org-1                    DELETE /api/v1/orgs/{id}/members/{userId}
+org.member_removed            (org)              org-1                    account removed at the identity provider's request
 org.member_removed            self               bool                     DELETE /api/v1/orgs/{id}/members/{userId}
+org.member_removed            self               bool                     account removed at the identity provider's request
 org.member_removed            user_id            string                   DELETE /api/v1/orgs/{id}/members/{userId}
+org.member_removed            user_id            string                   account removed at the identity provider's request
 org.member_role_changed       (actor)            user:u-admin             PUT /api/v1/orgs/{id}/members/{userId}
 org.member_role_changed       (org)              org-1                    PUT /api/v1/orgs/{id}/members/{userId}
 org.member_role_changed       from               string                   PUT /api/v1/orgs/{id}/members/{userId}
@@ -193,3 +195,5 @@ workitem.moved                column             string                   POST /
 workitem.updated              (actor)            user:u-admin             PUT /api/v1/work-items/{id}
 workitem.updated              (org)              -                        PUT /api/v1/work-items/{id}
 workitem.updated              title              string                   PUT /api/v1/work-items/{id}
+# Event types nothing publishes today:
+agentrun.successors_skipped   (no publisher)     -                        -

@@ -1,19 +1,21 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 314
-  axios instance calls: 303 (DELETE 37, GET 122, HEAD 1, POST 102, PUT 41)
-  helper calls (a function that passes its argument to the instance): 2
+call sites: 356
+  axios instance calls: 346 (DELETE 42, GET 136, HEAD 1, POST 111, PUT 56)
+  helper calls (a function that passes its argument to the instance): 1
   plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
-  needing normalisation: 7 (4 of them axios calls)
-distinct METHOD PATH lines below: 313; server routes reached: 313
+  needing normalisation: 6 (3 of them axios calls)
+distinct METHOD PATH lines below: 351; server routes reached: 351
 
+GET     /api/v1/admin/metrics/usage                                       adminAPI.usage
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
 GET     /api/v1/admin/metrics/visitors                                    adminAPI.visitorMetrics
 GET     /api/v1/admin/users                                               adminAPI.users
 PUT     /api/v1/admin/users/{id}/admin                                    adminAPI.setAdmin
 POST    /api/v1/admin/users/{id}/password-reset                           adminAPI.issuePasswordReset
 GET     /api/v1/admin/workspaces                                          adminAPI.workspaces
+PUT     /api/v1/agent-arrangement                                         agentsAPI.arrange
 GET     /api/v1/agent-runs                                                agentRunsAPI.list
 GET     /api/v1/agent-runs/{id}                                           agentRunsAPI.get
 POST    /api/v1/agent-runs/{id}/cancel                                    agentRunsAPI.cancel
@@ -21,6 +23,7 @@ GET     /api/v1/agent-runs/{id}/logs                                      agentR
 POST    /api/v1/agent-runs/{id}/retry                                     agentRunsAPI.retry
 GET     /api/v1/agent-runs/{id}/stream                                    agentRunsAPI.streamUrl (url)
 GET     /api/v1/agent-runs/{id}/tree                                      agentRunsAPI.tree
+GET     /api/v1/agent-stats                                               agentsAPI.stats
 GET     /api/v1/agents                                                    agentsAPI.list
 POST    /api/v1/agents                                                    agentsAPI.create
 POST    /api/v1/agents/sync                                               agentsAPI.sync
@@ -38,6 +41,7 @@ GET     /api/v1/artifacts/{id}                                            artifa
 PUT     /api/v1/artifacts/{id}                                            artifactAPI.update
 GET     /api/v1/artifacts/{id}/links                                      linkAPI.listForArtifact, linkAPI.listForArtifactVersion
 GET     /api/v1/artifacts/{id}/quality                                    qualityAPI.artifact
+POST    /api/v1/artifacts/{id}/reinstate                                  artifactAPI.reinstate
 POST    /api/v1/artifacts/{id}/restore                                    artifactAPI.restoreVersion
 PUT     /api/v1/artifacts/{id}/status                                     artifactAPI.changeStatus
 GET     /api/v1/artifacts/{id}/versions                                   artifactAPI.getVersions
@@ -82,22 +86,6 @@ GET     /api/v1/baselines/{id}                                            baseli
 GET     /api/v1/baselines/{id}/diff                                       baselineAPI.diff
 GET     /api/v1/chatter                                                   chatterAPI.list
 POST    /api/v1/chatter                                                   chatterAPI.create
-DELETE  /api/v1/crew-edges/{id}                                           crewsAPI.removeEdge
-PUT     /api/v1/crew-edges/{id}                                           crewsAPI.updateEdge
-DELETE  /api/v1/crew-nodes/{id}                                           crewsAPI.removeNode
-PUT     /api/v1/crew-nodes/{id}                                           crewsAPI.updateNode
-GET     /api/v1/crew-templates                                            crewTemplatesAPI.list
-GET     /api/v1/crews                                                     crewsAPI.list
-POST    /api/v1/crews                                                     crewsAPI.create
-POST    /api/v1/crews/import                                              crewsAPI.import
-DELETE  /api/v1/crews/{id}                                                crewsAPI.remove
-GET     /api/v1/crews/{id}                                                crewsAPI.get
-PUT     /api/v1/crews/{id}                                                crewsAPI.update
-POST    /api/v1/crews/{id}/clone                                          crewsAPI.clone
-POST    /api/v1/crews/{id}/edges                                          crewsAPI.addEdge
-GET     /api/v1/crews/{id}/export                                         crewsAPI.exportDownload (helper)
-POST    /api/v1/crews/{id}/nodes                                          crewsAPI.addNode
-POST    /api/v1/crews/{id}/runs                                           crewsAPI.launchRun
 GET     /api/v1/events                                                    eventsAPI.list
 DELETE  /api/v1/evidence-bundles/{id}                                     evidenceAPI.remove
 GET     /api/v1/evidence-bundles/{id}                                     evidenceAPI.get
@@ -132,6 +120,8 @@ PUT     /api/v1/links/{id}                                                linkAP
 PUT     /api/v1/links/{id}/confirm                                        linkAPI.confirm
 DELETE  /api/v1/me/avatar                                                 avatarAPI.remove
 POST    /api/v1/me/avatar                                                 avatarAPI.upload
+GET     /api/v1/me/comment-reads                                          commentReadAPI.list
+PUT     /api/v1/me/comment-reads                                          commentReadAPI.set
 GET     /api/v1/me/connected-apps                                         connectedAppsAPI.list
 DELETE  /api/v1/me/connected-apps/{id}                                    connectedAppsAPI.revoke
 PUT     /api/v1/me/connected-apps/{id}/workspaces                         connectedAppsAPI.setWorkspaces
@@ -147,6 +137,9 @@ DELETE  /api/v1/me/push-subscriptions                                     pushAP
 GET     /api/v1/me/push-subscriptions                                     pushAPI.list
 POST    /api/v1/me/push-subscriptions                                     pushAPI.subscribe
 GET     /api/v1/me/push/config                                            pushAPI.config
+GET     /api/v1/me/saved-searches                                         savedSearchAPI.list
+POST    /api/v1/me/saved-searches                                         savedSearchAPI.create
+DELETE  /api/v1/me/saved-searches/{id}                                    savedSearchAPI.delete
 GET     /api/v1/meta/artifact-types                                       metaAPI.artifactTypes
 GET     /api/v1/meta/attribute-definitions                                metaAPI.attributeDefinitions
 GET     /api/v1/meta/link-types                                           metaAPI.linkTypes
@@ -200,6 +193,10 @@ DELETE  /api/v1/orgs/{id}/my-runner-key                                   myRunn
 GET     /api/v1/orgs/{id}/my-runner-key                                   myRunnerKeyAPI.get
 POST    /api/v1/orgs/{id}/my-runner-key                                   myRunnerKeyAPI.create
 PUT     /api/v1/orgs/{id}/plan                                            adminAPI.setPlan
+GET     /api/v1/orgs/{id}/plan-calendar                                   planAPI.workspaceCalendar
+PUT     /api/v1/orgs/{id}/plan-calendar                                   planAPI.setWorkspaceWorkingDays
+POST    /api/v1/orgs/{id}/plan-calendar/time-off                          planAPI.addTimeOff
+DELETE  /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}              planAPI.removeTimeOff
 GET     /api/v1/orgs/{id}/quality-rules                                   qualityRulesAPI.forWorkspace
 PUT     /api/v1/orgs/{id}/quality-rules                                   qualityRulesAPI.setForWorkspace
 POST    /api/v1/orgs/{id}/restore                                         orgsAPI.restore
@@ -214,6 +211,8 @@ GET     /api/v1/orgs/{id}/worker-keys                                     worker
 POST    /api/v1/orgs/{id}/worker-keys                                     workerKeysAPI.create
 DELETE  /api/v1/orgs/{id}/worker-keys/{keyId}                             workerKeysAPI.revoke
 GET     /api/v1/orgs/{id}/worker-status                                   workerStatusAPI.get
+GET     /api/v1/plan/master                                               planAPI.master
+GET     /api/v1/plan/mine                                                 planAPI.mine
 GET     /api/v1/projects                                                  projectAPI.list
 POST    /api/v1/projects                                                  projectAPI.create
 POST    /api/v1/projects/import                                           projectAPI.import
@@ -245,11 +244,32 @@ DELETE  /api/v1/projects/{id}/members/{userId}                            member
 PUT     /api/v1/projects/{id}/members/{userId}                            membersAPI.setRole
 GET     /api/v1/projects/{id}/parties                                     projectAPI.parties
 PUT     /api/v1/projects/{id}/parties                                     projectAPI.setParties
+GET     /api/v1/projects/{id}/plan                                        planAPI.get
+POST    /api/v1/projects/{id}/plan/baselines                              planAPI.saveBaseline
+DELETE  /api/v1/projects/{id}/plan/baselines/{baselineId}                 planAPI.deleteBaseline
+GET     /api/v1/projects/{id}/plan/export                                 planAPI.export
+POST    /api/v1/projects/{id}/plan/import                                 planAPI.importMSProject
+POST    /api/v1/projects/{id}/plan/level                                  planAPI.level
+POST    /api/v1/projects/{id}/plan/milestones                             planAPI.createMilestone
+DELETE  /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAPI.removeMilestone
+PUT     /api/v1/projects/{id}/plan/milestones/{milestoneId}               planAPI.updateMilestone
+POST    /api/v1/projects/{id}/plan/recalculate                            planAPI.recalculate
+PUT     /api/v1/projects/{id}/plan/release-milestones/{releaseId}         planAPI.setReleaseCriteria, planAPI.setReleaseWaitsFor
+POST    /api/v1/projects/{id}/plan/reschedule-remaining                   planAPI.rescheduleRemaining
+PUT     /api/v1/projects/{id}/plan/resources/{assigneeId}                 planAPI.removePlanned, planAPI.setResource, planAPI.staffPlanned
+PUT     /api/v1/projects/{id}/plan/settings                               planAPI.setSettings, planAPI.setWorkingDays
+GET     /api/v1/projects/{id}/priority-detection                          projectAPI.priorityDetection
+PUT     /api/v1/projects/{id}/priority-detection                          projectAPI.setPriorityDetection
 GET     /api/v1/projects/{id}/profile                                     productProfileAPI.get
 PUT     /api/v1/projects/{id}/profile                                     productProfileAPI.update
 GET     /api/v1/projects/{id}/quality                                     qualityAPI.project
 GET     /api/v1/projects/{id}/quality-rules                               qualityRulesAPI.forProject
 PUT     /api/v1/projects/{id}/quality-rules                               qualityRulesAPI.setForProject
+PUT     /api/v1/projects/{id}/release-order                               releasesAPI.reorder
+GET     /api/v1/projects/{id}/releases                                    releasesAPI.list
+POST    /api/v1/projects/{id}/releases                                    releasesAPI.create
+DELETE  /api/v1/projects/{id}/releases/{releaseId}                        releasesAPI.remove
+PUT     /api/v1/projects/{id}/releases/{releaseId}                        releasesAPI.update
 GET     /api/v1/projects/{id}/repo-connections                            repoConnectionsAPI.list
 POST    /api/v1/projects/{id}/repo-connections                            repoConnectionsAPI.create
 GET     /api/v1/projects/{id}/review-queue                                reviewAPI.get
@@ -261,9 +281,13 @@ PUT     /api/v1/projects/{id}/team-access                                 projec
 DELETE  /api/v1/projects/{id}/team-access/{teamId}                        projectTeamAccessAPI.revoke
 GET     /api/v1/projects/{id}/test-runs                                   vvAPI.listRuns
 POST    /api/v1/projects/{id}/test-runs                                   vvAPI.createRun
+GET     /api/v1/projects/{id}/todos                                       todosAPI.listProject
+POST    /api/v1/projects/{id}/todos                                       todosAPI.createProject
 GET     /api/v1/projects/{id}/vv/coverage                                 vvAPI.coverage
 GET     /api/v1/projects/{id}/vv/gaps                                     vvAPI.gaps
 GET     /api/v1/projects/{id}/vv/matrix                                   vvAPI.matrix
+GET     /api/v1/projects/{id}/vv/releases                                 releasesAPI.overview
+GET     /api/v1/projects/{id}/vv/releases/{releaseId}                     releasesAPI.progress
 GET     /api/v1/projects/{id}/vv/report                                   vvAPI.report (helper)
 GET     /api/v1/projects/{id}/work-items                                  workItemsAPI.list
 POST    /api/v1/projects/{id}/work-items                                  workItemsAPI.create
@@ -315,18 +339,31 @@ POST    /api/v1/test-runs/{id}/agent-run                                  vvAPI.
 GET     /api/v1/test-runs/{id}/citations                                  evidenceAPI.citationsForRun
 GET     /api/v1/test-runs/{id}/results                                    vvAPI.listResults
 POST    /api/v1/test-runs/{id}/results                                    vvAPI.upsertResult
+GET     /api/v1/todos                                                     todosAPI.listMine
+POST    /api/v1/todos                                                     todosAPI.createPersonal
+DELETE  /api/v1/todos/{id}                                                todosAPI.remove
+GET     /api/v1/todos/{id}                                                todosAPI.get
+PUT     /api/v1/todos/{id}                                                todosAPI.update
+POST    /api/v1/todos/{id}/done                                           todosAPI.setDone
+POST    /api/v1/todos/{id}/promote                                        todosAPI.promote
 GET     /api/v1/users                                                     authAPI.listUsers
 DELETE  /api/v1/work-items/{id}                                           workItemsAPI.remove
 GET     /api/v1/work-items/{id}                                           workItemsAPI.get
 PUT     /api/v1/work-items/{id}                                           workItemsAPI.update
 POST    /api/v1/work-items/{id}/comments                                  workItemsAPI.comment
+DELETE  /api/v1/work-items/{id}/external-links/{otherId}                  planAPI.unrelateExternal
+PUT     /api/v1/work-items/{id}/external-links/{otherId}                  planAPI.relateExternal
 POST    /api/v1/work-items/{id}/move                                      workItemsAPI.move
+DELETE  /api/v1/work-items/{id}/relationships/{otherId}                   planAPI.unrelate
+PUT     /api/v1/work-items/{id}/relationships/{otherId}                   planAPI.relate
+PUT     /api/v1/work-items/{id}/schedule                                  planAPI.schedule
+GET     /api/v1/work-items/{id}/todos                                     planAPI.listTodos
+POST    /api/v1/work-items/{id}/todos                                     planAPI.addTodo
 
 ## Normalised call sites (the path the client writes is not literally a route template)
   attachmentAPI.fetchFile: ${version ? `?version=${version}` : ''} is a query-string suffix
   attachmentAPI.getDownloadUrl (url): ${version ? `?version=${version}` : ''} is a query-string suffix
   authAPI.oidcLoginUrl (url): ${signUp ? '?signup=1' : ''} is a query-string suffix
-  crewsAPI.import: ${projectId ? `?project_id=${encodeURIComponent(projectId)}` : ''} is a query-string suffix
   projectAPI.download: ${format} is one of csv|docx|excel|json|pdf|reqif; ${query ? `?${query}` : ''} is a query-string suffix
   projectAPI.downloadOptions: ${params} is a query-string suffix
   vvAPI.report (helper): ${baselineId ? `?baseline_id=${baselineId}` : ''} is a query-string suffix

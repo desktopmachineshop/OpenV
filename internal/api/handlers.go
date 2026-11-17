@@ -10,6 +10,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/attributes"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
+	"github.com/openv/requirements-platform/internal/domain/commentreads"
 	"github.com/openv/requirements-platform/internal/domain/connectedapps"
 	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/embeddings"
@@ -22,7 +23,9 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
+	"github.com/openv/requirements-platform/internal/domain/targetreleases"
 	"github.com/openv/requirements-platform/internal/domain/templates"
+	"github.com/openv/requirements-platform/internal/domain/todos"
 
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/agents"
@@ -36,6 +39,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/plan"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
 	"github.com/openv/requirements-platform/internal/domain/providers"
@@ -43,7 +47,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/pushsubs"
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
-	"github.com/openv/requirements-platform/internal/domain/teams"
+	"github.com/openv/requirements-platform/internal/domain/savedsearches"
 	"github.com/openv/requirements-platform/internal/domain/usermetrics"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/vv"
@@ -55,22 +59,27 @@ import (
 
 // HandlerDeps carries every service the API layer depends on.
 type HandlerDeps struct {
-	ArtifactService      artifacts.Service
-	LinkService          links.Service
-	ProjectService       projects.Service
-	AttachmentService    attachments.Service
-	ExportService        exports.Service
-	DownloadService      downloads.Service
-	BaselineService      baselines.Service
-	ReportService        reports.Service
-	TemplateService      templates.Service
-	ChatterService       chatter.Service
-	AttributeService     attributes.Service
+	ArtifactService   artifacts.Service
+	LinkService       links.Service
+	ProjectService    projects.Service
+	AttachmentService attachments.Service
+	ExportService     exports.Service
+	DownloadService   downloads.Service
+	BaselineService   baselines.Service
+	ReportService     reports.Service
+	TemplateService   templates.Service
+	ChatterService    chatter.Service
+	AttributeService  attributes.Service
+	// TargetReleaseService is a project's target releases (vv_release_handlers.go).
+	TargetReleaseService targetreleases.Service
 	SharedProductService sharedproducts.Service
 	EmbeddingService     *embeddings.Service
 	UploadsDir           string
 
-	UserService     users.Service
+	UserService users.Service
+	// AccountDeleter removes an account at the single sign-on provider's
+	// request (oidc_account_deletion.go); nil answers that endpoint 404.
+	AccountDeleter  users.AccountDeleter
 	MemberService   members.Service
 	ProductService  products.Service
 	VVService       vv.Service
@@ -87,8 +96,11 @@ type HandlerDeps struct {
 	// it so a deployment can be matched to a commit — which is what lets the
 	// staging smoke gate prove it tested the commit it thinks it did
 	// (REQ-141).
-	BuildSHA         string
-	WorkItemService  workitems.Service
+	BuildSHA        string
+	WorkItemService workitems.Service
+	TodoService     todos.Service
+	// PlanService is a project's plan, the Gantt over the board (plan_handlers.go).
+	PlanService      plan.Service
 	GuidedService    guided.Service
 	InterviewService interviews.Service
 	// ShareLinkService mints and resolves project share links (REQ-149).
@@ -107,7 +119,6 @@ type HandlerDeps struct {
 	LoginService       providers.LoginService
 	// ProviderTokenService holds members' own provider sign-in tokens.
 	ProviderTokenService usertokens.Service
-	TeamService          teams.Service
 	OrgService           orgs.Service
 	OrgTeamService       orgs.TeamService
 	WorkerKeyService     workerkeys.Service
@@ -119,6 +130,12 @@ type HandlerDeps struct {
 	// PushSubService stores per-device web push subscriptions (REQ-109).
 	// nil leaves the endpoints answering "not available".
 	PushSubService pushsubs.Service
+	// SavedSearchService stores members' saved searches (issue #722).
+	// nil answers an empty list and refuses to save.
+	SavedSearchService savedsearches.Service
+	// CommentReadService stores when members last read each artifact's
+	// comments. nil answers no read state and refuses to store any.
+	CommentReadService commentreads.Service
 	// UserMetricsService records daily user activity and answers the
 	// platform admin's user dashboard. nil records nothing.
 	UserMetricsService usermetrics.Service
@@ -126,6 +143,9 @@ type HandlerDeps struct {
 	// accounts they make and answers the platform admin's visitor
 	// dashboard. nil records nothing.
 	VisitorMetrics usermetrics.VisitorService
+	// UsageMetrics answers the platform admin's usage view: counts per
+	// workspace and person, and their pace. nil answers 503.
+	UsageMetrics usermetrics.UsageService
 	// ConnectedApps holds the AI clients members attach to a workspace over
 	// the remote MCP endpoint, their consents and their tokens (REQ-44). nil
 	// turns the endpoint and its OAuth off: they answer 404.
@@ -134,7 +154,7 @@ type HandlerDeps struct {
 	// what /api/v1/me/push/config reports as enabled=false.
 	VAPID       notify.VAPIDConfig
 	Provisioner hosting.Provisioner
-	// OrgSeeder provisions default agents/crew for a new workspace.
+	// OrgSeeder provisions default agents for a new workspace.
 	OrgSeeder func(orgID string) error
 	// PublicAPIURL is the externally-reachable API base (connector config).
 	PublicAPIURL string

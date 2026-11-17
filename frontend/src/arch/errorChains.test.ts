@@ -10,7 +10,7 @@ import { describe, expect, it, vi } from 'vitest';
 import ts from 'typescript';
 import { parseFile, productionSources, srcRel, walk } from './repo';
 
-const CEILING = 50;
+const CEILING = 49;
 
 /** `X.response.data.error`, with or without optional chaining. */
 function isInlineChain(node: ts.Node): boolean {

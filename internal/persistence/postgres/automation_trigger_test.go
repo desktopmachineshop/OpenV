@@ -75,7 +75,7 @@ func TestTriggeredRunOnAWorkspaceEvent(t *testing.T) {
 
 	bus := events.NewBus(NewEventRepository(db), nil)
 	runService := agentruns.NewDefaultService(NewAgentRunRepository(db), triggerAgents{repo: NewAgentRepository(db)}, bus)
-	automation.NewTriggerMatcher(autoRepo, runService, nil).Start(bus)
+	automation.NewTriggerMatcher(autoRepo, runService).Start(bus)
 	newcomer := uuid.New().String()
 	e := domainevents.New(domainevents.OrgMemberAdded, "", newcomer, "user:"+uuid.New().String(),
 		map[string]interface{}{"user_id": newcomer, "role": "member"}).WithOrg(orgID)

@@ -10,7 +10,7 @@ import { API_ERROR, apiErrorCode, apiErrorMessage, retryAfterSeconds } from '../
 import { useIdentityLink } from '../hooks/useIdentityLink';
 import { useAppStore } from '../state/store';
 import { safeReturnPath } from '../utils/returnTo';
-import { SsoButtons, SsoOnlySignIn } from './LoginSso';
+import { ResetForLinkNote, SignInLoading, SsoButtons, SsoError, SsoOnlySignIn } from './LoginSso';
 
 // Login renders email/password sign-in plus optional Google SSO, and a
 // register mode. The first registered user becomes the admin.
@@ -92,6 +92,9 @@ export const Login: React.FC = () => {
   const [oidcEnabled, setOidcEnabled] = useState(false);
   const [oidcName, setOidcName] = useState('SSO');
   const [oidcOnly, setOidcOnly] = useState(false);
+  // Nothing renders until the methods are known: a form that flashes and
+  // vanishes as the page goes to the provider is worse than a moment of none.
+  const [configLoaded, setConfigLoaded] = useState(false);
   const [signedOut, setSignedOut] = useState(false);
   const [registrationClosed, setRegistrationClosed] = useState(false);
   // The server's password rule, so the form states what will actually be
@@ -133,7 +136,8 @@ export const Login: React.FC = () => {
       .catch(() => {
         setGoogleEnabled(false);
         setOidcEnabled(false);
-      });
+      })
+      .finally(() => setConfigLoaded(true));
     authAPI
       .policy()
       .then((res) => {
@@ -371,7 +375,9 @@ export const Login: React.FC = () => {
     }
   };
 
-  if (oidcOnly && !decidingAsSignedIn && !linking) {
+  if (!configLoaded) return <SignInLoading />;
+  // A forgotten password still has a use there: the link step asks for it.
+  if (oidcOnly && !decidingAsSignedIn && !linking && activeMode !== 'forgot') {
     const back = shareToken ? `/s/${encodeURIComponent(shareToken)}` : returnTo;
     const problem = linkError ? 'That sign-in has expired.' : inviteError;
     const props = { name: oidcName, returnTo: back, ready: signedOut, invite, problem };
@@ -412,6 +418,7 @@ export const Login: React.FC = () => {
                 ? 'Reset your password'
                 : 'Create your account'}
         </p>
+        {!oidcOnly && <SsoError name={oidcName} />}
         {resetDone && activeMode === 'login' && (
           <div
             role="status"
@@ -554,6 +561,7 @@ export const Login: React.FC = () => {
                 <p style={{ fontSize: 13, color: 'var(--text-body)', lineHeight: 1.5, marginTop: 0 }}>
                   Enter the address you sign in with and we will email you a link to set a new password.
                 </p>
+                {oidcOnly && <ResetForLinkNote name={oidcName} />}
                 <div className="form-group" style={{ marginBottom: 16 }}>
                   <input
                     type="email"
@@ -684,7 +692,7 @@ export const Login: React.FC = () => {
                       ? 'Sign in'
                       : 'Create account'}
               </button>
-              {activeMode === 'login' && !oidcOnly && (
+              {activeMode === 'login' && (!oidcOnly || linking) && (
                 <div style={{ textAlign: 'center', marginTop: 10 }}>
                   <button
                     type="button"
@@ -702,7 +710,7 @@ export const Login: React.FC = () => {
                       width: 'auto',
                     }}
                   >
-                    Forgot your password?
+                    {linking ? 'Forgot your OpenV password?' : 'Forgot your password?'}
                   </button>
                 </div>
               )}

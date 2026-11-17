@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ShortcutTarget,
   SHORTCUT_PARAM,
@@ -45,9 +45,20 @@ import { Navbar } from './Navbar';
 import { HelpSidebar } from './HelpSidebar';
 import { DownloadWizard } from './DownloadWizard';
 import { CreateOrgModal } from './CreateOrgModal';
-import { SegmentedControl, useConfirm, usePrompt } from './ui';
+import { PanelHeader, SegmentedControl, useConfirm, usePrompt } from './ui';
 import { WORKSPACE_RUNS_FEATURE, workspaceRunPath } from './agents/workspaceRuns';
 import { useFeature } from '../hooks/useFeature';
+import { useHelpShortcut } from '../hooks/useHelpShortcut';
+import { COMPACT_LAYOUT_FEATURE, FLOW_DOWN_FEATURE, REDESIGN_PAGES_FEATURE, TODOS_FEATURE } from '../features';
+import { NewProjectAction, ProjectCount, ProjectMeters } from './ProjectListFigures';
+import { ProjectListHome } from './ProjectListHome';
+import { ProjectActions } from './ProjectListActions';
+import { NewProjectParent, ProjectFold, placeUnder, projectRows, useFoldedProjects } from './ProjectListTree';
+import { useUiRefresh } from '../hooks/useUiRefresh';
+import { loadWorkspaceHome, type WorkspaceHomeData } from './ProjectListHomeLoad';
+import { COMMENT_READS_FEATURE } from './noteReadState';
+import { useViewport } from '../hooks/useViewport';
+import { useFitWindow } from '../hooks/useFitWindow';
 import './ProjectList.css';
 
 // What an invention that outlasts its wait says where the workspace has the
@@ -99,6 +110,43 @@ export const ProjectList: React.FC = () => {
   // run is followed on the workspace Runs page, once the workspace has it.
   const [slowInventionRun, setSlowInventionRun] = useState<string | null>(null);
   const workspaceRuns = useFeature(WORKSPACE_RUNS_FEATURE);
+  // ? and F1 open help here too, as on every project page (compact layout).
+  useHelpShortcut(useFeature(COMPACT_LAYOUT_FEATURE), () => setHelpOpen((o) => !o));
+  // The Home design: this page is the workspace's Home. What needs the
+  // member across every project and the workspace's activity sit above the
+  // project picker, the Projects panel's rows with each project's size and
+  // traced and verified share (ProjectListHome, ProjectListHomeLoad).
+  const homeDesign = useFeature(REDESIGN_PAGES_FEATURE);
+  const refresh = useUiRefresh();
+  // The projects as a hierarchy, children indented under their parent, on
+  // the redesigned Home of the refreshed interface; a flat list otherwise.
+  const [folded, toggleFold] = useFoldedProjects();
+  const flowDown = useFeature(FLOW_DOWN_FEATURE);
+  const [newParentId, setNewParentId] = useState('');
+  const tree = homeDesign && refresh;
+  const rows = React.useMemo(() => (tree ? projectRows(projects, folded) : projects.map((project) => ({ project, depth: 0, below: 0, folded: false }))), [tree, projects, folded]);
+  const todosOn = useFeature(TODOS_FEATURE);
+  const commentReadsOn = useFeature(COMMENT_READS_FEATURE);
+  const meId = useAppStore((s) => s.currentUser?.id || null);
+  const location = useLocation();
+  const { isPhone } = useViewport();
+  const [home, setHome] = useState<WorkspaceHomeData | null>(null);
+  const homeKey = projects.map((p) => p.id).join(',');
+  useEffect(() => {
+    if (!homeDesign || loading) return undefined;
+    let live = true;
+    setHome(null);
+    loadWorkspaceHome(projects, { todos: todosOn, userId: meId, commentReads: commentReadsOn })
+      .then((d) => live && setHome(d))
+      // A Home that could not be gathered still draws, empty, rather than
+      // saying it is gathering for ever.
+      .catch(() => live && setHome({ todo: [], activity: [], figures: {}, proposals: [], totals: { artifacts: null, traced: null, verified: null, failing: 0 } }));
+    return () => {
+      live = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [homeDesign, loading, homeKey, todosOn, commentReadsOn, meId]);
+  const figures = home?.figures || {};
   const [inventedByAgent, setInventedByAgent] = useState<boolean>(false);
   // Concepts already shown this session, so each invention asks for something
   // new rather than re-treading the same joke.
@@ -243,6 +291,7 @@ export const ProjectList: React.FC = () => {
   // that is told exactly what to fix rather than being quietly accepted.
   const runInvention = async (agentSlug: string, rejected: string[]): Promise<RandomProduct | null> => {
     const launched = await agentsAPI.launchRun(agentSlug, {
+      conversation: true,
       prompt: inventProductPrompt(shownProductsRef.current, rejected),
     });
 
@@ -280,7 +329,7 @@ export const ProjectList: React.FC = () => {
     setInventError('');
     setSlowInventionRun(null);
     try {
-      const agents = (await agentsAPI.list()).data || [];
+      const agents = ((await agentsAPI.list()).data || []).filter((a) => !a.archived);
       const agent =
         agents.find((a) => a.slug === 'requirements-copilot') ||
         agents.find((a) => a.slug === 'chief-of-staff') ||
@@ -327,6 +376,13 @@ export const ProjectList: React.FC = () => {
   };
 
   const fileInputRef = React.useRef<HTMLInputElement>(null);
+  // On a wider screen the Home fits the window: the figures on top, then the
+  // Needs you and Activity panels and the Projects panel share the height
+  // left, each scrolling on its own. A form open below the list, or a phone,
+  // keeps the page scrolling as a whole.
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const fitHome = homeDesign && !isPhone && !loading && !isCreating && !isEditingProject;
+  useFitWindow(containerRef, fitHome);
 
   // Load projects on mount and whenever the active workspace changes.
   useEffect(() => {
@@ -334,6 +390,15 @@ export const ProjectList: React.FC = () => {
     loadTemplates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeOrgId]);
+
+  // The top bar's project switcher offers New project on every page; it
+  // arrives here with that wish in history state and opens the form.
+  const wantsCreate = (location.state as { create?: unknown } | null)?.create === true;
+  useEffect(() => {
+    if (!wantsCreate) return;
+    setCreateMode('blank');
+    setIsCreating(true);
+  }, [wantsCreate, location.key]);
 
   // A shortcut that knows which project the member was last in goes there
   // without asking. When it does not (first run, or that project is not in
@@ -391,7 +456,7 @@ export const ProjectList: React.FC = () => {
           name: newProjectName,
           description: newProjectDesc,
         });
-        addProject(response.data);
+        addProject(await placeUnder(response.data, newParentId));
         setProjectId(response.data.id);
         // Seed the Guided Wizard's framing step with the rolled concept and
         // land in the wizard, where the connected V&V Assistant picks it up
@@ -415,7 +480,7 @@ export const ProjectList: React.FC = () => {
           name: newProjectName,
           description: newProjectDesc,
         });
-        addProject(response.data);
+        addProject(await placeUnder(response.data, newParentId));
         openProject(response.data.id);
       } else {
         const response = await templateAPI.createProject(
@@ -423,7 +488,7 @@ export const ProjectList: React.FC = () => {
           newProjectName,
           newProjectDesc
         );
-        addProject(response.data);
+        addProject(await placeUnder(response.data, newParentId));
         openProject(response.data.id);
       }
       setNewProjectName('');
@@ -431,6 +496,7 @@ export const ProjectList: React.FC = () => {
       setSelectedTemplateId('');
       setRandomProduct(null);
       setCreateMode('blank');
+      setNewParentId('');
       setIsCreating(false);
       setError('');
     } catch (err: any) {
@@ -585,13 +651,32 @@ export const ProjectList: React.FC = () => {
           page it explains creating, importing, templating and exporting
           projects. */}
       <HelpSidebar open={helpOpen} onOpenChange={setHelpOpen} />
+      {/* DownloadWizard's Modal takes no extra attributes, so a wrapper marks
+          the dialog for the help panel; the modal is fixed, so it takes no space. */}
       {downloadProjectId && (
-        <DownloadWizard
-          projectId={downloadProjectId}
-          onClose={() => setDownloadProjectId(null)}
-        />
+        <div data-help-pane="projects.download" data-help-key="projects.download">
+          <DownloadWizard
+            projectId={downloadProjectId}
+            onClose={() => setDownloadProjectId(null)}
+          />
+        </div>
       )}
-      <div className="project-list-container">
+      <div ref={containerRef} className={fitHome ? 'project-list-container is-fit' : 'project-list-container'}>
+      {homeDesign && !loading ? (
+        <div className="project-list-home" style={{ marginBottom: 12 }}>
+          <ProjectListHome workspace={activeOrg?.name || 'Your workspace'} projects={projects.length} data={home} phone={isPhone} fit={fitHome} />
+        </div>
+      ) : (
+        <div className="project-list-head">
+          <h1>Projects</h1>
+          {!loading && (
+            <span>
+              {projects.length} project{projects.length === 1 ? '' : 's'}
+              {activeOrg?.name ? ' in this workspace' : ''}
+            </span>
+          )}
+        </div>
+      )}
 
       {/* An installed-app shortcut that could not guess the project says so
           rather than silently dropping the member on the plain project list. */}
@@ -620,7 +705,10 @@ export const ProjectList: React.FC = () => {
         <div className="loading">Loading projects...</div>
       ) : (
         <>
-          <div className="projects-grid">
+          <div className={homeDesign ? `projects-grid is-rows${tree ? ' is-tree' : ''}` : 'projects-grid'} data-help-key={homeDesign ? 'home.projects' : undefined}>
+            {homeDesign && projects.length > 0 && (
+              <PanelHeader title="Projects" count={projects.length} action={<NewProjectAction onClick={() => { setCreateMode('blank'); setIsCreating(true); }} />} />
+            )}
             {projects.length === 0 ? (
               <div className="create-import-placeholder">
                 <h3>Get Started</h3>
@@ -632,12 +720,14 @@ export const ProjectList: React.FC = () => {
                       setCreateMode('blank');
                       setIsCreating(true);
                     }}
+                    data-help-key="projects.create"
                   >
                     + New Project
                   </button>
                   <button
                     className="button button-secondary"
                     onClick={handleImportClick}
+                    data-help-key="projects.import"
                   >
                     ↑ Import Project
                   </button>
@@ -660,54 +750,32 @@ export const ProjectList: React.FC = () => {
                 </div>
               </div>
             ) : (
-              projects.map((project) => (
+              rows.map(({ project, ...row }) => (
                 <div
                   key={project.id}
                   className={`project-card ${projectId === project.id ? 'selected' : ''}`}
+                  style={tree && row.depth ? { paddingLeft: 12 + row.depth * 20 } : undefined}
                   onClick={() => handleSelectProject(project.id)}
                 >
                   <div className="project-card-header">
+                    {tree && <ProjectFold row={{ project, ...row }} onToggle={toggleFold} />}
                     <h3>{project.name}</h3>
-                    <div className="project-actions">
-                      <button
-                        className="icon-btn template-btn"
-                        onClick={(e) => handleSaveTemplate(project, e)}
-                        title="Save as template"
-                      >
-                        ⧉
-                      </button>
-                      <button
-                        className="icon-btn edit-btn"
-                        onClick={(e) => handleEditProject(project, e)}
-                        title="Edit project"
-                      >
-                        ✎
-                      </button>
-                      <button
-                        className="icon-btn export-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDownloadProjectId(project.id);
-                        }}
-                        title="Download this project — choose a format, sections and attachments"
-                      >
-                        ↓
-                      </button>
-                      <button
-                        className="icon-btn delete-btn"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteProject(project.id);
-                        }}
-                        title="Delete project"
-                      >
-                        ✕
-                      </button>
-                    </div>
+                    {tree && row.folded && <span className="project-count">+{row.below} folded</span>}
+                    {homeDesign && <ProjectCount figures={figures[project.id]} />}
+                    <ProjectActions
+                      name={project.name}
+                      menu={refresh}
+                      onTemplate={(e) => handleSaveTemplate(project, e)}
+                      onEdit={(e) => handleEditProject(project, e)}
+                      onDownload={() => setDownloadProjectId(project.id)}
+                      onDelete={() => handleDeleteProject(project.id)}
+                      onNewChild={flowDown ? () => { setCreateMode('blank'); setNewParentId(project.id); setIsCreating(true); } : undefined}
+                    />
                   </div>
                   {project.description && (
                     <p className="project-description">{project.description}</p>
                   )}
+                  {homeDesign && <ProjectMeters figures={figures[project.id]} />}
                   <div className="project-footer">
                     <code className="project-id">{project.id.substring(0, 8)}...</code>
                     <span className="project-date">
@@ -759,9 +827,10 @@ export const ProjectList: React.FC = () => {
               </form>
             </div>
           ) : isCreating ? (
-            <div className="create-project-form">
+            <div className="create-project-form" data-help-key="projects.create">
               <h3>Create New Project</h3>
               <form onSubmit={handleCreateProject}>
+                {flowDown && <NewProjectParent projects={projects} value={newParentId} onChange={setNewParentId} />}
                 <div className="form-group">
                   <label htmlFor="mode">Project Type</label>
                   <select
@@ -791,7 +860,7 @@ export const ProjectList: React.FC = () => {
                     and stays the default, with the two leaderboards beside
                     it for people who would rather see what the pool likes. */}
                 {createMode === 'random' && (
-                  <div style={{ marginBottom: 10 }}>
+                  <div style={{ marginBottom: 10 }} data-help-key="projects.random">
                     <SegmentedControl<RandomFilter>
                       aria-label="How to pick a product"
                       value={randomFilter}
@@ -816,6 +885,7 @@ export const ProjectList: React.FC = () => {
 
                 {createMode === 'random' && randomProduct && (
                   <div
+                    data-help-key="projects.random"
                     style={{
                       background: 'var(--surface-alt)',
                       border: '1px solid var(--border-soft)',
@@ -1061,7 +1131,7 @@ export const ProjectList: React.FC = () => {
                     type="button"
                     className="button button-secondary"
                     onClick={() => {
-                      setIsCreating(false);
+                      setIsCreating(false); setNewParentId('');
                       setCreateMode('blank');
                       setSelectedTemplateId('');
                       setNewProjectName('');
@@ -1081,12 +1151,14 @@ export const ProjectList: React.FC = () => {
                   setCreateMode('blank');
                   setIsCreating(true);
                 }}
+                data-help-key="projects.create"
               >
                 + New Project
               </button>
               <button
                 className="button button-secondary"
                 onClick={handleImportClick}
+                data-help-key="projects.import"
               >
                 ↑ Import Project
               </button>

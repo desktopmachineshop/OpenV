@@ -5,13 +5,18 @@ import (
 
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/attributes"
+	"github.com/openv/requirements-platform/internal/domain/commentreads"
 	"github.com/openv/requirements-platform/internal/domain/evidence"
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
+	"github.com/openv/requirements-platform/internal/domain/plan"
 	"github.com/openv/requirements-platform/internal/domain/products"
+	"github.com/openv/requirements-platform/internal/domain/savedsearches"
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
+	"github.com/openv/requirements-platform/internal/domain/targetreleases"
+	"github.com/openv/requirements-platform/internal/domain/todos"
 	"github.com/openv/requirements-platform/internal/domain/vv"
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
@@ -30,6 +35,14 @@ func (a *app) projects() {
 	// Typed attribute definitions (issue #219). The artifacts catalog validates
 	// a definition's applies_to_type at create/update time.
 	a.attributeService = attributes.NewDefaultService(a.attributeDefRepo, artifacts.ValidType)
+	// Target releases: the milestones a project plans its requirements for.
+	// A release an artifact still targets cannot be deleted.
+	a.targetReleaseService = targetreleases.NewDefaultService(a.targetReleaseRepo, a.targetReleaseRepo.CountTargeting)
+	// A member's saved searches: the named chip sets a page's search bar
+	// puts back (issue #722).
+	a.savedSearchService = savedsearches.NewDefaultService(postgres.NewSavedSearchRepository(a.db))
+	// When each member last read each artifact's comments, for Needs you.
+	a.commentReadService = commentreads.NewDefaultService(postgres.NewCommentReadRepository(a.db))
 	// The community pool of joke demo products for the new-project wizard.
 	// Limits are env-tunable so a deployment can tighten them without a
 	// release; the defaults bound both abuse and storage cost.
@@ -55,6 +68,8 @@ func (a *app) projects() {
 	a.downloadService.SetWorkspaceSource(downloadWorkspaceSource(a.projectService, a.orgService))
 	a.evidenceService = evidence.NewDefaultService(a.evidenceRepo)
 	a.workItemService = workitems.NewDefaultService(a.workItemRepo, a.bus)
+	a.todoService = todos.NewDefaultService(a.todoRepo, a.workItemService)
+	a.planService = plan.NewDefaultService(a.planRepo, a.workItemService, a.todoService, a.targetReleaseService)
 	a.guidedService = guided.NewDefaultService(a.guidedRepo, a.artifactService, a.linkService, a.chatterService, a.productService, a.bus)
 	a.interviewService = interviews.NewDefaultService(a.interviewRepo)
 	a.shareLinkService = sharelinks.NewService(postgres.NewShareLinkRepository(a.db))

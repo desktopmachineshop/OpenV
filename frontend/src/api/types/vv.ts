@@ -67,6 +67,9 @@ export interface Refinement {
 export interface CoverageReport {
   project_id: string;
   entries: CoverageEntry[];
+  // Requirements by rollup: rollup -> count (vv/coverage.go). There is no
+  // total, covered or verified key; coverageFigures (components/
+  // ProjectListHomeData) derives those (#720).
   summary: Record<string, number>;
 }
 
@@ -167,4 +170,78 @@ export interface EvidenceBundleInput {
   captured_at?: string | null;
   captured_by?: string;
   conditions?: Record<string, unknown>;
+}
+
+/** A project's target release ("MVP", "V1.0"); see internal/domain/targetreleases. */
+export type TargetReleaseStatus = 'planned' | 'in_progress' | 'released';
+
+export interface TargetRelease {
+  id: string;
+  project_id: string;
+  name: string;
+  description: string;
+  /** YYYY-MM-DD, or null when none is set. */
+  target_date: string | null;
+  status: TargetReleaseStatus;
+  position: number;
+  released_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TargetReleaseInput {
+  name?: string;
+  description?: string;
+  /** An empty string clears the date on an update. */
+  target_date?: string;
+  status?: TargetReleaseStatus;
+}
+
+/** The range of releases an artifact targets, as the server resolved it. */
+export interface ReleaseRange {
+  from: string;
+  until?: string;
+  /** The ancestor the range is inherited from, when it is. */
+  inherited_from?: string;
+}
+
+export interface ReleaseSummaryCounts {
+  total: number;
+  introduced: number;
+  approved: number;
+  verified: number;
+  ready: number;
+  by_status: Record<string, number>;
+  by_rollup: Record<string, number>;
+}
+
+export interface ReleaseOverview {
+  releases: { release: TargetRelease; summary: ReleaseSummaryCounts }[];
+  unassigned: number;
+  unassigned_ids: string[];
+}
+
+export interface ReleaseProgressEntry {
+  requirement_id: string;
+  ref: string;
+  title: string;
+  status: string;
+  rollup: string;
+  range: ReleaseRange;
+  introduced: boolean;
+  test_case_ids: string[];
+  latest_results: Record<string, string>;
+}
+
+export interface ReleaseBurnUpPoint {
+  date: string;
+  scope: number;
+  verified: number;
+}
+
+export interface ReleaseProgress {
+  release: TargetRelease;
+  summary: ReleaseSummaryCounts;
+  entries: ReleaseProgressEntry[];
+  burn_up?: ReleaseBurnUpPoint[];
 }

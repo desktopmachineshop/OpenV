@@ -2,11 +2,12 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { helpAPI } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import type { HelpHit, HelpTopic } from '../api/client';
+import { activityParams, type HelpActivity } from '../hooks/useHelpActivity';
 
 // The help panel's content when the deployment serves help from the user
 // manual on OpenD (capability help-docs, docs/plans/opend-help.md): the
 // manual's topic for the page you are on, for the release your workspace is
-// on. Links between topics open in the panel, with Back to return; search
+// on, or for the section, button or tab you are using on it. Links between topics open in the panel, with Back to return; search
 // covers the topics your workspace may read; "Open in the docs" opens the
 // same page on the public docs site.
 //
@@ -20,11 +21,17 @@ interface DocsHelpProps {
   /** Called when the docs cannot serve help here at all, so the panel can
    *  fall back to the help the app ships. */
   onUnavailable: () => void;
+  /** What the reader is doing on the page: the section with focus, the
+   *  button pressed last and the tab (useHelpActivity). */
+  activity?: HelpActivity;
 }
+
+/** How long the open panel waits after the activity changes. */
+const FOLLOW_DELAY_MS = 250;
 
 type Status = 'loading' | 'ready' | 'missing';
 
-export const DocsHelp: React.FC<DocsHelpProps> = ({ orgId, path, onUnavailable }) => {
+export const DocsHelp: React.FC<DocsHelpProps> = ({ orgId, path, onUnavailable, activity }) => {
   const [topic, setTopic] = useState<HelpTopic | null>(null);
   const [history, setHistory] = useState<HelpTopic[]>([]);
   const [status, setStatus] = useState<Status>('loading');
@@ -32,34 +39,59 @@ export const DocsHelp: React.FC<DocsHelpProps> = ({ orgId, path, onUnavailable }
   const [hits, setHits] = useState<HelpHit[] | null>(null);
   const body = useRef<HTMLDivElement>(null);
 
-  // The topic for the page, whenever the page changes.
+  // The topic for the page, whenever the page changes, and for what the
+  // reader is doing on it (hooks/useHelpActivity.ts): while the panel is
+  // open it follows the section, button and tab in use, a quarter of a
+  // second after they change, until the reader navigates inside the panel
+  // (a link, a related topic or a search). From then on it stays on what
+  // they chose until the page changes or the panel opens again, so it never
+  // takes away what they are reading.
+  const signals = activityParams(activity ?? {});
+  const activityKey = JSON.stringify(signals);
+  const shown = useRef<string | null>(null);
+  const pinned = useRef(false);
   useEffect(() => {
+    const page = `${orgId} ${path}`;
+    const newPage = shown.current !== page;
+    if (newPage) {
+      shown.current = page;
+      pinned.current = false;
+    } else if (pinned.current) {
+      return undefined;
+    }
     let live = true;
-    setStatus('loading');
-    setHistory([]);
-    setHits(null);
-    helpAPI
-      .context(orgId, { path })
-      .then(({ data }) => {
-        if (!live) return;
-        setTopic(data);
-        setStatus('ready');
-      })
-      .catch((err) => {
-        if (!live) return;
-        // No topic for this page: say so and offer search. Anything else
-        // (help not configured, the docs site down): the app's own help.
-        if (apiErrorMessage(err, '') === 'no help for this') {
-          setTopic(null);
-          setStatus('missing');
-        } else {
-          onUnavailable();
-        }
-      });
+    const load = () => {
+      if (newPage) {
+        setStatus('loading');
+        setHistory([]);
+        setHits(null);
+      }
+      helpAPI
+        .context(orgId, { path, ...(JSON.parse(activityKey) as HelpActivity) })
+        .then(({ data }) => {
+          if (!live || pinned.current) return;
+          setTopic(data);
+          setStatus('ready');
+        })
+        .catch((err) => {
+          if (!live || pinned.current) return;
+          // No topic for this page: say so and offer search. Anything else
+          // (help not configured, the docs site down): the app's own help.
+          if (apiErrorMessage(err, '') === 'no help for this') {
+            setTopic(null);
+            setStatus('missing');
+          } else {
+            onUnavailable();
+          }
+        });
+    };
+    const timer = newPage ? undefined : setTimeout(load, FOLLOW_DELAY_MS);
+    if (newPage) load();
     return () => {
       live = false;
+      if (timer) clearTimeout(timer);
     };
-  }, [orgId, path, onUnavailable]);
+  }, [orgId, path, activityKey, onUnavailable]);
 
   // Scroll to the section a context or a link names.
   useEffect(() => {
@@ -74,6 +106,7 @@ export const DocsHelp: React.FC<DocsHelpProps> = ({ orgId, path, onUnavailable }
 
   const open = useCallback(
     (topicId: string, fragment?: string) => {
+      pinned.current = true;
       helpAPI
         .topic(orgId, topicId)
         .then(({ data }) => {
@@ -115,6 +148,7 @@ export const DocsHelp: React.FC<DocsHelpProps> = ({ orgId, path, onUnavailable }
       setHits(null);
       return;
     }
+    pinned.current = true;
     helpAPI
       .search(orgId, q)
       .then(({ data }) => setHits(data.hits))

@@ -1,7 +1,7 @@
 import React, { useCallback, useState, useEffect } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../state/store';
-import { artifactAPI, linkAPI, attachmentAPI, agentsAPI, Artifact, Link, Attachment } from '../api/client';
+import { artifactAPI, linkAPI, attachmentAPI, Artifact, Link, Attachment } from '../api/client';
 import type { ArtifactContextAction } from '../components/ArtifactList';
 import { matchesFieldFilters, matchesSearch } from '../utils/artifactFilter';
 import { AttachmentViewer } from '../components/AttachmentViewer';
@@ -11,8 +11,12 @@ import { ArtifactEditor } from '../components/ArtifactEditor';
 import { ArtifactHeader } from '../components/ArtifactHeader';
 import { ArtifactDetails } from '../components/ArtifactDetails';
 import { ChatterPanel } from '../components/ChatterPanel';
+import { FLOATING_ASSISTANT_FEATURE } from '../components/wizard/assistantStore';
+import { revealHistory, useRequirementsAssistant } from './moduleView/assistantPane';
+import { StackedPaneTabs } from './moduleView/StackedPaneTabs';
 import { DownloadWizard } from '../components/DownloadWizard';
 import { useAlert, useConfirm } from '../components/ui';
+import { ArtifactTraceSummary } from '../components/ArtifactTraceSummary';
 import { apiErrorMessage } from '../api/errors';
 import { useViewport } from '../hooks/useViewport';
 import { useFeature } from '../hooks/useFeature';
@@ -26,9 +30,27 @@ import { DocumentHeader } from './moduleView/DocumentHeader';
 import { PhoneActionsSheet } from './moduleView/PhoneActionsSheet';
 import { FilterPanel } from './moduleView/FilterPanel';
 import { TreePane } from './moduleView/TreePane';
+import { ListToolbar } from './moduleView/ListToolbar';
+import { useListView } from './moduleView/useListView';
+import { useFoldAll } from './moduleView/useFoldAll';
+import { REQUIREMENTS_TREE_FEATURE } from './moduleView/requirementsViews';
+import { draftTestCases } from './moduleView/draftTestCases';
+import { ToolbarMenu } from './moduleView/ToolbarMenu';
+import { BackToList, NewArtifactButton, PushedScreen, ToolsButton } from './moduleView/HeaderBits';
+import { useUiRefresh } from '../hooks/useUiRefresh';
+import { ArtifactStatement } from '../components/ArtifactStatement';
+import { ArtifactFull } from '../components/ArtifactFull';
+import { TracePanels } from './DesignItemsParts';
+import { DESIGN_TYPE, traceOf } from './DesignItemsTree';
+import { ListChipSearch } from './moduleView/ListChipSearch';
+import { filterSummary } from './moduleView/filterSummary';
+import { PhoneActionBar } from './moduleView/PhoneActionBar';
+import { useCoverage } from './moduleView/useCoverage';
 import { useBaselineView } from './moduleView/useBaselineView';
 import { useModuleData } from './moduleView/useModuleData';
 import { useColumnResize } from './moduleView/useColumnResize';
+import { useNotesParam } from './moduleView/useNotesParam';
+import { useArtifactHistoryLink } from './moduleView/useArtifactHistoryLink';
 import { usePanelEscape, usePanelMode } from './moduleView/usePanelMode';
 import { useSiblingOrdering } from './moduleView/useSiblingOrdering';
 
@@ -41,6 +63,12 @@ export const ModuleView: React.FC = () => {
   const [error, setError] = useState<string>('');
   const ownersOn = useFeature(ARTIFACT_OWNERS_FEATURE);
   const steppingOn = useFeature(ARTIFACT_STEPPING_FEATURE);
+  const treeViews = useFeature(REQUIREMENTS_TREE_FEATURE);
+  // #725, #726: History in the artifact's pane, the assistant floating; no Notes column.
+  const historyInPane = useFeature(FLOATING_ASSISTANT_FEATURE);
+  const [fullArtifact, setFullArtifact] = useState(false);
+  const refresh = useUiRefresh();
+  const drafting = useState(false);
   const [searchText, setSearchText] = useState<string>('');
   const [searchExact, setSearchExact] = useState<boolean>(false);
   const [filterLogic, setFilterLogic] = useState<'and' | 'or'>('and');
@@ -56,8 +84,9 @@ export const ModuleView: React.FC = () => {
   // How far the figure currently uploading has got. Null both when nothing is
   // uploading and when the browser cannot measure the body.
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
-  const [collapseAllToken, setCollapseAllToken] = useState<number>(0);
-  const [expandAllToken, setExpandAllToken] = useState<number>(0);
+  // The tree's depth control: the level picked (Infinity for all) and a token
+  // that changes on every pick, so picking the same depth again re-applies it.
+  const [depthTrigger, setDepthTrigger] = useState<{ depth: number; token: number }>({ depth: 0, token: 0 });
   const [previewVersion, setPreviewVersion] = useState<Artifact | null>(null);
   // Pre-filled values for the create form when it is opened from an
   // artifact's context menu (create before/after/child). Explicit state —
@@ -65,9 +94,9 @@ export const ModuleView: React.FC = () => {
   // How much room the notes panel takes. Same three states as the project
   // menu, remembered separately: notes and navigation are wanted at different
   // times.
-  // A first visit on a small laptop (under 1200px) starts the notes column
-  // auto-hidden: pinned, it would leave the document a sliver between the
-  // tree and the notes. A saved choice always wins.
+  // A first visit on anything narrower than a wide desktop (under 1680px)
+  // starts the notes column auto-hidden: pinned, it would squeeze the list
+  // and the detail panel beside it. A saved choice always wins.
   const {
     mode: notesMode,
     setHovered: setNotesHovered,
@@ -77,7 +106,7 @@ export const ModuleView: React.FC = () => {
     pinned: notesPinned,
     cycleMode: cycleNotesMode,
   } = usePanelMode('artifact-notes', () =>
-    typeof window !== 'undefined' && window.innerWidth < 1200 ? 'autohide' : 'pinned'
+    typeof window !== 'undefined' && window.innerWidth < 1680 ? 'autohide' : 'pinned'
   );
   // Phones and tablets cannot fit three columns: the module stacks and shows
   // one pane at a time — the tree, the selected artifact's document, or the
@@ -100,7 +129,6 @@ export const ModuleView: React.FC = () => {
   >(null);
   // "Draft test cases" launch guard: disables the button while the run is being
   // enqueued so a double-click can't launch two runs (issue #218).
-  const [draftingTests, setDraftingTests] = useState(false);
   // The download wizard, opened from the one Download button above.
   const [downloadOpen, setDownloadOpen] = useState(false);
 
@@ -131,6 +159,7 @@ export const ModuleView: React.FC = () => {
   // The ?artifact= search param is the shareable source of truth for the
   // selection (mirrors AgentRunsPage's ?run= pattern).
   const urlArtifactId = searchParams.get('artifact');
+  useNotesParam(searchParams.get('notes') === '1', urlArtifactId, stacked, setStackedPane, () => setNotesRevealed(true));
 
   const {
     baselines,
@@ -161,9 +190,9 @@ export const ModuleView: React.FC = () => {
 
   // The tree and notes columns' widths and their drag handles. Called where
   // the drag effect stood, ahead of the project loads.
-  const { rightColumnWidth, isResizing, leftColumnDrawn, startResize } = useColumnResize({
+  const { rightColumnWidth, isResizing, leftColumnDrawn: detailWidth, startResize } = useColumnResize({
     viewportWidth: viewport.width,
-    notesTakesSpace: notesPinned,
+    notesTakesSpace: notesPinned && !historyInPane,
   });
 
   const {
@@ -179,6 +208,10 @@ export const ModuleView: React.FC = () => {
     loadLinks,
     loadQuality,
   } = useModuleData({ projectId, setArtifacts, setError, loadBaselines, setActiveBaselineId, setBaselineData });
+  // Verification per requirement, for the V&V column, the figures and the
+  // detail panel's tests: the live project's, or the baseline's on screen.
+  const { coverage, loadCoverage } = useCoverage(projectId, activeBaselineId);
+
 
   const loadAttachments = useCallback(async (artifactId: string) => {
     try {
@@ -402,9 +435,9 @@ export const ModuleView: React.FC = () => {
 
   const handleDeleteArtifact = async (id: string) => {
     const ok = await confirm({
-      title: 'Delete artifact',
-      message: 'Are you sure you want to delete this artifact?',
-      confirmLabel: 'Delete',
+      title: 'Archive artifact',
+      message: 'It leaves the project and keeps every version. Reinstate it from its page, which Activity links to.',
+      confirmLabel: 'Archive',
       danger: true,
     });
     if (!ok) {
@@ -418,9 +451,9 @@ export const ModuleView: React.FC = () => {
       }
       setError('');
     } catch (error: any) {
-      console.error('Failed to delete artifact:', error);
+      console.error('Failed to archive artifact:', error);
       const errorMsg = apiErrorMessage(error, 'Unknown error');
-      setError(`Failed to delete artifact: ${errorMsg}`);
+      setError(`Failed to archive artifact: ${errorMsg}`);
     }
   };
 
@@ -546,7 +579,7 @@ export const ModuleView: React.FC = () => {
         setError(`${ref} is no longer on ${holder.ref}. Showing the artifact instead.`);
         return;
       }
-      setError(`${ref} is not in this project — it may have been deleted.`);
+      setError(`${ref} is not in this project — it may have been archived.`);
       return;
     }
     const target = artifacts.find((a) => a.ref === ref);
@@ -556,7 +589,7 @@ export const ModuleView: React.FC = () => {
       setIsCreating(false);
       return;
     }
-    setError(`${ref} is not in this project — it may have been deleted.`);
+    setError(`${ref} is not in this project — it may have been archived.`);
   };
 
   const handleArtifactContextMenu = (action: ArtifactContextAction, artifact: Artifact) => {
@@ -601,6 +634,9 @@ export const ModuleView: React.FC = () => {
     setError('');
   };
 
+  // On a wide screen a new artifact is written in the document pane, beside
+  // the list it will join; stacked, its form sits above the list.
+  const creatingInPane = isCreating && !stacked && !isBaselineView;
   const activeArtifacts = isBaselineView ? (baselineData?.artifacts || []) : artifacts;
   const activeLinks = isBaselineView ? (baselineData?.links || []) : allLinks;
 
@@ -660,9 +696,21 @@ export const ModuleView: React.FC = () => {
     }
   };
 
-  const filteredArtifacts = activeArtifacts.filter(
+  const searched = activeArtifacts.filter(
     (artifact) => matchesSearch(artifact, searchText, searchExact) && matchesFieldFilters(artifact, filterRows, filterLogic, getFieldValue)
   );
+  const { view, setView, typeTab, setTypeTab, quick, setQuick, facts, filteredArtifacts, typeCounts, figures, quickCounts, ...chips } =
+    useListView({
+      searched,
+      artifacts: activeArtifacts,
+      links: activeLinks,
+      quality: isBaselineView ? undefined : qualityScores,
+      coverage,
+      searchParams,
+      setSearchParams,
+      treeViews,
+    });
+  const fold = useFoldAll(view);
 
   // Reading order for ‹ ›, J / K and the swipe: the tree's own order, over what
   // the search and the filters have left in view, so a narrowed tree reads as
@@ -736,26 +784,6 @@ export const ModuleView: React.FC = () => {
     (direction) => stepToArtifact(direction === 'next' ? 1 : -1)
   );
 
-  const buildFilterSummary = (): string => {
-    const parts: string[] = [];
-
-    if (searchText.trim()) {
-      parts.push(searchExact ? `Exact search: "${searchText.trim()}"` : `Search: "${searchText.trim()}"`);
-    }
-
-    const activeRows = filterRows.filter((row) => row.value.trim() !== '');
-    if (activeRows.length > 0) {
-      const rowSummaries = activeRows.map((row) => `${row.field} ${row.comparator} "${row.value.trim()}"`);
-      parts.push(`Filters (${filterLogic.toUpperCase()}): ${rowSummaries.join(filterLogic === 'and' ? ' + ' : ' | ')}`);
-    }
-
-    if (parts.length === 0) {
-      return 'No filters applied';
-    }
-
-    return parts.join(' • ');
-  };
-
   useEffect(() => {
     const saved = window.localStorage.getItem('artifactFilterPresets');
     if (!saved) return;
@@ -794,6 +822,14 @@ export const ModuleView: React.FC = () => {
     }
   };
 
+  useRequirementsAssistant(activeArtifacts.find((a) => a.id === selectedArtifactId), isBaselineView, () => {
+    loadArtifacts();
+    loadLinks();
+  });
+
+  // A link to an archived artifact, or to one as it was (?link=&at=), reads its history.
+  const { archived, reinstate } = useArtifactHistoryLink({ artifactId: urlArtifactId, live: activeArtifacts.some((a) => a.id === urlArtifactId), linkId: searchParams.get('link'), at: searchParams.get('at'), enabled: !isBaselineView && activeArtifacts.length > 0, setPreviewVersion, onReinstated: loadArtifacts });
+
   if (!projectId) {
     return (
       <div className="card">
@@ -803,33 +839,40 @@ export const ModuleView: React.FC = () => {
     );
   }
 
-  const selectedArtifact = activeArtifacts.find((a) => a.id === selectedArtifactId);
+  const selectedArtifact = activeArtifacts.find((a) => a.id === selectedArtifactId) || (archived?.id === selectedArtifactId ? archived : undefined);
+  // With History in the pane, a request for the Notes pane (?notes=1) shows the document.
+  const shownPane = historyInPane && stackedPane === 'notes' ? 'document' : stackedPane;
   const detailAttachments = isBaselineView ? [] : attachments;
+  // What the pane and the full view both show of an artifact. A link write versions both artifacts server-side, so both are refetched.
+  const detailsOf = (artifact: Artifact) => ({ artifact, links: activeLinks, linked: linkedArtifacts, artifacts: activeArtifacts, attachments: detailAttachments, onSelectArtifact: handleSelectArtifact, onReferenceClick: handleReferenceClick, allowLinkDelete: !isBaselineView && artifact !== archived, liveLinks: !isBaselineView && artifact !== archived, projectId: projectId || undefined, onLinksChanged: () => (loadArtifacts(), loadLinks()) });
 
   // Requirements the "Draft test cases" action will cover: the selected
   // requirement if one is selected, otherwise every requirement in view. Only
   // the IDs are sent — the agent fetches each requirement's content itself.
-  const requirementTargets =
-    selectedArtifact && selectedArtifact.type === 'requirement'
-      ? [selectedArtifact]
-      : activeArtifacts.filter((a) => a.type === 'requirement');
+  const { requirementTargets, draftingTests, handleDraftTestCases } = draftTestCases(projectId, selectedArtifact, activeArtifacts, drafting, setError, navigate);
 
-  const handleDraftTestCases = async () => {
-    if (!projectId || requirementTargets.length === 0 || draftingTests) return;
-    setDraftingTests(true);
-    try {
-      await agentsAPI.draftTestCases(
-        projectId,
-        requirementTargets.map((a) => a.id)
-      );
-      setError('');
-      navigate(`/projects/${projectId}/agent-runs`);
-    } catch (error: any) {
-      setError(`Failed to launch test-case drafting: ${apiErrorMessage(error, 'Unknown error')}`);
-    } finally {
-      setDraftingTests(false);
-    }
+  const filtersActive = !!searchText.trim() || filterRows.some((row) => row.value.trim() !== '') || !!quick;
+  const clearFilters = () => {
+    setSearchText('');
+    setQuick('');
+    setFilterRows([{ id: `filter-${Date.now()}`, field: 'type', value: '', comparator: 'contains' }]);
   };
+
+  const newButton = !isBaselineView ? (
+    <NewArtifactButton
+      isCreating={isCreating}
+      stacked={stacked}
+      onToggle={() => {
+        if (stacked) setStackedPane('tree');
+        setIsCreating(!isCreating);
+        // A manual open (or cancel) always starts from a blank form, and
+        // without the placement a context-menu create had asked for.
+        setPendingCreateContext(null);
+        setPendingCreatePlacement(null);
+        setError('');
+      }}
+    />
+  ) : null;
 
   const toolbarActions = (
     <Toolbar
@@ -840,6 +883,7 @@ export const ModuleView: React.FC = () => {
       projectId={projectId}
       handleDeleteBaseline={handleDeleteBaseline}
       stacked={stacked}
+      menu={refresh}
       handleCaptureBaseline={handleCaptureBaseline}
       handleDraftTestCases={handleDraftTestCases}
       isBaselineView={isBaselineView}
@@ -847,6 +891,38 @@ export const ModuleView: React.FC = () => {
       requirementTargets={requirementTargets}
       selectedArtifact={selectedArtifact}
       setDownloadOpen={setDownloadOpen}
+    />
+  );
+
+  // The refreshed page on a wide screen has one bar: the list's search,
+  // filters and views, then the toolbar behind one menu and the create button.
+  const headerToolbar = refresh && !stacked;
+  const listToolbar = (
+    <ListToolbar
+      phone={stacked}
+      view={view}
+      setView={setView}
+      typeCounts={typeCounts}
+      total={chips.chipSearched.length}
+      typeTab={typeTab}
+      setTypeTab={setTypeTab}
+      quick={quick}
+      setQuick={setQuick}
+      quickCounts={quickCounts}
+      searchText={searchText}
+      setSearchText={setSearchText}
+      filterSummary={filterSummary(searchText, searchExact, filterRows, filterLogic)}
+      filtersActive={filtersActive}
+      clearFilters={clearFilters}
+      showFilterPanel={showFilterPanel}
+      setShowFilterPanel={setShowFilterPanel}
+      pickDepth={(depth) => setDepthTrigger((prev) => ({ depth, token: prev.token + 1 }))}
+      treeViews={treeViews}
+      folded={fold.folded}
+      toggleFold={fold.toggleFold}
+      newButton={stacked ? <>{refresh && <ToolsButton toolsOpen={toolsOpen} onOpen={() => setToolsOpen(true)} />}{newButton}</> : undefined}
+      trailing={headerToolbar ? <><ToolbarMenu isBaselineView={isBaselineView} toolbarActions={toolbarActions} />{newButton}</> : undefined}
+      chipSearch={chips.chipSearch ? <ListChipSearch {...chips} phone={stacked} canSave={!isBaselineView} /> : undefined}
     />
   );
 
@@ -858,45 +934,30 @@ export const ModuleView: React.FC = () => {
     // around the whole app — every panel that needs to scroll scrolls itself.
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       {/* The floating help panel is mounted once in ProjectLayout now. */}
-      <DocumentHeader stacked={stacked} toolsOpen={toolsOpen} setToolsOpen={setToolsOpen} toolbarActions={toolbarActions} />
+      {/* The refreshed page has no header row; its name stays, for assistive technology. */}
+      {refresh && <h2 className="sr-only">Requirements</h2>}
+      {headerToolbar || (refresh && stacked) ? (headerToolbar && listToolbar) : (
+        <DocumentHeader
+          stacked={stacked}
+          toolsOpen={toolsOpen}
+          setToolsOpen={setToolsOpen}
+          toolbarActions={toolbarActions}
+          newButton={newButton}
+          isBaselineView={isBaselineView}
+        />
+      )}
       {stacked && toolsOpen && (
         <PhoneActionsSheet setToolsOpen={setToolsOpen} toolbarActions={toolbarActions} />
       )}
-      {stacked && (
-        <div
-          role="tablist"
-          aria-label="Requirements panes"
-          style={{ display: 'flex', margin: '0 12px 8px', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden', flexShrink: 0 }}
-        >
-          {(['tree', 'document', 'notes'] as const).map((pane) => {
-            const active = stackedPane === pane;
-            const label = pane === 'tree' ? 'Tree' : pane === 'document' ? 'Document' : 'Notes';
-            return (
-              <button
-                key={pane}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setStackedPane(pane)}
-                style={{
-                  flex: 1,
-                  minHeight: 44,
-                  border: 'none',
-                  borderLeft: pane === 'tree' ? 'none' : '1px solid var(--border)',
-                  background: active ? 'var(--accent)' : 'var(--surface)',
-                  color: active ? 'var(--accent-fg)' : 'var(--text)',
-                  fontSize: 14,
-                  fontWeight: active ? 600 : 400,
-                  cursor: 'pointer',
-                }}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+      {stacked && refresh && shownPane !== 'tree' && <><PushedScreen /><BackToList onBack={() => setStackedPane('tree')} /></>}
+      {stacked && !refresh && (
+        <StackedPaneTabs
+          panes={historyInPane ? ['tree', 'document'] : ['tree', 'document', 'notes']}
+          shown={shownPane}
+          onShow={setStackedPane}
+        />
       )}
-      <div style={{ display: 'flex', gap: '0', paddingLeft: stacked ? '12px' : '20px', paddingRight: stacked ? '12px' : '20px', paddingBottom: '10px', flex: 1, minHeight: 0, overflow: 'hidden' }}>
+      <div style={{ display: 'flex', gap: '0', flex: 1, minHeight: 0, overflow: 'hidden' }}>
       {/* The column scrolls nothing itself: the artifact tree inside it owns
           the leftover height and scrolls there, so the tree grows with the
           window instead of sitting in a fixed-height box. Stacked, every
@@ -904,8 +965,10 @@ export const ModuleView: React.FC = () => {
           rather than unmounted. */}
       <TreePane
         stacked={stacked}
-        stackedPane={stackedPane}
-        leftColumnDrawn={leftColumnDrawn}
+        phone={viewport.isPhone}
+        stackedPane={shownPane}
+        view={view}
+        setView={setView}
         error={error}
         setError={setError}
         isBaselineView={isBaselineView}
@@ -913,11 +976,10 @@ export const ModuleView: React.FC = () => {
         setIsCreating={setIsCreating}
         setPendingCreateContext={setPendingCreateContext}
         setPendingCreatePlacement={setPendingCreatePlacement}
-        searchText={searchText}
-        setSearchText={setSearchText}
-        buildFilterSummary={buildFilterSummary}
-        setShowFilterPanel={setShowFilterPanel}
-        showFilterPanel={showFilterPanel}
+        showFilterPanel={!chips.chipSearch && showFilterPanel}
+        tableGroups={chips.tableGroups}
+        groupedBy={chips.groupedBy}
+        toolbar={headerToolbar ? null : listToolbar}
         filterPanel={
           <FilterPanel
             searchText={searchText}
@@ -940,34 +1002,36 @@ export const ModuleView: React.FC = () => {
             applyPreset={applyPreset}
           />
         }
-        setCollapseAllToken={setCollapseAllToken}
-        setExpandAllToken={setExpandAllToken}
+        figures={figures}
+        facts={facts}
+        depthTrigger={depthTrigger}
+        treeViews={treeViews}
+        foldTrigger={fold.trigger}
         artifacts={artifacts}
         projectId={projectId}
         pendingCreateContext={pendingCreateContext}
         handleCreateArtifact={handleCreateArtifact}
         baselineLoading={baselineLoading}
         filteredArtifacts={filteredArtifacts}
+        totalArtifacts={activeArtifacts.length}
         selectedArtifactId={selectedArtifactId}
         handleSelectArtifact={handleSelectArtifact}
         handleReorderArtifact={handleReorderArtifact}
         handleArtifactContextMenu={handleArtifactContextMenu}
         clipboard={clipboard}
-        collapseAllToken={collapseAllToken}
-        expandAllToken={expandAllToken}
         qualityScores={qualityScores}
       />
 
-      {/* Resize handle for left column */}
+      {/* The detail panel's resize handle, on its left edge. */}
       {!stacked && (
       <div
         onMouseDown={startResize('left')}
         style={{
-          width: '10px',
+          width: '6px',
           cursor: 'col-resize',
           backgroundColor: isResizing === 'left' ? 'var(--accent)' : 'transparent',
           borderLeft: '1px solid var(--border)',
-          borderRight: '1px solid var(--border)',
+          borderRight: 'none',
           transition: 'background-color 0.2s',
           flexShrink: 0,
         }}
@@ -984,18 +1048,42 @@ export const ModuleView: React.FC = () => {
       />
       )}
 
-      <div style={{ display: stacked && stackedPane === 'tree' ? 'none' : 'flex', flex: 1, gap: '0', minWidth: 0, overflow: 'hidden' }}>
+      <div style={{ display: stacked && shownPane === 'tree' ? 'none' : 'flex', flex: stacked ? 1 : 'none', gap: '0', minWidth: 0, overflow: 'hidden' }}>
         <div
           ref={documentPaneRef}
           role="region"
           aria-label="Artifact document"
           {...documentSwipe}
-          style={{ flex: 1, minWidth: 0, overflow: 'auto', display: stacked && stackedPane !== 'document' ? 'none' : 'flex', flexDirection: 'column', paddingLeft: stacked ? 0 : '10px', paddingRight: stacked ? 0 : selectedArtifact ? '5px' : '10px' }}
+          data-help-key="requirements.detail"
+          style={{
+            ...(stacked ? { flex: 1 } : { width: detailWidth, flex: 'none' }),
+            minWidth: 0,
+            overflow: 'auto',
+            display: stacked && shownPane !== 'document' ? 'none' : 'flex',
+            flexDirection: 'column',
+            padding: stacked ? '0 12px' : '12px 12px 0',
+            background: stacked ? undefined : 'var(--surface-alt)',
+          }}
         >
         {/* The document and its editor read at the measure on a wide screen;
             the column itself keeps the notes handle at the window's edge. */}
         <div className={stacked ? undefined : 'measure'} style={{ width: '100%' }}>
-        {!isBaselineView && isEditing && editingArtifact && (
+        {creatingInPane && (
+          <ArtifactEditor
+            artifacts={artifacts}
+            projectId={projectId}
+            initialData={pendingCreateContext ?? undefined}
+            onSave={handleCreateArtifact}
+            onCancel={() => {
+              setIsCreating(false);
+              setPendingCreateContext(null);
+              setPendingCreatePlacement(null);
+              setError('');
+            }}
+          />
+        )}
+
+        {!isBaselineView && isEditing && editingArtifact && !creatingInPane && (
           <ArtifactEditor
             artifact={editingArtifact}
             artifacts={artifacts}
@@ -1026,7 +1114,7 @@ export const ModuleView: React.FC = () => {
           />
         )}
 
-        {selectedArtifact && !isEditing && (
+        {selectedArtifact && !isEditing && !creatingInPane && (
           <>
             <ArtifactHeader
               artifact={selectedArtifact}
@@ -1056,46 +1144,64 @@ export const ModuleView: React.FC = () => {
               // A baseline's artifact shares its id with the live one, so
               // its header acts on nothing.
               readOnly={isBaselineView}
-            />
-            <ArtifactDetails
-              artifact={selectedArtifact} 
-              links={activeLinks} 
-              linked={linkedArtifacts}
-              artifacts={activeArtifacts}
-              attachments={detailAttachments}
-              onSelectArtifact={handleSelectArtifact}
-              onReferenceClick={handleReferenceClick}
-              previewVersion={previewVersion}
-              onClosePreview={() => setPreviewVersion(null)}
-              allowLinkDelete={!isBaselineView}
-              liveLinks={!isBaselineView}
-              onLinksChanged={() => {
-                // Link writes auto-version both artifacts server-side;
-                // refetch so displayed versions and link lists stay current.
-                loadArtifacts();
-                loadLinks();
+              archivedAt={selectedArtifact === archived ? archived?.valid_to : null}
+              onReinstate={selectedArtifact === archived ? reinstate : undefined}
+              quality={isBaselineView ? undefined : qualityScores[selectedArtifact.id]}
+              onStatusChange={(changed) => {
+                updateArtifact(changed);
+                loadCoverage();
               }}
+              hideTransitions={viewport.isPhone}
+              statementFirst={refresh}
+              onOpen={isBaselineView || viewport.isPhone ? undefined : () => setFullArtifact(true)}
+            >
+              <ArtifactStatement artifact={selectedArtifact} onReferenceClick={handleReferenceClick} />
+            </ArtifactHeader>
+            <ArtifactTraceSummary
+              artifact={selectedArtifact}
+              artifacts={activeArtifacts}
+              linked={linkedArtifacts}
+              facts={facts}
+              onSelect={handleSelectArtifact}
+              touch={viewport.coarsePointer}
             />
+            {/* What the Design page showed of a design item: what it satisfies and the tests that reach it. */}
+            {refresh && selectedArtifact.type === DESIGN_TYPE && projectId && (
+              <div style={{ display: 'grid', gap: 8, marginBottom: 12 }}><TracePanels {...traceOf(selectedArtifact.id, activeArtifacts, activeLinks, { entries: coverage })} projectId={projectId} /></div>
+            )}
+            <ArtifactDetails {...detailsOf(selectedArtifact)} previewVersion={previewVersion} onClosePreview={() => setPreviewVersion(null)} showHistory={historyInPane} hideDescription={refresh && !previewVersion} />
+            {fullArtifact && <ArtifactFull {...detailsOf(selectedArtifact)} onClose={() => setFullArtifact(false)} />}
           </>
         )}
 
-        {!selectedArtifact && !isEditing && (
+        {!selectedArtifact && !isEditing && !creatingInPane && (
           <div className="card">
             <h3>No Artifact Selected</h3>
             <p>Select an artifact from the list to view details.</p>
           </div>
         )}
         </div>
+        {viewport.isPhone && selectedArtifact && !isEditing && !isBaselineView && (
+          <PhoneActionBar
+            artifact={selectedArtifact}
+            onComment={() => (historyInPane ? revealHistory(documentPaneRef.current) : setStackedPane('notes'))}
+            onStatusChange={(changed) => {
+              updateArtifact(changed);
+              loadCoverage();
+            }}
+          />
+        )}
         </div>
 
         {/* The notes column stays whether or not an artifact is selected: its
             comments tab needs one, its assistant tab does not. Its width is
             only spent when pinned — auto-hide floats it over the document on
             hover, and hidden leaves just the strip that brings it back. */}
-        {!stacked && !notesPinned && (
+        {!historyInPane && !stacked && !notesPinned && (
           <button
             type="button"
             className="panel-edge-strip"
+            data-help-key="requirements.layout"
             aria-label={panelStripLabel('the notes panel', notesOpen)}
             aria-expanded={notesOpen}
             onMouseEnter={() => !viewport.coarsePointer && setNotesHovered(true)}
@@ -1127,7 +1233,7 @@ export const ModuleView: React.FC = () => {
           </button>
         )}
             {/* Resize handle — only a pinned column has a width to drag. */}
-            {!stacked && notesPinned && (
+            {!historyInPane && !stacked && notesPinned && (
             <div
               onMouseDown={startResize('right')}
               style={{
@@ -1153,13 +1259,13 @@ export const ModuleView: React.FC = () => {
             )}
             {/* Clicking away closes a panel that was revealed on purpose: an
                 overlay with no way out but the edge strip is a trap. */}
-            {!stacked && notesRevealed && !notesPinned && (
+            {!historyInPane && !stacked && notesRevealed && !notesPinned && (
               <div
                 onClick={() => setNotesRevealed(false)}
                 style={{ position: 'fixed', inset: 0, zIndex: 899 }}
               />
             )}
-            {(stacked ? stackedPane === 'notes' : notesOpen) && (
+            {!historyInPane && (stacked ? stackedPane === 'notes' : notesOpen) && (
             <div
               onMouseEnter={() => !stacked && notesMode === 'autohide' && setNotesHovered(true)}
               onMouseLeave={() => !stacked && notesMode === 'autohide' && setNotesHovered(false)}

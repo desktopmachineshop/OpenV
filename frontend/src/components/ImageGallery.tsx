@@ -305,7 +305,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
     }
 
     return (
-      <div className="image-gallery">
+      <div className="image-gallery" data-help-key="requirements.figures">
         <h4 className="gallery-title">Figures</h4>
         <div 
           className="gallery-grid"
@@ -349,7 +349,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
 
   return (
     <>
-      <div className="image-gallery">
+      <div className="image-gallery" data-help-key="requirements.figures">
         <h4 className="gallery-title">Figures ({attachments.length})</h4>
         <div 
           className="gallery-grid"
@@ -501,6 +501,7 @@ export const ImageGallery: React.FC<ImageGalleryProps> = ({
         >
           <div
             onClick={(e) => e.stopPropagation()}
+            data-help-pane="requirements.figures"
             style={{
               background: 'var(--surface)',
               border: '1px solid var(--border)',

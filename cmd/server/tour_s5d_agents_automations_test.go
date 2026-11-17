@@ -37,13 +37,9 @@ import (
 //     creates it with 200); the form's update (a body slug that differs, an
 //     empty one, which takes the URL's, no allowed_tools, and a slug no agent
 //     has, which creates it with 200);
-//   - the delete and what it cascades (ON DELETE CASCADE on agent_runs,
-//     automations and agent_team_nodes): the agent's queued run and its
-//     automation are gone (404), its crew node is gone from the crew's
-//     graph, and with it the crew's entry_node_id (ON DELETE SET NULL,
-//     migration 0052), so an automation of that crew answers "team has no
-//     entry node"; the run's
-//     tracking card stays on P's board; a slug no agent has answers 404,
+//   - the delete and what it cascades (ON DELETE CASCADE on agent_runs and
+//     automations): the agent's queued run and its automation are gone
+//     (404); the run's tracking card stays on P's board; a slug no agent has answers 404,
 //     the read's "agent not found";
 //   - the sync, in X once the area deleted X's seeds: X's agents are null
 //     (Q14), the seeds stay deleted since their files went to X's .trash, a
@@ -59,11 +55,10 @@ import (
 //     matcher launches runs from the bus's goroutine) and its refusals in
 //     order (a body that does not decode, the guard: the member only pinned to
 //     P, the outsider nowhere; then the service: no name, a kind no
-//     automation has, not exactly one target, a cron robfig does not parse,
-//     with its text (Q19), no event type); where it may run (#379 question
-//     42): a target agent or crew no row has answers as another workspace's
-//     would ("agent not found", "crew not found"), and a crew pinned to P
-//     runs no automation for all of W; the
+//     automation has, no agent (a team_id, a crew's, is no target since
+//     crews went), a cron robfig does not parse, with its text (Q19), no
+//     event type); where it may run (#379 question 42): a target agent no row
+//     has answers as another workspace's would ("agent not found"); the
 //     list, newest first, filtered to P, and null when none match (Q14), which
 //     the member reads whole; the read's guard (the outsider) and a phantom
 //     or non-UUID id (404); the update of next_run_at (disabled, enabled,
@@ -73,9 +68,7 @@ import (
 //     an unknown placeholder empty; an empty template, one of unknown
 //     placeholders only, and one of two placeholders and a space, whose
 //     rendering is only whitespace, fall back to "Manual run of automation:
-//     <name>"; a crew's entry node's agent, with team_id and team_node_id;
-//     a crew with no entry node, and one deleted since; a disabled automation
-//     runs all the same) and the tracking card a run in P gets
+//     <name>"; a disabled automation runs all the same) and the tracking card a run in P gets
 //     (workitem.created, actor agent:<run>, the launches' only events); and
 //     delete (the run it launched keeps its automation_id);
 //   - the triggered firings: an enabled automation of W for all of W on
@@ -106,7 +99,7 @@ func TestTourS5dAgentsAutomations(t *testing.T) {
 		key:   "agents_automations",
 		about: "Agent definitions and automations: the seeded agents, create, read, the raw file, update and delete " +
 			"with what it cascades, the sync from disk and its errors, the automations' create, list, read, update " +
-			"and delete, run-now's prompt copy and crew targets, and one triggered firing across workspaces.",
+			"and delete, run-now's prompt copy, and one triggered firing across workspaces.",
 		run: agentsAutomationsTour,
 		accounts: []tourAccount{
 			{name: "member", display: "Tour Member", about: "a plain member of W and an editor of its project P: " +
@@ -299,9 +292,8 @@ func agentsAutomationsAgents(tr *tour) {
 		slug("tour-put"), jsonBody(agentsAutomationsAgent("", "Tour Put")))
 }
 
-// agentsAutomationsDelete deletes an agent that has a queued run, an
-// automation and a crew node, the crew's entry, and an automation of that
-// crew, and reads what is left.
+// agentsAutomationsDelete deletes an agent that has a queued run and an
+// automation, and reads what is left.
 func agentsAutomationsDelete(tr *tour) {
 	o, m := tr.owner, tr.actor("member")
 	slug := func(s string) tourOpt { return at("slug", s) }
@@ -313,13 +305,6 @@ func agentsAutomationsDelete(tr *tour) {
 	tr.setup("an automation of tour-doomed", o, "POST /api/v1/automations",
 		jsonBody(`{"name":"Tour Doomed Watch","kind":"manual","agent_id":"{{doomed.agent}}"}`)).
 		capture("doomed.auto", "/id")
-	tr.setup("the crew D", o, "POST /api/v1/crews", jsonBody(`{"name":"Tour Doomed Crew"}`)).capture("crew.d", "/id")
-	tr.setup("tour-doomed on D", o, "POST /api/v1/crews/{id}/nodes", at("id", "{{crew.d}}"),
-		jsonBody(`{"agent_id":"{{doomed.agent}}","label":"Doomed lead"}`)).capture("crew.d.node", "/id")
-	tr.setup("tour-doomed's node is D's entry", o, "PUT /api/v1/crews/{id}", at("id", "{{crew.d}}"),
-		jsonBody(`{"entry_node_id":"{{crew.d.node}}"}`))
-	tr.setup("an automation of D", o, "POST /api/v1/automations",
-		jsonBody(`{"name":"Tour Doomed Crew Run","kind":"manual","team_id":"{{crew.d}}"}`)).capture("crew.d.auto", "/id")
 
 	tr.step("the member deletes tour-doomed: the admin guard", m, agentsAutomationsDel, slug("tour-doomed"))
 	tr.step("delete tour-doomed: 204, and its file goes to W's .trash", o, agentsAutomationsDel, slug("tour-doomed"))
@@ -328,11 +313,6 @@ func agentsAutomationsDelete(tr *tour) {
 		"GET /api/v1/agent-runs/{id}", at("id", "{{doomed.run}}"))
 	tr.step("tour-doomed's automation: 404, deleted with the agent (ON DELETE CASCADE)", o,
 		"GET /api/v1/automations/{id}", at("id", "{{doomed.auto}}"))
-	tr.step("the crew D: tour-doomed's node is gone (ON DELETE CASCADE), nodes and edges null (Q14), and "+
-		"entry_node_id with it (ON DELETE SET NULL)", o, "GET /api/v1/crews/{id}",
-		at("id", "{{crew.d}}"))
-	tr.step("run D's automation now: 400, the entry node is gone", o, "POST /api/v1/automations/{id}/run-now",
-		at("id", "{{crew.d.auto}}"))
 	tr.step("the run's tracking card: it stays on P's board, assigned to the agent that is gone", o,
 		"GET /api/v1/work-items/{id}", at("id", "{{doomed.card}}"),
 		note("an S5b route, read to pin what the cascade leaves"))
@@ -397,14 +377,6 @@ func agentsAutomationsAutomations(tr *tour) {
 	auto := func(name string) tourOpt { return at("id", "{{"+name+"}}") }
 	body := func(fields map[string]any) tourOpt { return agentsAutomationsBody(tr, fields) }
 
-	tr.setup("the crew E", o, "POST /api/v1/crews", jsonBody(`{"name":"Tour Entry Crew"}`)).capture("crew.e", "/id")
-	tr.setup("tour-auto on E", o, "POST /api/v1/crews/{id}/nodes", at("id", "{{crew.e}}"),
-		jsonBody(`{"agent_id":"{{auto.agent}}","label":"Lead"}`)).capture("crew.e.node", "/id")
-	tr.setup("tour-auto's node is E's entry", o, "PUT /api/v1/crews/{id}", at("id", "{{crew.e}}"),
-		jsonBody(`{"entry_node_id":"{{crew.e.node}}"}`))
-	tr.setup("the crew H, with no node and so no entry", o, "POST /api/v1/crews",
-		jsonBody(`{"name":"Tour Headless Crew"}`)).capture("crew.h", "/id")
-
 	// (a) Create.
 	tr.step("create an automation with a body that does not decode", o, agentsAutomationsAutoCreate, jsonBody(`{`))
 	tr.step("a manual automation of tour-auto for all of W: 201, enabled, a 60 s cooldown, 10 runs an hour, "+
@@ -432,9 +404,9 @@ func agentsAutomationsAutomations(tr *tour) {
 			"from the bus's goroutine")).capture("a.dormant", "/id")
 	tr.step("an automation with no target: 400", o, agentsAutomationsAutoCreate,
 		body(map[string]any{"name": "Tour Aimless", "kind": "manual"}))
-	tr.step("an automation with an agent and a crew: 400", o, agentsAutomationsAutoCreate,
-		body(map[string]any{"name": "Tour Both", "kind": "manual", "agent_id": "{{auto.agent}}",
-			"team_id": "{{crew.e}}"}))
+	tr.step("an automation of a crew alone: 400, a team_id is no target since crews went", o,
+		agentsAutomationsAutoCreate, body(map[string]any{"name": "Tour Crew", "kind": "manual",
+			"team_id": "{{phantom}}"}))
 	tr.step("an automation of a kind no automation has: 400", o, agentsAutomationsAutoCreate,
 		body(map[string]any{"name": "Tour Odd", "kind": "hourly", "agent_id": "{{auto.agent}}"}))
 	tr.step("an automation with no name: 400", o, agentsAutomationsAutoCreate,
@@ -442,27 +414,6 @@ func agentsAutomationsAutomations(tr *tour) {
 	tr.step("an automation of an agent no row has: 400, agent not found, as for another workspace's agent", o,
 		agentsAutomationsAutoCreate, body(map[string]any{"name": "Tour Ghost Agent", "kind": "manual",
 			"agent_id": "{{phantom}}"}))
-	tr.step("an automation of a crew no row has: 400, crew not found, as for another workspace's crew", o,
-		agentsAutomationsAutoCreate, body(map[string]any{"name": "Tour Ghost Crew", "kind": "manual",
-			"team_id": "{{phantom}}"}))
-	tr.setup("the crew G, deleted below", o, "POST /api/v1/crews", jsonBody(`{"name":"Tour Gone Crew"}`)).
-		capture("crew.g", "/id")
-	tr.step("an automation of the crew G", o, agentsAutomationsAutoCreate,
-		body(map[string]any{"name": "Tour Ghost Crew", "kind": "manual", "team_id": "{{crew.g}}"})).
-		capture("a.ghost", "/id")
-	tr.setup("delete G: its automation stays (team_id has no foreign key)", o, "DELETE /api/v1/crews/{id}",
-		at("id", "{{crew.g}}"))
-	tr.setup("the crew Q, pinned to P", o, "POST /api/v1/crews",
-		jsonBody(`{"name":"Tour Pinned Crew","project_id":"{{p}}"}`)).capture("crew.q", "/id")
-	tr.step("an automation of Q for all of W: 400, a whole-workspace automation runs in every project, and Q only "+
-		"in P", o, agentsAutomationsAutoCreate, body(map[string]any{"name": "Tour Pinned Wide", "kind": "manual",
-		"team_id": "{{crew.q}}"}))
-	tr.step("an automation of the crew E", o, agentsAutomationsAutoCreate,
-		body(map[string]any{"name": "Tour Crew Run", "kind": "manual", "team_id": "{{crew.e}}",
-			"prompt_template": "Lead {{automation.name}}."})).capture("a.crew", "/id")
-	tr.step("an automation of the crew H", o, agentsAutomationsAutoCreate,
-		body(map[string]any{"name": "Tour Headless Run", "kind": "manual", "team_id": "{{crew.h}}"})).
-		capture("a.headless", "/id")
 	tr.step("an automation whose template is an unknown placeholder alone", o, agentsAutomationsAutoCreate,
 		body(map[string]any{"name": "Tour Blank", "kind": "manual", "agent_id": "{{auto.agent}}",
 			"prompt_template": "{{unknown}}"})).capture("a.blank", "/id")
@@ -539,12 +490,6 @@ func agentsAutomationsAutomations(tr *tour) {
 		agentsAutomationsRunNow, auto("a.blank"))
 	tr.step("run the automation of two unknown placeholders and a space: a rendering of only whitespace falls "+
 		"back too", o, agentsAutomationsRunNow, auto("a.space"))
-	tr.step("run the automation of the crew E: its entry node's agent, with team_id and team_node_id", o,
-		agentsAutomationsRunNow, auto("a.crew"))
-	tr.step("run the automation of the crew H: 400, it has no entry node", o, agentsAutomationsRunNow,
-		auto("a.headless"))
-	tr.step("run the automation of the crew G, deleted since: 400, the lookup's text", o, agentsAutomationsRunNow,
-		auto("a.ghost"))
 	tr.step("run the disabled triggered automation now: 201, run-now does not read enabled", o,
 		agentsAutomationsRunNow, auto("a.dormant"))
 

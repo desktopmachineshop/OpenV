@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="usage">
+  <title>Usage</title>
+  <conbody>
+    <p>The <i>Usage</i> section shows how much each workspace and each person uses OpenV, and whether that use is speeding up or slowing down. It shows <b>counts only</b>: how many requirements, test cases, links, test runs and comments a workspace holds, and how many changes are made each week. It never shows what an artifact says, its title or its reference.</p>
+    <ul>
+      <li><b>By workspace</b> groups workspaces by plan, then company workspaces before personal ones, busiest first. Each row shows the members who signed in in the last 30 days out of all its members, what it holds, a bar per week for the last 12 weeks, its pace and when it last changed. Click a workspace's name to see its members under it, each with their own pace. <b>People</b> opens <i>By person</i> filtered to that workspace.</li>
+      <li><b>By person</b> lists everyone. Filter by plan, by workspace (narrowed to the plan you chose), by pace, or search by name or email. Each person shows their workspaces and role in each, the days they signed in in the last 4 weeks, their weekly changes, their pace and when they were last seen. <b>Make admin</b> and <b>Reset link</b> are here too.</li>
+    </ul>
+    <p><b>Pace</b> compares the last 4 weeks with the 4 weeks before. A rise of a quarter or more is <i>Accelerating</i> and a fall of a quarter or more is <i>Slowing</i>; anything between is <i>Steady</i>. <i>New</i> means activity lately and none before, <i>Gone quiet</i> means activity before and none lately, and <i>No activity</i> means none in either. A change is anything a person or an agent did that shows in a project's Activity; jobs the system runs itself do not count. A person who only reads is paced on the days they signed in. Hover a badge to see the two totals it compares.</p>
+  </conbody>
+</concept>

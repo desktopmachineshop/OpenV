@@ -305,9 +305,9 @@ func TestTourWorker(t *testing.T) {
 
 	// A literal body: encoded as it is, a server template's braces and the
 	// encoder's HTML escaping kept, nothing filled.
-	r := tr.build("POST /api/v1/crews/{id}/edges", []tourOpt{at("id", "run1"),
-		literalBody(map[string]any{"config": map[string]string{"prompt_template": "After {{handoff.run_id}} & <x>"}})})
-	check("a literal body", string(r.body), `{"config":{"prompt_template":"After {{handoff.run_id}} \u0026 \u003cx\u003e"}}`)
+	r := tr.build("PUT /api/v1/automations/{id}", []tourOpt{at("id", "run1"),
+		literalBody(map[string]any{"config": map[string]string{"prompt_template": "After {{event.entity_id}} & <x>"}})})
+	check("a literal body", string(r.body), `{"config":{"prompt_template":"After {{event.entity_id}} \u0026 \u003cx\u003e"}}`)
 	check("its type", r.header.Get("Content-Type"), "application/json")
 
 	// A run token from a claim answer: a bearer actor, its token registered

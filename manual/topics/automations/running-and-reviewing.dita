@@ -2,6 +2,9 @@
 <!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
 <concept id="running-and-reviewing">
   <title>Running and reviewing</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="automations.runs"/>
+  </prolog>
   <conbody>
     <ul>
       <li><b>Run now</b> launches immediately and jumps you to the Runs page focused on the new run. A whole-workspace automation's run belongs to no project, so no project's Runs page lists it: it opens beside the automations instead, and <b>Workspace runs</b> (in the workspace menu) lists it with the automation's scheduled and event runs (see <i>Runs &amp; runners</i>).</li>

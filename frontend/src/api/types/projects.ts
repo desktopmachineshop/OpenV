@@ -49,6 +49,19 @@ export interface Baseline {
   /** That account's display name, resolved server-side so a reader never
    *  sees a bare id. Absent whenever created_by is. */
   created_by_name?: string;
+  /** Where the project's plan stood when the baseline was taken. Absent for one taken before the plan was recorded with it, or of a project with no plan. */
+  plan?: BaselinePlan;
+}
+
+/** A plan as a baseline recorded it: how far along it was, its tasks done and late, the days it ran from and to, and its milestones. */
+export interface BaselinePlan {
+  progress: number;
+  tasks: number;
+  done: number;
+  late: number;
+  start: string | null;
+  end: string | null;
+  milestones: { key: string; name: string; kind: string; date: string | null; progress: number; met: boolean }[];
 }
 
 export interface Template {
@@ -92,6 +105,10 @@ export interface DownloadOptions {
   templates?: DownloadTemplate[];
   /** What the document holds when no switch is sent. */
   defaults?: DownloadContent;
+  /** The project's plan, when it has a task or a milestone to take along; never for a baseline. */
+  plan?: { tasks: number; milestones: number };
+  /** How many projects under this one a download can take along; never for a baseline. */
+  children?: number;
 }
 
 export interface DownloadSection {
@@ -163,6 +180,10 @@ export interface DownloadSelection {
   vvStatus: boolean;
   /** The attribute keys to show. Undefined means every one of them. */
   fields?: string[];
+  /** Take the plan and its tasks beside the document, which makes the download an archive. */
+  plan?: boolean;
+  /** Take the projects under this one along, each as its own download in a folder of its name. */
+  children?: boolean;
 }
 
 export type DownloadFormat = 'json' | 'csv' | 'excel' | 'reqif' | 'pdf' | 'docx';
@@ -211,6 +232,33 @@ export interface BaselineDiff {
   modified: BaselineDiffModified[];
   links_added: BaselineDiffLink[];
   links_removed: BaselineDiffLink[];
+  /** Where the plan stood on each side; absent for a side that has no plan recorded. */
+  plan_base?: BaselinePlan;
+  plan_target?: BaselinePlan;
+  /** The tasks of the plan that differ between the two sides, when both recorded it. */
+  plan_tasks?: BaselineTaskChange[];
+}
+
+/** A task of the plan as a baseline recorded it. */
+export interface BaselineTaskMoment {
+  id: string;
+  start: string | null;
+  end: string | null;
+  title?: string;
+  progress?: number;
+  done?: boolean;
+}
+
+/** What happened to one task between the two sides of a comparison. */
+export interface BaselineTaskChange {
+  id: string;
+  title: string;
+  change: 'added' | 'removed' | 'finished' | 'reopened' | 'moved' | 'progress';
+  before: BaselineTaskMoment | null;
+  after: BaselineTaskMoment | null;
+  /** Calendar days later (negative: earlier) the task starts and ends; 0 when a date did not move. */
+  start_shift_days: number;
+  finish_shift_days: number;
 }
 
 export interface ArtifactTypeDef {
@@ -267,7 +315,7 @@ export interface WorkItem {
   description: string;
   column: string;
   sort_order: number;
-  assignee_type: 'user' | 'agent' | 'team';
+  assignee_type: 'user' | 'agent';
   assignee_id?: string | null;
   agent_run_id?: string | null;
   artifact_ids: string[];
@@ -287,3 +335,38 @@ export interface WorkItemActivity {
   payload: Record<string, any>;
   created_at: string;
 }
+
+/**
+ * A to-do (issue #731): one paragraph to tick off, kept off the board. A
+ * project's, or a personal one (project_id null) that only its writer sees.
+ */
+export interface Todo {
+  id: string;
+  org_id: string;
+  project_id: string | null;
+  text: string;
+  done: boolean;
+  done_at: string | null;
+  /** Why it was ticked off when not simply done: "promoted" to a board task. */
+  done_note: string;
+  assignee_id: string | null;
+  due_date: string | null;
+  source_artifact_id: string | null;
+  source_chatter_id: string | null;
+  promoted_work_item_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/** What a to-do is made from; the route says whose it is. */
+export interface TodoInput {
+  text: string;
+  assignee_id?: string | null;
+  due_date?: string | null;
+  source_chatter_id?: string | null;
+  source_artifact_id?: string | null;
+}
+
+// The project plan's types are in ./plan.
+export type * from './plan';

@@ -18,6 +18,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	"github.com/openv/requirements-platform/internal/domain/baselines"
 	"github.com/openv/requirements-platform/internal/domain/chatter"
+	"github.com/openv/requirements-platform/internal/domain/commentreads"
 	"github.com/openv/requirements-platform/internal/domain/connectedapps"
 	"github.com/openv/requirements-platform/internal/domain/downloads"
 	"github.com/openv/requirements-platform/internal/domain/embeddings"
@@ -31,6 +32,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/notifications"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/plan"
 	"github.com/openv/requirements-platform/internal/domain/products"
 	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
@@ -41,11 +43,13 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/repoconns"
 	"github.com/openv/requirements-platform/internal/domain/reports"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
+	"github.com/openv/requirements-platform/internal/domain/savedsearches"
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
 	"github.com/openv/requirements-platform/internal/domain/sharelinks"
-	"github.com/openv/requirements-platform/internal/domain/teams"
+	"github.com/openv/requirements-platform/internal/domain/targetreleases"
 	"github.com/openv/requirements-platform/internal/domain/templates"
+	"github.com/openv/requirements-platform/internal/domain/todos"
 	"github.com/openv/requirements-platform/internal/domain/usermetrics"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/domain/vv"
@@ -57,6 +61,7 @@ import (
 	"github.com/openv/requirements-platform/internal/notify"
 	"github.com/openv/requirements-platform/internal/orchestration"
 	"github.com/openv/requirements-platform/internal/persistence/postgres"
+	"github.com/openv/requirements-platform/internal/seeds"
 )
 
 // app holds the locals of main() that more than one of its stages uses,
@@ -84,12 +89,15 @@ type app struct {
 	templateRepo         *postgres.TemplateRepository
 	chatterRepo          *postgres.ChatterRepository
 	userRepo             *postgres.UserRepository
+	userDeletionRepo     *postgres.UserDeletionRepository
 	memberRepo           *postgres.MemberRepository
 	eventRepo            *postgres.EventRepository
 	productProfileRepo   *postgres.ProductProfileRepository
 	vvRepo               *postgres.VVRepository
 	evidenceRepo         *postgres.EvidenceRepository
 	workItemRepo         *postgres.WorkItemRepository
+	todoRepo             *postgres.TodoRepository
+	planRepo             *postgres.PlanRepository
 	guidedRepo           *postgres.GuidedRepository
 	interviewRepo        *postgres.InterviewRepository
 	agentRepo            *postgres.AgentRepository
@@ -98,7 +106,6 @@ type app struct {
 	proposalRepo         *postgres.ProposalRepository
 	repoConnRepo         *postgres.RepoConnectionRepository
 	providerRepo         *postgres.ProviderSettingRepository
-	teamRepo             *postgres.TeamRepository
 	orgRepo              *postgres.OrgRepository
 	invitationRepo       *postgres.InvitationRepository
 	workerKeyRepo        *postgres.WorkerKeyRepository
@@ -109,6 +116,7 @@ type app struct {
 	userMetricsRepo      *postgres.UserMetricsRepository
 	connectedAppRepo     *postgres.ConnectedAppRepository
 	attributeDefRepo     *postgres.AttributeDefinitionRepository
+	targetReleaseRepo    *postgres.TargetReleaseRepository
 	sharedProductRepo    *postgres.SharedProductRepository
 	bus                  *eventbus.DefaultBus
 	artifactService      *artifacts.DefaultService
@@ -136,10 +144,15 @@ type app struct {
 	productService       *products.DefaultService
 	settingsService      *settings.DefaultService
 	attributeService     *attributes.DefaultService
+	targetReleaseService *targetreleases.DefaultService
+	savedSearchService   *savedsearches.DefaultService
+	commentReadService   *commentreads.DefaultService
 	sharedProductService *sharedproducts.DefaultService
 	vvService            *vv.DefaultService
 	evidenceService      *evidence.DefaultService
 	workItemService      *workitems.DefaultService
+	todoService          *todos.DefaultService
+	planService          *plan.DefaultService
 	guidedService        *guided.DefaultService
 	interviewService     *interviews.DefaultService
 	shareLinkService     *sharelinks.DefaultService
@@ -151,7 +164,6 @@ type app struct {
 	providerKeyService   *providers.DefaultKeyService
 	loginService         *providers.DefaultLoginService
 	providerTokenService *usertokens.DefaultService
-	teamService          *teams.DefaultService
 	proposalService      *proposals.DefaultService
 	proposalAppliers     proposals.Appliers
 	metricsCollector     *metrics.Metrics
@@ -167,15 +179,19 @@ type app struct {
 	pushSubService       *pushsubs.DefaultService
 	userMetricsService   *usermetrics.DefaultService
 	visitorMetrics       *usermetrics.DefaultVisitorService
+	usageMetrics         *usermetrics.DefaultUsageService
 	connectedApps        *connectedapps.DefaultService
 	notificationService  *notifications.DefaultService
 	minutesMonitor       *notify.MinutesMonitor
 	deploymentKind       string
 	buildSHA             string
 	releaseService       *release.DefaultService
-	googleOAuth          *api.GoogleOAuthConfig
-	oidcConfig           *api.OIDCConfig
-	billingService       *billing.Service
+	// seedTeam answers which seeded agent team a workspace gets (stage
+	// agents builds it; stage handlers' org seeder reads it too).
+	seedTeam       func(orgID string) seeds.Team
+	googleOAuth    *api.GoogleOAuthConfig
+	oidcConfig     *api.OIDCConfig
+	billingService *billing.Service
 	// extModules are the registered modules (ext.Register), built in stage
 	// billing for stage handlers.
 	extModules []ext.Module

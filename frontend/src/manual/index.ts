@@ -10,11 +10,13 @@ import links from './chapters/links';
 import guidedWizard from './chapters/guidedWizard';
 import board from './chapters/board';
 import agents from './chapters/agents';
-import crews from './chapters/crews';
 import runsRunners from './chapters/runsRunners';
 import automations from './chapters/automations';
 import interviews from './chapters/interviews';
 import vv from './chapters/vv';
+import releases from './chapters/releases';
+import gantt from './chapters/gantt';
+import projectPages from './chapters/projectPages';
 import orgSettings from './chapters/orgSettings';
 import troubleshooting from './chapters/troubleshooting';
 import platformAdmin from './chapters/platformAdmin';
@@ -37,11 +39,13 @@ export const MANUAL_CHAPTERS: ManualChapter[] = [
   { slug: 'guided-wizard', title: 'Guided definition & the V&V Assistant', content: guidedWizard },
   { slug: 'board', title: 'Kanban board', content: board },
   { slug: 'agents', title: 'Agents', content: agents },
-  { slug: 'crews', title: 'Crews', content: crews },
   { slug: 'runs-runners', title: 'Runs & runners', content: runsRunners },
   { slug: 'automations', title: 'Automations', content: automations },
   { slug: 'interviews', title: 'Interviews', content: interviews },
   { slug: 'vv', title: 'V&V & test runs', content: vv },
+  { slug: 'releases', title: 'Target releases', content: releases },
+  { slug: 'gantt', title: 'The plan (Gantt)', content: gantt },
+  { slug: 'project-pages', title: 'Home, Design, Tests and Baselines', content: projectPages },
   { slug: 'org-settings', title: 'Workspace settings & teams', content: orgSettings },
   { slug: 'platform-admin', title: 'Platform admin', content: platformAdmin },
   { slug: 'troubleshooting', title: 'Troubleshooting & FAQ', content: troubleshooting },

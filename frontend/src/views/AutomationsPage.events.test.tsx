@@ -48,7 +48,6 @@ vi.mock('../api/client', async (orig) =>
         ]),
     },
     agentsAPI: { list: () => ok([{ id: 'agent-1', name: 'Greeter' }]) },
-    crewsAPI: { list: () => ok([]) },
   })
 );
 

@@ -226,9 +226,9 @@ func testRunsResultsTour(tr *tour) {
 	// order (lookup, guard, the run's status, decode, the slug, the agent,
 	// the cases), then the launch.
 	tr.step("launch an agent on a run that does not exist", o, "POST /api/v1/test-runs/{id}/agent-run",
-		at("id", "{{phantom}}"), jsonBody(`{"agent_slug":"vv-engineer"}`))
+		at("id", "{{phantom}}"), jsonBody(`{"agent_slug":"test-auditor"}`))
 	tr.step("the viewer launches an agent on R1", viewer, "POST /api/v1/test-runs/{id}/agent-run", at("id", "{{r1}}"),
-		jsonBody(`{"agent_slug":"vv-engineer"}`))
+		jsonBody(`{"agent_slug":"test-auditor"}`))
 	tr.step("launch an agent with a malformed body", o, "POST /api/v1/test-runs/{id}/agent-run", at("id", "{{r1}}"),
 		jsonBody(`[`))
 	tr.step("launch an agent with no agent_slug", o, "POST /api/v1/test-runs/{id}/agent-run", at("id", "{{r1}}"),
@@ -236,9 +236,9 @@ func testRunsResultsTour(tr *tour) {
 	tr.step("launch an agent the workspace does not have", o, "POST /api/v1/test-runs/{id}/agent-run",
 		at("id", "{{r1}}"), jsonBody(`{"agent_slug":"no-such-agent"}`))
 	tr.step("launch an agent on the manual and physical cases only", o, "POST /api/v1/test-runs/{id}/agent-run",
-		at("id", "{{r1}}"), jsonBody(`{"agent_slug":"vv-engineer","test_case_ids":["{{tc_manual}}","{{tc_rig}}"]}`))
-	launched := tr.step("launch the V&V engineer on every case of the project: the automated one runs, the others are skipped", o,
-		"POST /api/v1/test-runs/{id}/agent-run", at("id", "{{r1}}"), jsonBody(`{"agent_slug":"vv-engineer"}`),
+		at("id", "{{r1}}"), jsonBody(`{"agent_slug":"test-auditor","test_case_ids":["{{tc_manual}}","{{tc_rig}}"]}`))
+	launched := tr.step("launch the Test Auditor on every case of the project: the automated one runs, the others are skipped", o,
+		"POST /api/v1/test-runs/{id}/agent-run", at("id", "{{r1}}"), jsonBody(`{"agent_slug":"test-auditor"}`),
 		note("an empty test_case_ids means every test case of the project, not only the run's; the run stays queued "+
 			"(HOSTED_RUNNERS=off and no runner has claimed it yet), and launching it creates a tracking card on the "+
 			"board"))
@@ -286,7 +286,7 @@ func testRunsResultsTour(tr *tour) {
 	tr.step("abort the run on P's baseline", o, "PUT /api/v1/test-runs/{id}",
 		at("id", "{{run_baselined}}"), jsonBody(`{"status":"aborted"}`))
 	tr.step("launch an agent on the completed R1: 409, as a result there", o, "POST /api/v1/test-runs/{id}/agent-run",
-		at("id", "{{r1}}"), jsonBody(`{"agent_slug":"vv-engineer"}`),
+		at("id", "{{r1}}"), jsonBody(`{"agent_slug":"test-auditor"}`),
 		note("fixed under R7 (#379 bug 50): it answered 400, in the words of the next step's 409"))
 	tr.step("record the physical case in the completed R1: 409, a closed run takes no result", o,
 		"POST /api/v1/test-runs/{id}/results", at("id", "{{r1}}"),
@@ -321,9 +321,9 @@ func testRunsResultsTour(tr *tour) {
 		jsonBody(`{"email":"tour-editor@example.com","role":"editor"}`), expect(201))
 	tr.setup("run R3, in progress, for the editor's launch", o, "POST /api/v1/projects/{id}/test-runs",
 		at("id", "{{p}}"), jsonBody(`{"name":"Editor's run"}`)).capture("r3", "/id")
-	tr.step("an editor of P from another workspace launches the V&V engineer on R3: P's workspace's agent, and "+
+	tr.step("an editor of P from another workspace launches the Test Auditor on R3: P's workspace's agent, and "+
 		"the run queued in P's workspace", editor, "POST /api/v1/test-runs/{id}/agent-run", at("id", "{{r3}}"),
-		jsonBody(`{"agent_slug":"vv-engineer"}`))
+		jsonBody(`{"agent_slug":"test-auditor"}`))
 
 	// A run's history: every result recorded in it, the ones later results
 	// superseded included (OpenV REQ-13).

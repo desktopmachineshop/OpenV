@@ -5,21 +5,22 @@ import { ModuleView } from './ModuleView';
 import { DialogProvider } from '../components/ui';
 import { useAppStore } from '../state/store';
 
-// Characterization for refactor plan step X16b (useColumnResize and
-// usePanelMode): the requirements module's two resizable columns and the
-// notes column's three modes, pinned before that logic leaves ModuleView.
+// The requirements module's two resizable columns and the notes column's
+// three modes (useColumnResize and usePanelMode; first pinned for refactor
+// plan step X16b, redrawn when the list became the main area).
 //
-//   column resize  The tree column is drawn at its saved width
-//                  (openv-leftColumnWidth, else 400), clamped so the document
-//                  keeps 420px beside the 260px of sidebar and a pinned notes
-//                  column; the notes column at openv-rightColumnWidth, else
-//                  320. A drag on a handle moves the column by the pointer's
-//                  travel from where it was pressed, from the width drawn,
-//                  clamped to 200–800 (tree) or 250–600 (notes), and the width
-//                  is saved only on release, as a string.
+//   column resize  The detail panel (the artifact document, right of the
+//                  list) is drawn at its saved width (openv-detailColumnWidth,
+//                  else 460), clamped so the list keeps 420px beside the 104px
+//                  of rail and padding and the notes (pinned, or the 24px
+//                  strip), and never under 340; the notes column at
+//                  openv-rightColumnWidth, else 320. Both sit right of their
+//                  handles, so a drag to the left widens them, by the
+//                  pointer's travel from the width drawn, clamped to 340–900
+//                  (detail) or 250–600 (notes), saved only on release.
 //   panel mode     The notes column is pinned, auto-hidden or hidden
 //                  (openv-panel-mode-artifact-notes; unsaved, auto-hide under
-//                  1200px and pinned from there). The button inside the panel
+//                  1680px and pinned from there). The button inside the panel
 //                  cycles the mode and saves it; the edge strip opens an
 //                  auto-hidden panel on hover and reveals any unpinned panel
 //                  on click, until a click away, Escape or the strip again.
@@ -218,10 +219,9 @@ const leave = (node: Element, to: Element = document.body) => dispatch(node, mou
 
 // ---- what the page draws ---------------------------------------------------
 
-// The tree column: the box the "+ New Artifact" button sits in.
-const treeColumn = () => byText<HTMLButtonElement>('button', '+ New Artifact').parentElement as HTMLDivElement;
-const treeWidth = () => treeColumn().style.width;
-// The resize handles, left to right: the tree's, then the notes column's.
+// The detail panel: the artifact document's region, which carries its width.
+const detailWidth = () => container.querySelector<HTMLDivElement>('[aria-label="Artifact document"]')!.style.width;
+// The resize handles, left to right: the detail panel's, then the notes column's.
 const handles = () =>
   Array.from(container.querySelectorAll<HTMLDivElement>('div')).filter((node) => node.style.cursor === 'col-resize');
 const probe = () => container.querySelector<HTMLElement>('[data-probe="chatter"]');
@@ -233,7 +233,7 @@ const backdrop = () =>
   Array.from(container.querySelectorAll<HTMLDivElement>('div')).find((node) => node.style.zIndex === '899') ?? null;
 const saved = (key: string) => window.localStorage.getItem(key);
 
-const LEFT = 'openv-leftColumnWidth';
+const LEFT = 'openv-detailColumnWidth';
 const RIGHT = 'openv-rightColumnWidth';
 const MODE = 'openv-panel-mode-artifact-notes';
 
@@ -273,12 +273,12 @@ afterEach(() => {
   }
 });
 
-describe('ModuleView column resize (X16b characterization)', () => {
-  it('draws 400 and 320 when nothing is saved', async () => {
-    setViewport(1600);
+describe('ModuleView column resize', () => {
+  it('draws 460 and 320 when nothing is saved', async () => {
+    setViewport(1700);
     await mount();
 
-    expect(treeWidth()).toBe('400px');
+    expect(detailWidth()).toBe('460px');
     expect(notesColumn().style.width).toBe('320px');
     expect(notesColumn().style.minWidth).toBe('250px');
     expect(notesColumn().style.maxWidth).toBe('600px');
@@ -288,58 +288,59 @@ describe('ModuleView column resize (X16b characterization)', () => {
   });
 
   it('draws the saved widths, read as integers', async () => {
-    window.localStorage.setItem(LEFT, '480');
+    window.localStorage.setItem(LEFT, '520');
     window.localStorage.setItem(RIGHT, '300.9');
-    setViewport(1600);
+    setViewport(1700);
     await mount();
 
-    expect(treeWidth()).toBe('480px');
+    expect(detailWidth()).toBe('520px');
     expect(notesColumn().style.width).toBe('300px');
   });
 
-  it('narrows the tree to leave the document 420px, but never below 200, and keeps the saved width', async () => {
-    window.localStorage.setItem(LEFT, '700');
-    // 1300 - 260 (sidebar) - 330 (pinned notes and handle) - 420 = 290.
+  it('narrows the detail panel to leave the list 420px, but never below 340, and keeps the saved width', async () => {
+    window.localStorage.setItem(LEFT, '900');
+    // Auto-hidden notes take the 24px strip: 1300 - 104 - 24 - 420 = 752.
     setViewport(1300);
     await mount();
-    expect(treeWidth()).toBe('290px');
-    expect(saved(LEFT)).toBe('700');
+    expect(detailWidth()).toBe('752px');
+    expect(saved(LEFT)).toBe('900');
 
     act(() => root.unmount());
     act(() => {
       root = createRoot(container);
     });
-    // 1200 - 260 - 330 - 420 = 190, under the floor.
-    setViewport(1200);
+    // Pinned notes: 1100 - 104 - 330 - 420 = 246, under the floor.
+    window.localStorage.setItem(MODE, 'pinned');
+    setViewport(1100);
     await mount();
-    expect(treeWidth()).toBe('200px');
+    expect(detailWidth()).toBe('340px');
   });
 
-  it('drags the tree column by the pointer, clamped to 200–800, and saves the width on release', async () => {
-    setViewport(1600);
+  it('drags the detail panel by the pointer, wider to the left, clamped to 340–900, and saves the width on release', async () => {
+    setViewport(1700);
     await mount();
     const [left] = handles();
 
-    const down = await dispatch(left, mouse('mousedown', 500));
+    const down = await dispatch(left, mouse('mousedown', 1000));
     expect(down.defaultPrevented).toBe(true);
     expect(left.style.backgroundColor).toBe('var(--accent)');
     expect(document.body.style.cursor).toBe('col-resize');
     expect(document.body.style.userSelect).toBe('none');
 
-    await dispatch(document, mouse('mousemove', 560));
-    expect(treeWidth()).toBe('460px');
+    await dispatch(document, mouse('mousemove', 940));
+    expect(detailWidth()).toBe('520px');
     // Nothing is saved while the pointer is down.
     expect(saved(LEFT)).toBeNull();
 
-    await dispatch(document, mouse('mousemove', 50));
-    expect(treeWidth()).toBe('200px');
-
-    // 800 at most; drawn at the 590 the window leaves the tree.
     await dispatch(document, mouse('mousemove', 1500));
-    expect(treeWidth()).toBe('590px');
+    expect(detailWidth()).toBe('340px');
 
-    await dispatch(document, mouse('mouseup', 1500));
-    expect(saved(LEFT)).toBe('800');
+    // 900 at most; drawn at the 846 the window leaves: 1700 - 104 - 330 - 420.
+    await dispatch(document, mouse('mousemove', 0));
+    expect(detailWidth()).toBe('846px');
+
+    await dispatch(document, mouse('mouseup', 0));
+    expect(saved(LEFT)).toBe('900');
     expect(saved(RIGHT)).toBeNull();
     expect(left.style.backgroundColor).toBe('transparent');
     expect(document.body.style.cursor).toBe('');
@@ -347,12 +348,13 @@ describe('ModuleView column resize (X16b characterization)', () => {
 
     // Released, the pointer moves nothing.
     await dispatch(document, mouse('mousemove', 600));
-    expect(treeWidth()).toBe('590px');
+    expect(detailWidth()).toBe('846px');
     expect(recorder.calls).toEqual([]);
   });
 
-  it('drags the notes column the other way, clamped to 250–600', async () => {
-    setViewport(1600);
+  it('drags the notes column the same way, clamped to 250–600, and the detail panel yields', async () => {
+    window.localStorage.setItem(LEFT, '700');
+    setViewport(1700);
     await mount();
     const [, right] = handles();
 
@@ -361,47 +363,48 @@ describe('ModuleView column resize (X16b characterization)', () => {
 
     await dispatch(document, mouse('mousemove', 900));
     expect(notesColumn().style.width).toBe('420px');
-    expect(treeWidth()).toBe('400px');
+    expect(detailWidth()).toBe('700px');
 
     await dispatch(document, mouse('mousemove', 1400));
     expect(notesColumn().style.width).toBe('250px');
 
-    // 600 at most, and the tree yields to keep the document its 420px:
-    // 1600 - 260 - 610 - 420 = 310.
+    // 600 at most, and the detail panel yields to keep the list its 420px:
+    // 1700 - 104 - 610 - 420 = 566.
     await dispatch(document, mouse('mousemove', 0));
     expect(notesColumn().style.width).toBe('600px');
-    expect(treeWidth()).toBe('310px');
+    expect(detailWidth()).toBe('566px');
     expect(saved(RIGHT)).toBeNull();
 
     await dispatch(document, mouse('mouseup', 0));
     expect(saved(RIGHT)).toBe('600');
-    expect(saved(LEFT)).toBeNull();
+    expect(saved(LEFT)).toBe('700');
     expect(recorder.calls).toEqual([]);
   });
 
-  it('starts a tree drag from the width drawn, not the width saved', async () => {
-    window.localStorage.setItem(LEFT, '700');
+  it('starts a drag from the width drawn, not the width saved', async () => {
+    window.localStorage.setItem(LEFT, '900');
     setViewport(1300);
     await mount();
-    expect(treeWidth()).toBe('290px');
+    expect(detailWidth()).toBe('752px');
 
     await dispatch(handles()[0], mouse('mousedown', 500));
-    await dispatch(document, mouse('mousemove', 450));
-    expect(treeWidth()).toBe('240px');
-    await dispatch(document, mouse('mouseup', 450));
-    expect(saved(LEFT)).toBe('240');
+    await dispatch(document, mouse('mousemove', 550));
+    expect(detailWidth()).toBe('702px');
+    await dispatch(document, mouse('mouseup', 550));
+    expect(saved(LEFT)).toBe('702');
   });
 
   it('saves the width it last knew when released without a move', async () => {
-    window.localStorage.setItem(LEFT, '700');
-    setViewport(1300);
+    window.localStorage.setItem(LEFT, '900');
+    window.localStorage.setItem(MODE, 'pinned');
+    setViewport(1700);
     await mount();
 
-    // The tree is drawn at 290, but a press and release with no move saves
-    // the 700 it read at mount.
+    // The panel is drawn at 846, but a press and release with no move saves
+    // the 900 it read at mount.
     await dispatch(handles()[0], mouse('mousedown', 500));
     await dispatch(document, mouse('mouseup', 500));
-    expect(saved(LEFT)).toBe('700');
+    expect(saved(LEFT)).toBe('900');
 
     await dispatch(handles()[1], mouse('mousedown', 1000));
     await dispatch(document, mouse('mouseup', 1000));
@@ -409,16 +412,16 @@ describe('ModuleView column resize (X16b characterization)', () => {
 
     // After a drag it is the dragged width.
     await dispatch(handles()[0], mouse('mousedown', 500));
-    await dispatch(document, mouse('mousemove', 480));
-    await dispatch(document, mouse('mouseup', 480));
-    expect(saved(LEFT)).toBe('270');
+    await dispatch(document, mouse('mousemove', 520));
+    await dispatch(document, mouse('mouseup', 520));
+    expect(saved(LEFT)).toBe('826');
     await dispatch(handles()[0], mouse('mousedown', 500));
     await dispatch(document, mouse('mouseup', 500));
-    expect(saved(LEFT)).toBe('270');
+    expect(saved(LEFT)).toBe('826');
   });
 
   it('lights a handle under the pointer, but not while a drag is on', async () => {
-    setViewport(1600);
+    setViewport(1700);
     await mount();
     const [left, right] = handles();
 
@@ -449,8 +452,8 @@ describe('ModuleView column resize (X16b characterization)', () => {
 });
 
 describe('ModuleView notes panel mode (X16b characterization)', () => {
-  it('starts pinned from 1200px', async () => {
-    setViewport(1200);
+  it('starts pinned from 1680px', async () => {
+    setViewport(1680);
     await mount();
 
     expect(probe()).not.toBeNull();
@@ -462,8 +465,8 @@ describe('ModuleView notes panel mode (X16b characterization)', () => {
     expect(saved(MODE)).toBeNull();
   });
 
-  it('starts auto-hidden under 1200px, behind the edge strip', async () => {
-    setViewport(1199);
+  it('starts auto-hidden under 1680px, behind the edge strip', async () => {
+    setViewport(1679);
     await mount();
 
     expect(probe()).toBeNull();
@@ -504,11 +507,11 @@ describe('ModuleView notes panel mode (X16b characterization)', () => {
   });
 
   it('cycles pinned, auto-hide, hidden and back, saving each, and keeps the panel up while choosing', async () => {
-    window.localStorage.setItem(LEFT, '600');
-    setViewport(1600);
+    window.localStorage.setItem(LEFT, '900');
+    setViewport(1700);
     await mount();
-    // Pinned, the notes take 330px: 1600 - 260 - 330 - 420 = 590.
-    expect(treeWidth()).toBe('590px');
+    // Pinned, the notes take 330px: 1700 - 104 - 330 - 420 = 846.
+    expect(detailWidth()).toBe('846px');
     expect(chatter.mounts).toBe(1);
 
     await click(modeButton());
@@ -524,8 +527,8 @@ describe('ModuleView notes panel mode (X16b characterization)', () => {
     expect(strip()!.textContent).toBe('›');
     expect(backdrop()).not.toBeNull();
     expect(handles()).toHaveLength(1);
-    // Unpinned, the notes take no width from the tree.
-    expect(treeWidth()).toBe('600px');
+    // Unpinned, the notes take only their strip: 1700 - 104 - 24 - 420 = 1152.
+    expect(detailWidth()).toBe('900px');
 
     await click(modeButton());
     expect(saved(MODE)).toBe('hidden');
@@ -539,7 +542,7 @@ describe('ModuleView notes panel mode (X16b characterization)', () => {
     expect(strip()).toBeNull();
     expect(backdrop()).toBeNull();
     expect(handles()).toHaveLength(2);
-    expect(treeWidth()).toBe('590px');
+    expect(detailWidth()).toBe('846px');
 
     // The panel stayed mounted through the cycle, and nothing was called.
     expect(chatter.mounts).toBe(1);
@@ -631,17 +634,17 @@ describe('ModuleView notes panel mode (X16b characterization)', () => {
   });
 
   it('remounts the panel for another artifact, and keeps it for the same one', async () => {
-    setViewport(1600);
+    setViewport(1700);
     await mount('/projects/p1/requirements?artifact=req-1');
     // Twice: first with no artifact, before the ?artifact= sync selects it.
     expect(probe()!.dataset.artifact).toBe('req-1');
     expect(chatter.mounts).toBe(2);
 
-    await click(byText('code', 'REQ-2'));
+    await click(byText('span', 'REQ-2'));
     expect(probe()!.dataset.artifact).toBe('req-2');
     expect(chatter.mounts).toBe(3);
 
-    await click(byText('code', 'REQ-2'));
+    await click(byText('span', 'REQ-2'));
     expect(chatter.mounts).toBe(3);
   });
 });

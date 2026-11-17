@@ -12,6 +12,8 @@ import (
 	"github.com/openv/requirements-platform/internal/config"
 	"github.com/openv/requirements-platform/internal/domain/help"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
+	"github.com/openv/requirements-platform/internal/domain/users"
+	"github.com/openv/requirements-platform/internal/notify"
 	"github.com/openv/requirements-platform/internal/seeds"
 )
 
@@ -69,9 +71,7 @@ func (a *app) billing() {
 // nudges.
 func (a *app) handlers() {
 	cfg := a.env()
-	// The in-app help reads the user manual from OpenD when a docs site is
-	// configured (docs/plans/opend-help.md); otherwise the app keeps the
-	// help it ships.
+	// The in-app help reads the manual from OpenD when a docs site is set (docs/plans/opend-help.md).
 	var helpService *help.Service
 	if docs := cfg.HelpDocs(); docs != nil {
 		helpService = help.NewService(help.Config{URL: docs.URL, Secret: docs.EmbedSecret, AdminToken: docs.AdminToken}, nil)
@@ -88,10 +88,14 @@ func (a *app) handlers() {
 		TemplateService:      a.templateService,
 		ChatterService:       a.chatterService,
 		AttributeService:     a.attributeService,
+		TargetReleaseService: a.targetReleaseService,
+		SavedSearchService:   a.savedSearchService,
+		CommentReadService:   a.commentReadService,
 		SharedProductService: a.sharedProductService,
 		EmbeddingService:     a.embeddingService,
 		UploadsDir:           a.uploadsDir,
 		UserService:          a.userService,
+		AccountDeleter:       users.NewAccountDeletionService(a.userDeletionRepo),
 		MemberService:        a.memberService,
 		ProductService:       a.productService,
 		VVService:            a.vvService,
@@ -102,6 +106,8 @@ func (a *app) handlers() {
 		DeploymentKind:       a.deploymentKind,
 		BuildSHA:             a.buildSHA,
 		WorkItemService:      a.workItemService,
+		TodoService:          a.todoService,
+		PlanService:          a.planService,
 		GuidedService:        a.guidedService,
 		InterviewService:     a.interviewService,
 		ShareLinkService:     a.shareLinkService,
@@ -125,13 +131,13 @@ func (a *app) handlers() {
 		PushSubService:       a.pushSubService,
 		UserMetricsService:   a.userMetricsService,
 		VisitorMetrics:       a.visitorMetrics,
+		UsageMetrics:         a.usageMetrics,
 		ConnectedApps:        a.connectedApps,
 		VAPID:                a.vapid,
 		Provisioner:          a.provisioner,
 		OrgSeeder: func(orgID string) error {
-			return seeds.EnsureOrgDefaults(orgID, a.agentService, a.teamService)
+			return seeds.EnsureOrgDefaults(orgID, a.agentService, a.seedTeam(orgID))
 		},
-		TeamService:       a.teamService,
 		Bus:               a.bus,
 		EventRepo:         a.eventRepo,
 		SSEHub:            a.sseHub,
@@ -251,3 +257,20 @@ func (b extBoot) Context() context.Context         { return b.a.ctx }
 func (b extBoot) Workspaces() ext.WorkspaceService { return b.a.orgService }
 func (b extBoot) Users() ext.UserService           { return b.a.userService }
 func (b extBoot) Metrics() any                     { return b.a.metricsCollector }
+
+// Mail lends modules the mail stage notify built, for once-only notices to a
+// workspace's admins (ext.MailBoot).
+func (b extBoot) Mail() ext.Mail {
+	return extMail{notify.NewWorkspaceMail(b.a.emailMailer, b.a.orgService, b.a.userService, b.a.emailLinkBase)}
+}
+
+// extMail is notify's WorkspaceMail as an ext.Mail.
+type extMail struct{ w *notify.WorkspaceMail }
+
+func (m extMail) Enabled() bool { return m.w.Enabled() }
+
+func (m extMail) SendToAdmins(ctx context.Context, orgID string, n ext.Notice) (bool, error) {
+	return m.w.SendToAdmins(ctx, orgID, notify.WorkspaceNotice{Key: n.Key, Subject: n.Subject, Body: n.Body, Path: n.Path})
+}
+
+var _ ext.MailBoot = extBoot{}

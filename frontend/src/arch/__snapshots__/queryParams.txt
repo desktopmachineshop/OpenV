@@ -2,19 +2,24 @@
 # and the query strings built with URLSearchParams for API calls.
 # Regenerate: npx vitest run src/arch -u. Emails, pushes, Stripe returns, shortcuts and bookmarks carry these names.
 
-page parameters read: 24 (against, artifact, checkout, client_id, code_challenge, code_challenge_method, error, go, invite, item, link, mode, next, panel, redirect_uri, reset, run, scope, session_id, share, signed_out, state, tab, token)
-page parameters written: 8
-parameters carried by in-app links: 9
-API query parameters built with URLSearchParams: 10
+page parameters read: 29 (against, agent, artifact, at, checkout, client_id, code_challenge, code_challenge_method, error, go, invite, item, link, mode, next, notes, panel, redirect_uri, release, reset, run, scope, session_id, share, signed_out, state, tab, todo, token)
+page parameters written: 10
+parameters carried by in-app links: 13
+API query parameters built with URLSearchParams: 20
 
 ## Page URL parameters (modules using useSearchParams)
 against
   get
   set (object)
+agent
+  delete
+  get
 artifact
   delete
   get
   set
+at
+  get
 checkout
   delete
   get
@@ -33,17 +38,23 @@ invite
 item
   delete
   get
+  set
 link
   get
 mode
   get
 next
   get
+notes
+  get
 panel
   delete
   get
 redirect_uri
   get
+release
+  get
+  set
 reset
   get
 run
@@ -64,10 +75,16 @@ state
 tab
   get
   set
+todo
+  get
 token
   get
 
 ## Parameters written into in-app links
+against
+  /projects/{}/baselines/{}/compare?against={}
+agent
+  /projects/{}/agent-runs?agent={}
 artifact
   /projects/{}/impact?artifact={}
   /projects/{}/requirements?artifact={}
@@ -78,6 +95,8 @@ mode
   /login?mode=register
 next
   /login?next={}
+release
+  /projects/{}/releases?release={}
 reset
   /login?reset=done
 run
@@ -91,21 +110,46 @@ tab
   /org/settings?tab=members
   /org/settings?tab=usage
   /org/settings?tab=worker-keys
-  /projects/{}/settings?tab=general
   /projects/{}/settings?tab=members
+todo
+  /org/todos?todo={}
+  /projects/{}/todos?todo={}
 
 ## API query strings built with URLSearchParams
+<dynamic: keys.filter>
+  append
+  getAll
+<dynamic: keys.group>
+  append
+  getAll
+<dynamic: keys.quick>
+  append
+  getAll
+<dynamic: keys.saved>
+  append
+  getAll
+<dynamic: keys.text>
+  get
+  set
+<k>
+  delete
 <name>
   set
 attachments
   set
 baseline_id
   set
+children
+  set
 fields
   set
 headings
   set
+notes
+  get
 owners
+  set
+plan
   set
 sections
   set
@@ -115,3 +159,7 @@ types
   set
 utm_source
   get
+view
+  delete
+  get
+  set

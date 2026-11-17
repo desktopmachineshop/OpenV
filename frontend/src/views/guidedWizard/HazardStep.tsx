@@ -30,7 +30,7 @@ export const renderHazardStep = ({ hazards, setHazards, openHazardCategories, se
     Operational: 'in-service risks — environment, wear, support, or user error',
   };
   return (
-    <div>
+    <div data-help-key="guided.steps.hazards">
       <div className="card" style={{ marginBottom: 12 }}>
         <h3>Hazards &amp; risks (optional)</h3>
         <div style={{ ...helpText, marginBottom: 0 }}>

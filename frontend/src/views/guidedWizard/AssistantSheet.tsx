@@ -42,6 +42,7 @@ export const AssistantSheet: React.FC<AssistantSheetProps> = ({
       <div
         role="dialog"
         aria-label="V&V Assistant"
+        data-help-pane="guided.assistant"
         aria-hidden={!assistantOpen}
         className="safe-area-bottom"
         style={{
@@ -93,10 +94,13 @@ export const AssistantSheet: React.FC<AssistantSheetProps> = ({
           type="button"
           onClick={() => setAssistantOpen(true)}
           title="Open the V&V Assistant"
+          data-help-key="guided.assistant"
           style={{
             position: 'fixed',
             right: 16,
-            bottom: 'calc(16px + env(safe-area-inset-bottom, 0px))',
+            // Above the project's phone tab bar where one is drawn
+            // (ProjectLayoutTabs.tsx sets --ov-tabbar-height).
+            bottom: 'calc(16px + var(--ov-tabbar-height, 0px) + env(safe-area-inset-bottom, 0px))',
             minHeight: 48,
             padding: '0 18px',
             borderRadius: 24,

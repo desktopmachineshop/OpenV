@@ -128,7 +128,7 @@ func TestSchedulersShareTheRealClaim(t *testing.T) {
 			wg.Add(1)
 			go func(rs *schedulerClaimRuns) {
 				defer wg.Done()
-				scheduler.New(r, rs, nil).Start(ctx)
+				scheduler.New(r, rs).Start(ctx)
 			}(rs)
 		}
 		wg.Wait()

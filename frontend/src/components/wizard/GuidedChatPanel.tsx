@@ -1,17 +1,38 @@
 import React, { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { guidedAPI, GuidedChatMessage } from '../../api/client';
 import { ChatMarkdown } from '../ChatMarkdown';
-import { CloudRunnerStartingNotice } from './CloudRunnerStartingNotice';
+import { CloudRunnerStartingNotice, RunnerOfflineNotice } from './CloudRunnerStartingNotice';
 import { RECONNECT, useEventStream } from '../../hooks/useEventStream';
 import type { ArtifactTypeValue } from '../../generated/contract';
+import { quickActionsFor, useAutoSend } from './guidedChatActions';
+import { ONE_AT_A_TIME_KINDS, PROJECT_ACTION_LABELS, isProjectActionKind, projectActionLabels, projectActionSummary } from './projectActions';
 
 /**
  * One structured proposal embedded in a copilot reply: a wizard entry, or —
  * beside the project — any artifact by type and place, an edit, or a move.
  */
 export interface CopilotSuggestion {
-  kind: 'framing' | 'persona' | 'need' | 'requirement' | 'nfr' | 'hazard' | 'artifact' | 'edit' | 'move';
+  kind:
+    | 'framing'
+    | 'persona'
+    | 'need'
+    | 'requirement'
+    | 'nfr'
+    | 'hazard'
+    | 'artifact'
+    | 'edit'
+    | 'move'
+    | 'release'
+    | 'target'
+    | 'link'
+    | 'status'
+    | 'archive'
+    | 'comment'
+    | 'todo'
+    | 'task'
+    | 'baseline'
+    | 'review'
+    | 'test_run';
   [key: string]: any;
 }
 
@@ -62,6 +83,21 @@ interface GuidedChatPanelProps {
    * says so in both.
    */
   applyTarget?: ApplyTarget;
+  /**
+   * A turn another page asked for (openAssistant, #726): sent once, as soon
+   * as the transcript has loaded, and reported back through onAutoSent so
+   * the caller can forget it. An empty conversation is not kicked off when
+   * one is waiting: the request is the opening turn.
+   */
+  autoSend?: { id: number; message: string } | null;
+  onAutoSent?: (id: number) => void;
+  /**
+   * Rewrite a message just before it goes, e.g. to say which page the
+   * reader is on. The transcript shows what was sent.
+   */
+  decorateMessage?: (content: string) => string;
+  /** Leave the title out: the floating panel draws its own header. */
+  hideHeader?: boolean;
 }
 
 type Segment =
@@ -106,6 +142,7 @@ const KIND_LABELS: Record<string, string> = {
   artifact: 'New artifact',
   edit: 'Change',
   move: 'Move',
+  ...PROJECT_ACTION_LABELS,
 };
 
 /**
@@ -164,61 +201,8 @@ const FRAMING_FIELD_LABELS: Record<string, string> = {
   target_users: 'Target users',
 };
 
-// Canned assistant commands, sent as ordinary chat messages so they read
-// naturally in the transcript and the reply flows through the normal turn.
-type QuickAction = { label: string; title: string; message: string };
-
-const QUICK_ACTIONS: QuickAction[] = [
-  {
-    label: 'Review step',
-    title: 'Quality-check the entries on the current step',
-    message:
-      'Review this step: quality-check each entry I have filled in — clarity, specificity, testability — and call out the weak ones with concrete improvements (use replace suggestions where useful).',
-  },
-  {
-    label: 'Gap analysis',
-    title: 'What is missing, here and across the definition',
-    message:
-      'Do a gap analysis: given everything entered so far, what is missing on this step and across the definition as a whole? Propose the most important missing entries as suggestions.',
-  },
-  {
-    label: 'Conflict check',
-    title: 'Find contradictions, duplicates and inconsistencies',
-    message:
-      'Check for conflicts: contradictions, duplicates, or inconsistencies anywhere in what I have entered so far. List each one, say which entries clash, and how you would resolve it.',
-  },
-  {
-    label: 'Draft for me',
-    title: 'Propose entries for the current step',
-    message:
-      'Draft entries for this step based on everything you know about the product so far, as suggestion blocks I can add or apply.',
-  },
-];
-
-// Beside an artifact there is no step to review and nothing to draft into,
-// so the notes panel offers what a reader of one artifact actually wants.
-const NOTES_QUICK_ACTIONS: QuickAction[] = [
-  {
-    label: 'Review this',
-    title: 'Quality-check the artifact on screen',
-    message:
-      'Review the artifact I am reading: is it clear, specific and testable? Quote the wording that weakens it and say how you would rewrite it.',
-  },
-  {
-    label: 'How would I verify it?',
-    title: 'Propose verification for this artifact',
-    message:
-      'How would I verify the artifact I am reading? Propose a verification method and the test cases that would demonstrate it, and say what evidence each would produce.',
-  },
-  {
-    label: 'What is missing?',
-    title: 'Gaps around this artifact',
-    message:
-      'What is missing around the artifact I am reading — unstated hazards, absent non-functional requirements, needs or requirements it should trace to but does not?',
-  },
-];
-
 const suggestionSummary = (s: CopilotSuggestion): { title: string; detail: string } => {
+  if (isProjectActionKind(s.kind)) return projectActionSummary(s);
   switch (s.kind) {
     case 'framing':
       return { title: FRAMING_FIELD_LABELS[s.field] || String(s.field || ''), detail: s.text || '' };
@@ -258,6 +242,7 @@ const applyLabels = (
 ): { button: string; done: string } => {
   // A change to the project says so wherever the card is shown: the wizard
   // sits on top of a project too, and its locked entries are artifacts.
+  if (isProjectActionKind(s.kind)) return projectActionLabels(s);
   switch (s.kind) {
     case 'edit':
       return { button: 'Apply change', done: '✓ Changed' };
@@ -312,12 +297,16 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   applied = {},
   onApplySuggestions,
   applyTarget = 'wizard',
+  autoSend = null,
+  onAutoSent,
+  decorateMessage,
+  hideHeader = false,
 }, ref) => {
   // Suggestions are applied into wizard entry sections. Beside an artifact
   // there is nowhere to put them, so the cards render without their buttons
   // rather than offering an action that cannot work.
   const canApply = !!onApplySuggestions;
-  const quickActions = artifactId ? NOTES_QUICK_ACTIONS : QUICK_ACTIONS;
+  const quickActions = quickActionsFor(artifactId, applyTarget, step);
   const [messages, setMessages] = useState<GuidedChatMessage[]>([]);
   const [composerText, setComposerText] = useState('');
   const [sending, setSending] = useState(false);
@@ -371,6 +360,10 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   // The session on screen now, for a send that outlives a session change.
   const sessionRef = useRef(sessionId);
   sessionRef.current = sessionId;
+  const autoSendRef = useRef(autoSend);
+  autoSendRef.current = autoSend;
+  const decorateRef = useRef(decorateMessage);
+  decorateRef.current = decorateMessage;
 
   const appendMessage = useCallback((msg: GuidedChatMessage) => {
     setMessages((prev) => {
@@ -479,6 +472,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
   useEffect(() => {
     if (!loaded || loaded.sessionId !== sessionId || !loaded.empty || kickedRef.current) return;
     kickedRef.current = true;
+    // A turn someone asked for opens the conversation itself.
+    if (autoSendRef.current) return;
     (async () => {
       try {
         const kick = await guidedAPI.kickoffChat(
@@ -581,7 +576,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
 
   // preset carries a quick-action message; without it the composer text is sent.
   const send = async (preset?: string) => {
-    const content = (preset ?? composerText).trim();
+    const typed = (preset ?? composerText).trim();
+    const content = typed && decorateRef.current ? decorateRef.current(typed) : typed;
     if (!sessionId || !content || sending) return;
     setSending(true);
     setSendError('');
@@ -619,6 +615,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
       setSending(false);
     }
   };
+
+  useAutoSend(!!loaded && loaded.sessionId === sessionId, autoSend, send, onAutoSent);
 
   // Apply the cards not already on their way, marking them pending first.
   // Null when there is nothing left to apply.
@@ -752,6 +750,8 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
 
   return (
     <div
+      data-help-pane="guided.assistant"
+      data-help-key="guided.assistant"
       style={{
         display: 'flex',
         flexDirection: 'column',
@@ -770,10 +770,12 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
             }),
       }}
     >
-      <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
-        <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 14 }}>V&amp;V Assistant</div>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{subtitle}</div>
-      </div>
+      {!hideHeader && (
+        <div style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+          <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: 14 }}>V&amp;V Assistant</div>
+          <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{subtitle}</div>
+        </div>
+      )}
 
       <div ref={scrollerRef} style={{ flex: 1, overflowY: 'auto', padding: 12 }}>
         {/* Not while the notice below says no runner can answer (#379, bug 211). */}
@@ -826,6 +828,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
                             x.seg.type === 'suggestion' &&
                             !!x.seg.suggestion &&
                             isKnownKind(x.seg.suggestion.kind) &&
+                            !ONE_AT_A_TIME_KINDS.has(x.seg.suggestion.kind) &&
                             !applied[x.key]
                         )
                         .map((x) => ({ suggestion: x.seg.suggestion as CopilotSuggestion, key: x.key }));
@@ -864,28 +867,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
             )}
           </div>
         ))}
-        {runnerOffline && (
-          <div
-            style={{
-              border: '1px solid var(--tint-yellow-border)',
-              background: 'var(--tint-yellow)',
-              borderRadius: 6,
-              padding: '10px 12px',
-              marginBottom: 8,
-              fontSize: 12,
-              color: 'var(--warning-text)',
-              lineHeight: 1.5,
-            }}
-          >
-            <div style={{ fontWeight: 700, marginBottom: 4 }}>⚠ V&amp;V Assistant not connected</div>
-            No runner is online to answer, so assistant replies are paused. To connect one, open{' '}
-            <Link to="/org/settings" style={{ color: 'var(--warning-text)', fontWeight: 600 }}>
-              Workspace Settings → Runners
-            </Link>{' '}
-            and launch the Agent Connector on your machine — or restart it if it was already running.
-            Messages you send are saved and will be answered as soon as a runner connects.
-          </div>
-        )}
+        {runnerOffline && <RunnerOfflineNotice />}
         {runnerStarting && !runnerOffline && !partial && <CloudRunnerStartingNotice />}
         {partial && (
           <div data-testid="assistant-partial" style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>

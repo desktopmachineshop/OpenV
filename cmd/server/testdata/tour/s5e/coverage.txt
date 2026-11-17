@@ -17,9 +17,6 @@ DELETE /api/v1/attachments/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/attribute-definitions/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/automations/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/baselines/{id}: 401, 404; phantom_matrix (errors only)
-DELETE /api/v1/crew-edges/{id}: 401, 404; phantom_matrix (errors only)
-DELETE /api/v1/crew-nodes/{id}: 401, 404; phantom_matrix (errors only)
-DELETE /api/v1/crews/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/evidence-bundles/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/evidence-files/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/links/{id}: 401, 404; phantom_matrix (errors only)
@@ -27,6 +24,7 @@ DELETE /api/v1/me/avatar: 200, 401; phantom_matrix
 DELETE /api/v1/me/connected-apps/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/me/provider-tokens/{provider}: 400, 401; phantom_matrix (errors only)
 DELETE /api/v1/me/push-subscriptions: 400, 401; phantom_matrix (errors only)
+DELETE /api/v1/me/saved-searches/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/notifications/cleared: 200, 401; phantom_matrix
 DELETE /api/v1/org-teams/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/org-teams/{id}/members/{userId}: 401, 404; phantom_matrix (errors only)
@@ -36,36 +34,41 @@ DELETE /api/v1/orgs/{id}/invitations/{invId}: 204, 401, 404; over_plan_self_host
 DELETE /api/v1/orgs/{id}/logo: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/orgs/{id}/members/{userId}: 204, 401, 404; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix
 DELETE /api/v1/orgs/{id}/my-runner-key: 204, 401, 404; over_plan_tiers_on, phantom_matrix
+DELETE /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/orgs/{id}/runner-session: 400, 401, 404; over_plan_tiers_on, phantom_matrix (errors only)
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: 204, 401, 404; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix
 DELETE /api/v1/projects/{id}: 204, 401, 404; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix
 DELETE /api/v1/projects/{id}/members/{userId}: 401, 404; phantom_matrix (errors only)
+DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}: 401, 404; phantom_matrix (errors only)
+DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}: 401, 404; phantom_matrix (errors only)
+DELETE /api/v1/projects/{id}/releases/{releaseId}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/projects/{id}/team-access/{teamId}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/provider-api-keys/{env}: 400, 401, 403; phantom_matrix (errors only)
 DELETE /api/v1/repo-connections/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/share-links/{id}: 204, 401, 404; over_plan_tiers_on, phantom_matrix
 DELETE /api/v1/shared-products/{id}: 401, 403, 404; phantom_matrix (errors only)
 DELETE /api/v1/shared-products/{id}/vote: 401, 403, 404; phantom_matrix (errors only)
-DELETE /api/v1/team-edges/{id}: 401, 404; phantom_matrix (errors only)
-DELETE /api/v1/team-nodes/{id}: 401, 404; phantom_matrix (errors only)
-DELETE /api/v1/teams/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/test-results/{id}/citations/{bundleId}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/test-runs/{id}: 401, 404; phantom_matrix (errors only)
+DELETE /api/v1/todos/{id}: 401, 404; phantom_matrix (errors only)
 DELETE /api/v1/work-items/{id}: 401, 404; phantom_matrix (errors only)
+DELETE /api/v1/work-items/{id}/external-links/{otherId}: 401, 404; phantom_matrix (errors only)
+DELETE /api/v1/work-items/{id}/relationships/{otherId}: 401, 404; phantom_matrix (errors only)
 DELETE /mcp: 405; phantom_matrix (errors only)
 GET /.well-known/oauth-authorization-server: 200; phantom_matrix
 GET /.well-known/oauth-protected-resource: 200; phantom_matrix
 GET /.well-known/oauth-protected-resource/mcp: 200; phantom_matrix
+GET /api/v1/admin/metrics/usage: 200, 401, 403; phantom_matrix
 GET /api/v1/admin/metrics/users: 200, 401, 403; phantom_matrix
 GET /api/v1/admin/metrics/visitors: 200, 401, 403; phantom_matrix
 GET /api/v1/admin/users: 200, 401, 403; phantom_matrix
 GET /api/v1/admin/workspaces: 200, 401, 403; phantom_matrix
 GET /api/v1/agent-runs: 200, 401, 404; phantom_matrix, real_id_reads
-GET /api/v1/agent-runs/delegate/{id}: 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 GET /api/v1/agent-runs/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/agent-runs/{id}/logs: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/agent-runs/{id}/stream: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/agent-runs/{id}/tree: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/agent-stats: 400, 401; phantom_matrix (errors only)
 GET /api/v1/agents: 200, 401; phantom_matrix, real_id_reads
 GET /api/v1/agents/{slug}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/agents/{slug}/raw: 200, 401, 404; phantom_matrix, real_id_reads
@@ -92,10 +95,6 @@ GET /api/v1/automations/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/baselines/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/baselines/{id}/diff: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/chatter: 200, 400, 401, 404; phantom_matrix, real_id_reads
-GET /api/v1/crew-templates: 200, 401; phantom_matrix
-GET /api/v1/crews: 200, 401; phantom_matrix, real_id_reads
-GET /api/v1/crews/{id}: 200, 401, 404; phantom_matrix, real_id_reads
-GET /api/v1/crews/{id}/export: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/events: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/evidence-bundles/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/evidence-files/{id}/download: 200, 401, 404; phantom_matrix, real_id_reads
@@ -108,12 +107,14 @@ GET /api/v1/interviews/{id}/invites: 200, 401, 404; phantom_matrix, real_id_read
 GET /api/v1/interviews/{id}/sessions: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/links: 200, 400, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/links/{id}: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/me/comment-reads: 200, 401; phantom_matrix
 GET /api/v1/me/connected-apps: 200, 401; phantom_matrix
 GET /api/v1/me/default-workspace: 200, 401; phantom_matrix
 GET /api/v1/me/notification-prefs: 200, 401; phantom_matrix
 GET /api/v1/me/provider-tokens/{provider}: 200, 400, 401; phantom_matrix, real_id_reads
 GET /api/v1/me/push-subscriptions: 200, 401; phantom_matrix
 GET /api/v1/me/push/config: 200, 401; phantom_matrix
+GET /api/v1/me/saved-searches: 400, 401; phantom_matrix (errors only)
 GET /api/v1/meta/artifact-types: 200, 401; phantom_matrix
 GET /api/v1/meta/attribute-definitions: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/meta/link-types: 200, 401; phantom_matrix
@@ -133,6 +134,7 @@ GET /api/v1/orgs/{id}/limits: 200, 401, 404; over_plan_self_hosted, over_plan_ti
 GET /api/v1/orgs/{id}/logo: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/orgs/{id}/members: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/orgs/{id}/my-runner-key: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/orgs/{id}/plan-calendar: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/orgs/{id}/quality-rules: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/orgs/{id}/runner-pool: 200, 401, 403, 404; phantom_matrix, real_id_reads
 GET /api/v1/orgs/{id}/runner-session: 200, 401, 404; phantom_matrix, real_id_reads
@@ -140,6 +142,8 @@ GET /api/v1/orgs/{id}/teams: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/orgs/{id}/usage: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/orgs/{id}/worker-keys: 200, 401, 403, 404; phantom_matrix, real_id_reads
 GET /api/v1/orgs/{id}/worker-status: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/plan/master: 200, 401; phantom_matrix
+GET /api/v1/plan/mine: 200, 401; phantom_matrix
 GET /api/v1/projects: 200, 401; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/ai-map: 200, 401, 404; over_plan_tiers_on, phantom_matrix, real_id_reads
@@ -161,18 +165,25 @@ GET /api/v1/projects/{id}/interviews: 200, 401, 404; phantom_matrix, real_id_rea
 GET /api/v1/projects/{id}/linked-artifacts: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/members: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/parties: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/projects/{id}/plan: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/projects/{id}/plan/export: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/projects/{id}/priority-detection: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/profile: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/quality: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/quality-rules: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/projects/{id}/releases: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/repo-connections: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/report: 200, 401, 404; over_plan_tiers_on, phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/review-queue: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/share-links: 200, 401, 403, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/team-access: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/test-runs: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/projects/{id}/todos: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/vv/coverage: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/vv/gaps: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/vv/matrix: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/projects/{id}/vv/releases: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/projects/{id}/vv/releases/{releaseId}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/vv/report: 200, 401, 404; over_plan_tiers_on, phantom_matrix, real_id_reads
 GET /api/v1/projects/{id}/work-items: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/projects/{projectID}/attachments: 200, 401, 404; phantom_matrix, real_id_reads
@@ -197,24 +208,23 @@ GET /api/v1/public/share/{token}/preview.png: 200, 404; phantom_matrix, real_id_
 GET /api/v1/release: 200, 401; phantom_matrix
 GET /api/v1/search: 200, 401; phantom_matrix, real_id_reads
 GET /api/v1/shared-products: 200, 401; phantom_matrix
-GET /api/v1/teams: 200, 401; phantom_matrix, real_id_reads
-GET /api/v1/teams/{id}: 200, 401, 404; phantom_matrix, real_id_reads
-GET /api/v1/teams/{id}/export: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/templates: 200, 401; phantom_matrix
 GET /api/v1/test-results/{id}/citations: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/test-runs/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/test-runs/{id}/citations: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/test-runs/{id}/results: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/todos: 200, 401; phantom_matrix
+GET /api/v1/todos/{id}: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/users: 200, 401; phantom_matrix, real_id_reads
 GET /api/v1/users/{id}/avatar: 200, 401, 404; phantom_matrix, real_id_reads
 GET /api/v1/work-items/{id}: 200, 401, 404; phantom_matrix, real_id_reads
+GET /api/v1/work-items/{id}/todos: 200, 401, 404; phantom_matrix, real_id_reads
 GET /health: 200; phantom_matrix
 GET /mcp: 405; phantom_matrix (errors only)
 GET /oauth/authorize: 400; phantom_matrix (errors only)
 HEAD /api/v1/public/connector/download: 404; phantom_matrix (errors only)
 POST /api/v1/admin/users/{id}/password-reset: 401, 403, 404; phantom_matrix (errors only)
 POST /api/v1/agent-runs/claim: 200, 204, 400, 401, 403; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix
-POST /api/v1/agent-runs/delegate: 400, 401, 403; phantom_matrix (errors only)
 POST /api/v1/agent-runs/{id}/cancel: 200, 401, 404; over_plan_tiers_on, phantom_matrix
 POST /api/v1/agent-runs/{id}/finish: 401, 403, 404; phantom_matrix (errors only)
 POST /api/v1/agent-runs/{id}/logs: 200, 401, 403, 404; over_plan_tiers_on, phantom_matrix
@@ -225,6 +235,7 @@ POST /api/v1/agents: 400, 401, 403; phantom_matrix (errors only)
 POST /api/v1/agents/sync: 200, 401, 403; over_plan_tiers_on, phantom_matrix
 POST /api/v1/agents/{slug}/runs: 201, 400, 401, 403, 404; over_plan_tiers_on, phantom_matrix, real_id_reads
 POST /api/v1/artifacts: 400, 401, 403, 404; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix (errors only)
+POST /api/v1/artifacts/{id}/reinstate: 401, 404; phantom_matrix (errors only)
 POST /api/v1/artifacts/{id}/restore: 400, 401, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/attachments/upload: 400, 401, 404; phantom_matrix (errors only)
 POST /api/v1/attachments/{id}/versions: 401, 404; phantom_matrix (errors only)
@@ -235,6 +246,7 @@ POST /api/v1/auth/invitations/preview: 400, 404; phantom_matrix (errors only)
 POST /api/v1/auth/link: 400; phantom_matrix (errors only)
 POST /api/v1/auth/login: 400; phantom_matrix (errors only)
 POST /api/v1/auth/logout: 204; phantom_matrix
+POST /api/v1/auth/oidc/account-deletion: 404; phantom_matrix (errors only)
 POST /api/v1/auth/password-reset: 400; phantom_matrix (errors only)
 POST /api/v1/auth/password-reset/confirm: 400; phantom_matrix (errors only)
 POST /api/v1/auth/register: 400; phantom_matrix (errors only)
@@ -245,12 +257,6 @@ POST /api/v1/auth/verify-email/resend: 400, 401; phantom_matrix (errors only)
 POST /api/v1/automations: 400, 401, 403, 404; over_plan_tiers_on, phantom_matrix (errors only)
 POST /api/v1/automations/{id}/run-now: 201, 401, 403, 404; phantom_matrix, real_id_reads
 POST /api/v1/chatter: 400, 401, 403, 404; over_plan_tiers_on, phantom_matrix (errors only)
-POST /api/v1/crews: 400, 401; phantom_matrix (errors only)
-POST /api/v1/crews/import: 400, 401, 403; over_plan_tiers_on, phantom_matrix (errors only)
-POST /api/v1/crews/{id}/clone: 401, 404; phantom_matrix (errors only)
-POST /api/v1/crews/{id}/edges: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
-POST /api/v1/crews/{id}/nodes: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
-POST /api/v1/crews/{id}/runs: 201, 401, 403, 404; phantom_matrix, real_id_reads
 POST /api/v1/evidence-bundles/{id}/files: 401, 404; phantom_matrix (errors only)
 POST /api/v1/guided-sessions: 400, 401, 404; phantom_matrix (errors only)
 POST /api/v1/guided-sessions/{id}/abandon: 401, 404; phantom_matrix (errors only)
@@ -265,6 +271,7 @@ POST /api/v1/interviews/{id}/invites: 400, 401, 403, 404; phantom_matrix, real_i
 POST /api/v1/links: 400, 401; phantom_matrix (errors only)
 POST /api/v1/me/avatar: 400, 401; phantom_matrix (errors only)
 POST /api/v1/me/push-subscriptions: 400, 401; phantom_matrix (errors only)
+POST /api/v1/me/saved-searches: 400, 401; phantom_matrix (errors only)
 POST /api/v1/notifications/clear: 200, 401; phantom_matrix
 POST /api/v1/notifications/read: 400, 401; phantom_matrix (errors only)
 POST /api/v1/notifications/read-all: 200, 401; over_plan_tiers_on, phantom_matrix
@@ -284,6 +291,7 @@ POST /api/v1/orgs/{id}/invitations: 400, 401, 403, 404; phantom_matrix, real_id_
 POST /api/v1/orgs/{id}/logo: 401, 404; phantom_matrix (errors only)
 POST /api/v1/orgs/{id}/members: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/orgs/{id}/my-runner-key: 401, 404; phantom_matrix (errors only)
+POST /api/v1/orgs/{id}/plan-calendar/time-off: 401, 404; phantom_matrix (errors only)
 POST /api/v1/orgs/{id}/restore: 401, 404; phantom_matrix (errors only)
 POST /api/v1/orgs/{id}/runner-session: 401, 404; phantom_matrix (errors only)
 POST /api/v1/orgs/{id}/runner-session/extend: 401, 404; phantom_matrix (errors only)
@@ -296,11 +304,19 @@ POST /api/v1/projects/{id}/draft-test-cases: 400, 401, 403, 404; phantom_matrix,
 POST /api/v1/projects/{id}/evidence-bundles: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/interviews: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/members: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+POST /api/v1/projects/{id}/plan/baselines: 401, 404; phantom_matrix (errors only)
+POST /api/v1/projects/{id}/plan/import: 401, 404; phantom_matrix (errors only)
+POST /api/v1/projects/{id}/plan/level: 401, 404; phantom_matrix (errors only)
+POST /api/v1/projects/{id}/plan/milestones: 401, 404; phantom_matrix (errors only)
+POST /api/v1/projects/{id}/plan/recalculate: 401, 404; phantom_matrix (errors only)
+POST /api/v1/projects/{id}/plan/reschedule-remaining: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/reindex-embeddings: 401, 404; phantom_matrix (errors only)
+POST /api/v1/projects/{id}/releases: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/repo-connections: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/review-round: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/share-links: 400, 401, 403, 404; over_plan_tiers_on, phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/test-runs: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+POST /api/v1/projects/{id}/todos: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/work-items: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/proposals/bulk: 200, 400, 401; phantom_matrix
 POST /api/v1/proposals/{id}/approve: 401, 403, 404; phantom_matrix (errors only)
@@ -321,24 +337,23 @@ POST /api/v1/runner-pool/nodes/{id}/heartbeat: 401, 403; phantom_matrix (errors 
 POST /api/v1/runner-pool/nodes/{id}/release: 401, 403; phantom_matrix (errors only)
 POST /api/v1/shared-products: 400, 401, 403; over_plan_tiers_on, phantom_matrix (errors only)
 POST /api/v1/shared-products/{id}/report: 401, 403, 404; phantom_matrix (errors only)
-POST /api/v1/teams: 400, 401; phantom_matrix (errors only)
-POST /api/v1/teams/import: 400, 401, 403; phantom_matrix (errors only)
-POST /api/v1/teams/{id}/clone: 401, 404; phantom_matrix (errors only)
-POST /api/v1/teams/{id}/edges: 401, 404; phantom_matrix (errors only)
-POST /api/v1/teams/{id}/nodes: 401, 404; phantom_matrix (errors only)
-POST /api/v1/teams/{id}/runs: 401, 404; phantom_matrix (errors only)
 POST /api/v1/templates: 400, 401, 404; phantom_matrix (errors only)
 POST /api/v1/templates/{id}/projects: 201, 400, 401, 403, 404; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix, real_id_reads
 POST /api/v1/test-results/{id}/citations: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/test-runs/{id}/agent-run: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/test-runs/{id}/results: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+POST /api/v1/todos: 400, 401; phantom_matrix (errors only)
+POST /api/v1/todos/{id}/done: 401, 404; phantom_matrix (errors only)
+POST /api/v1/todos/{id}/promote: 401, 404; phantom_matrix (errors only)
 POST /api/v1/work-items/{id}/comments: 400, 401, 403, 404; over_plan_tiers_on, phantom_matrix, real_id_reads (errors only)
 POST /api/v1/work-items/{id}/move: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+POST /api/v1/work-items/{id}/todos: 401, 404; phantom_matrix (errors only)
 POST /mcp: 401; phantom_matrix (not counted)
 POST /oauth/register: 400; phantom_matrix (errors only)
 POST /oauth/revoke: 200; phantom_matrix
 POST /oauth/token: 400; phantom_matrix (errors only)
 PUT /api/v1/admin/users/{id}/admin: 400, 401, 403; phantom_matrix (errors only)
+PUT /api/v1/agent-arrangement: 400, 401, 403; phantom_matrix (errors only)
 PUT /api/v1/agents/{slug}: 400, 401, 403; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/agents/{slug}/raw: 400, 401, 403; phantom_matrix (errors only)
 PUT /api/v1/artifacts/{id}: 400, 401, 404; phantom_matrix, real_id_reads (errors only)
@@ -346,14 +361,12 @@ PUT /api/v1/artifacts/{id}/status: 400, 401, 404; phantom_matrix, real_id_reads 
 PUT /api/v1/attachments/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/attribute-definitions/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/automations/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
-PUT /api/v1/crew-edges/{id}: 401, 404; phantom_matrix (errors only)
-PUT /api/v1/crew-nodes/{id}: 401, 404; phantom_matrix (errors only)
-PUT /api/v1/crews/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/evidence-bundles/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/guided-sessions/{id}/step: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/interviews/{id}/persona: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/links/{id}: 400, 401, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/links/{id}/confirm: 401, 404; phantom_matrix (errors only)
+PUT /api/v1/me/comment-reads: 400, 401; phantom_matrix (errors only)
 PUT /api/v1/me/connected-apps/{id}/workspaces: 400, 401; phantom_matrix (errors only)
 PUT /api/v1/me/default-workspace: 400, 401, 404; phantom_matrix (errors only)
 PUT /api/v1/me/notification-prefs: 400, 401; phantom_matrix (errors only)
@@ -365,22 +378,31 @@ PUT /api/v1/orgs/{id}: 200, 400, 401, 403, 404; over_plan_self_hosted, over_plan
 PUT /api/v1/orgs/{id}/members/me/preview: 400, 401, 404; over_plan_tiers_on, phantom_matrix (errors only)
 PUT /api/v1/orgs/{id}/members/{userId}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/orgs/{id}/plan: 400, 401, 403; phantom_matrix (errors only)
+PUT /api/v1/orgs/{id}/plan-calendar: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/orgs/{id}/quality-rules: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/projects/{id}: 400, 401, 403, 404; over_plan_self_hosted, over_plan_tiers_on, phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/projects/{id}/members/{userId}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/projects/{id}/parties: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+PUT /api/v1/projects/{id}/plan/milestones/{milestoneId}: 401, 404; phantom_matrix (errors only)
+PUT /api/v1/projects/{id}/plan/release-milestones/{releaseId}: 401, 404; phantom_matrix (errors only)
+PUT /api/v1/projects/{id}/plan/resources/{assigneeId}: 401, 404; phantom_matrix (errors only)
+PUT /api/v1/projects/{id}/plan/settings: 401, 404; phantom_matrix (errors only)
+PUT /api/v1/projects/{id}/priority-detection: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/projects/{id}/profile: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/projects/{id}/quality-rules: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+PUT /api/v1/projects/{id}/release-order: 401, 404; phantom_matrix (errors only)
+PUT /api/v1/projects/{id}/releases/{releaseId}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/projects/{id}/team-access: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 PUT /api/v1/provider-api-keys/{env}: 400, 401, 403; phantom_matrix (errors only)
 PUT /api/v1/provider-settings: 400, 401, 403; phantom_matrix (errors only)
 PUT /api/v1/repo-connections/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/repo-connections/{id}/my-path: 401, 403, 404; over_plan_tiers_on, phantom_matrix (errors only)
 PUT /api/v1/shared-products/{id}/vote: 401, 403, 404; phantom_matrix (errors only)
-PUT /api/v1/team-edges/{id}: 401, 404; phantom_matrix (errors only)
-PUT /api/v1/team-nodes/{id}: 401, 404; phantom_matrix (errors only)
-PUT /api/v1/teams/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/test-runs/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+PUT /api/v1/todos/{id}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/work-items/{id}: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
+PUT /api/v1/work-items/{id}/external-links/{otherId}: 401, 404; phantom_matrix (errors only)
+PUT /api/v1/work-items/{id}/relationships/{otherId}: 401, 404; phantom_matrix (errors only)
+PUT /api/v1/work-items/{id}/schedule: 401, 404; phantom_matrix (errors only)
 
-s5e: 370 of 371 routes reached (99.7%), 169 with a 2xx or 3xx answer (45.6%)
+s5e: 392 of 393 routes reached (99.7%), 176 with a 2xx or 3xx answer (44.8%)

@@ -22,6 +22,11 @@ type SearchHit struct {
 	// from the semantic/hybrid modes. It is omitted for pure keyword hits,
 	// which have no vector distance.
 	Score float64 `json:"score,omitempty"`
+	// Status and Owner are the hit's review status and owner attribute,
+	// carried only when SearchOptions.Facets asks for them (the chip search
+	// bar shows them and filters by them, issue #722).
+	Status string `json:"status,omitempty"`
+	Owner  string `json:"owner,omitempty"`
 }
 
 // SearchOptions varies what a search matches.
@@ -32,6 +37,20 @@ type SearchOptions struct {
 	// that shipped searching by ref (release.FeatureSearchByRef), which then
 	// gets exactly the title/body search it had before.
 	MatchRefs bool
+	// Types, Statuses and Owners narrow the hits to those whose type, review
+	// status or owner attribute is one of the values given: a type and a
+	// status exactly, an owner as a substring without regard to case ("dav"
+	// finds "Dave Smith"). An empty list does not narrow.
+	Types    []string
+	Statuses []string
+	Owners   []string
+	// Facets carries each hit's status and owner back.
+	Facets bool
+}
+
+// Filtered reports whether the options narrow the hits by a facet.
+func (o SearchOptions) Filtered() bool {
+	return len(o.Types) > 0 || len(o.Statuses) > 0 || len(o.Owners) > 0
 }
 
 // snippetRadius is how many runes of context Snippet keeps on each side of

@@ -114,8 +114,8 @@ func (h *Handler) ImportProject(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Creator becomes the project owner (mirrors CreateProject).
-	if user := CurrentUser(r); user != nil && h.MemberService != nil {
-		if err := h.MemberService.AddMember(projectID, user.ID, members.RoleOwner); err != nil {
+	if creator := projectCreator(r); creator != "" && h.MemberService != nil {
+		if err := h.MemberService.AddMember(projectID, creator, members.RoleOwner); err != nil {
 			slog.Warn("api: failed to add creator as project owner", "project_id", projectID, "error", err)
 		}
 	}

@@ -234,7 +234,7 @@ func proposalsEventsTour(tr *tour) {
 		jsonBody(`{"requirement_ids":["{{rh}}"]}`))
 	tr.step("the box key drafts in a project no one has: 404, as a person's is", box, draft,
 		on("phantom"), jsonBody(`{"requirement_ids":["{{r1}}"]}`))
-	tr.setup("delete L's test-case author", o, "DELETE /api/v1/agents/{slug}", at("slug", "test-case-author"), inL,
+	tr.setup("delete L's test auditor", o, "DELETE /api/v1/agents/{slug}", at("slug", "test-auditor"), inL,
 		expect(http.StatusNoContent))
 	tr.step("draft in L, whose test-case author was deleted: 404", o, draft, on("lp"), inL,
 		jsonBody(`{"requirement_ids":["{{phantom}}"]}`))

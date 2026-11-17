@@ -11,7 +11,8 @@ few people. It is separate from being a workspace admin.
 - The **first account registered** on a deployment is the platform admin.
   On a fresh self-hosted OpenV, register first and that account is it.
 - A platform admin makes others: open **Platform admin** from the account
-  menu (top right), find the person under *Platform admins* and click
+  menu (top right), find the person under *Platform admins* (or in
+  *Usage*, *By person*) and click
   **Make admin**. **Remove** takes it away again. You cannot remove your
   own standing, and the last platform admin cannot be removed.
 
@@ -29,11 +30,40 @@ hand it to somebody you have identified. Each link you make is written to
 the server log with your account. Accounts that sign in through Google or
 single sign-on have no password, so they have no button.
 
+## Usage
+
+The *Usage* section shows how much each workspace and each person uses
+OpenV, and whether that use is speeding up or slowing down. It shows
+**counts only**: how many requirements, test cases, links, test runs and
+comments a workspace holds, and how many changes are made each week. It
+never shows what an artifact says, its title or its reference.
+
+- **By workspace** groups workspaces by plan, then company workspaces
+  before personal ones, busiest first. Each row shows the members who
+  signed in in the last 30 days out of all its members, what it holds, a
+  bar per week for the last 12 weeks, its pace and when it last changed.
+  Click a workspace's name to see its members under it, each with their
+  own pace. **People** opens *By person* filtered to that workspace.
+- **By person** lists everyone. Filter by plan, by workspace (narrowed to
+  the plan you chose), by pace, or search by name or email. Each person
+  shows their workspaces and role in each, the days they signed in in the
+  last 4 weeks, their weekly changes, their pace and when they were last
+  seen. **Make admin** and **Reset link** are here too.
+
+**Pace** compares the last 4 weeks with the 4 weeks before. A rise of a
+quarter or more is *Accelerating* and a fall of a quarter or more is
+*Slowing*; anything between is *Steady*. *New* means activity lately and
+none before, *Gone quiet* means activity before and none lately, and *No
+activity* means none in either. A change is anything a person or an agent
+did that shows in a project's Activity; jobs the system runs itself do not
+count. A person who only reads is paced on the days they signed in. Hover
+a badge to see the two totals it compares.
+
 ## Workspaces and plans
 
-The *Workspaces* table lists every workspace on the deployment with its
-type, plan, member count and creation date. Change a plan from the
-selector: a plan decides the workspace's limits and its default release
+The *Workspaces* table (in *Usage*, *By workspace*, once your release has
+the usage view) lists every workspace on the deployment with its type,
+plan and members. Change a plan from the selector: a plan decides the workspace's limits and its default release
 channel. A workspace you move from Single User, Business Lite, Self-hosted
 or Open source onto Business or Enterprise stays on the nightly channel,
 as it would after a checkout, so none of the features its members use

@@ -16,6 +16,7 @@ DELETE /api/v1/attachments/{id}: 204, 404; attachments
 DELETE /api/v1/attribute-definitions/{id}: 204, 403, 404; artifacts_attributes
 DELETE /api/v1/baselines/{id}: 204, 403, 404; baselines_documents
 DELETE /api/v1/links/{id}: 204, 404; links_managed_edits
+DELETE /api/v1/me/saved-searches/{id}: 204, 404; review_chatter_search
 DELETE /api/v1/projects/{id}: 204, 404; projects_templates
 DELETE /api/v1/share-links/{id}: 204, 403, 404; share_links_public
 GET /api/v1/artifacts: 200, 400, 401, 404; artifacts_attributes
@@ -32,6 +33,8 @@ GET /api/v1/baselines/{id}/diff: 200, 400, 404; baselines_documents
 GET /api/v1/chatter: 200, 400, 404; artifacts_attributes, attachments, links_managed_edits, review_chatter_search
 GET /api/v1/links: 200, 400, 404; links_managed_edits
 GET /api/v1/links/{id}: 200, 404; links_managed_edits
+GET /api/v1/me/comment-reads: 200; review_chatter_search
+GET /api/v1/me/saved-searches: 200, 400; review_chatter_search
 GET /api/v1/meta/artifact-types: 200, 401; artifacts_attributes
 GET /api/v1/meta/attribute-definitions: 200, 404; artifacts_attributes
 GET /api/v1/meta/link-types: 200; artifacts_attributes
@@ -64,6 +67,7 @@ GET /api/v1/public/share/{token}/preview.png: 200, 404, 429; share_links_public
 GET /api/v1/search: 200, 401; review_chatter_search
 GET /api/v1/templates: 200; projects_templates
 POST /api/v1/artifacts: 201, 400, 403, 404; artifacts_attributes, projects_templates
+POST /api/v1/artifacts/{id}/reinstate: 200, 404, 409; artifacts_attributes
 POST /api/v1/artifacts/{id}/restore: 200, 400, 403, 404; artifacts_attributes, attachments
 POST /api/v1/attachments/upload: 201, 400, 404; attachments
 POST /api/v1/attachments/{id}/versions: 201, 400, 404; attachments
@@ -72,6 +76,7 @@ POST /api/v1/attribute-definitions: 201, 400, 403, 404; artifacts_attributes
 POST /api/v1/auth/share/accept: 200, 400, 401, 404, 429; share_links_public
 POST /api/v1/chatter: 200, 400, 403, 404; review_chatter_search
 POST /api/v1/links: 201, 400, 403; links_managed_edits, projects_templates
+POST /api/v1/me/saved-searches: 201, 400; review_chatter_search
 POST /api/v1/projects: 201, 400; projects_templates
 POST /api/v1/projects/import: 201, 400, 401; exports_imports
 POST /api/v1/projects/{id}/baselines: 201, 400, 404; baselines_documents
@@ -86,6 +91,7 @@ PUT /api/v1/attachments/{id}: 200, 400, 404; attachments
 PUT /api/v1/attribute-definitions/{id}: 200, 400, 403, 404; artifacts_attributes
 PUT /api/v1/links/{id}: 200, 400, 404; links_managed_edits
 PUT /api/v1/links/{id}/confirm: 200, 404; links_managed_edits
+PUT /api/v1/me/comment-reads: 200, 400; review_chatter_search
 PUT /api/v1/projects/{id}: 200, 400; projects_templates
 
-s5a: 76 of 371 routes reached (20.5%), 76 with a 2xx or 3xx answer (20.5%)
+s5a: 82 of 393 routes reached (20.9%), 82 with a 2xx or 3xx answer (20.9%)

@@ -42,7 +42,7 @@ func TestSchedulerCatchUp(t *testing.T) {
 		scheduled("au-skip", "Sweep", cron, missed),
 		scheduled("au-later", "Later", cron, later))
 	runs := newSchedRuns()
-	s := New(repo, runs, crewGraphs())
+	s := New(repo, runs)
 	if s.interval != 30*time.Second {
 		t.Errorf("New's tick interval = %s, want 30s", s.interval)
 	}
@@ -119,7 +119,7 @@ func TestSchedulerTickFiresEveryDueAutomation(t *testing.T) {
 		second.CatchUp = true
 		repo := newSchedRepo(first, second, scheduled("au-3", "Not yet", cron, now.Add(time.Hour)))
 		runs := newSchedRuns()
-		s := New(repo, runs, crewGraphs())
+		s := New(repo, runs)
 
 		s.tick()
 		want := []string{wantLaunch("au-2", "Scheduled run of automation: Second"),
@@ -141,7 +141,7 @@ func TestSchedulerTickFiresEveryDueAutomation(t *testing.T) {
 		repo := newSchedRepo(scheduled("au-1", "First", "*/5 * * * *", time.Now().Add(-time.Minute)))
 		repo.listErr = errors.New("connection refused")
 		runs := newSchedRuns()
-		s := New(repo, runs, crewGraphs())
+		s := New(repo, runs)
 		s.catchUp()
 		s.tick()
 		if n := len(runs.requests()) + len(repo.claimsMade()); n != 0 {
@@ -165,7 +165,7 @@ func TestSchedulerStartTicks(t *testing.T) {
 	cron := quietCron(t)
 	repo := newSchedRepo(scheduled("au-skip", "Skipped", cron, time.Now().Add(-time.Hour)))
 	runs := newSchedRuns()
-	s := New(repo, runs, crewGraphs())
+	s := New(repo, runs)
 	s.interval = time.Millisecond
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
@@ -215,7 +215,7 @@ func TestSchedulerPrompt(t *testing.T) {
 			a := scheduled("au-1", "Weekly report", "0 9 * * 1", time.Now().Add(-time.Minute))
 			a.PromptTemplate = tc.template
 			runs := newSchedRuns()
-			New(newSchedRepo(a), runs, crewGraphs()).tick()
+			New(newSchedRepo(a), runs).tick()
 			if got, want := launchLines(runs.requests()), []string{wantLaunch("au-1", tc.want)}; !equalLines(got, want) {
 				t.Errorf("launched\n  %q\nwant\n  %q", got, want)
 			}
@@ -224,60 +224,43 @@ func TestSchedulerPrompt(t *testing.T) {
 }
 
 // TestSchedulerTargets pins whom a scheduled run goes to, and what happens
-// when there is no one: a crew's run goes to its entry node's agent with the
-// crew and node named, and last_run_at is stamped after the launch; a crew
-// with no entry node, one whose entry node is gone, one no row has and an
-// automation with no target each launch nothing, log one line, and stay
-// claimed (next_run_at advanced), so the occurrence is skipped, not retried,
-// but leave last_run_at unset, since nothing ran (bug 74 of issue #379,
-// decided under Q35: the claim stamped it before the target was resolved). A
-// launch the run service refuses is logged and skipped the same way. A
-// stamp the repository refuses is logged; the run stands.
+// when there is no one: the automation's agent, and last_run_at is stamped
+// after the launch; an automation with no agent, or an empty agent id (as a
+// crew automation migration 0069 switched off has), launches nothing, logs one
+// line, and stays claimed (next_run_at advanced), so the occurrence is
+// skipped, not retried, but leaves last_run_at unset, since nothing ran (bug
+// 74 of issue #379, decided under Q35: the claim stamped it before the target
+// was resolved). A launch the run service refuses is logged and skipped the
+// same way. A stamp the repository refuses is logged; the run stands.
 func TestSchedulerTargets(t *testing.T) {
 	cron := quietCron(t)
-	crew := func(id string) *automations.Automation {
-		a := scheduled("au-"+id, "Crew "+id, cron, time.Now().Add(-time.Minute))
-		team := id
-		a.AgentID, a.TeamID = nil, &team
-		return a
-	}
+	agent := scheduled("au-agent", "Agent", cron, time.Now().Add(-time.Minute))
 	none := scheduled("au-none", "Nobody", cron, time.Now().Add(-time.Minute))
 	none.AgentID = nil
-	emptyAgent := crew("crew-1")
-	emptyAgent.ID = "au-empty-agent"
+	emptyAgent := scheduled("au-empty-agent", "Empty", cron, time.Now().Add(-time.Minute))
 	blank := ""
 	emptyAgent.AgentID = &blank
 
-	project, crewID, entry, automation := "proj-1", "crew-1", "node-entry", ""
-	crewLaunch := func(id string) string {
-		automation = id
-		return launchLine(agentruns.LaunchRequest{OrgID: "org-1", AgentID: "agent-entry", ProjectID: &project,
-			AutomationID: &automation, TeamID: &crewID, TeamNodeID: &entry,
-			Prompt: "Scheduled run of automation: Crew crew-1"})
-	}
+	project, agentID, automation := "proj-1", "agent-au-agent", "au-agent"
 	cases := []struct {
 		name   string
 		a      *automations.Automation
 		launch string
 		log    string
 	}{
-		{name: "a crew goes to its entry node's agent", a: crew("crew-1"), launch: crewLaunch("au-crew-1")},
-		{name: "an empty agent id counts as none", a: emptyAgent, launch: crewLaunch("au-empty-agent")},
-		{name: "a crew with no entry node", a: crew("crew-headless"),
-			log: "scheduler: automation Crew crew-headless (au-crew-headless) target unresolvable: team has no entry node"},
-		{name: "a crew whose entry node is gone", a: crew("crew-stale"),
-			log: "scheduler: automation Crew crew-stale (au-crew-stale) target unresolvable: team has no entry node"},
-		{name: "a crew no row has", a: crew("crew-gone"),
-			log: "scheduler: automation Crew crew-gone (au-crew-gone) target unresolvable: team crew-gone not found"},
-		{name: "no agent and no crew", a: none,
-			log: "scheduler: automation Nobody (au-none) target unresolvable: automation has neither agent nor team target"},
+		{name: "an agent gets the run", a: agent, launch: launchLine(agentruns.LaunchRequest{OrgID: "org-1", AgentID: agentID,
+			ProjectID: &project, AutomationID: &automation, Prompt: "Scheduled run of automation: Agent"})},
+		{name: "an empty agent id counts as none", a: emptyAgent,
+			log: "scheduler: automation Empty (au-empty-agent) target unresolvable: automation has no agent target"},
+		{name: "no agent", a: none,
+			log: "scheduler: automation Nobody (au-none) target unresolvable: automation has no agent target"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			logs := captureLog(t)
 			repo := newSchedRepo(tc.a)
 			runs := newSchedRuns()
-			New(repo, runs, crewGraphs()).tick()
+			New(repo, runs).tick()
 			var want []string
 			if tc.launch != "" {
 				want = []string{tc.launch}
@@ -309,7 +292,7 @@ func TestSchedulerTargets(t *testing.T) {
 		repo := newSchedRepo(scheduled("au-1", "Refused", cron, time.Now().Add(-time.Minute)))
 		runs := newSchedRuns()
 		runs.launchErr = errors.New("this workspace has reached its monthly budget")
-		s := New(repo, runs, crewGraphs())
+		s := New(repo, runs)
 		s.tick()
 		s.tick()
 		if n := len(runs.requests()); n != 1 {
@@ -330,7 +313,7 @@ func TestSchedulerTargets(t *testing.T) {
 		repo := newSchedRepo(scheduled("au-1", "Unstamped", cron, time.Now().Add(-time.Minute)))
 		repo.stampErr = errors.New("deadlock detected")
 		runs := newSchedRuns()
-		s := New(repo, runs, crewGraphs())
+		s := New(repo, runs)
 		s.tick()
 		s.tick()
 		want := []string{wantLaunch("au-1", "Scheduled run of automation: Unstamped")}
@@ -366,7 +349,7 @@ func TestSchedulerClaims(t *testing.T) {
 		repo.barrier = &sync.WaitGroup{}
 		repo.barrier.Add(2)
 		runsA, runsB := newSchedRuns(), newSchedRuns()
-		replicaA, replicaB := New(repo, runsA, crewGraphs()), New(repo, runsB, crewGraphs())
+		replicaA, replicaB := New(repo, runsA), New(repo, runsB)
 
 		var wg sync.WaitGroup
 		wg.Add(2)
@@ -398,22 +381,20 @@ func TestSchedulerClaims(t *testing.T) {
 		}
 	})
 
-	t.Run("a lost claim resolves no target and launches nothing", func(t *testing.T) {
+	t.Run("a lost claim launches nothing", func(t *testing.T) {
 		logs := captureLog(t)
-		team := "crew-1"
 		a := scheduled("au-1", "Stale", "*/5 * * * *", time.Now().Add(-time.Minute))
-		a.AgentID, a.TeamID = nil, &team
 		candidate := cloneAutomation(a)
 		future := time.Now().Add(time.Hour)
 		a.NextRunAt = &future // a peer replica claimed it and advanced it
 		repo := newSchedRepo(a)
-		runs, crews := newSchedRuns(), crewGraphs()
-		New(repo, runs, crews).fire(candidate)
+		runs := newSchedRuns()
+		New(repo, runs).fire(candidate)
 		if claims := repo.claimsMade(); len(claims) != 1 || claims[0].won {
 			t.Fatalf("claims = %v, want one lost", claims)
 		}
-		if n, asked := len(runs.requests()), crews.crewsAsked(); n != 0 || len(asked) != 0 {
-			t.Errorf("a lost claim launched %d runs and looked up crews %q, want neither", n, asked)
+		if n := len(runs.requests()); n != 0 {
+			t.Errorf("a lost claim launched %d runs, want none", n)
 		}
 		if a := repo.stored(t, "au-1"); !a.NextRunAt.Equal(future) {
 			t.Errorf("a lost claim changed next_run_at to %s", timeOrDash(a.NextRunAt))
@@ -447,7 +428,7 @@ func TestSchedulerClaims(t *testing.T) {
 				repo := newSchedRepo(scheduled("au-1", "Erring", tc.cron, time.Now().Add(-time.Minute)))
 				repo.claimFails = map[string]claimResult{"au-1": tc.answer}
 				runs := newSchedRuns()
-				New(repo, runs, crewGraphs()).tick()
+				New(repo, runs).tick()
 				if n := len(runs.requests()); n != 0 {
 					t.Errorf("launched %d runs, want none: an answer with an error never fires", n)
 				}
@@ -497,7 +478,7 @@ func TestSchedulerSwitchesOffAnInvalidCron(t *testing.T) {
 			a.CatchUp = tc.catchUp
 			repo := newSchedRepo(a)
 			runs := newSchedRuns()
-			s := New(repo, runs, crewGraphs())
+			s := New(repo, runs)
 
 			before := time.Now()
 			tc.start(s)
@@ -539,8 +520,8 @@ func TestSchedulerSwitchesOffAnInvalidCron(t *testing.T) {
 		runsA, runsB := newSchedRuns(), newSchedRuns()
 		var wg sync.WaitGroup
 		wg.Add(2)
-		go func() { defer wg.Done(); New(repo, runsA, crewGraphs()).tick() }()
-		go func() { defer wg.Done(); New(repo, runsB, crewGraphs()).tick() }()
+		go func() { defer wg.Done(); New(repo, runsA).tick() }()
+		go func() { defer wg.Done(); New(repo, runsB).tick() }()
 		wg.Wait()
 		offs := repo.switchOffsMade()
 		if len(offs) != 2 || !offs[0].won || offs[1].won {
@@ -556,58 +537,32 @@ func TestSchedulerSwitchesOffAnInvalidCron(t *testing.T) {
 }
 
 // TestResolveTarget pins ResolveTarget, which the scheduler, the trigger
-// matcher and run-now each call to find whom a run goes to: an agent target
-// wins (a crew named beside it is ignored, and not returned); otherwise a
-// crew's entry node's agent, with the crew's id and the node's; and the two
-// sentinel errors, or the crew lookup's own error, when there is no one.
+// matcher and run-now each call to find whom a run goes to: the automation's
+// agent, or ErrNoTarget when it names none (crews, once a target too, are
+// gone).
 func TestResolveTarget(t *testing.T) {
 	str := func(s string) *string { return &s }
-	lookupErr := errors.New("team crew-gone not found")
 	cases := []struct {
-		name               string
-		agent, team        *string
-		wantAgent          string
-		wantTeam, wantNode string
-		wantErr            error
-		wantErrText        string
-		wantCrewLookup     bool
+		name      string
+		agent     *string
+		wantAgent string
+		wantErr   bool
 	}{
 		{name: "an agent", agent: str("agent-1"), wantAgent: "agent-1"},
-		{name: "an agent and a crew: the agent", agent: str("agent-1"), team: str("crew-1"), wantAgent: "agent-1"},
-		{name: "an empty agent id and a crew: the crew", agent: str(""), team: str("crew-1"), wantAgent: "agent-entry",
-			wantTeam: "crew-1", wantNode: "node-entry", wantCrewLookup: true},
-		{name: "a crew", team: str("crew-1"), wantAgent: "agent-entry", wantTeam: "crew-1", wantNode: "node-entry",
-			wantCrewLookup: true},
-		{name: "a crew with no entry node", team: str("crew-headless"), wantErr: ErrNoEntryNode,
-			wantErrText: "team has no entry node", wantCrewLookup: true},
-		{name: "a crew whose entry node is gone", team: str("crew-stale"), wantErr: ErrNoEntryNode,
-			wantErrText: "team has no entry node", wantCrewLookup: true},
-		{name: "a crew no row has", team: str("crew-gone"), wantErrText: lookupErr.Error(), wantCrewLookup: true},
-		{name: "neither", wantErr: ErrNoTarget, wantErrText: "automation has neither agent nor team target"},
-		{name: "an empty crew id", team: str(""), wantErr: ErrNoTarget,
-			wantErrText: "automation has neither agent nor team target"},
+		{name: "an empty agent id", agent: str(""), wantErr: true},
+		{name: "none", wantErr: true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			crews := crewGraphs()
-			a := &automations.Automation{ID: "au-1", OrgID: "org-1", AgentID: tc.agent, TeamID: tc.team}
-			agent, team, node, err := ResolveTarget(a, crews)
-			if tc.wantErrText != "" {
-				if err == nil || err.Error() != tc.wantErrText || (tc.wantErr != nil && !errors.Is(err, tc.wantErr)) {
-					t.Fatalf("err = %v, want %q", err, tc.wantErrText)
+			agent, err := ResolveTarget(&automations.Automation{ID: "au-1", OrgID: "org-1", AgentID: tc.agent})
+			if tc.wantErr {
+				if !errors.Is(err, ErrNoTarget) || err.Error() != "automation has no agent target" || agent != "" {
+					t.Fatalf("= %q, %v; want ErrNoTarget alone", agent, err)
 				}
-				if agent != "" || team != nil || node != nil {
-					t.Errorf("with the error it also answered %q, %v, %v, want nothing", agent, team, node)
-				}
-			} else if err != nil {
-				t.Fatalf("err = %v", err)
+				return
 			}
-			if agent != tc.wantAgent || derefOr(team, "") != tc.wantTeam || derefOr(node, "") != tc.wantNode {
-				t.Errorf("= %q, crew %q, node %q; want %q, %q, %q", agent, derefOr(team, ""), derefOr(node, ""),
-					tc.wantAgent, tc.wantTeam, tc.wantNode)
-			}
-			if asked := crews.crewsAsked(); (len(asked) == 1) != tc.wantCrewLookup || len(asked) > 1 {
-				t.Errorf("crews looked up %q, want a lookup: %v", asked, tc.wantCrewLookup)
+			if err != nil || agent != tc.wantAgent {
+				t.Fatalf("= %q, %v; want %q", agent, err, tc.wantAgent)
 			}
 		})
 	}
@@ -634,7 +589,7 @@ func TestSchedulerHandsTheRepositoryUTC(t *testing.T) {
 	atCatchUp.CatchUp = true
 	repo := newSchedRepo(atCatchUp, scheduled("au-bad", "Broken", "nope", now.Add(-time.Minute)))
 	runs := newSchedRuns()
-	s := New(repo, runs, crewGraphs())
+	s := New(repo, runs)
 	s.catchUp()
 	repo.add(scheduled("au-2", "On a tick", cron, time.Now().Add(-time.Second)))
 	s.tick()

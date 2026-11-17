@@ -124,9 +124,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({ variant = 'light' }) => {
           >
             {displayName}
           </div>
-        ) : (
-          <span aria-hidden style={{ fontSize: 12, color: 'var(--text-muted)' }}>▼</span>
-        )}
+        ) : null}
       </button>
       {menuOpen && (
         <div style={dropdownStyle}>

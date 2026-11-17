@@ -48,7 +48,7 @@ const (
 	// on a deployment with no mailer (REQ-158).
 	ErrCodeResetInvalid          = "reset_invalid"
 	ErrCodeResetEmailUnavailable = "reset_email_unavailable"
-	// ErrCodeSSOOnly answers a password sign-in, sign-up or reset, or a
+	// ErrCodeSSOOnly answers a password sign-in or sign-up, or a
 	// Google sign-in, on a deployment that signs everyone in through its
 	// single sign-on provider only (OPENV_OIDC_ONLY).
 	ErrCodeSSOOnly = "sso_only"

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="where-the-project-stands">
+  <title>Where the project stands</title>
+  <prolog>
+    <resourceid appname="openv-web" appid="overview.links"/>
+  </prolog>
+  <conbody>
+    <p>Four tiles give the share of requirements <b>traced</b> and <b>verified</b>, how many tests are <b>failing</b> and how many links are <b>suspect</b>; each opens the page behind its number. <b>Needs you</b> lists what waits on the team: reviews, suspect links, test runs in progress, failing tests, unread comments and the changes agents have proposed (see <i>Home</i> in the project pages chapter for each kind of line). <b>Recent activity</b> shows the newest events, and <b>Full history</b> opens the <b>Activity</b> page.</p>
+  </conbody>
+</concept>

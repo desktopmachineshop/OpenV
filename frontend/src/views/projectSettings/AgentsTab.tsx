@@ -12,7 +12,7 @@ interface AgentsTabProps {
 }
 
 export const AgentsTab: React.FC<AgentsTabProps> = ({ project, savingAuth, handleSetAgentAuth }) => (
-  <div className="card">
+  <div className="card" data-help-key="settings.agents">
     <h3>Agent authentication</h3>
     <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
       How agent runs in this project authenticate with their AI provider. This only picks the

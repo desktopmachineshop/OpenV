@@ -3,5 +3,8 @@
 <concept id="user-interviews">
   <title>User interviews</title>
   <shortdesc>Create and manage AI-led stakeholder interviews from here — see the <i>Interviews</i> chapter for the full flow.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="overview.interviews"/>
+  </prolog>
   <conbody/>
 </concept>

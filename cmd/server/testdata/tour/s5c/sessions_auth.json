@@ -56,14 +56,14 @@
       "email": "tour-newcomer@example.com",
       "account_name": "Tour <Newcomer> & Co",
       "workspace": "<newcomer.workspace>",
-      "about": "the account a recorded registration made (step 10)"
+      "about": "the account a recorded registration made (step 11)"
     },
     {
       "name": "newcomer.second",
       "email": "tour-newcomer@example.com",
       "account_name": "Tour <Newcomer> & Co",
       "workspace": "<newcomer.workspace>",
-      "about": "a second session of newcomer's, from a recorded sign-in (step 17), which the area signs out"
+      "about": "a second session of newcomer's, from a recorded sign-in (step 18), which the area signs out"
     },
     {
       "name": "worker",
@@ -81,21 +81,21 @@
       "email": "tour-member@example.com",
       "account_name": "Tour Member",
       "workspace": "<member.workspace>",
-      "about": "a session of the member's from a recorded sign-in (step 31)"
+      "about": "a session of the member's from a recorded sign-in (step 32)"
     },
     {
       "name": "member.third",
       "email": "tour-member@example.com",
       "account_name": "Tour Member",
       "workspace": "<member.workspace>",
-      "about": "a session of the member's from a recorded sign-in (step 53)"
+      "about": "a session of the member's from a recorded sign-in (step 54)"
     },
     {
       "name": "googler",
       "email": "tour-googler@example.com",
       "account_name": "Tour Googler",
       "workspace": "<googler.workspace>",
-      "about": "the account Google's sign-on made (step 66)"
+      "about": "the account Google's sign-on made (step 67)"
     },
     {
       "name": "locked",
@@ -382,6 +382,35 @@
     },
     {
       "n": 10,
+      "title": "an account deletion from the identity provider, not configured here",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/oidc/account-deletion",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/oidc/account-deletion",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "deletion_token=x"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 42,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"sso sign-in is not configured\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "sso sign-in is not configured"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 11,
       "title": "register an account: the account, and a session cookie",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/register",
@@ -406,7 +435,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 10>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"}"
+        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 11>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -421,15 +450,15 @@
         "push_notifications": false,
         "default_org_id": "",
         "email_verified": true,
-        "email_verified_at": "<time@step 10>",
-        "created_at": "<time@step 10>",
-        "updated_at": "<time@step 10>"
+        "email_verified_at": "<time@step 11>",
+        "created_at": "<time@step 11>",
+        "updated_at": "<time@step 11>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 11,
+      "n": 12,
       "title": "register the same address again",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/register",
@@ -459,7 +488,7 @@
       "events": []
     },
     {
-      "n": 12,
+      "n": 13,
       "title": "register with a password under 8 characters",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/register",
@@ -490,7 +519,7 @@
       "events": []
     },
     {
-      "n": 13,
+      "n": 14,
       "title": "register with a malformed body: refused before the address's budget is spent",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/register",
@@ -520,7 +549,7 @@
       "events": []
     },
     {
-      "n": 14,
+      "n": 15,
       "title": "register with no address",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/register",
@@ -550,7 +579,7 @@
       "events": []
     },
     {
-      "n": 15,
+      "n": 16,
       "title": "register with an invite token no invitation has: the account is made all the same, and the answer says the token was invalid",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/register",
@@ -572,7 +601,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<uuid:1>\",\"email\":\"tour-uninvited@example.com\",\"name\":\"Tour Uninvited\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 15>\",\"created_at\":\"<time@step 15>\",\"updated_at\":\"<time@step 15>\",\"invitation\":\"invalid\"}"
+        "{\"id\":\"<uuid:1>\",\"email\":\"tour-uninvited@example.com\",\"name\":\"Tour Uninvited\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 16>\",\"created_at\":\"<time@step 16>\",\"updated_at\":\"<time@step 16>\",\"invitation\":\"invalid\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -587,16 +616,16 @@
         "push_notifications": false,
         "default_org_id": "",
         "email_verified": true,
-        "email_verified_at": "<time@step 15>",
-        "created_at": "<time@step 15>",
-        "updated_at": "<time@step 15>",
+        "email_verified_at": "<time@step 16>",
+        "created_at": "<time@step 16>",
+        "updated_at": "<time@step 16>",
         "invitation": "invalid"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 16,
+      "n": 17,
       "title": "a sixth registration from the address: its budget of five is spent",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/register",
@@ -628,7 +657,7 @@
       "events": []
     },
     {
-      "n": 17,
+      "n": 18,
       "title": "sign in: the account, and a new session",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -650,7 +679,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 10>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"}"
+        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 11>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -665,15 +694,15 @@
         "push_notifications": false,
         "default_org_id": "",
         "email_verified": true,
-        "email_verified_at": "<time@step 10>",
-        "created_at": "<time@step 10>",
-        "updated_at": "<time@step 10>"
+        "email_verified_at": "<time@step 11>",
+        "created_at": "<time@step 11>",
+        "updated_at": "<time@step 11>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 18,
+      "n": 19,
       "title": "sign in with the address in capitals: the same account",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -695,7 +724,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 10>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"}"
+        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 11>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -710,15 +739,15 @@
         "push_notifications": false,
         "default_org_id": "",
         "email_verified": true,
-        "email_verified_at": "<time@step 10>",
-        "created_at": "<time@step 10>",
-        "updated_at": "<time@step 10>"
+        "email_verified_at": "<time@step 11>",
+        "created_at": "<time@step 11>",
+        "updated_at": "<time@step 11>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 19,
+      "n": 20,
       "title": "sign in with a wrong password",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -748,7 +777,7 @@
       "events": []
     },
     {
-      "n": 20,
+      "n": 21,
       "title": "sign in with an address no account has",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -778,7 +807,7 @@
       "events": []
     },
     {
-      "n": 21,
+      "n": 22,
       "title": "sign in with a malformed body",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -808,7 +837,7 @@
       "events": []
     },
     {
-      "n": 22,
+      "n": 23,
       "title": "the signed-in account",
       "actor": "newcomer",
       "route": "GET /api/v1/auth/me",
@@ -823,7 +852,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 10>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"}"
+        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 11>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -838,14 +867,14 @@
         "push_notifications": false,
         "default_org_id": "",
         "email_verified": true,
-        "email_verified_at": "<time@step 10>",
-        "created_at": "<time@step 10>",
-        "updated_at": "<time@step 10>"
+        "email_verified_at": "<time@step 11>",
+        "created_at": "<time@step 11>",
+        "updated_at": "<time@step 11>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 23,
+      "n": 24,
       "title": "the account with no session",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/me",
@@ -869,7 +898,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 24,
+      "n": 25,
       "title": "the account with a worker key as the bearer: only the cookie is read",
       "actor": "worker",
       "route": "GET /api/v1/auth/me",
@@ -893,7 +922,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 25,
+      "n": 26,
       "title": "sign the second session out: 204, and a cookie that clears it",
       "actor": "newcomer.second",
       "route": "POST /api/v1/auth/logout",
@@ -913,7 +942,7 @@
       "events": []
     },
     {
-      "n": 26,
+      "n": 27,
       "title": "the account, from the session signed out",
       "actor": "newcomer.second",
       "route": "GET /api/v1/auth/me",
@@ -937,7 +966,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 27,
+      "n": 28,
       "title": "a protected route from the session signed out: the middleware's 401",
       "actor": "newcomer.second",
       "route": "GET /api/v1/orgs",
@@ -961,7 +990,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 28,
+      "n": 29,
       "title": "the first session is still signed in",
       "actor": "newcomer",
       "route": "GET /api/v1/auth/me",
@@ -976,7 +1005,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 10>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"}"
+        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 11>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -991,14 +1020,14 @@
         "push_notifications": false,
         "default_org_id": "",
         "email_verified": true,
-        "email_verified_at": "<time@step 10>",
-        "created_at": "<time@step 10>",
-        "updated_at": "<time@step 10>"
+        "email_verified_at": "<time@step 11>",
+        "created_at": "<time@step 11>",
+        "updated_at": "<time@step 11>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 29,
+      "n": 30,
       "title": "sign out with no session: 204 all the same",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/logout",
@@ -1018,7 +1047,7 @@
       "events": []
     },
     {
-      "n": 30,
+      "n": 31,
       "title": "the owner's workspaces with no X-Org-ID: the server resolves one",
       "actor": "owner",
       "acting_in": "(no X-Org-ID: the server resolves the workspace)",
@@ -1034,7 +1063,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"active_org\":\"<owner.workspace>\",\"orgs\":[{\"id\":\"<owner.workspace>\",\"name\":\"Tour Owner's Space\",\"slug\":\"tour-owner-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"}]}"
+        "{\"active_org\":\"<owner.workspace>\",\"orgs\":[{\"id\":\"<owner.workspace>\",\"name\":\"Tour Owner's Space\",\"slug\":\"tour-owner-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1073,8 +1102,8 @@
               "status": "none"
             },
             "created_by": "<owner>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -1089,7 +1118,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 31,
+      "n": 32,
       "title": "the member signs in again: a session of its own",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -1111,7 +1140,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<member>\",\"email\":\"tour-member@example.com\",\"name\":\"Tour Member\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@before step 30>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\"}"
+        "{\"id\":\"<member>\",\"email\":\"tour-member@example.com\",\"name\":\"Tour Member\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@before step 31>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1126,15 +1155,15 @@
         "push_notifications": false,
         "default_org_id": "",
         "email_verified": true,
-        "email_verified_at": "<time@before step 30>",
-        "created_at": "<time@before step 30>",
-        "updated_at": "<time@before step 30>"
+        "email_verified_at": "<time@before step 31>",
+        "created_at": "<time@before step 31>",
+        "updated_at": "<time@before step 31>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 32,
+      "n": 33,
       "title": "with no X-Org-ID: the personal workspace, since the session has none active and the member chose no default",
       "actor": "member.second",
       "acting_in": "(no X-Org-ID: the server resolves the workspace)",
@@ -1150,7 +1179,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"active_org\":\"<member.workspace>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+        "{\"active_org\":\"<member.workspace>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1167,8 +1196,8 @@
               "status": "none"
             },
             "created_by": "<member>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -1189,8 +1218,8 @@
               "status": "none"
             },
             "created_by": "<owner>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -1205,7 +1234,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 33,
+      "n": 34,
       "title": "make W the session's active workspace",
       "actor": "member.second",
       "route": "POST /api/v1/orgs/{id}/activate",
@@ -1223,7 +1252,7 @@
       "events": []
     },
     {
-      "n": 34,
+      "n": 35,
       "title": "with no X-Org-ID: W, the session's",
       "actor": "member.second",
       "acting_in": "(no X-Org-ID: the server resolves the workspace)",
@@ -1239,7 +1268,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1256,8 +1285,8 @@
               "status": "none"
             },
             "created_by": "<member>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -1278,8 +1307,8 @@
               "status": "none"
             },
             "created_by": "<owner>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -1294,7 +1323,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 35,
+      "n": 36,
       "title": "naming its personal workspace: the header wins",
       "actor": "member.second",
       "route": "GET /api/v1/orgs",
@@ -1309,7 +1338,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"active_org\":\"<member.workspace>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+        "{\"active_org\":\"<member.workspace>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1326,8 +1355,8 @@
               "status": "none"
             },
             "created_by": "<member>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -1348,79 +1377,8 @@
               "status": "none"
             },
             "created_by": "<owner>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
-            "has_logo": false,
-            "release_channel": "nightly",
-            "release_channel_locked": true,
-            "stable_release": "",
-            "upgrade_day": 0,
-            "upgrade_hour": 0,
-            "upgrade_timezone": "",
-            "role": "member"
-          }
-        ]
-      },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
-    },
-    {
-      "n": 36,
-      "title": "naming a workspace that does not exist: the session's, silently",
-      "actor": "member.second",
-      "acting_in": "<phantom>",
-      "route": "GET /api/v1/orgs",
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/orgs"
-      },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": "<varies>",
-      "kind": "json",
-      "body": [
-        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "active_org": "<w>",
-        "orgs": [
-          {
-            "id": "<member.workspace>",
-            "name": "Tour Member's Space",
-            "slug": "tour-member-s-space-<id8>",
-            "type": "personal",
-            "plan": "single",
-            "limits": {},
-            "billing": {
-              "status": "none"
-            },
-            "created_by": "<member>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
-            "has_logo": false,
-            "release_channel": "nightly",
-            "release_channel_locked": true,
-            "stable_release": "",
-            "upgrade_day": 0,
-            "upgrade_hour": 0,
-            "upgrade_timezone": "",
-            "role": "admin"
-          },
-          {
-            "id": "<w>",
-            "name": "Tour Shared",
-            "slug": "tour-shared-<id8>",
-            "type": "company",
-            "plan": "single",
-            "limits": {},
-            "billing": {
-              "status": "none"
-            },
-            "created_by": "<owner>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -1436,9 +1394,9 @@
     },
     {
       "n": 37,
-      "title": "naming a workspace it is not in: the same",
+      "title": "naming a workspace that does not exist: the session's, silently",
       "actor": "member.second",
-      "acting_in": "<owner.workspace>",
+      "acting_in": "<phantom>",
       "route": "GET /api/v1/orgs",
       "request": {
         "method": "GET",
@@ -1451,7 +1409,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1468,8 +1426,8 @@
               "status": "none"
             },
             "created_by": "<member>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -1490,8 +1448,8 @@
               "status": "none"
             },
             "created_by": "<owner>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -1507,9 +1465,9 @@
     },
     {
       "n": 38,
-      "title": "naming something that is not an id: the same",
+      "title": "naming a workspace it is not in: the same",
       "actor": "member.second",
-      "acting_in": "not-a-workspace",
+      "acting_in": "<owner.workspace>",
       "route": "GET /api/v1/orgs",
       "request": {
         "method": "GET",
@@ -1522,7 +1480,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1539,8 +1497,8 @@
               "status": "none"
             },
             "created_by": "<member>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -1561,8 +1519,8 @@
               "status": "none"
             },
             "created_by": "<owner>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -1578,6 +1536,77 @@
     },
     {
       "n": 39,
+      "title": "naming something that is not an id: the same",
+      "actor": "member.second",
+      "acting_in": "not-a-workspace",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "active_org": "<w>",
+        "orgs": [
+          {
+            "id": "<member.workspace>",
+            "name": "Tour Member's Space",
+            "slug": "tour-member-s-space-<id8>",
+            "type": "personal",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<member>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "admin"
+          },
+          {
+            "id": "<w>",
+            "name": "Tour Shared",
+            "slug": "tour-shared-<id8>",
+            "type": "company",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<owner>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "member"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 40,
       "title": "the workspace's members with no X-Org-ID: W's",
       "actor": "member.second",
       "acting_in": "(no X-Org-ID: the server resolves the workspace)",
@@ -1613,7 +1642,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 40,
+      "n": 41,
       "title": "make a workspace it is not in active",
       "actor": "member.second",
       "route": "POST /api/v1/orgs/{id}/activate",
@@ -1638,7 +1667,7 @@
       "events": []
     },
     {
-      "n": 41,
+      "n": 42,
       "title": "make a workspace active with a worker key: no account, the guard's 401",
       "actor": "worker",
       "route": "POST /api/v1/orgs/{id}/activate",
@@ -1663,7 +1692,7 @@
       "events": []
     },
     {
-      "n": 42,
+      "n": 43,
       "title": "the member's default workspace: none chosen",
       "actor": "member",
       "acting_in": "<w>",
@@ -1688,7 +1717,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 43,
+      "n": 44,
       "title": "choose W",
       "actor": "member",
       "acting_in": "<w>",
@@ -1718,7 +1747,7 @@
       "events": []
     },
     {
-      "n": 44,
+      "n": 45,
       "title": "choose the personal workspace: stored as none",
       "actor": "member",
       "acting_in": "<w>",
@@ -1748,7 +1777,7 @@
       "events": []
     },
     {
-      "n": 45,
+      "n": 46,
       "title": "choose a workspace that does not exist",
       "actor": "member",
       "acting_in": "<w>",
@@ -1778,7 +1807,7 @@
       "events": []
     },
     {
-      "n": 46,
+      "n": 47,
       "title": "choose a workspace the member is not in: the same answer",
       "actor": "member",
       "acting_in": "<w>",
@@ -1808,7 +1837,7 @@
       "events": []
     },
     {
-      "n": 47,
+      "n": 48,
       "title": "choose something that is not an id: 404, as a workspace no row has",
       "actor": "member",
       "acting_in": "<w>",
@@ -1838,7 +1867,7 @@
       "events": []
     },
     {
-      "n": 48,
+      "n": 49,
       "title": "choose with a malformed body",
       "actor": "member",
       "acting_in": "<w>",
@@ -1868,7 +1897,7 @@
       "events": []
     },
     {
-      "n": 49,
+      "n": 50,
       "title": "choose W again",
       "actor": "member",
       "acting_in": "<w>",
@@ -1901,7 +1930,7 @@
       "events": []
     },
     {
-      "n": 50,
+      "n": 51,
       "title": "the member's default workspace: W",
       "actor": "member",
       "acting_in": "<w>",
@@ -1926,7 +1955,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 51,
+      "n": 52,
       "title": "the default workspace with a worker key: the handler's 401",
       "actor": "worker",
       "route": "GET /api/v1/me/default-workspace",
@@ -1950,7 +1979,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 52,
+      "n": 53,
       "title": "choose with no session: the middleware's 401",
       "actor": "anonymous",
       "route": "PUT /api/v1/me/default-workspace",
@@ -1979,7 +2008,7 @@
       "events": []
     },
     {
-      "n": 53,
+      "n": 54,
       "title": "the member signs in once more",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -2001,7 +2030,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<member>\",\"email\":\"tour-member@example.com\",\"name\":\"Tour Member\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"<w>\",\"email_verified\":true,\"email_verified_at\":\"<time@before step 30>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@step 49>\"}"
+        "{\"id\":\"<member>\",\"email\":\"tour-member@example.com\",\"name\":\"Tour Member\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"<w>\",\"email_verified\":true,\"email_verified_at\":\"<time@before step 31>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@step 50>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2016,15 +2045,15 @@
         "push_notifications": false,
         "default_org_id": "<w>",
         "email_verified": true,
-        "email_verified_at": "<time@before step 30>",
-        "created_at": "<time@before step 30>",
-        "updated_at": "<time@step 49>"
+        "email_verified_at": "<time@before step 31>",
+        "created_at": "<time@before step 31>",
+        "updated_at": "<time@step 50>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 54,
+      "n": 55,
       "title": "a fresh session with no X-Org-ID: W, the member's default (REQ-156)",
       "actor": "member.third",
       "acting_in": "(no X-Org-ID: the server resolves the workspace)",
@@ -2040,7 +2069,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
+        "{\"active_org\":\"<w>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"},{\"id\":\"<w>\",\"name\":\"Tour Shared\",\"slug\":\"tour-shared-<id8>\",\"type\":\"company\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<owner>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"member\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2057,8 +2086,8 @@
               "status": "none"
             },
             "created_by": "<member>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -2079,8 +2108,8 @@
               "status": "none"
             },
             "created_by": "<owner>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -2095,7 +2124,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 55,
+      "n": 56,
       "title": "the member leaves W: org.member_removed, self true",
       "actor": "member",
       "acting_in": "<w>",
@@ -2124,7 +2153,7 @@
       ]
     },
     {
-      "n": 56,
+      "n": 57,
       "title": "the default no longer holds: the personal workspace",
       "actor": "member.third",
       "acting_in": "(no X-Org-ID: the server resolves the workspace)",
@@ -2140,7 +2169,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"active_org\":\"<member.workspace>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"}]}"
+        "{\"active_org\":\"<member.workspace>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2157,57 +2186,8 @@
               "status": "none"
             },
             "created_by": "<member>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
-            "has_logo": false,
-            "release_channel": "nightly",
-            "release_channel_locked": true,
-            "stable_release": "",
-            "upgrade_day": 0,
-            "upgrade_hour": 0,
-            "upgrade_timezone": "",
-            "role": "admin"
-          }
-        ]
-      },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
-    },
-    {
-      "n": 57,
-      "title": "nor does the other session's active W",
-      "actor": "member.second",
-      "acting_in": "(no X-Org-ID: the server resolves the workspace)",
-      "route": "GET /api/v1/orgs",
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/orgs"
-      },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": "<varies>",
-      "kind": "json",
-      "body": [
-        "{\"active_org\":\"<member.workspace>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 30>\",\"updated_at\":\"<time@before step 30>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"}]}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "active_org": "<member.workspace>",
-        "orgs": [
-          {
-            "id": "<member.workspace>",
-            "name": "Tour Member's Space",
-            "slug": "tour-member-s-space-<id8>",
-            "type": "personal",
-            "plan": "single",
-            "limits": {},
-            "billing": {
-              "status": "none"
-            },
-            "created_by": "<member>",
-            "created_at": "<time@before step 30>",
-            "updated_at": "<time@before step 30>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
             "has_logo": false,
             "release_channel": "nightly",
             "release_channel_locked": true,
@@ -2223,6 +2203,55 @@
     },
     {
       "n": 58,
+      "title": "nor does the other session's active W",
+      "actor": "member.second",
+      "acting_in": "(no X-Org-ID: the server resolves the workspace)",
+      "route": "GET /api/v1/orgs",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/orgs"
+      },
+      "status": 200,
+      "content_type": "text/plain; charset=utf-8",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"active_org\":\"<member.workspace>\",\"orgs\":[{\"id\":\"<member.workspace>\",\"name\":\"Tour Member's Space\",\"slug\":\"tour-member-s-space-<id8>\",\"type\":\"personal\",\"plan\":\"single\",\"limits\":{},\"billing\":{\"status\":\"none\"},\"created_by\":\"<member>\",\"created_at\":\"<time@before step 31>\",\"updated_at\":\"<time@before step 31>\",\"has_logo\":false,\"release_channel\":\"nightly\",\"release_channel_locked\":true,\"stable_release\":\"\",\"upgrade_day\":0,\"upgrade_hour\":0,\"upgrade_timezone\":\"\",\"role\":\"admin\"}]}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "active_org": "<member.workspace>",
+        "orgs": [
+          {
+            "id": "<member.workspace>",
+            "name": "Tour Member's Space",
+            "slug": "tour-member-s-space-<id8>",
+            "type": "personal",
+            "plan": "single",
+            "limits": {},
+            "billing": {
+              "status": "none"
+            },
+            "created_by": "<member>",
+            "created_at": "<time@before step 31>",
+            "updated_at": "<time@before step 31>",
+            "has_logo": false,
+            "release_channel": "nightly",
+            "release_channel_locked": true,
+            "stable_release": "",
+            "upgrade_day": 0,
+            "upgrade_hour": 0,
+            "upgrade_timezone": "",
+            "role": "admin"
+          }
+        ]
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 59,
       "title": "the stored default is still W",
       "actor": "member",
       "acting_in": "<w>",
@@ -2247,7 +2276,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 59,
+      "n": 60,
       "title": "the member's deleted workspaces: none, written null (Q14)",
       "actor": "member.third",
       "acting_in": "(no X-Org-ID: the server resolves the workspace)",
@@ -2274,7 +2303,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 60,
+      "n": 61,
       "title": "the workspace's members with no X-Org-ID: the personal workspace's",
       "actor": "member.third",
       "acting_in": "(no X-Org-ID: the server resolves the workspace)",
@@ -2304,7 +2333,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 61,
+      "n": 62,
       "title": "start Google sign-on: a redirect to Google's consent screen, its state in a cookie",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google",
@@ -2332,7 +2361,7 @@
       "gzip": "not sent: each single sign-on request spends a token of the address's budget"
     },
     {
-      "n": 62,
+      "n": 63,
       "title": "the callback with no state cookie",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google/callback",
@@ -2360,7 +2389,7 @@
       "gzip": "not sent: each single sign-on request spends a token of the address's budget"
     },
     {
-      "n": 63,
+      "n": 64,
       "title": "a state other than the cookie's",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google/callback",
@@ -2389,7 +2418,7 @@
       "gzip": "not sent: each single sign-on request spends a token of the address's budget"
     },
     {
-      "n": 64,
+      "n": 65,
       "title": "no code",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google/callback",
@@ -2418,7 +2447,7 @@
       "gzip": "not sent: each single sign-on request spends a token of the address's budget"
     },
     {
-      "n": 65,
+      "n": 66,
       "title": "a code Google refuses: the token exchange fails",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google/callback",
@@ -2463,7 +2492,7 @@
       ]
     },
     {
-      "n": 66,
+      "n": 67,
       "title": "a code Google accepts: the account is made and signed in, and sent to the frontend",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google/callback",
@@ -2516,7 +2545,7 @@
       ]
     },
     {
-      "n": 67,
+      "n": 68,
       "title": "the account Google made",
       "actor": "googler",
       "route": "GET /api/v1/auth/me",
@@ -2531,7 +2560,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<googler>\",\"email\":\"tour-googler@example.com\",\"name\":\"Tour Googler\",\"avatar_url\":\"https://lh3.googleusercontent.com/a/tour-googler\",\"has_avatar\":false,\"auth_provider\":\"google\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 66>\",\"created_at\":\"<time@step 66>\",\"updated_at\":\"<time@step 66>\"}"
+        "{\"id\":\"<googler>\",\"email\":\"tour-googler@example.com\",\"name\":\"Tour Googler\",\"avatar_url\":\"https://lh3.googleusercontent.com/a/tour-googler\",\"has_avatar\":false,\"auth_provider\":\"google\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 67>\",\"created_at\":\"<time@step 67>\",\"updated_at\":\"<time@step 67>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2546,14 +2575,14 @@
         "push_notifications": false,
         "default_org_id": "",
         "email_verified": true,
-        "email_verified_at": "<time@step 66>",
-        "created_at": "<time@step 66>",
-        "updated_at": "<time@step 66>"
+        "email_verified_at": "<time@step 67>",
+        "created_at": "<time@step 67>",
+        "updated_at": "<time@step 67>"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 68,
+      "n": 69,
       "title": "an address Google does not vouch for",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google/callback",
@@ -2605,7 +2634,7 @@
       ]
     },
     {
-      "n": 69,
+      "n": 70,
       "title": "an address a password account holds: no session, a link request in a cookie, and the sign-in page to confirm it on",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google/callback",
@@ -2658,7 +2687,7 @@
       ]
     },
     {
-      "n": 70,
+      "n": 71,
       "title": "the pending link with no link cookie",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/link",
@@ -2685,7 +2714,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 71,
+      "n": 72,
       "title": "the pending link: Google, for the password account's address",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/link",
@@ -2714,7 +2743,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 72,
+      "n": 73,
       "title": "confirm the link with a malformed body",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/link",
@@ -2745,7 +2774,7 @@
       "events": []
     },
     {
-      "n": 73,
+      "n": 74,
       "title": "confirm the link with a wrong password: refused, the link kept",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/link",
@@ -2776,7 +2805,7 @@
       "events": []
     },
     {
-      "n": 74,
+      "n": 75,
       "title": "confirm the link with the account's password: the account, and a session",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/link",
@@ -2800,7 +2829,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 10>\",\"created_at\":\"<time@step 10>\",\"updated_at\":\"<time@step 10>\"}"
+        "{\"id\":\"<newcomer>\",\"email\":\"tour-newcomer@example.com\",\"name\":\"Tour \\u003cNewcomer\\u003e \\u0026 Co\",\"avatar_url\":\"\",\"has_avatar\":false,\"auth_provider\":\"password\",\"is_admin\":false,\"email_notifications\":true,\"push_notifications\":false,\"default_org_id\":\"\",\"email_verified\":true,\"email_verified_at\":\"<time@step 11>\",\"created_at\":\"<time@step 11>\",\"updated_at\":\"<time@step 11>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2815,15 +2844,15 @@
         "push_notifications": false,
         "default_org_id": "",
         "email_verified": true,
-        "email_verified_at": "<time@step 10>",
-        "created_at": "<time@step 10>",
-        "updated_at": "<time@step 10>"
+        "email_verified_at": "<time@step 11>",
+        "created_at": "<time@step 11>",
+        "updated_at": "<time@step 11>"
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
       "events": []
     },
     {
-      "n": 75,
+      "n": 76,
       "title": "confirm the spent link again",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/link",
@@ -2856,7 +2885,7 @@
       "events": []
     },
     {
-      "n": 76,
+      "n": 77,
       "title": "the password account's address again: linked, so signed in and sent to the frontend",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google/callback",
@@ -2909,7 +2938,7 @@
       ]
     },
     {
-      "n": 77,
+      "n": 78,
       "title": "sign in with a password to the account Google made: refused as any wrong password is, since it is bound to Google (OpenV REQ-18)",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -2938,7 +2967,7 @@
       "events": []
     },
     {
-      "n": 78,
+      "n": 79,
       "title": "the 30th email verification from address A: the last its sign-in budget allows (Q18)",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/verify-email",
@@ -2971,7 +3000,7 @@
       "events": []
     },
     {
-      "n": 79,
+      "n": 80,
       "title": "sign in from A, with the right password: refused, the bucket verification spent",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -3003,7 +3032,7 @@
       "events": []
     },
     {
-      "n": 80,
+      "n": 81,
       "title": "confirm a password reset from A: refused by the same bucket",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/password-reset/confirm",
@@ -3035,7 +3064,7 @@
       "events": []
     },
     {
-      "n": 81,
+      "n": 82,
       "title": "verify from A with a malformed body: decoded before the bucket, so 400",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/verify-email",
@@ -3065,7 +3094,7 @@
       "events": []
     },
     {
-      "n": 82,
+      "n": 83,
       "title": "the 30th reset confirmation from address B: the last its budget allows",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/password-reset/confirm",
@@ -3099,7 +3128,7 @@
       "events": []
     },
     {
-      "n": 83,
+      "n": 84,
       "title": "verify from B: refused, the bucket reset confirmation spent",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/verify-email",
@@ -3131,7 +3160,7 @@
       "events": []
     },
     {
-      "n": 84,
+      "n": 85,
       "title": "sign in from B: refused too",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -3163,7 +3192,7 @@
       "events": []
     },
     {
-      "n": 85,
+      "n": 86,
       "title": "the 30th sign-in from address C: the last its budget allows",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -3196,7 +3225,7 @@
       "events": []
     },
     {
-      "n": 86,
+      "n": 87,
       "title": "confirm a reset from C: refused, the bucket sign-in spent",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/password-reset/confirm",
@@ -3228,7 +3257,7 @@
       "events": []
     },
     {
-      "n": 87,
+      "n": 88,
       "title": "verify from C: refused too",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/verify-email",
@@ -3260,7 +3289,7 @@
       "events": []
     },
     {
-      "n": 88,
+      "n": 89,
       "title": "verify from address D: its own bucket, untouched",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/verify-email",
@@ -3290,7 +3319,7 @@
       "events": []
     },
     {
-      "n": 89,
+      "n": 90,
       "title": "the fifth failed sign-in to one account",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -3323,7 +3352,7 @@
       "events": []
     },
     {
-      "n": 90,
+      "n": 91,
       "title": "the account changes its password, with the right current one: refused, since failed sign-ins spent the account's budget (Q18)",
       "actor": "locked",
       "route": "PUT /api/v1/me/password",
@@ -3354,7 +3383,7 @@
       "events": []
     },
     {
-      "n": 91,
+      "n": 92,
       "title": "the account signs in with the right password: refused as well",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -3386,7 +3415,7 @@
       "events": []
     },
     {
-      "n": 92,
+      "n": 93,
       "title": "the fifth wrong current password",
       "actor": "reverse",
       "route": "PUT /api/v1/me/password",
@@ -3419,7 +3448,7 @@
       "events": []
     },
     {
-      "n": 93,
+      "n": 94,
       "title": "the account signs in with the right password: refused, since the wrong current passwords spent its budget (Q18)",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/login",
@@ -3451,7 +3480,7 @@
       "events": []
     },
     {
-      "n": 94,
+      "n": 95,
       "title": "the 20th Google sign-on start from address G: the last its budget allows",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google",
@@ -3482,7 +3511,7 @@
       "gzip": "not sent: each single sign-on request spends a token of the address's budget"
     },
     {
-      "n": 95,
+      "n": 96,
       "title": "the callback from G: refused, the bucket the starts spent (Q18)",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google/callback",
@@ -3513,7 +3542,7 @@
       "gzip": "not sent: each single sign-on request spends a token of the address's budget"
     },
     {
-      "n": 96,
+      "n": 97,
       "title": "Google's userinfo does not decode: the email is a number",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google/callback",
@@ -3565,7 +3594,7 @@
       ]
     },
     {
-      "n": 97,
+      "n": 98,
       "title": "an access token Google answers already expired: the userinfo fetch fails before a request is sent",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google/callback",
@@ -3610,7 +3639,7 @@
       ]
     },
     {
-      "n": 98,
+      "n": 99,
       "title": "ask for a reset link on a server that cannot send mail: 409 reset_email_unavailable",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/password-reset",
@@ -3640,7 +3669,7 @@
       "events": []
     },
     {
-      "n": 99,
+      "n": 100,
       "title": "the same from address A, whose authIPLimiter is drained: still 409, since with no mailer a reset request is refused before it spends a token (Q18)",
       "actor": "anonymous",
       "route": "POST /api/v1/auth/password-reset",
@@ -3671,7 +3700,7 @@
       "events": []
     },
     {
-      "n": 100,
+      "n": 101,
       "title": "resend the verification mail on a server that requires no verification: 400",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3701,7 +3730,7 @@
       "events": []
     },
     {
-      "n": 101,
+      "n": 102,
       "title": "change the address to verify on that server: the same 400",
       "actor": "owner",
       "acting_in": "<w>",
@@ -3731,7 +3760,7 @@
       "events": []
     },
     {
-      "n": 102,
+      "n": 103,
       "title": "a platform admin's reset link for the account Google made: 409 no_password",
       "actor": "admin",
       "route": "POST /api/v1/admin/users/{id}/password-reset",
@@ -3757,7 +3786,7 @@
       "events": []
     },
     {
-      "n": 103,
+      "n": 104,
       "title": "the push configuration on a server with no VAPID key pair: off",
       "actor": "owner",
       "acting_in": "<w>",

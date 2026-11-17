@@ -9,7 +9,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agents"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/projects"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/workitems"
 )
 
@@ -17,7 +16,7 @@ import (
 // (#379 bug 93). A TIMESTAMP keeps the wall clock it is sent, dropping the
 // offset, and every read takes that wall clock as UTC, so a time.Now() in a
 // server's local zone moved by the zone's offset on its way in: on a server
-// two hours east of UTC, a crew created at 09:00 UTC read back as created at
+// two hours east of UTC, an agent created at 09:00 UTC read back as created at
 // 11:00 UTC, two hours in the future. Each service is driven through its
 // real repository with time.Local two hours east of UTC: each time it
 // stamps is stored as the UTC wall clock of the moment it was stamped, and
@@ -167,7 +166,7 @@ func TestTheServicesStampTimesInUTC(t *testing.T) {
 		}
 	})
 
-	t.Run("crews and agents", func(t *testing.T) {
+	t.Run("agents", func(t *testing.T) {
 		agentRepo := NewAgentRepository(db)
 		agentSvc, err := agents.NewFileService(t.TempDir(), agentRepo)
 		if err != nil {
@@ -195,71 +194,5 @@ func TestTheServicesStampTimesInUTC(t *testing.T) {
 			t.Fatal(err)
 		}
 		rtStamp(t, "a resaved agent's updated_at", gotAgent.UpdatedAt, agent.UpdatedAt, before, time.Now())
-
-		repo := NewTeamRepository(db)
-		svc := teams.NewDefaultService(repo)
-		start()
-		crew, err := svc.CreateTeam(org, "Crew", "", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		got, err := repo.FindTeamByID(crew.ID)
-		if err != nil || got == nil {
-			t.Fatalf("FindTeamByID: %v, %v", got, err)
-		}
-		rtStamp(t, "a new crew's created_at", got.CreatedAt, crew.CreatedAt, before, time.Now())
-		rtStamp(t, "a new crew's updated_at", got.UpdatedAt, crew.UpdatedAt, before, time.Now())
-
-		start()
-		lead, err := svc.AddNode(crew.ID, teams.NodeSpec{AgentID: agent.ID, Label: "Lead"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		writer, err := svc.AddNode(crew.ID, teams.NodeSpec{AgentID: agent.ID, Label: "Writer"})
-		if err != nil {
-			t.Fatal(err)
-		}
-		gotNode, err := repo.FindNodeByID(lead.ID)
-		if err != nil || gotNode == nil {
-			t.Fatalf("FindNodeByID: %v, %v", gotNode, err)
-		}
-		rtStamp(t, "a new node's created_at", gotNode.CreatedAt, lead.CreatedAt, before, time.Now())
-
-		start()
-		edge, err := svc.AddEdge(crew.ID, lead.ID, writer.ID, teams.EdgeDelegates, nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		gotEdge, err := repo.FindEdgeByID(edge.ID)
-		if err != nil || gotEdge == nil {
-			t.Fatalf("FindEdgeByID: %v, %v", gotEdge, err)
-		}
-		rtStamp(t, "a new edge's created_at", gotEdge.CreatedAt, edge.CreatedAt, before, time.Now())
-
-		start()
-		renamed := "Crew 2"
-		updated, err := svc.UpdateTeam(crew.ID, &renamed, nil, &lead.ID)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got, err = repo.FindTeamByID(crew.ID); err != nil {
-			t.Fatal(err)
-		}
-		rtStamp(t, "an updated crew's updated_at", got.UpdatedAt, updated.UpdatedAt, before, time.Now())
-
-		start()
-		clone, err := svc.CloneTeam(crew.ID, "Clone", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if got, err = repo.FindTeamByID(clone.ID); err != nil || got == nil {
-			t.Fatalf("FindTeamByID(clone): %v, %v", got, err)
-		}
-		rtStamp(t, "a clone's created_at", got.CreatedAt, clone.CreatedAt, before, time.Now())
-		edges, err := repo.ListEdgesByTeam(clone.ID)
-		if err != nil || len(edges) != 1 {
-			t.Fatalf("the clone's edges: %v, %v", edges, err)
-		}
-		rtStamp(t, "a clone's edge's created_at", edges[0].CreatedAt, time.Time{}, before, time.Now())
 	})
 }

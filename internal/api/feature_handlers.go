@@ -226,7 +226,8 @@ func writeHelpError(w http.ResponseWriter, err error) {
 
 // GetHelpContext answers the topic for ?key= (a context key the page or a
 // help link names) or, without one, for ?path= (the app path, which the
-// manual's help-contexts.yaml maps to a key).
+// manual's help-contexts.yaml maps to a key), with the optional activity
+// signals ?focus=, ?action= and ?pane= tried first.
 func (h *Handler) GetHelpContext(w http.ResponseWriter, r *http.Request) {
 	profile, ok := h.helpProfile(w, r)
 	if !ok {
@@ -238,13 +239,32 @@ func (h *Handler) GetHelpContext(w http.ResponseWriter, r *http.Request) {
 		writeJSONError(w, http.StatusBadRequest, "key or path is required")
 		return
 	}
-	topic, err := h.HelpService.Context(r.Context(), profile, key, path)
+	req := help.Request{Key: key, Path: path}
+	// What the reader is doing on the page, most specific first: the
+	// section with focus, the button pressed last, the tab. OpenD answers
+	// the first whose help the workspace may read. Anything that is not a
+	// context key is dropped, and nothing is forwarded until the member's
+	// channel has the feature.
+	if h.featureEnabled(r, mux.Vars(r)["id"], release.FeatureHelpActivity) {
+		q := r.URL.Query()
+		req.Focus, req.Action, req.Pane = signal(q.Get("focus")), signal(q.Get("action")), signal(q.Get("pane"))
+	}
+	topic, err := h.HelpService.Context(r.Context(), profile, req)
 	if err != nil {
 		writeHelpError(w, err)
 		return
 	}
 	w.Header().Set("Cache-Control", "private, no-store")
 	writeJSONBare(w, topic)
+}
+
+// signal is v when it is a context key OpenD may be sent, otherwise "".
+func signal(v string) string {
+	v = strings.TrimSpace(v)
+	if !help.ValidSignal(v) {
+		return ""
+	}
+	return v
 }
 
 // GetHelpTopic answers one topic by its page id: ?id=topics/vv/test-runs.

@@ -30,7 +30,7 @@ export const renderStartScreen = ({
 }: StartScreenProps): React.ReactElement => {
   return (
     <div style={{ padding: 24, maxWidth: 700, margin: '0 auto' }}>
-      <div className="card" style={{ textAlign: 'center', padding: 40 }}>
+      <div className="card" style={{ textAlign: 'center', padding: 40 }} data-help-key="guided.session">
         <h2 style={{ color: 'var(--text)', marginBottom: 12 }}>Guided requirements definition</h2>
         {latestCommitted ? (
           <p style={{ color: 'var(--text-muted)', marginBottom: 24, lineHeight: 1.6 }}>

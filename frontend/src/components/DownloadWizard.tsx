@@ -18,6 +18,16 @@ import {
   toggle,
 } from '../utils/downloadSelection';
 
+/** The file the plan travels as beside a document of each format. */
+const PLAN_BESIDE: Record<DownloadFormat, string> = {
+  json: 'A JSON file beside the project',
+  csv: 'A CSV file beside the artifacts',
+  excel: 'A workbook beside the artifacts',
+  reqif: 'A Microsoft Project XML file beside the ReqIF',
+  pdf: 'A PDF beside the specification',
+  docx: 'A PDF beside the specification',
+};
+
 interface DownloadWizardProps {
   projectId: string;
   /** Which snapshot to take: a baseline id, or 'live'/undefined for the project as it stands. */
@@ -136,7 +146,9 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 6, marginBottom: 14, fontSize: 12 }}>
+      {/* Modal takes no attributes, so each part of the wizard names the
+          manual's download topic itself. */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14, fontSize: 12 }} data-help-pane="projects.download">
         {(['format', 'content'] as const).map((s, i) => (
           <button
             key={s}
@@ -157,7 +169,7 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
       </div>
 
       {step === 'format' && (
-        <div>
+        <div data-help-pane="projects.download">
           {DOWNLOAD_FORMATS.map((choice) => (
             <label
               key={choice.format}
@@ -189,7 +201,7 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
       )}
 
       {step === 'content' && (
-        <div>
+        <div data-help-pane="projects.download">
           {loading && <div style={{ fontSize: 13, color: 'var(--text-muted)' }}>Reading the project…</div>}
 
           {!loading && options && (
@@ -400,18 +412,41 @@ export const DownloadWizard: React.FC<DownloadWizardProps> = ({ projectId, basel
                     `${cat.count} file${cat.count === 1 ? '' : 's'}, ${formatBytes(cat.bytes)}`
                   )
                 )}
-                {isArchive(selection) && (
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
-                    The files travel with the document, so this download is a .zip.
-                  </div>
-                )}
               </section>
+
+              {options.plan && (
+                <section style={{ marginTop: 14 }}>
+                  <SectionHeading title="Plan and tasks" />
+                  {checkbox(
+                    selection.plan,
+                    'The plan and its tasks',
+                    () => setSelection((s) => ({ ...s, plan: !s.plan })),
+                    `${options.plan.tasks} task${options.plan.tasks === 1 ? '' : 's'}, ${options.plan.milestones} milestone${options.plan.milestones === 1 ? '' : 's'}`
+                  )}
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>
+                    {PLAN_BESIDE[format]}, with every task's dates, effort, progress and who it is assigned to, and the milestones.
+                  </div>
+                </section>
+              )}
+              {Boolean(options.children) && (
+                <section style={{ marginTop: 14 }}>
+                  <SectionHeading title="Child projects" />
+                  {checkbox(selection.children, 'The projects under this one', () => setSelection((s) => ({ ...s, children: !s.children })), `${options.children} project${options.children === 1 ? '' : 's'}`)}
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Each travels as its own download, with the same choices as this one, in a folder of its name under projects/.</div>
+                </section>
+              )}
+              {isArchive(selection) && (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 10 }}>
+                  {selection.children ? 'The projects travel' : selection.plan && selection.attachments.length === 0 ? 'The plan travels' : 'The files travel'} with the document, so this download is a .zip.
+                </div>
+              )}
             </>
           )}
         </div>
       )}
 
       <div
+        data-help-pane="projects.download"
         style={{
           borderTop: '1px solid var(--border-soft)',
           marginTop: 16,

@@ -12,21 +12,19 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/agentruns"
 	"github.com/openv/requirements-platform/internal/domain/automations"
 	domainevents "github.com/openv/requirements-platform/internal/domain/events"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/scheduler"
 )
 
 // TriggerMatcher subscribes to the event bus and launches runs for matching
 // triggered automations.
 type TriggerMatcher struct {
-	repo        automations.Repository
-	runService  agentruns.Service
-	teamService teams.Service
+	repo       automations.Repository
+	runService agentruns.Service
 }
 
 // NewTriggerMatcher creates a matcher.
-func NewTriggerMatcher(repo automations.Repository, runService agentruns.Service, teamService teams.Service) *TriggerMatcher {
-	return &TriggerMatcher{repo: repo, runService: runService, teamService: teamService}
+func NewTriggerMatcher(repo automations.Repository, runService agentruns.Service) *TriggerMatcher {
+	return &TriggerMatcher{repo: repo, runService: runService}
 }
 
 // Start subscribes to the bus.
@@ -156,7 +154,7 @@ func (m *TriggerMatcher) passesGuards(a *automations.Automation, e domainevents.
 }
 
 func (m *TriggerMatcher) fire(a *automations.Automation, e domainevents.Event) {
-	agentID, teamID, teamNodeID, err := scheduler.ResolveTarget(a, m.teamService)
+	agentID, err := scheduler.ResolveTarget(a)
 	if err != nil {
 		slog.Warn("triggers: automation target unresolvable",
 			slog.String("automation_id", a.ID),
@@ -202,8 +200,6 @@ func (m *TriggerMatcher) fire(a *automations.Automation, e domainevents.Event) {
 		ProjectID:      projectID,
 		AutomationID:   &automationID,
 		TriggerEventID: &eventID,
-		TeamID:         teamID,
-		TeamNodeID:     teamNodeID,
 		Prompt:         prompt,
 	}
 	if _, _, err := m.runService.Launch(req); err != nil {

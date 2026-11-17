@@ -54,7 +54,7 @@ export async function registerUser(page: Page, user: TestUser): Promise<void> {
 
   await expect(page).toHaveURL(/\/projects$/);
   // Registration auto-provisions "<name>'s Space" as a personal workspace.
-  await expect(page.getByText(`${user.name}'s Space`)).toBeVisible();
+  await expect(page.getByText(`${user.name}'s Space`).first()).toBeVisible();
 }
 
 /** The page must never be wider than the window: horizontal scrolling on a
@@ -100,9 +100,26 @@ export async function openMenuGroup(page: Page, group: string): Promise<void> {
 }
 
 /** Navigate to a project module through the menu, opening its group first. */
+/**
+ * The requirements toolbar: the baseline picker with Compare, Capture
+ * Baseline, Delete baseline, Draft test cases and Download. On a wide screen
+ * it sits behind one button, named for the copy on screen (Working copy, or
+ * Baseline); a use of one of its buttons closes it. This opens it unless it
+ * is open already.
+ */
+export async function openRequirementsToolbar(page: Page): Promise<void> {
+  const picker = page.locator('select[title="Select baseline"]');
+  if (await picker.isVisible()) return;
+  await page.getByRole('button', { name: /^(Working copy|Baseline)/ }).click();
+  await expect(picker).toBeVisible();
+}
+
 export async function openModule(page: Page, group: string, label: string): Promise<void> {
   await openMenuGroup(page, group);
-  await page.getByRole('link', { name: label, exact: true }).click();
+  // The group's flyout lists the page; so does the row of the group's pages
+  // under the top bar when the page in view is in that group. Either leads
+  // there, so the first is taken.
+  await page.getByRole('link', { name: label, exact: true }).first().click();
 }
 
 /** Open the Requirements module from the project shell. */
@@ -112,10 +129,26 @@ export async function openRequirements(page: Page): Promise<void> {
   await expect(page.getByRole('heading', { name: 'Requirements' })).toBeVisible();
 }
 
+/**
+ * Choose an option in one of the editor's choice fields by its value: the
+ * native select where the workspace has not received the editor pickers yet,
+ * else the picker's listbox, whose options carry their value.
+ */
+export async function chooseOption(page: Page, selector: string, value: string): Promise<void> {
+  const field = page.locator(selector);
+  if ((await field.evaluate((el) => el.tagName)) === 'SELECT') {
+    await field.selectOption(value);
+    return;
+  }
+  if ((await field.getAttribute('aria-expanded')) !== 'true') await field.click();
+  await page.locator(`[role="listbox"] [role="option"][data-value="${value}"]`).click();
+  await expect(field).toHaveAttribute('aria-expanded', 'false');
+}
+
 /** Create a requirement artifact via the New Artifact form (Requirements view). */
 export async function createRequirement(page: Page, title: string, body: string): Promise<void> {
   await page.getByRole('button', { name: '+ New Artifact' }).click();
-  await page.locator('#type').selectOption('requirement');
+  await chooseOption(page, '#type', 'requirement');
   await page.locator('#title').fill(title);
   await page.locator('#body').fill(body);
   await page.getByRole('button', { name: 'Create', exact: true }).click();

@@ -96,7 +96,7 @@
       "email": "google-user@example.com",
       "account_name": "Tour Google",
       "workspace": "<googler.workspace>",
-      "about": "the account Google's sign-on made (step 43)"
+      "about": "the account Google's sign-on made (step 47)"
     },
     {
       "name": "anonymous",
@@ -1045,19 +1045,19 @@
           "Cookie: openv_oidc_state=<oidc.state>; openv_oidc_nonce=<oidc.nonce>; openv_oidc_pkce=<oidc.pkce>"
         ]
       },
-      "status": 400,
-      "content_type": "application/json",
-      "headers": [],
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
+      "headers": [
+        "Location: http://localhost:3000/login?error=sso_failed"
+      ],
       "security_headers": "standard",
-      "content_length": 32,
-      "kind": "json",
+      "content_length": 67,
+      "kind": "text",
       "body": [
-        "{\"error\":\"invalid oauth state\"}"
+        "<a href=\"http://localhost:3000/login?error=sso_failed\">Found</a>.",
+        ""
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "invalid oauth state"
-      },
       "gzip": "not sent: each single sign-on request spends a token of the address's budget, and a code is exchanged each time"
     },
     {
@@ -1073,19 +1073,19 @@
           "Cookie: openv_oidc_state=<oidc.state>"
         ]
       },
-      "status": 400,
-      "content_type": "application/json",
-      "headers": [],
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
+      "headers": [
+        "Location: http://localhost:3000/login?error=sso_failed"
+      ],
       "security_headers": "standard",
-      "content_length": 32,
-      "kind": "json",
+      "content_length": 67,
+      "kind": "text",
       "body": [
-        "{\"error\":\"missing oauth nonce\"}"
+        "<a href=\"http://localhost:3000/login?error=sso_failed\">Found</a>.",
+        ""
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "missing oauth nonce"
-      },
       "gzip": "not sent: each single sign-on request spends a token of the address's budget, and a code is exchanged each time"
     },
     {
@@ -1101,23 +1101,22 @@
           "Cookie: openv_oidc_state=<oidc.state>; openv_oidc_nonce=<oidc.nonce>; openv_oidc_pkce=<oidc.pkce>"
         ]
       },
-      "status": 400,
-      "content_type": "application/json",
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
       "headers": [
+        "Location: http://localhost:3000/login?error=sso_failed",
         "Set-Cookie: openv_oidc_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_nonce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_pkce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned"
       ],
       "security_headers": "standard",
-      "content_length": 39,
-      "kind": "json",
+      "content_length": 67,
+      "kind": "text",
       "body": [
-        "{\"error\":\"missing authorization code\"}"
+        "<a href=\"http://localhost:3000/login?error=sso_failed\">Found</a>.",
+        ""
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "missing authorization code"
-      },
       "gzip": "not sent: each single sign-on request spends a token of the address's budget, and a code is exchanged each time"
     },
     {
@@ -1133,23 +1132,22 @@
           "Cookie: openv_oidc_state=<oidc.state>; openv_oidc_nonce=<oidc.nonce>; openv_oidc_pkce=<oidc.pkce>"
         ]
       },
-      "status": 502,
-      "content_type": "application/json",
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
       "headers": [
+        "Location: http://localhost:3000/login?error=sso_failed",
         "Set-Cookie: openv_oidc_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_nonce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_pkce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned"
       ],
       "security_headers": "standard",
-      "content_length": 38,
-      "kind": "json",
+      "content_length": 67,
+      "kind": "text",
       "body": [
-        "{\"error\":\"sso token exchange failed\"}"
+        "<a href=\"http://localhost:3000/login?error=sso_failed\">Found</a>.",
+        ""
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "sso token exchange failed"
-      },
       "gzip": "not sent: each single sign-on request spends a token of the address's budget, and a code is exchanged each time",
       "stand_in_requests": [
         {
@@ -1196,23 +1194,22 @@
           "Cookie: openv_oidc_state=<oidc.state>; openv_oidc_nonce=<oidc.nonce>; openv_oidc_pkce=<oidc.pkce>"
         ]
       },
-      "status": 502,
-      "content_type": "application/json",
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
       "headers": [
+        "Location: http://localhost:3000/login?error=sso_failed",
         "Set-Cookie: openv_oidc_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_nonce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_pkce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned"
       ],
       "security_headers": "standard",
-      "content_length": 48,
-      "kind": "json",
+      "content_length": 67,
+      "kind": "text",
       "body": [
-        "{\"error\":\"sso response is missing an id_token\"}"
+        "<a href=\"http://localhost:3000/login?error=sso_failed\">Found</a>.",
+        ""
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "sso response is missing an id_token"
-      },
       "gzip": "not sent: each single sign-on request spends a token of the address's budget, and a code is exchanged each time",
       "stand_in_requests": [
         {
@@ -1244,23 +1241,22 @@
           "Cookie: openv_oidc_state=<oidc.state>; openv_oidc_nonce=<oidc.nonce>; openv_oidc_pkce=<oidc.pkce>"
         ]
       },
-      "status": 502,
-      "content_type": "application/json",
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
       "headers": [
+        "Location: http://localhost:3000/login?error=sso_failed",
         "Set-Cookie: openv_oidc_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_nonce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_pkce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned"
       ],
       "security_headers": "standard",
-      "content_length": 45,
-      "kind": "json",
+      "content_length": 67,
+      "kind": "text",
       "body": [
-        "{\"error\":\"sso id_token verification failed\"}"
+        "<a href=\"http://localhost:3000/login?error=sso_failed\">Found</a>.",
+        ""
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "sso id_token verification failed"
-      },
       "gzip": "not sent: each single sign-on request spends a token of the address's budget, and a code is exchanged each time",
       "stand_in_requests": [
         {
@@ -1299,23 +1295,22 @@
           "Cookie: openv_oidc_state=<oidc.state>; openv_oidc_nonce=<oidc.nonce>; openv_oidc_pkce=<oidc.pkce>"
         ]
       },
-      "status": 502,
-      "content_type": "application/json",
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
       "headers": [
+        "Location: http://localhost:3000/login?error=sso_failed",
         "Set-Cookie: openv_oidc_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_nonce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_pkce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned"
       ],
       "security_headers": "standard",
-      "content_length": 45,
-      "kind": "json",
+      "content_length": 67,
+      "kind": "text",
       "body": [
-        "{\"error\":\"sso id_token verification failed\"}"
+        "<a href=\"http://localhost:3000/login?error=sso_failed\">Found</a>.",
+        ""
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "sso id_token verification failed"
-      },
       "gzip": "not sent: each single sign-on request spends a token of the address's budget, and a code is exchanged each time",
       "stand_in_requests": [
         {
@@ -1347,23 +1342,22 @@
           "Cookie: openv_oidc_state=<oidc.state>; openv_oidc_nonce=<oidc.nonce>; openv_oidc_pkce=<oidc.pkce>"
         ]
       },
-      "status": 400,
-      "content_type": "application/json",
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
       "headers": [
+        "Location: http://localhost:3000/login?error=sso_failed",
         "Set-Cookie: openv_oidc_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_nonce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_pkce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned"
       ],
       "security_headers": "standard",
-      "content_length": 32,
-      "kind": "json",
+      "content_length": 67,
+      "kind": "text",
       "body": [
-        "{\"error\":\"invalid oauth nonce\"}"
+        "<a href=\"http://localhost:3000/login?error=sso_failed\">Found</a>.",
+        ""
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "invalid oauth nonce"
-      },
       "gzip": "not sent: each single sign-on request spends a token of the address's budget, and a code is exchanged each time",
       "stand_in_requests": [
         {
@@ -1395,23 +1389,22 @@
           "Cookie: openv_oidc_state=<oidc.state>; openv_oidc_nonce=<oidc.nonce>; openv_oidc_pkce=<oidc.pkce>"
         ]
       },
-      "status": 502,
-      "content_type": "application/json",
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
       "headers": [
+        "Location: http://localhost:3000/login?error=sso_failed",
         "Set-Cookie: openv_oidc_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_nonce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_pkce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned"
       ],
       "security_headers": "standard",
-      "content_length": 36,
-      "kind": "json",
+      "content_length": 67,
+      "kind": "text",
       "body": [
-        "{\"error\":\"invalid id_token claims\"}"
+        "<a href=\"http://localhost:3000/login?error=sso_failed\">Found</a>.",
+        ""
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "invalid id_token claims"
-      },
       "gzip": "not sent: each single sign-on request spends a token of the address's budget, and a code is exchanged each time",
       "stand_in_requests": [
         {
@@ -1443,23 +1436,22 @@
           "Cookie: openv_oidc_state=<oidc.state>; openv_oidc_nonce=<oidc.nonce>; openv_oidc_pkce=<oidc.pkce>"
         ]
       },
-      "status": 403,
-      "content_type": "application/json",
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
       "headers": [
+        "Location: http://localhost:3000/login?error=sso_unverified",
         "Set-Cookie: openv_oidc_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_nonce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_pkce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned"
       ],
       "security_headers": "standard",
-      "content_length": 43,
-      "kind": "json",
+      "content_length": 71,
+      "kind": "text",
       "body": [
-        "{\"error\":\"sso account has no email claim\"}"
+        "<a href=\"http://localhost:3000/login?error=sso_unverified\">Found</a>.",
+        ""
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "sso account has no email claim"
-      },
       "gzip": "not sent: each single sign-on request spends a token of the address's budget, and a code is exchanged each time",
       "stand_in_requests": [
         {
@@ -1491,23 +1483,22 @@
           "Cookie: openv_oidc_state=<oidc.state>; openv_oidc_nonce=<oidc.nonce>; openv_oidc_pkce=<oidc.pkce>"
         ]
       },
-      "status": 403,
-      "content_type": "application/json",
+      "status": 302,
+      "content_type": "text/html; charset=utf-8",
       "headers": [
+        "Location: http://localhost:3000/login?error=sso_unverified",
         "Set-Cookie: openv_oidc_state=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_nonce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned",
         "Set-Cookie: openv_oidc_pkce=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None; Partitioned"
       ],
       "security_headers": "standard",
       "content_length": 71,
-      "kind": "json",
+      "kind": "text",
       "body": [
-        "{\"error\":\"sso account email is not verified by the identity provider\"}"
+        "<a href=\"http://localhost:3000/login?error=sso_unverified\">Found</a>.",
+        ""
       ],
       "trailing_newline": true,
-      "parsed": {
-        "error": "sso account email is not verified by the identity provider"
-      },
       "gzip": "not sent: each single sign-on request spends a token of the address's budget, and a code is exchanged each time",
       "stand_in_requests": [
         {
@@ -1996,6 +1987,117 @@
     },
     {
       "n": 41,
+      "title": "the provider sends an ID token as a deletion token: refused as invalid, its typ is not account-deletion+jwt",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/oidc/account-deletion",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/oidc/account-deletion",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "deletion_token=<deletion.id_token>"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 21,
+      "kind": "json",
+      "body": [
+        "{\"status\":\"invalid\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "status": "invalid"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 42,
+      "title": "the provider removes the uninvited account: deleted, its session ended and its personal workspace purged",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/oidc/account-deletion",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/oidc/account-deletion",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "deletion_token=<deletion.token>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 21,
+      "kind": "json",
+      "body": [
+        "{\"status\":\"deleted\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "status": "deleted"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 43,
+      "title": "the removed account's session is gone",
+      "actor": "uninvited",
+      "route": "GET /api/v1/auth/me",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/auth/me"
+      },
+      "status": 401,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 30,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"not authenticated\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "not authenticated"
+      },
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 44,
+      "title": "the same request again: not_found, nothing left to remove",
+      "actor": "anonymous",
+      "route": "POST /api/v1/auth/oidc/account-deletion",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/auth/oidc/account-deletion",
+        "headers": [
+          "Content-Type: application/x-www-form-urlencoded"
+        ],
+        "body": "deletion_token=<deletion.token>"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 23,
+      "kind": "json",
+      "body": [
+        "{\"status\":\"not_found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "status": "not_found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 45,
       "title": "the first address signs in again: a new session, and nothing published",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/oidc/callback",
@@ -2043,7 +2145,7 @@
       ]
     },
     {
-      "n": 42,
+      "n": 46,
       "title": "start Google sign-on: its state cookie is Secure, SameSite=None and Partitioned, and the redirect_uri is on PUBLIC_URL (I8, Q12)",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google",
@@ -2068,7 +2170,7 @@
       "gzip": "not sent: each single sign-on request spends a token of the address's budget"
     },
     {
-      "n": 43,
+      "n": 47,
       "title": "Google's callback: the account is made (single sign-on never consults the closed registration), its session cookie cross-site, and it is sent to http://localhost:3000, not PUBLIC_URL (Q12's second chain)",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/google/callback",
@@ -2120,7 +2222,7 @@
       ]
     },
     {
-      "n": 44,
+      "n": 48,
       "title": "mint a share link: its url is on PUBLIC_URL, the handler's FrontendURL with FRONTEND_URL unset (Q12's first chain)",
       "actor": "owner",
       "acting_in": "<w>",
@@ -2140,7 +2242,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"id\":\"<uuid:3>\",\"project_id\":\"<p>\",\"role\":\"public\",\"label\":\"\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 44>\",\"token\":\"<hex64:4>\",\"url\":\"https://api.tour.example/share/<hex64:4>\"}"
+        "{\"id\":\"<uuid:3>\",\"project_id\":\"<p>\",\"role\":\"public\",\"label\":\"\",\"created_by\":\"<owner>\",\"created_at\":\"<time@step 48>\",\"token\":\"<hex64:4>\",\"url\":\"https://api.tour.example/share/<hex64:4>\"}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2149,7 +2251,7 @@
         "role": "public",
         "label": "",
         "created_by": "<owner>",
-        "created_at": "<time@step 44>",
+        "created_at": "<time@step 48>",
         "token": "<hex64:4>",
         "url": "https://api.tour.example/share/<hex64:4>"
       },
@@ -2157,7 +2259,7 @@
       "events": []
     },
     {
-      "n": 45,
+      "n": 49,
       "title": "the 20th OIDC sign-on start from address Q: the last its budget allows",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/oidc/login",
@@ -2190,7 +2292,7 @@
       "gzip": "not sent: each single sign-on request spends a token of the address's budget"
     },
     {
-      "n": 46,
+      "n": 50,
       "title": "the callback from Q: refused, the bucket the starts spent (Q18)",
       "actor": "anonymous",
       "route": "GET /api/v1/auth/oidc/callback",

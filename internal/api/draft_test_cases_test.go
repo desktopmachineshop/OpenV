@@ -239,3 +239,31 @@ func TestDraftTestCasesRefusesAProposalModeRun(t *testing.T) {
 		}
 	})
 }
+
+// The flat team's Test Auditor drafts test cases where the workspace has it;
+// an archived one is passed over for the earlier Test Case Author.
+func TestDraftTestCasesPrefersTheTestAuditor(t *testing.T) {
+	for name, tc := range map[string]struct {
+		archived bool
+		want     string
+	}{
+		"test auditor":                  {false, "ta"},
+		"archived auditor, earlier one": {true, "tca"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			h, runs := newDraftFixture(t)
+			h.AgentService.(*fakeAgentService).byID["ta"] = &agents.Agent{
+				ID: "ta", OrgID: "org-1", Slug: seeds.TestAuditorSlug, Name: "Test Auditor", Provider: "claude-code",
+				WriteMode: agents.WriteModeProposal, Archived: tc.archived,
+			}
+			w := httptest.NewRecorder()
+			h.DraftTestCases(w, draftReq("editor", "proj-1", `{"requirement_ids":["`+draftReqUUID1+`"]}`))
+			if w.Code != http.StatusCreated || len(runs.launchReqs) != 1 {
+				t.Fatalf("draft = %d, %d launches: %s", w.Code, len(runs.launchReqs), w.Body.String())
+			}
+			if got := runs.launchReqs[0].AgentID; got != tc.want {
+				t.Errorf("launched %s, want %s", got, tc.want)
+			}
+		})
+	}
+}

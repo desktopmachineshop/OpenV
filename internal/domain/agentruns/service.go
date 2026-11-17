@@ -151,6 +151,18 @@ func (s *DefaultService) QueueStats(orgID string) (QueueStats, error) {
 	return s.repo.QueueStats(orgID)
 }
 
+// AgentStats answers every agent's numbers since the given time.
+func (s *DefaultService) AgentStats(orgID, projectID string, since time.Time) ([]AgentStats, error) {
+	stats, err := s.repo.AgentStats(orgID, projectID, since)
+	if err != nil {
+		return nil, err
+	}
+	if stats == nil {
+		stats = []AgentStats{}
+	}
+	return stats, nil
+}
+
 // Usage rolls up the org's run usage since the given time. Totals are summed
 // from the per-agent rollup (both groupings cover the same runs).
 func (s *DefaultService) Usage(orgID string, since time.Time) (*UsageSummary, error) {

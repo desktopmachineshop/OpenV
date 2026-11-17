@@ -3,6 +3,9 @@
 <concept id="creating-an-interview">
   <title>Creating an interview</title>
   <shortdesc>Click <b>+ New interview</b>:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="interviews.create"/>
+  </prolog>
   <conbody>
     <ul>
       <li><b>Interview name</b> — e.g. "Machinist onboarding feedback".</li>

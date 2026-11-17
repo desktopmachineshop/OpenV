@@ -13,6 +13,10 @@ package api
 //   - POST /auth/password-reset/confirm {token, new_password} — spends the
 //     link, sets the password and signs the account out everywhere.
 //
+// All three stay open where single sign-on is the only way in
+// (OPENV_OIDC_ONLY): there the password is what links the provider to an
+// existing password account, and resetting it signs nobody in.
+//
 // The two auth routes live under /api/v1/auth/, which the middleware leaves
 // open; the admin one sits behind it like the rest of platform admin.
 
@@ -44,10 +48,10 @@ func (h *Handler) passwordResetEmailAvailable() bool {
 // account. Open, and deliberately uninformative: 202 whether or not the
 // address is known, with the lookup and the send done after the answer.
 func (h *Handler) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
-	// Without a password sign-in there is no password to reset.
-	if h.ownSignInRefused(w) {
-		return
-	}
+	// Open in every mode. Where single sign-on is the only way in
+	// (OPENV_OIDC_ONLY) a password still has one use: linking the provider
+	// to an existing password account asks for it once (auth_link_handlers.go),
+	// and someone who forgot it has no other way through.
 	var req struct {
 		Email string `json:"email"`
 	}
@@ -112,10 +116,9 @@ func (h *Handler) sendPasswordResetFor(email string) {
 
 // ConfirmPasswordReset spends a reset link and sets the new password.
 func (h *Handler) ConfirmPasswordReset(w http.ResponseWriter, r *http.Request) {
-	// Without a password sign-in there is no password to reset.
-	if h.ownSignInRefused(w) {
-		return
-	}
+	// Open in every mode, like the request: with single sign-on the only
+	// way in, the password it sets serves only to link the provider, since
+	// password sign-in itself still refuses, and no session is opened here.
 	var req struct {
 		Token       string `json:"token"`
 		NewPassword string `json:"new_password"`

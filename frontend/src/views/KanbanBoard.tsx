@@ -1,3 +1,4 @@
+import { useUiRefresh } from '../hooks/useUiRefresh';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import {
@@ -8,16 +9,15 @@ import {
   Artifact,
   artifactAPI,
   authAPI,
-  Crew,
-  crewsAPI,
   User,
   WorkItem,
   workItemsAPI,
 } from '../api/client';
 import { useAppStore } from '../state/store';
 import { WorkItemDrawer } from '../components/kanban/WorkItemDrawer';
+import { OpenIcon } from '../components/ui/OpenIcon';
 import { BOARD_COLUMNS } from '../components/kanban/columns';
-import { ArtifactPicker, ErrorBanner, Modal, SegmentedControl } from '../components/ui';
+import { AgentGlyph, ArtifactPicker, ErrorBanner, Modal, SegmentedControl, chipStyle } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 
 const COLUMNS = BOARD_COLUMNS;
@@ -27,7 +27,7 @@ const LIVE_STATUSES = ['queued', 'claimed', 'running'];
 interface ComposerState {
   title: string;
   description: string;
-  assignee: string; // '', 'me', 'agent:<id>', 'team:<id>'
+  assignee: string; // '', 'me', 'agent:<id>'
   artifactIds: string[];
   expanded: boolean;
 }
@@ -49,12 +49,13 @@ export const KanbanBoard: React.FC = () => {
 
   const [items, setItems] = useState<WorkItem[]>([]);
   const [agents, setAgents] = useState<AgentDef[]>([]);
-  const [crews, setCrews] = useState<Crew[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [artifactMap, setArtifactMap] = useState<Record<string, Artifact>>({});
   const [runsByWorkItem, setRunsByWorkItem] = useState<Record<string, AgentRun>>({});
   const [error, setError] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // A card opens beside the board, which keeps its place; its open mark opens it in full.
+  const [full, setFull] = useState(false);
   const [composers, setComposers] = useState<Record<string, ComposerState>>({});
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);
   const dragItemId = useRef<string | null>(null);
@@ -62,6 +63,7 @@ export const KanbanBoard: React.FC = () => {
   // 260px columns do not fit, and drag-and-drop between them never starts
   // from a finger, so a card's actions menu offers Move to… instead.
   const viewport = useViewport();
+  const refresh = useUiRefresh();
   const phone = viewport.isPhone;
   const [phoneColumn, setPhoneColumn] = useState<string>(COLUMNS[0].key);
   const [actionsFor, setActionsFor] = useState<WorkItem | null>(null);
@@ -91,8 +93,8 @@ export const KanbanBoard: React.FC = () => {
 
   // Static-ish caches
   useEffect(() => {
-    agentsAPI.list().then((res) => setAgents(res.data || [])).catch(() => setAgents([]));
-    crewsAPI.list(projectId).then((res) => setCrews(res.data || [])).catch(() => setCrews([]));
+    // An archived agent cannot run, so a card is not assigned to one.
+    agentsAPI.list().then((res) => setAgents((res.data || []).filter((a) => !a.archived))).catch(() => setAgents([]));
     authAPI.listUsers().then((res) => setUsers(res.data || [])).catch(() => setUsers([]));
     if (projectId) {
       artifactAPI
@@ -147,14 +149,6 @@ export const KanbanBoard: React.FC = () => {
     return m;
   }, [agents]);
 
-  const crewById = useMemo(() => {
-    const m: Record<string, Crew> = {};
-    crews.forEach((c) => {
-      m[c.id] = c;
-    });
-    return m;
-  }, [crews]);
-
   const userById = useMemo(() => {
     const m: Record<string, User> = {};
     users.forEach((u) => {
@@ -182,7 +176,7 @@ export const KanbanBoard: React.FC = () => {
   };
 
   const isDragDisabled = (item: WorkItem): boolean =>
-    (item.assignee_type === 'agent' || item.assignee_type === 'team') && isRunLive(item);
+    item.assignee_type === 'agent' && isRunLive(item);
 
   const handleDrop = async (columnKey: string) => {
     const id = dragItemId.current;
@@ -223,9 +217,6 @@ export const KanbanBoard: React.FC = () => {
     } else if (c.assignee.startsWith('agent:')) {
       assignee_type = 'agent';
       assignee_id = c.assignee.slice(6);
-    } else if (c.assignee.startsWith('team:')) {
-      assignee_type = 'team';
-      assignee_id = c.assignee.slice(5);
     }
     // Wire format unchanged: artifact_ids stays a string[] of artifact ids.
     const artifact_ids = c.artifactIds;
@@ -252,43 +243,10 @@ export const KanbanBoard: React.FC = () => {
       return (
         <span
           title={`Agent: ${agent?.name || item.assignee_id}`}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            fontSize: 12,
-            background: 'var(--tint-purple)',
-            border: '1px solid var(--tint-purple-border)',
-            borderRadius: 10,
-            padding: '2px 8px',
-            color: 'var(--text)',
-          }}
+          style={{ ...chipStyle('agent'), fontWeight: 600 }}
         >
-          <span role="img" aria-label="agent">🤖</span>
+          <span role="img" aria-label="agent"><AgentGlyph /></span>
           {agent?.name || 'agent'}
-        </span>
-      );
-    }
-    // assignee_type 'team' is the wire value for crews (unchanged JSON).
-    if (item.assignee_type === 'team') {
-      const crew = crewById[item.assignee_id];
-      return (
-        <span
-          title={`Crew: ${crew?.name || item.assignee_id}`}
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            fontSize: 12,
-            background: 'var(--tint-blue)',
-            border: '1px solid var(--tint-blue-border)',
-            borderRadius: 10,
-            padding: '2px 8px',
-            color: 'var(--text)',
-          }}
-        >
-          <span role="img" aria-label="crew">👥</span>
-          {crew?.name || 'crew'}
         </span>
       );
     }
@@ -316,13 +274,13 @@ export const KanbanBoard: React.FC = () => {
   };
 
   return (
-    <div style={{ padding: phone ? 12 : 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
+    <div className="ov-gutter" style={{ padding: phone ? 12 : 20, height: '100%', display: 'flex', flexDirection: 'column' }}>
       <style>
         {`@keyframes ovPulse { 0% { opacity: 1; } 50% { opacity: 0.25; } 100% { opacity: 1; } }`}
       </style>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 14, marginBottom: 6, flexWrap: 'wrap' }}>
-        <h2 style={{ color: 'var(--text)', margin: 0 }}>Board</h2>
-        <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>
+      <div className="ov-page-head" style={{ marginBottom: 10 }}>
+        <h2 className="ov-page-title">Board</h2>
+        <span className="ov-page-sub">
           {phone
             ? 'Tip: a card’s ⋯ menu moves it between columns.'
             : 'Tip: assign a card to an agent and drag it to To Do to launch the agent.'}
@@ -370,12 +328,15 @@ export const KanbanBoard: React.FC = () => {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: 12, flex: 1, overflowX: 'auto', alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: 12, flex: 1, minHeight: 0 }}>
+      <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 0, overflowX: 'auto', alignItems: 'flex-start' }}>
         {COLUMNS.filter((col) => !phone || col.key === phoneColumn).map((col) => {
           const composer = composers[col.key] || emptyComposer();
           return (
             <div
               key={col.key}
+              // A drop target: moving cards (the composer below keeps its own key).
+              data-help-key="board.move"
               onDragOver={(e) => {
                 e.preventDefault();
                 setDragOverColumn(col.key);
@@ -388,9 +349,9 @@ export const KanbanBoard: React.FC = () => {
               style={{
                 flex: phone ? '1 1 auto' : '0 0 260px',
                 width: phone ? '100%' : undefined,
-                background: dragOverColumn === col.key ? 'var(--tint-blue)' : 'var(--surface-alt)',
-                borderRadius: 6,
-                padding: 10,
+                background: dragOverColumn === col.key ? 'var(--tint-blue)' : 'var(--surface-inset)',
+                borderRadius: 8,
+                padding: 8,
                 maxHeight: '100%',
                 overflowY: 'auto',
                 border: dragOverColumn === col.key ? '2px dashed var(--accent)' : '2px solid transparent',
@@ -428,19 +389,23 @@ export const KanbanBoard: React.FC = () => {
                     title={disabled ? 'Agent run in progress — card is locked' : undefined}
                     style={{
                       background: 'var(--surface)',
-                      borderRadius: 4,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
-                      padding: '10px 12px',
+                      borderRadius: 12,
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                      padding: 10,
                       marginBottom: 8,
                       cursor: disabled ? 'not-allowed' : 'grab',
                       opacity: disabled ? 0.85 : 1,
-                      border: '1px solid var(--surface-alt)',
+                      border: `1px solid ${item.id === selectedId ? 'var(--accent)' : 'var(--border)'}`,
                     }}
                   >
                     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
                       <div style={{ flex: 1, fontSize: phone ? 15 : 13, color: 'var(--text)', fontWeight: 600 }}>
                         {item.title}
                       </div>
+                      <button type="button" aria-label={`Open ${item.title} in full`} title="Open the card in full" onClick={(e) => (e.stopPropagation(), setSelectedId(item.id), setFull(true))}
+                        style={{ border: 'none', background: 'none', padding: phone ? 8 : 2, color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}>
+                        <OpenIcon />
+                      </button>
                       {phone && (
                         <button
                           type="button"
@@ -449,17 +414,7 @@ export const KanbanBoard: React.FC = () => {
                             e.stopPropagation();
                             setActionsFor(item);
                           }}
-                          style={{
-                            width: 44,
-                            height: 44,
-                            margin: '-10px -12px -10px 0',
-                            border: 'none',
-                            background: 'none',
-                            fontSize: 20,
-                            color: 'var(--text-muted)',
-                            cursor: 'pointer',
-                            flexShrink: 0,
-                          }}
+                          style={{ width: 44, height: 44, margin: '-10px -12px -10px 0', border: 'none', background: 'none', fontSize: 20, color: 'var(--text-muted)', cursor: 'pointer', flexShrink: 0 }}
                         >
                           ⋯
                         </button>
@@ -467,15 +422,7 @@ export const KanbanBoard: React.FC = () => {
                       {live && (
                         <span
                           title={`Run ${runsByWorkItem[item.id]?.status}`}
-                          style={{
-                            width: 9,
-                            height: 9,
-                            borderRadius: '50%',
-                            background: 'var(--accent)',
-                            animation: 'ovPulse 1.2s ease-in-out infinite',
-                            marginTop: 3,
-                            flexShrink: 0,
-                          }}
+                          style={{ width: 9, height: 9, borderRadius: '50%', background: 'var(--accent)', animation: 'ovPulse 1.2s ease-in-out infinite', marginTop: 3, flexShrink: 0 }}
                         />
                       )}
                     </div>
@@ -499,9 +446,12 @@ export const KanbanBoard: React.FC = () => {
                 );
               })}
 
-              {/* Composer */}
+              {/* Composer. data-help-key: the help panel opens on the manual's
+                  "Creating a card" while the reader is in it, or has just
+                  pressed + Add card (hooks/useHelpActivity). */}
               {composer.expanded ? (
                 <div
+                  data-help-key="board.add-card"
                   style={{
                     background: 'var(--surface)',
                     borderRadius: 4,
@@ -523,6 +473,7 @@ export const KanbanBoard: React.FC = () => {
                     style={{ fontSize: 13, minHeight: 50, marginBottom: 8 }}
                   />
                   <select
+                    data-help-key="board.agents"
                     value={composer.assignee}
                     onChange={(e) => setComposer(col.key, { assignee: e.target.value })}
                     style={{ fontSize: 13, marginBottom: 8 }}
@@ -532,14 +483,7 @@ export const KanbanBoard: React.FC = () => {
                     <optgroup label="Agents">
                       {agents.map((a) => (
                         <option key={a.id} value={`agent:${a.id}`}>
-                          🤖 {a.name}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Crews">
-                      {crews.map((c) => (
-                        <option key={c.id} value={`team:${c.id}`}>
-                          👥 {c.name}
+                          {refresh ? '' : '🤖 '}{a.name}
                         </option>
                       ))}
                     </optgroup>
@@ -572,6 +516,7 @@ export const KanbanBoard: React.FC = () => {
                 </div>
               ) : (
                 <button
+                  data-help-key="board.add-card"
                   onClick={() => setComposer(col.key, { expanded: true })}
                   style={{
                     width: '100%',
@@ -591,10 +536,15 @@ export const KanbanBoard: React.FC = () => {
           );
         })}
       </div>
+      {selectedId && projectId && (
+        <WorkItemDrawer workItemId={selectedId} projectId={projectId} artifactMap={artifactMap} mode={full ? 'pane' : phone ? undefined : 'docked'} onExpand={full ? undefined : () => setFull(true)}
+          onClose={() => (setSelectedId(null), setFull(false))} onChanged={loadItems} onDeleted={() => (setSelectedId(null), setFull(false), loadItems())} />
+      )}
+      </div>
 
       {actionsFor && (
         <Modal title={actionsFor.title} width={360} onClose={() => setActionsFor(null)}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} data-help-pane="board.move">
             <button
               className="button"
               style={{ minHeight: 44 }}
@@ -627,19 +577,6 @@ export const KanbanBoard: React.FC = () => {
         </Modal>
       )}
 
-      {selectedId && projectId && (
-        <WorkItemDrawer
-          workItemId={selectedId}
-          projectId={projectId}
-          artifactMap={artifactMap}
-          onClose={() => setSelectedId(null)}
-          onChanged={loadItems}
-          onDeleted={() => {
-            setSelectedId(null);
-            loadItems();
-          }}
-        />
-      )}
     </div>
   );
 };

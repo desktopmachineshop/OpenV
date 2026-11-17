@@ -29,6 +29,11 @@ type Baseline struct {
 	// CreatedByName is that account's display name, resolved on read so a
 	// reader sees a person rather than a UUID. Empty when CreatedBy is nil.
 	CreatedByName string `json:"created_by_name,omitempty"`
+	// Plan is where the project's plan stood when the baseline was taken:
+	// its progress, its tasks done and late, its dates and its milestones.
+	// The API fills it from the plan baseline taken with this one; it is
+	// absent for a baseline taken before the plan was recorded with it.
+	Plan json.RawMessage `json:"plan,omitempty"`
 }
 
 // Repository defines baseline persistence operations.

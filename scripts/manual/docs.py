@@ -47,11 +47,13 @@ ORDER = [
     ('guided-wizard', 'guidedWizard'),
     ('board', 'board'),
     ('agents', 'agents'),
-    ('crews', 'crews'),
     ('runs-runners', 'runsRunners'),
     ('automations', 'automations'),
     ('interviews', 'interviews'),
     ('vv', 'vv'),
+    ('releases', 'releases'),
+    ('gantt', 'gantt'),
+    ('project-pages', 'projectPages'),
     ('org-settings', 'orgSettings'),
     ('platform-admin', 'platformAdmin'),
     ('troubleshooting', 'troubleshooting'),
@@ -70,11 +72,13 @@ CHAPTER_KEYS = {
     'guided-wizard': ['guided'],
     'board': ['board'],
     'agents': ['agents'],
-    'crews': ['crew'],
     'runs-runners': ['agent-runs'],
     'automations': ['automations'],
     'interviews': ['interviews'],
     'vv': ['vv'],
+    'releases': ['releases'],
+    'gantt': ['gantt'],
+    'project-pages': [],
     'org-settings': ['settings', 'org.settings'],
     'platform-admin': ['admin'],
     'troubleshooting': ['troubleshooting', 'activity'],
@@ -84,8 +88,10 @@ SECTION_KEYS = {
     ('artifacts', 'review-status'): ['review'],
     ('artifacts', 'figures'): ['requirements.figures'],
     ('artifacts', 'history'): ['requirements.history'],
+    ('artifacts', 'editing-versions-history'): ['requirements.versions'],
     ('links', 'the-traceability-matrix'): ['matrix'],
-    ('board', 'to-dos-the-same-work-by-person'): ['todos'],
+    ('board', 'creating-a-card'): ['board.add-card'],
+    ('board', 'to-dos-small-jobs-kept-off-the-board'): ['todos', 'org.todos'],
     ('vv', 'evidence-for-physical-and-manual-tests'): ['evidence'],
     ('vv', 'test-runs'): ['vv.runs'],
     ('vv', 'baselines'): ['vv.baselines'],
@@ -97,6 +103,90 @@ SECTION_KEYS = {
     ('projects', 'project-access-members'): ['settings.members'],
     ('projects', 'share-links'): ['settings.share-links'],
     ('guided-wizard', 'the-vv-assistant-chat'): ['guided.assistant'],
+    ('getting-started', 'finding-your-way-around'): ['start.navigation'],
+    ('getting-started', 'keyboard-shortcuts'): ['start.shortcuts'],
+    ('links', 'impact-analysis'): ['impact'],
+    # Finer keys the app sends as activity signals: data-help-key on a form,
+    # field or button and data-help-pane on a tab or dialog
+    # (frontend/src/hooks/useHelpActivity.ts). Keys are an interface, rule 5
+    # of docs/docs-maintenance.md.
+    ('projects', 'creating-a-project'): ['projects.create'],
+    ('projects', 'downloading-a-project'): ['projects.download'],
+    ('projects', 'import'): ['projects.import'],
+    ('projects', 'deleting-a-project'): ['settings.danger'],
+    ('artifacts', 'creating-and-organizing-artifacts'): ['requirements.create'],
+    ('artifacts', 'moving-through-the-document'): ['requirements.navigate'],
+    ('artifacts', 'referencing-figures-and-linked-artifacts'): ['requirements.references'],
+    ('artifacts', 'making-room'): ['requirements.layout'],
+    ('artifacts', 'table-and-tree'): ['requirements.views'],
+    # requirements.layers stays: the Layers view is retired, and its key opens
+    # the Tree diagram that replaced it.
+    ('artifacts', 'the-tree-diagram'): ['requirements.tree', 'requirements.layers'],
+    ('artifacts', 'the-detail-panel'): ['requirements.detail'],
+    ('artifacts', 'search-filters'): ['requirements.search', 'search'],
+    ('links', 'creating-links'): ['links.create'],
+    ('links', 'viewing-links'): ['links.view'],
+    ('board', 'driving-agents-from-the-board'): ['board.agents'],
+    ('board', 'the-card-drawer'): ['board.card'],
+    ('board', 'moving-cards'): ['board.move'],
+    # crew: the Crew Builder's key, retired onto the agent hierarchy that
+    # replaced it (rule 5 of docs/docs-maintenance.md); its crew.* children
+    # fall back to it.
+    ('agents', 'the-agent-hierarchy'): ['agents.hierarchy', 'crew'],
+    ('agents', 'the-agent-list'): ['agents.list'],
+    ('agents', 'launching-a-run'): ['agents.launch'],
+    ('agents', 'the-agent-editor'): ['agents.editor'],
+    ('agents', 'every-agent-needs-an-allowlist'): ['agents.allowlist'],
+    ('agents', 'write-mode-proposal-vs-direct'): ['agents.write-mode'],
+    ('agents', 'repository-access'): ['agents.repos'],
+    ('agents', 'default-model-providers'): ['agents.model'],
+    ('automations', 'kinds-of-automation'): ['automations.kinds'],
+    ('automations', 'trigger-events'): ['automations.triggers'],
+    ('automations', 'creating-an-automation'): ['automations.create'],
+    ('automations', 'running-and-reviewing'): ['automations.runs'],
+    ('runs-runners', 'the-runs-page'): ['agent-runs.list'],
+    ('runs-runners', 'per-project-agent-auth'): ['settings.agents'],
+    ('runs-runners', 'repositories'): ['settings.repos'],
+    ('guided-wizard', 'starting-resuming-modifying'): ['guided.session'],
+    ('guided-wizard', 'the-eight-steps'): ['guided.steps'],
+    ('interviews', 'creating-an-interview'): ['interviews.create'],
+    ('interviews', 'sharing-invite-links'): ['interviews.invite'],
+    ('interviews', 'reviewing-sessions'): ['interviews.sessions'],
+    # overview.links was the Quick links section, which the merged Overview
+    # replaced; the key stays, on the section that took its place.
+    ('product-overview', 'where-the-project-stands'): ['overview.links'],
+    ('product-overview', 'product-definition'): ['overview.product'],
+    ('product-overview', 'success-metrics'): ['overview.metrics'],
+    ('product-overview', 'constraints'): ['overview.constraints'],
+    ('product-overview', 'personas-user-needs'): ['overview.personas'],
+    ('product-overview', 'user-interviews'): ['overview.interviews'],
+    ('vv', 'coverage-rollup'): ['vv.coverage'],
+    ('vv', 'gaps'): ['vv.gaps'],
+    ('vv', 'the-pdf-report'): ['vv.report'],
+    ('releases', 'planning-releases'): ['releases.list', 'releases.add', 'releases.form'],
+    ('releases', 'targeting-requirements'): ['requirements.releases'],
+    ('releases', 'release-progress'): ['releases.progress'],
+    ('releases', 'the-burn-up'): ['releases.burnup'],
+    ('gantt', 'reading-the-chart'): ['gantt.chart', 'gantt.summary'],
+    ('gantt', 'scheduling-tasks'): ['gantt.task', 'gantt.add-task'],
+    ('gantt', 'relationships-between-tasks'): ['gantt.relationships', 'gantt.recalculate'],
+    ('gantt', 'duration-and-effort'): ['gantt.schedule'],
+    ('gantt', 'the-critical-path'): ['gantt.critical'],
+    ('gantt', 'listing-ordering-and-editing-tasks'): ['gantt.view'],
+    ('gantt', 'working-days'): ['gantt.working-days', 'gantt.holidays'],
+    ('gantt', 'automatic-scheduling-and-constraints'): ['gantt.scheduling'],
+    ('gantt', 'resources-cost-and-levelling'): ['gantt.resources', 'gantt.planned', 'gantt.defaults'],
+    ('gantt', 'tracking-progress-against-a-baseline'): ['gantt.tracking'],
+    ('gantt', 'progress-from-to-dos-and-sub-tasks'): ['gantt.todos'],
+    ('gantt', 'milestones-and-their-criteria'): ['gantt.milestone', 'gantt.add-milestone', 'gantt.milestone-links'],
+    ('gantt', 'assigning-tasks-to-a-milestone'): ['gantt.milestone-tasks', 'gantt.task-milestone'],
+    ('gantt', 'exporting-the-plan'): ['gantt.export'],
+    ('gantt', 'other-views-of-the-plan'): ['gantt.views'],
+    ('gantt', 'all-projects-and-links-between-them'): ['gantt.master'],
+    ('project-pages', 'home'): ['home', 'home.figures', 'home.needs', 'home.activity', 'home.projects', 'home.proposals'],
+    ('project-pages', 'design'): ['design', 'design.tree', 'design.detail', 'design.attributes', 'design.trace'],
+    ('project-pages', 'tests'): ['tests', 'tests.runs', 'tests.cases'],
+    ('project-pages', 'baselines-page'): ['baselines.timeline', 'baselines.compare', 'baselines.plan', 'baselines.changes', 'baselines.diff'],
 }
 
 
@@ -299,11 +389,24 @@ def generate(chapters_dir):
         '<!-- Generated by scripts/manual/docs.py sync from frontend/src/manual/chapters. -->\n'
         '<map>\n  <title>OpenV User Manual</title>\n\n' + '\n'.join(refs) + '\n</map>\n'
     )
+    for old, target in RETIRED_LINKS.items():
+        links.setdefault(old, target)
     files['redirects.json'] = json.dumps(links, indent=2) + '\n'
     return files
 
 
 GENERATED = ('topics', 'maps', 'redirects.json')
+
+# Deep links of chapters the manual no longer has, to the topic that
+# replaced each: the Crews chapter went with crews, onto Agents.
+RETIRED_LINKS = {
+    '/manual/crews': 'topics/agents/the-agent-hierarchy',
+    '/manual/crews#managing-crews': 'topics/agents/the-agent-hierarchy',
+    '/manual/crews#the-canvas': 'topics/agents/the-agent-hierarchy',
+    '/manual/crews#adding-nodes': 'topics/agents/the-agent-hierarchy',
+    '/manual/crews#connecting-nodes': 'topics/agents/the-agent-hierarchy',
+    '/manual/crews#crews-elsewhere-in-the-app': 'topics/agents/the-agent-hierarchy',
+}
 
 
 def existing(manual):

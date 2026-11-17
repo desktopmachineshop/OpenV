@@ -1351,7 +1351,7 @@
         "headers": [
           "Content-Type: application/json"
         ],
-        "body": "{\"agent_slug\":\"vv-engineer\"}"
+        "body": "{\"agent_slug\":\"test-auditor\"}"
       },
       "status": 404,
       "content_type": "application/json",
@@ -1380,7 +1380,7 @@
         "headers": [
           "Content-Type: application/json"
         ],
-        "body": "{\"agent_slug\":\"vv-engineer\"}"
+        "body": "{\"agent_slug\":\"test-auditor\"}"
       },
       "status": 403,
       "content_type": "application/json",
@@ -1496,7 +1496,7 @@
         "headers": [
           "Content-Type: application/json"
         ],
-        "body": "{\"agent_slug\":\"vv-engineer\",\"test_case_ids\":[\"<tc_manual>\",\"<tc_rig>\"]}"
+        "body": "{\"agent_slug\":\"test-auditor\",\"test_case_ids\":[\"<tc_manual>\",\"<tc_rig>\"]}"
       },
       "status": 400,
       "content_type": "application/json",
@@ -1516,7 +1516,7 @@
     },
     {
       "n": 41,
-      "title": "launch the V&V engineer on every case of the project: the automated one runs, the others are skipped",
+      "title": "launch the Test Auditor on every case of the project: the automated one runs, the others are skipped",
       "actor": "owner",
       "route": "POST /api/v1/test-runs/{id}/agent-run",
       "request": {
@@ -1525,7 +1525,7 @@
         "headers": [
           "Content-Type: application/json"
         ],
-        "body": "{\"agent_slug\":\"vv-engineer\"}"
+        "body": "{\"agent_slug\":\"test-auditor\"}"
       },
       "notes": [
         "an empty test_case_ids means every test case of the project, not only the run's; the run stays queued (HOSTED_RUNNERS=off and no runner has claimed it yet), and launching it creates a tracking card on the board"
@@ -1537,7 +1537,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"executing\":1,\"run\":{\"id\":\"<agent_run>\",\"org_id\":\"<owner.workspace>\",\"agent_id\":\"<vv_engineer>\",\"project_id\":\"<p>\",\"work_item_id\":\"<tracking_card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Execute the test cases below for the OpenV test run \\\"Tour run \\u003c1\\u003e \\u0026 \\\\\\\"one\\\\\\\"\\\" and record a result for each one.\\n\\nproject_id: <p>\\ntest run id: <r1>\\n\\nTest cases to execute:\\n- Time the answer (test case id: <tc_auto>)\\n\\nHow to proceed:\\n1. Read each test case with get_artifact to get its steps and expected results.\\n2. Carry out the test as written, using the project's repository and tooling where relevant.\\n3. Record the outcome with record_test_result, passing the run id above, the test case id, and a status of \\\"pass\\\", \\\"fail\\\", or \\\"blocked\\\".\\n4. In the notes, state exactly what you did and what you observed — the command you ran, the output, or the reason it could not be run. This is verification evidence: a reviewer must be able to judge your result without rerunning it.\\n\\nRules:\\n- Only report \\\"pass\\\" for behaviour you actually observed. If you could not execute a case (missing environment, unclear steps, needs hardware), record it as \\\"blocked\\\" and explain why.\\n- Never guess an outcome, and never edit a test case to make it pass.\\n- Record a result for every test case listed above, and for no others.\\n\\n2 further test case(s) in this run are flagged as human- or physically-verified and are deliberately excluded — do not attempt them or record results for them:\\n- Judge the wording (manual)\\n- Measure on the rig (physical)\\n\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 41>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"V\\u0026V Engineer\",\"agent_provider\":\"claude-code\"},\"skipped\":[{\"execution_method\":\"manual\",\"id\":\"<tc_manual>\",\"title\":\"Judge the wording\"},{\"execution_method\":\"physical\",\"id\":\"<tc_rig>\",\"title\":\"Measure on the rig\"}]}"
+        "{\"executing\":1,\"run\":{\"id\":\"<agent_run>\",\"org_id\":\"<owner.workspace>\",\"agent_id\":\"<vv_engineer>\",\"project_id\":\"<p>\",\"work_item_id\":\"<tracking_card>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Execute the test cases below for the OpenV test run \\\"Tour run \\u003c1\\u003e \\u0026 \\\\\\\"one\\\\\\\"\\\" and record a result for each one.\\n\\nproject_id: <p>\\ntest run id: <r1>\\n\\nTest cases to execute:\\n- Time the answer (test case id: <tc_auto>)\\n\\nHow to proceed:\\n1. Read each test case with get_artifact to get its steps and expected results.\\n2. Carry out the test as written, using the project's repository and tooling where relevant.\\n3. Record the outcome with record_test_result, passing the run id above, the test case id, and a status of \\\"pass\\\", \\\"fail\\\", or \\\"blocked\\\".\\n4. In the notes, state exactly what you did and what you observed — the command you ran, the output, or the reason it could not be run. This is verification evidence: a reviewer must be able to judge your result without rerunning it.\\n\\nRules:\\n- Only report \\\"pass\\\" for behaviour you actually observed. If you could not execute a case (missing environment, unclear steps, needs hardware), record it as \\\"blocked\\\" and explain why.\\n- Never guess an outcome, and never edit a test case to make it pass.\\n- Record a result for every test case listed above, and for no others.\\n\\n2 further test case(s) in this run are flagged as human- or physically-verified and are deliberately excluded — do not attempt them or record results for them:\\n- Judge the wording (manual)\\n- Measure on the rig (physical)\\n\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<owner>\",\"created_at\":\"<time@step 41>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Auditor\",\"agent_provider\":\"claude-code\"},\"skipped\":[{\"execution_method\":\"manual\",\"id\":\"<tc_manual>\",\"title\":\"Judge the wording\"},{\"execution_method\":\"physical\",\"id\":\"<tc_rig>\",\"title\":\"Measure on the rig\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -1562,7 +1562,8 @@
           "launched_by": "<owner>",
           "created_at": "<time@step 41>",
           "agent_content_hash": "<hex64:1>",
-          "agent_name": "V\u0026V Engineer",
+          "agent_effort": "medium",
+          "agent_name": "Test Auditor",
           "agent_provider": "claude-code"
         },
         "skipped": [
@@ -1587,7 +1588,7 @@
           "entity": "<tracking_card>",
           "payload": {
             "column": "string \"todo\"",
-            "title": "string \"Agent run: V&V Engineer\""
+            "title": "string \"Agent run: Test Auditor\""
           }
         }
       ]
@@ -2000,7 +2001,7 @@
         "headers": [
           "Content-Type: application/json"
         ],
-        "body": "{\"agent_slug\":\"vv-engineer\"}"
+        "body": "{\"agent_slug\":\"test-auditor\"}"
       },
       "notes": [
         "fixed under R7 (#379 bug 50): it answered 400, in the words of the next step's 409"
@@ -2358,7 +2359,7 @@
     },
     {
       "n": 63,
-      "title": "an editor of P from another workspace launches the V&V engineer on R3: P's workspace's agent, and the run queued in P's workspace",
+      "title": "an editor of P from another workspace launches the Test Auditor on R3: P's workspace's agent, and the run queued in P's workspace",
       "actor": "editor",
       "route": "POST /api/v1/test-runs/{id}/agent-run",
       "request": {
@@ -2367,7 +2368,7 @@
         "headers": [
           "Content-Type: application/json"
         ],
-        "body": "{\"agent_slug\":\"vv-engineer\"}"
+        "body": "{\"agent_slug\":\"test-auditor\"}"
       },
       "status": 201,
       "content_type": "text/plain; charset=utf-8",
@@ -2376,7 +2377,7 @@
       "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"executing\":1,\"run\":{\"id\":\"<uuid:5>\",\"org_id\":\"<owner.workspace>\",\"agent_id\":\"<vv_engineer>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:6>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Execute the test cases below for the OpenV test run \\\"Editor's run\\\" and record a result for each one.\\n\\nproject_id: <p>\\ntest run id: <r3>\\n\\nTest cases to execute:\\n- Time the answer (test case id: <tc_auto>)\\n\\nHow to proceed:\\n1. Read each test case with get_artifact to get its steps and expected results.\\n2. Carry out the test as written, using the project's repository and tooling where relevant.\\n3. Record the outcome with record_test_result, passing the run id above, the test case id, and a status of \\\"pass\\\", \\\"fail\\\", or \\\"blocked\\\".\\n4. In the notes, state exactly what you did and what you observed — the command you ran, the output, or the reason it could not be run. This is verification evidence: a reviewer must be able to judge your result without rerunning it.\\n\\nRules:\\n- Only report \\\"pass\\\" for behaviour you actually observed. If you could not execute a case (missing environment, unclear steps, needs hardware), record it as \\\"blocked\\\" and explain why.\\n- Never guess an outcome, and never edit a test case to make it pass.\\n- Record a result for every test case listed above, and for no others.\\n\\n2 further test case(s) in this run are flagged as human- or physically-verified and are deliberately excluded — do not attempt them or record results for them:\\n- Judge the wording (manual)\\n- Measure on the rig (physical)\\n\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<editor>\",\"created_at\":\"<time@step 63>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_name\":\"V\\u0026V Engineer\",\"agent_provider\":\"claude-code\"},\"skipped\":[{\"execution_method\":\"manual\",\"id\":\"<tc_manual>\",\"title\":\"Judge the wording\"},{\"execution_method\":\"physical\",\"id\":\"<tc_rig>\",\"title\":\"Measure on the rig\"}]}"
+        "{\"executing\":1,\"run\":{\"id\":\"<uuid:5>\",\"org_id\":\"<owner.workspace>\",\"agent_id\":\"<vv_engineer>\",\"project_id\":\"<p>\",\"work_item_id\":\"<uuid:6>\",\"status\":\"queued\",\"cancel_requested\":false,\"priority\":0,\"prompt\":\"Execute the test cases below for the OpenV test run \\\"Editor's run\\\" and record a result for each one.\\n\\nproject_id: <p>\\ntest run id: <r3>\\n\\nTest cases to execute:\\n- Time the answer (test case id: <tc_auto>)\\n\\nHow to proceed:\\n1. Read each test case with get_artifact to get its steps and expected results.\\n2. Carry out the test as written, using the project's repository and tooling where relevant.\\n3. Record the outcome with record_test_result, passing the run id above, the test case id, and a status of \\\"pass\\\", \\\"fail\\\", or \\\"blocked\\\".\\n4. In the notes, state exactly what you did and what you observed — the command you ran, the output, or the reason it could not be run. This is verification evidence: a reviewer must be able to judge your result without rerunning it.\\n\\nRules:\\n- Only report \\\"pass\\\" for behaviour you actually observed. If you could not execute a case (missing environment, unclear steps, needs hardware), record it as \\\"blocked\\\" and explain why.\\n- Never guess an outcome, and never edit a test case to make it pass.\\n- Record a result for every test case listed above, and for no others.\\n\\n2 further test case(s) in this run are flagged as human- or physically-verified and are deliberately excluded — do not attempt them or record results for them:\\n- Judge the wording (manual)\\n- Measure on the rig (physical)\\n\",\"final_text\":\"\",\"error\":\"\",\"attempt_count\":1,\"max_attempts\":3,\"tokens_in\":0,\"tokens_out\":0,\"artifacts_touched\":[],\"launched_by\":\"<editor>\",\"created_at\":\"<time@step 63>\",\"agent_content_hash\":\"<hex64:1>\",\"agent_effort\":\"medium\",\"agent_name\":\"Test Auditor\",\"agent_provider\":\"claude-code\"},\"skipped\":[{\"execution_method\":\"manual\",\"id\":\"<tc_manual>\",\"title\":\"Judge the wording\"},{\"execution_method\":\"physical\",\"id\":\"<tc_rig>\",\"title\":\"Measure on the rig\"}]}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2401,7 +2402,8 @@
           "launched_by": "<editor>",
           "created_at": "<time@step 63>",
           "agent_content_hash": "<hex64:1>",
-          "agent_name": "V\u0026V Engineer",
+          "agent_effort": "medium",
+          "agent_name": "Test Auditor",
           "agent_provider": "claude-code"
         },
         "skipped": [
@@ -2426,7 +2428,7 @@
           "entity": "<uuid:6>",
           "payload": {
             "column": "string \"todo\"",
-            "title": "string \"Agent run: V&V Engineer\""
+            "title": "string \"Agent run: Test Auditor\""
           }
         }
       ]

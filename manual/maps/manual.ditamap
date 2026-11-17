@@ -8,6 +8,8 @@
     <topicref href="../topics/getting-started/signing-in.dita"/>
     <topicref href="../topics/getting-started/workspaces.dita"/>
     <topicref href="../topics/getting-started/notifications.dita"/>
+    <topicref href="../topics/getting-started/finding-your-way-around.dita"/>
+    <topicref href="../topics/getting-started/keyboard-shortcuts.dita"/>
     <topicref href="../topics/getting-started/help-on-every-page.dita"/>
     <topicref href="../topics/getting-started/whats-next.dita"/>
   </topicref>
@@ -22,7 +24,8 @@
     <topicref href="../topics/projects/deleting-a-project.dita"/>
   </topicref>
   <topicref href="../topics/product-overview/index.dita">
-    <topicref href="../topics/product-overview/quick-links.dita"/>
+    <topicref href="../topics/product-overview/where-the-project-sits.dita"/>
+    <topicref href="../topics/product-overview/where-the-project-stands.dita"/>
     <topicref href="../topics/product-overview/product-definition.dita"/>
     <topicref href="../topics/product-overview/success-metrics.dita"/>
     <topicref href="../topics/product-overview/constraints.dita"/>
@@ -32,6 +35,9 @@
   <topicref href="../topics/artifacts/index.dita">
     <topicref href="../topics/artifacts/artifact-types.dita"/>
     <topicref href="../topics/artifacts/the-layout.dita"/>
+    <topicref href="../topics/artifacts/table-and-tree.dita"/>
+    <topicref href="../topics/artifacts/the-tree-diagram.dita"/>
+    <topicref href="../topics/artifacts/the-detail-panel.dita"/>
     <topicref href="../topics/artifacts/creating-and-organizing-artifacts.dita"/>
     <topicref href="../topics/artifacts/moving-through-the-document.dita"/>
     <topicref href="../topics/artifacts/referencing-figures-and-linked-artifacts.dita"/>
@@ -49,6 +55,7 @@
     <topicref href="../topics/links/viewing-links.dita"/>
     <topicref href="../topics/links/where-links-come-from-automatically.dita"/>
     <topicref href="../topics/links/the-traceability-matrix.dita"/>
+    <topicref href="../topics/links/impact-analysis.dita"/>
   </topicref>
   <topicref href="../topics/guided-wizard/index.dita">
     <topicref href="../topics/guided-wizard/starting-resuming-modifying.dita"/>
@@ -61,9 +68,12 @@
     <topicref href="../topics/board/driving-agents-from-the-board.dita"/>
     <topicref href="../topics/board/the-card-drawer.dita"/>
     <topicref href="../topics/board/moving-cards.dita"/>
-    <topicref href="../topics/board/to-dos-the-same-work-by-person.dita"/>
+    <topicref href="../topics/board/to-dos-small-jobs-kept-off-the-board.dita"/>
   </topicref>
   <topicref href="../topics/agents/index.dita">
+    <topicref href="../topics/agents/the-agent-hierarchy.dita"/>
+    <topicref href="../topics/agents/the-default-agents.dita"/>
+    <topicref href="../topics/agents/archived-agents.dita"/>
     <topicref href="../topics/agents/the-agent-list.dita"/>
     <topicref href="../topics/agents/launching-a-run.dita"/>
     <topicref href="../topics/agents/the-agent-editor.dita"/>
@@ -71,13 +81,6 @@
     <topicref href="../topics/agents/write-mode-proposal-vs-direct.dita"/>
     <topicref href="../topics/agents/repository-access.dita"/>
     <topicref href="../topics/agents/default-model-providers.dita"/>
-  </topicref>
-  <topicref href="../topics/crews/index.dita">
-    <topicref href="../topics/crews/managing-crews.dita"/>
-    <topicref href="../topics/crews/the-canvas.dita"/>
-    <topicref href="../topics/crews/adding-nodes.dita"/>
-    <topicref href="../topics/crews/connecting-nodes.dita"/>
-    <topicref href="../topics/crews/crews-elsewhere-in-the-app.dita"/>
   </topicref>
   <topicref href="../topics/runs-runners/index.dita">
     <topicref href="../topics/runs-runners/the-runs-page.dita"/>
@@ -111,17 +114,55 @@
     <topicref href="../topics/vv/test-runs.dita"/>
     <topicref href="../topics/vv/evidence-for-physical-and-manual-tests.dita"/>
   </topicref>
+  <topicref href="../topics/releases/index.dita">
+    <topicref href="../topics/releases/planning-releases.dita"/>
+    <topicref href="../topics/releases/targeting-requirements.dita"/>
+    <topicref href="../topics/releases/release-progress.dita"/>
+    <topicref href="../topics/releases/the-burn-up.dita"/>
+    <topicref href="../topics/releases/releases-on-the-plan.dita"/>
+  </topicref>
+  <topicref href="../topics/gantt/index.dita">
+    <topicref href="../topics/gantt/reading-the-chart.dita"/>
+    <topicref href="../topics/gantt/scheduling-tasks.dita"/>
+    <topicref href="../topics/gantt/tasks-with-sub-tasks.dita"/>
+    <topicref href="../topics/gantt/listing-ordering-and-editing-tasks.dita"/>
+    <topicref href="../topics/gantt/working-days.dita"/>
+    <topicref href="../topics/gantt/duration-and-effort.dita"/>
+    <topicref href="../topics/gantt/the-critical-path.dita"/>
+    <topicref href="../topics/gantt/relationships-between-tasks.dita"/>
+    <topicref href="../topics/gantt/automatic-scheduling-and-constraints.dita"/>
+    <topicref href="../topics/gantt/resources-cost-and-levelling.dita"/>
+    <topicref href="../topics/gantt/tracking-progress-against-a-baseline.dita"/>
+    <topicref href="../topics/gantt/progress-from-to-dos-and-sub-tasks.dita"/>
+    <topicref href="../topics/gantt/milestones-and-their-criteria.dita"/>
+    <topicref href="../topics/gantt/assigning-tasks-to-a-milestone.dita"/>
+    <topicref href="../topics/gantt/release-milestones.dita"/>
+    <topicref href="../topics/gantt/exporting-the-plan.dita"/>
+    <topicref href="../topics/gantt/importing-from-microsoft-project.dita"/>
+    <topicref href="../topics/gantt/other-views-of-the-plan.dita"/>
+    <topicref href="../topics/gantt/all-projects-and-links-between-them.dita"/>
+    <topicref href="../topics/gantt/on-a-phone.dita"/>
+  </topicref>
+  <topicref href="../topics/project-pages/index.dita">
+    <topicref href="../topics/project-pages/home.dita"/>
+    <topicref href="../topics/project-pages/activity-log.dita"/>
+    <topicref href="../topics/project-pages/design.dita"/>
+    <topicref href="../topics/project-pages/tests.dita"/>
+    <topicref href="../topics/project-pages/baselines-page.dita"/>
+  </topicref>
   <topicref href="../topics/org-settings/index.dita">
     <topicref href="../topics/org-settings/general.dita"/>
     <topicref href="../topics/org-settings/members.dita"/>
     <topicref href="../topics/org-settings/limits.dita"/>
     <topicref href="../topics/org-settings/teams.dita"/>
+    <topicref href="../topics/org-settings/plan-calendar.dita"/>
     <topicref href="../topics/org-settings/ai-providers-admin-only.dita"/>
     <topicref href="../topics/org-settings/runners.dita"/>
   </topicref>
   <topicref href="../topics/platform-admin/index.dita">
     <topicref href="../topics/platform-admin/who-is-a-platform-admin.dita"/>
     <topicref href="../topics/platform-admin/password-reset-links-for-support.dita"/>
+    <topicref href="../topics/platform-admin/usage.dita"/>
     <topicref href="../topics/platform-admin/workspaces-and-plans.dita"/>
   </topicref>
   <topicref href="../topics/troubleshooting/index.dita">

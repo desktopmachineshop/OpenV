@@ -1,6 +1,10 @@
 import React, { Suspense, useCallback, useEffect, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { AdminUser, AdminWorkspace, PLANS, adminAPI } from '../api/client';
+import { ADMIN_USAGE_FEATURE } from '../features';
+import { useFeature } from '../hooks/useFeature';
+import { AdminToggle, PlanSelect, ResetLinkButton, linkButton } from '../components/admin/adminControls';
+import { UsageOverview } from '../components/admin/UsageOverview';
 import { apiErrorMessage } from '../api/errors';
 import { Navbar } from '../components/Navbar';
 import { UserDashboard } from '../components/admin/UserDashboard';
@@ -49,12 +53,16 @@ export const PlatformAdmin: React.FC = () => {
   // the admin to pass on; the server never repeats it.
   const [resetLink, setResetLink] = useState<{ user: AdminUser; link: string; expiresAt: string } | null>(null);
   const [copied, setCopied] = useState(false);
+  // The usage view replaces the two plain tables once it is in the release.
+  const usageOn = useFeature(ADMIN_USAGE_FEATURE);
+  const [reload, setReload] = useState(0);
 
   const load = useCallback(async () => {
     try {
       const [w, u] = await Promise.all([adminAPI.workspaces(), adminAPI.users()]);
       setWorkspaces(w.data || []);
       setUsers(u.data || []);
+      setReload((n) => n + 1);
     } catch (err: any) {
       setError(apiErrorMessage(err, 'Could not load the platform overview'));
     }
@@ -148,18 +156,36 @@ export const PlatformAdmin: React.FC = () => {
     }
   };
 
-  const selectStyle: React.CSSProperties = { padding: '5px 8px', fontSize: 13, width: 'auto', minWidth: 140 };
-  const linkButton: React.CSSProperties = {
-    background: 'none',
-    border: '1px solid var(--border)',
-    borderRadius: 4,
-    color: 'var(--text)',
-    cursor: 'pointer',
-    fontSize: 13,
-    width: 'auto',
-    padding: '5px 10px',
-    minHeight: 32,
-  };
+  const personActions = { currentUserId: currentUser?.id, busy, onToggleAdmin: toggleAdmin, onIssueReset: issueResetLink };
+
+  const resetBanner = resetLink && (
+      <div
+        role="status"
+        className="card"
+        style={{ padding: '12px 14px', marginBottom: 12, background: 'var(--tint-blue)', border: '1px solid var(--accent)' }}
+      >
+        <div style={{ fontSize: 13, marginBottom: 6 }}>
+          Reset link for <strong>{resetLink.user.name || resetLink.user.email}</strong>, valid until{' '}
+          {new Date(resetLink.expiresAt).toLocaleString()}. It is shown once: copy it now and pass it on.
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <input
+            type="text"
+            readOnly
+            value={resetLink.link}
+            aria-label="Password reset link"
+            onFocus={(e) => e.currentTarget.select()}
+            style={{ flex: '1 1 240px', padding: '6px 8px', fontSize: 12, fontFamily: 'var(--font-mono, monospace)' }}
+          />
+          <button type="button" onClick={copyResetLink} style={linkButton}>
+            {copied ? 'Copied' : 'Copy'}
+          </button>
+          <button type="button" onClick={() => setResetLink(null)} style={linkButton}>
+            Done
+          </button>
+        </div>
+      </div>
+  );
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-app)' }}>
@@ -184,7 +210,12 @@ export const PlatformAdmin: React.FC = () => {
 
         <UserDashboard compact={compact} />
 
-        <section className="card" style={{ padding: compact ? 14 : 20, marginBottom: 16 }}>
+        {usageOn && resetBanner}
+        {usageOn && (
+          <UsageOverview compact={compact} workspaces={workspaces} users={users} onChangePlan={changePlan} reload={reload} {...personActions} />
+        )}
+
+        <section className="card" hidden={usageOn} style={{ padding: compact ? 14 : 20, marginBottom: 16 }}>
           <h2 style={{ margin: '0 0 10px', fontSize: 18 }}>Workspaces</h2>
           {workspaces === null ? (
             <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
@@ -209,21 +240,7 @@ export const PlatformAdmin: React.FC = () => {
                       </td>
                       <td style={td}>{ws.type}</td>
                       <td style={td}>
-                        <select
-                          value={PLANS.some((p) => p.value === ws.plan) ? ws.plan : ''}
-                          onChange={(e) => changePlan(ws, e.target.value)}
-                          disabled={busy === ws.id}
-                          aria-label={`Plan for ${ws.name}`}
-                          style={selectStyle}
-                        >
-                          {!PLANS.some((p) => p.value === ws.plan) && <option value="">{ws.plan}</option>}
-                          {/* A legacy plan only for the workspace already on it. */}
-                          {PLANS.filter((p) => !p.legacy || p.value === ws.plan).map((p) => (
-                            <option key={p.value} value={p.value}>
-                              {p.label}
-                            </option>
-                          ))}
-                        </select>
+                        <PlanSelect ws={ws} disabled={busy === ws.id} onChange={changePlan} />
                       </td>
                       <td style={td}>{ws.members}</td>
                       <td style={td}>{new Date(ws.created_at).toLocaleDateString()}</td>
@@ -253,35 +270,12 @@ export const PlatformAdmin: React.FC = () => {
             <em>Reset link</em> makes a one-time password reset link for a password account, for when the person
             cannot use the emailed one or the server sends no mail.
           </p>
-          {resetLink && (
-            <div
-              role="status"
-              className="card"
-              style={{ padding: '12px 14px', marginBottom: 12, background: 'var(--tint-blue)', border: '1px solid var(--accent)' }}
-            >
-              <div style={{ fontSize: 13, marginBottom: 6 }}>
-                Reset link for <strong>{resetLink.user.name || resetLink.user.email}</strong>, valid until{' '}
-                {new Date(resetLink.expiresAt).toLocaleString()}. It is shown once: copy it now and pass it on.
-              </div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <input
-                  type="text"
-                  readOnly
-                  value={resetLink.link}
-                  aria-label="Password reset link"
-                  onFocus={(e) => e.currentTarget.select()}
-                  style={{ flex: '1 1 240px', padding: '6px 8px', fontSize: 12, fontFamily: 'var(--font-mono, monospace)' }}
-                />
-                <button type="button" onClick={copyResetLink} style={linkButton}>
-                  {copied ? 'Copied' : 'Copy'}
-                </button>
-                <button type="button" onClick={() => setResetLink(null)} style={linkButton}>
-                  Done
-                </button>
-              </div>
+          {!usageOn && resetBanner}
+          {usageOn ? (
+            <div style={{ fontSize: 13 }}>
+              Make admins and reset links from <em>Usage</em>, <em>By person</em>.
             </div>
-          )}
-          {users === null ? (
+          ) : users === null ? (
             <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading…</div>
           ) : (
             <div className="table-scroll">
@@ -307,35 +301,10 @@ export const PlatformAdmin: React.FC = () => {
                       <td style={td}>{u.email}</td>
                       <td style={td}>{u.auth_provider || 'password'}</td>
                       <td style={td}>
-                        {u.is_admin ? (
-                          <span style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-                            <span className="badge">admin</span>
-                            {currentUser && u.id !== currentUser.id && (
-                              <button type="button" onClick={() => toggleAdmin(u)} disabled={busy === u.id} style={linkButton}>
-                                Remove
-                              </button>
-                            )}
-                          </span>
-                        ) : (
-                          <button type="button" onClick={() => toggleAdmin(u)} disabled={busy === u.id} style={linkButton}>
-                            Make admin
-                          </button>
-                        )}
+                        <AdminToggle u={u} {...personActions} />
                       </td>
                       <td style={td}>
-                        {!u.auth_provider || u.auth_provider === 'password' ? (
-                          <button
-                            type="button"
-                            onClick={() => issueResetLink(u)}
-                            disabled={busy === u.id}
-                            style={linkButton}
-                            aria-label={`Make a password reset link for ${u.name || u.email}`}
-                          >
-                            Reset link
-                          </button>
-                        ) : (
-                          <span style={{ color: 'var(--text-muted)', fontSize: 12 }}>via {u.auth_provider}</span>
-                        )}
+                        <ResetLinkButton u={u} {...personActions} />
                       </td>
                     </tr>
                   ))}

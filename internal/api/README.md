@@ -14,11 +14,11 @@ globs of `docs/areas.json`:
 
 | Area | Globs here |
 |---|---|
-| requirements-core | `artifact_*.go`, `attribute_*.go`, `chatter_*.go`, `embedding_*.go`, `link_*.go`, `managed_link_edits*.go`, `meta_*.go`, `product_profile_*.go`, `project_handlers*.go`, `quality_*.go`, `reference_party_*.go`, `review_*.go`, `search_*.go`, `suite_*.go`, `work_item_*.go` |
+| requirements-core | `artifact_*.go`, `attribute_*.go`, `chatter_*.go`, `comment_read_*.go`, `embedding_*.go`, `link_*.go`, `managed_link_edits*.go`, `meta_*.go`, `product_profile_*.go`, `project_handlers*.go`, `quality_*.go`, `reference_party_*.go`, `review_*.go`, `search_*.go`, `suite_*.go`, `todo_*.go`, `work_item_*.go` |
 | verification | `evidence_*.go`, `vv_*.go` |
 | documents | `attachment_*.go`, `baseline_*.go`, `download_*.go`, `project_io_*.go`, `project_snapshot*.go`, `template_*.go` |
 | tenancy-identity | `auth*.go`, `avatar_*.go`, `cookies*.go`, `default_workspace_*.go`, `email_verification_*.go`, `invitation_*.go`, `limits*.go`, `oidc_*.go`, `org_*.go`, `password*.go`, `project_team_access_*.go`, `registration_policy*.go` |
-| agent-suite | `agent_*.go`, `ai_map*.go`, `automation_*.go`, `crew_*.go`, `guided_*.go`, `interview_*.go`, `proposal_*.go`, `provider_*.go`, `public_interview_*.go`, `repo_connection_*.go` |
+| agent-suite | `agent_*.go`, `ai_map*.go`, `automation_*.go`, `guided_*.go`, `interview_*.go`, `proposal_*.go`, `provider_*.go`, `public_interview_*.go`, `repo_connection_*.go` |
 | runner-fleet | `connector_*.go`, `hosted_runner_*.go`, `runner_*.go`, `worker_*.go` |
 | events-notifications | `domain_event_*.go`, `event_names*.go`, `notification_*.go`, `publish*.go`, `push_*.go`, `sse*.go` |
 | community | `share_*.go`, `shared_product_*.go` |
@@ -114,7 +114,7 @@ Each line: the guard, what it pins, and the command that runs it.
   `go test ./internal/api -count=1 -run '^(TestFormatsGolden|TestProposalPayloadsGolden)$'`
 - **I3 unit tests**: what the matrix cannot send, and the read-only gate's
   DELETE side.
-  `go test ./internal/api -count=1 -run '^(TestAResourceTheCallerCannotReachAnswersAsOneNoRowHas|TestAnotherWorkspacesKeyOrRunAnswersAsForAnIDNoRowHas|TestACrewLaunchAnswersWhoMayNotKnowOfItAsForACrewNoRowHas|TestAReadOnlyWorkspaceStillRevokesAccess)$'`
+  `go test ./internal/api -count=1 -run '^(TestAResourceTheCallerCannotReachAnswersAsOneNoRowHas|TestAnotherWorkspacesKeyOrRunAnswersAsForAnIDNoRowHas|TestAReadOnlyWorkspaceStillRevokesAccess)$'`
 - **S5** the tour and the S5e matrix: every route's bytes and authorization,
   run from `cmd/server` (`cmd/server/README.md`).
 - **S1** archtest: one router, HandleFunc outside registrars, raw JSON

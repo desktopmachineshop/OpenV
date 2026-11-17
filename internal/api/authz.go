@@ -14,7 +14,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/proposals"
-	"github.com/openv/requirements-platform/internal/domain/teams"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
@@ -169,36 +168,6 @@ func (h *Handler) requireUserVisible(w http.ResponseWriter, r *http.Request, use
 			return false
 		}
 		if role != "" {
-			return true
-		}
-	}
-	absent.write(w)
-	return false
-}
-
-// requireTeamVisible reports whether the request may know of the crew: a
-// member of its workspace, its workspace's worker keys, its workspace's runs
-// (of a pinned crew only a run of the pinned project, the one project a run
-// reaches), or a caller who reaches its pinned project. Otherwise it answers
-// absent, as for a crew no row has (I3), and reports false. A crew with no
-// workspace is anyone's to know of.
-func (h *Handler) requireTeamVisible(w http.ResponseWriter, r *http.Request, team *teams.Team, absent notFound) bool {
-	switch run := CurrentRun(r); {
-	case team.OrgID == "":
-		return true
-	case WorkerOrg(r) != "":
-		if WorkerOrg(r) == team.OrgID {
-			return true
-		}
-	case run != nil:
-		if pin := h.teamPin(team); run.OrgID == team.OrgID && (pin == "" || sameProject(run.ProjectID, &pin)) {
-			return true
-		}
-	default:
-		if pin := h.teamPin(team); pin != "" && h.reachesProject(r, pin) {
-			return true
-		}
-		if h.orgAccess(discardResponse{}, r, team.OrgID, orgs.RoleMember, notFound{}, notFound{}) {
 			return true
 		}
 	}
@@ -458,31 +427,6 @@ func (h *Handler) readableRunTree(r *http.Request, tree []*agentruns.Run) []*age
 	return kept
 }
 
-// requireTeamWrite enforces crew mutations: project-pinned crews need project
-// editor rights, workspace-wide crews need workspace admin rights. A caller
-// with no access at all gets absent, the answer to an id no row has of the
-// crew, node or edge the handler looked up.
-func (h *Handler) requireTeamWrite(w http.ResponseWriter, r *http.Request, team *teams.Team, absent notFound) bool {
-	if pin := h.teamPin(team); pin != "" {
-		return h.requireProjectRoleFor(w, r, pin, members.RoleEditor, absent)
-	}
-	return h.requireOrgRoleFor(w, r, team.OrgID, orgs.RoleAdmin, absent)
-}
-
-// teamPin is the crew's pinned project while the pin still names a project of
-// the crew's own workspace. A pin to a deleted project, or to another
-// workspace's, counts as no pin, so the crew stays its workspace admins'.
-func (h *Handler) teamPin(team *teams.Team) string {
-	if team.ProjectID == nil || *team.ProjectID == "" {
-		return ""
-	}
-	project, err := h.ProjectService.GetProject(*team.ProjectID)
-	if err != nil || project == nil || (team.OrgID != "" && project.OrgID != team.OrgID) {
-		return ""
-	}
-	return *team.ProjectID
-}
-
 // requireAutomationWrite enforces automation mutations: project-pinned
 // automations need project editor rights, workspace-wide ones need workspace
 // admin rights on the given org. A caller with no access at all gets absent:
@@ -607,22 +551,34 @@ func (h *Handler) requireUnscopedLaunch(w http.ResponseWriter, r *http.Request, 
 
 // requireProjectCreate decides every project create (POST /projects, a
 // template's project, an import) and returns the workspace it lands in, the
-// one the caller acts in. A person creates it and owns it: an agent run acts
-// only inside its own project (REQ-42), and a runner key, workspace or
-// personal, has no person to own what it would make, so both are refused
-// before the body is read. Then, before anything is created, the
-// workspace's read-only gate (which import's alwaysWritable passes, REQ-177)
-// and the project maximum (REQ-176).
+// one the caller acts in. A person creates it and owns it. A runner key
+// creates one in its own workspace: a member's personal key is its holder
+// acting, who must still be a member there and becomes the owner
+// (projectCreator); a workspace key has no person behind it, so its project
+// has no owner of its own and is its workspace admins', who hold an owner's
+// rights on every project of the workspace. An agent run acts only inside
+// its own project (REQ-42) and is refused before the body is read. Then,
+// before anything is created, the workspace's read-only gate (which
+// import's alwaysWritable passes, REQ-177) and the project maximum
+// (REQ-176).
 func (h *Handler) requireProjectCreate(w http.ResponseWriter, r *http.Request) (string, bool) {
 	if CurrentRun(r) != nil {
 		writeJSONError(w, http.StatusForbidden, "agent runs cannot create projects")
 		return "", false
 	}
 	if IsWorker(r) {
-		writeJSONError(w, http.StatusForbidden, "runner keys cannot create projects")
-		return "", false
-	}
-	if requireUserMsg(w, r, "authentication required", http.StatusUnauthorized) == nil {
+		if holder := WorkerUser(r); holder != "" && h.OrgService != nil {
+			role, err := h.OrgService.RoleInOrg(WorkerOrg(r), holder)
+			if err != nil {
+				respondInternal(w, r, "failed to resolve workspace access", err)
+				return "", false
+			}
+			if role == "" {
+				writeJSONError(w, http.StatusForbidden, "this runner key's holder is not a member of the workspace")
+				return "", false
+			}
+		}
+	} else if requireUserMsg(w, r, "authentication required", http.StatusUnauthorized) == nil {
 		return "", false
 	}
 	orgID := ActiveOrg(r)
@@ -640,6 +596,16 @@ func (h *Handler) requireProjectCreate(w http.ResponseWriter, r *http.Request) (
 		return "", false
 	}
 	return orgID, true
+}
+
+// projectCreator names the account that owns a project the request creates:
+// the person signed in, or the holder of a personal runner key. "" for a
+// workspace runner key, whose project its workspace's admins own.
+func projectCreator(r *http.Request) string {
+	if user := CurrentUser(r); user != nil {
+		return user.ID
+	}
+	return WorkerUser(r)
 }
 
 // pendingArtifactRef returns the pending create_artifact proposal in runID that

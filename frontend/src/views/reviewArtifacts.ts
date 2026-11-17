@@ -51,3 +51,21 @@ export const attachmentLabel = (a: Attachment): string =>
 
 /** The label a reviewer reads for one artifact, ref included when it has one. */
 export const artifactLabel = (a: Artifact): string => a.title || '(untitled)';
+
+/**
+ * How long ago something last changed, as a board card prints it: "now",
+ * "5m", "3h", "2d", then the date. Blank for a missing or unreadable time,
+ * so a card never shows "NaN".
+ */
+export const ageLabel = (iso: string | undefined, now: number = Date.now()): string => {
+  const t = iso ? Date.parse(iso) : NaN;
+  if (Number.isNaN(t)) return '';
+  const minutes = Math.max(0, Math.floor((now - t) / 60000));
+  if (minutes < 1) return 'now';
+  if (minutes < 60) return `${minutes}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d`;
+  return new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+};

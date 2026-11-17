@@ -91,6 +91,12 @@ export interface ReviewRoundResult {
   types: string[];
 }
 
+/** When the member last read an artifact's comments (GET /me/comment-reads). */
+export interface CommentRead {
+  artifact_id: string;
+  read_at: string;
+}
+
 export interface ChatterEntry {
   id: string;
   artifact_id: string;
@@ -116,10 +122,17 @@ export interface NoteMention {
   name: string;
 }
 
+/**
+ * The to-do raised from a note. Since to-dos have a table of their own it
+ * names one by todo_id, with status "open" or "done"; a note raised before
+ * names the board card it raised by work_item_id, with its column.
+ */
 export interface NoteTodo {
-  work_item_id: string;
+  todo_id?: string;
+  work_item_id?: string;
+  /** The to-do's text, or the card's title. */
   title: string;
-  /** The board column the to-do sits in. */
+  /** "open" or "done" for a to-do; the board column for a card. */
   status: string;
   assignee_id?: string | null;
   assignee_name?: string;
@@ -194,6 +207,34 @@ export interface SearchHit {
   ref?: string;
   // Semantic-similarity score (0..1); present only for semantic/hybrid hits.
   score?: number;
+  // The hit's review status and owner attribute, present when the search
+  // asked for facets (the chip search bar, issue #722).
+  status?: string;
+  owner?: string;
+}
+
+// What the chip search bar narrows GET /api/v1/search by (issue #722): each
+// list matches any of its values; facets asks for each hit's status and owner.
+export interface SearchFacets {
+  projects?: string[];
+  types?: string[];
+  statuses?: string[];
+  owners?: string[];
+  facets?: boolean;
+}
+
+// One of a member's saved searches (GET /api/v1/me/saved-searches): a named
+// set of search-bar chips, per user, workspace and scope. value is the bar's
+// own state, which the page that saved it reads back.
+export interface SavedSearch {
+  id: string;
+  user_id: string;
+  org_id: string;
+  scope: string;
+  name: string;
+  value: Record<string, unknown>;
+  shared: boolean;
+  created_at: string;
 }
 
 // Ranking path for GET /api/v1/search. 'keyword' is the original trigram match;

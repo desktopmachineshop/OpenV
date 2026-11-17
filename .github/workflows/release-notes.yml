@@ -48,6 +48,8 @@ jobs:
 
       - name: Script self-test
         run: python3 -m unittest scripts/release_notes_test.py
+      - name: Release CI gate suite
+        run: cd scripts && python3 -m unittest release_ci_test
 
       - name: Notes file is well-formed
         run: python3 scripts/release_notes.py check RELEASE_NOTES.md

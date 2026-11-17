@@ -82,7 +82,6 @@ func main()
     call internal/domain/providers.NewSealer
     if
       call os.Exit
-  call (*internal/domain/teams.DefaultService).SetMemberValidator
   call (*internal/domain/proposals.DefaultService).OnResolved
   call (*internal/domain/orgs.DefaultService).ListAll
   if

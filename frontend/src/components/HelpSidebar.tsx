@@ -4,6 +4,7 @@ import { helpTopicForPath } from './helpTopics';
 import { DocsHelp } from './DocsHelp';
 import { useAppStore } from '../state/store';
 import { useFeature } from '../hooks/useFeature';
+import { useHelpActivity } from '../hooks/useHelpActivity';
 import type { FeatureKey } from '../generated/contract';
 import './HelpSidebar.css';
 
@@ -28,6 +29,9 @@ export const CAPABILITY_HELP_DOCS = 'help-docs';
 
 /** The release gate on it: the member's channel must have reached it too. */
 export const MANUAL_HELP_FEATURE: FeatureKey = 'manual-help';
+
+/** The gate on help following the section, button and tab in use. */
+export const HELP_ACTIVITY_FEATURE: FeatureKey = 'help-activity';
 
 interface HelpSidebarProps {
   /** Controlled open state. Every shell keeps it now, with the ? button in
@@ -56,9 +60,15 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({ open, onOpenChange }) 
   const onDocsUnavailable = useCallback(() => setDocsFailed(true), []);
   const manualHelp = useFeature(MANUAL_HELP_FEATURE);
   const showDocs = docsOffered && manualHelp && !!orgId && !docsFailed;
+  // What the reader is doing on the page, tracked while the panel is closed
+  // too, so that opening it lands on the section they were working in.
+  const helpActivity = useFeature(HELP_ACTIVITY_FEATURE);
+  const activity = useHelpActivity(showDocs && helpActivity, location.pathname);
 
   return (
-    <div className={`help-sidebar ${isExpanded ? 'expanded' : 'collapsed'}`}>
+    // data-help-ui: what happens in the panel is not what the reader is
+    // doing on the page (useHelpActivity).
+    <div className={`help-sidebar ${isExpanded ? 'expanded' : 'collapsed'}`} data-help-ui="">
       {/* Controlled by the shell's own ? button, beside the notification
           bell. A floating button was the old arrangement and it cost the
           bottom-right corner of every page: on a phone it landed on the
@@ -82,7 +92,12 @@ export const HelpSidebar: React.FC<HelpSidebarProps> = ({ open, onOpenChange }) 
 
       {isExpanded && showDocs && (
         <div className="help-content">
-          <DocsHelp orgId={orgId} path={location.pathname} onUnavailable={onDocsUnavailable} />
+          <DocsHelp
+            orgId={orgId}
+            path={location.pathname}
+            onUnavailable={onDocsUnavailable}
+            activity={activity}
+          />
         </div>
       )}
 

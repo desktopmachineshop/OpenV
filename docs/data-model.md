@@ -226,13 +226,23 @@ Setting `OPENV_BUDGET_ENFORCE=true` additionally soft-blocks new launches once
 a workspace is at 100% of budget (the launch API answers 402); it fails open on
 any lookup error so a budget hiccup never wedges launches.
 
+### workspace_notices
+Once-only emails to a workspace's admins (migration 0072, `orgs.Notices`):
+`(org_id, notice_key)` is the primary key, with the `subject` sent,
+`recipients` (how many admins it reached) and `sent_at`. A module names the
+occurrence a notice is about in its key (the hosted service's billing emails
+use `billing:<kind>:<subscription>:<period end>`); the insert is the claim, so
+a polling loop that sees the cause again, on any replica, sends nothing more.
+A claim whose notice reached nobody is deleted so the next attempt can send
+it. Rows go with their workspace (`ON DELETE CASCADE`).
+
 ### org_members
 `(org_id, user_id)` → `role` (`admin` | `member`). Org admins act as owners
 of every project in the org.
 
 ### org_teams / org_team_members
-People-teams within a workspace (these are *human* teams; agent graphs are
-"crews", below): team `name`/`description`, and its user membership.
+People-teams within a workspace (these are *human* teams; the removed agent graphs
+were "crews", below): team `name`/`description`, and its user membership.
 
 ### project_team_access
 `(project_id, org_team_id)` → `role`. Grants a whole people-team a project
@@ -275,7 +285,8 @@ JSONB, `write_mode` (`proposal` | `direct`), `repo_access`, `max_turns`,
 ### agent_runs
 **This table is the job queue** (workers claim with
 `FOR UPDATE SKIP LOCKED`). Scope/links: `agent_id`, `project_id`,
-`automation_id`, `trigger_event_id`, `team_id`/`team_node_id` (crew),
+`automation_id`, `trigger_event_id`, `team_id`/`team_node_id` (a removed
+crew's, kept unread on old runs),
 `parent_run_id` (delegation tree), `work_item_id`, `interview_session_id`,
 `guided_session_id`. Lifecycle: `status` (`queued` → `claimed` → `running` →
 `succeeded`/`failed`/`cancelled`/`timed_out`, plus `awaiting_approval`),
@@ -335,8 +346,11 @@ member and provider (`user_id`, `provider`; today `claude-code` only):
 `created_at`, `expires_at` (a year after saving). The rows go with the
 member.
 
-### agent_teams / agent_team_nodes / agent_team_edges (crews)
-Agent org charts (API name: **crews**; table names keep the historical
+### agent_teams / agent_team_nodes / agent_team_edges (crews, removed)
+Crews were removed (issue 732). These tables stay, unread and unwritten by
+the application, until a later migration drops them; the project delete,
+the workspace purge and an account's deletion still clean their rows.
+What they held: agent org charts (API name: **crews**; table names keep the historical
 `agent_team*` prefix). `agent_teams`: `org_id`, `name`, optional
 `project_id` (pinned), `entry_node_id`, `is_default`. Nodes: `node_type`
 (`agent` | `human`) with a CHECK constraint tying `agent_id` xor `user_id`
@@ -373,8 +387,8 @@ belong to an evidence bundle, which a result cites through
 ### work_items / work_item_activity
 Kanban cards: `project_id`, `title`, `description`, `board_column`
 (`backlog` | `todo` | `in-progress` | `review` | `done`, listed in that
-order), `sort_order`, `assignee_type` (`user` | `agent` | `team`, a
-crew) + `assignee_id`, `agent_run_id` (moving a card into an agent
+order), `sort_order`, `assignee_type` (`user` | `agent`; `team`, a
+crew's, was moved off by migration 0069) + `assignee_id`, `agent_run_id` (moving a card into an agent
 column enqueues a run), `artifact_ids` JSONB, `due_date`. Activity is the
 card's feed (`kind`, `actor`, `content`, `payload`).
 

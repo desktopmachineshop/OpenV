@@ -3,6 +3,9 @@
 <concept id="trigger-events">
   <title>Trigger events</title>
   <shortdesc>Triggered automations listen to the workspace's events. Available events:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="automations.triggers"/>
+  </prolog>
   <conbody>
     <ul>
       <li>artifact.created / artifact.updated / artifact.deleted / artifact.status_changed / artifact.restored</li>

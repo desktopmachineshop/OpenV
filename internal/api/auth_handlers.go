@@ -67,7 +67,7 @@ func (h *Handler) registerAuthRoutes(router *mux.Router) {
 }
 
 // provisionPersonalWorkspace ensures a new user's personal org exists and is
-// seeded with default agents/crew. Failures are non-fatal (retried on next
+// seeded with default agents. Failures are non-fatal (retried on next
 // login via the middleware's personal-org fallback).
 func (h *Handler) provisionPersonalWorkspace(userID, displayName string) {
 	if h.OrgService == nil {
@@ -87,8 +87,8 @@ func (h *Handler) provisionPersonalWorkspace(userID, displayName string) {
 
 // AuthConfig tells the login page which sign-in methods are available. On a
 // deployment that signs everyone in through its provider only
-// (OPENV_OIDC_ONLY), oidc_only is true and password sign-in, its reset and
-// Google read as unavailable, so the page goes straight to the provider.
+// (OPENV_OIDC_ONLY), oidc_only is true and password sign-in and Google read
+// as unavailable, so the page goes straight to the provider.
 func (h *Handler) AuthConfig(w http.ResponseWriter, r *http.Request) {
 	only := h.ssoOnly()
 	resp := map[string]any{
@@ -103,8 +103,10 @@ func (h *Handler) AuthConfig(w http.ResponseWriter, r *http.Request) {
 		// never walls anyone on a deployment that cannot send the link.
 		"email_verification_required": h.EmailVerification.Required,
 		// Whether the sign-in page can offer an emailed password reset
-		// (REQ-158); without a mailer a platform admin mints the link.
-		"password_reset_email": h.Mailer != nil && h.Mailer.Enabled() && !only,
+		// (REQ-158); without a mailer a platform admin mints the link. In
+		// every mode: with single sign-on the only way in, the reset serves
+		// the step that links the provider to a password account.
+		"password_reset_email": h.Mailer != nil && h.Mailer.Enabled(),
 		// Whether the page should offer a sign-up form at all (REQ-95).
 		"registration": h.registrationPolicy(),
 		// What this deployment offers (module_host.go): the app hides the

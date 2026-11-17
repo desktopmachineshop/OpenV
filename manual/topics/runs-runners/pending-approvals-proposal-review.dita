@@ -6,5 +6,15 @@
   <prolog>
     <resourceid appname="openv-web" appid="agent-runs.approvals"/>
   </prolog>
-  <conbody/>
+  <conbody>
+    <p>Each proposal is a card that reads as the change it makes:</p>
+    <ul>
+      <li>a chip naming the kind of write — <b>New artifact</b>, <b>Edit</b>, <b>Delete</b>, <b>New link</b>, <b>Remove link</b> or <b>Test result</b>;</li>
+      <li>the artifact it lands on, by reference and title (for a link, the two artifacts and the link type between them);</li>
+      <li>for an edit, each field it changes, with what the field says now struck through above what it would say; a new artifact lists the fields it sets, and a deletion shows what would go;</li>
+      <li><b>Raw payload</b>, which opens the exact data the agent sent;</li>
+      <li><b>from its run</b>, which opens the run that made the proposal beside the list.</li>
+    </ul>
+    <p><b>Approve</b> takes one press. <b>Reject</b> first asks why: a note field opens, and pressing <b>Reject</b> again rejects with whatever you wrote, or nothing. <b>Add a note</b> opens the same field for an approval. To decide several together, press <b>Select several</b>: each card gets a tick, and a bar offers <b>Select all</b>, one note and <b>Approve Selected</b> or <b>Reject Selected</b>.</p>
+  </conbody>
 </concept>

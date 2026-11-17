@@ -8,15 +8,17 @@ itself never runs a model; it queues work and reviews results.
 
 ## The Runs page
 
-**Runs** in the project sidebar lists agent runs with status, start time,
+**Runs** in the project menu lists agent runs with status, start time,
 duration, token usage, and cost. Statuses:
 
 queued · running · awaiting_approval · succeeded · failed · timed_out ·
 cancelled
 
 - Click a run to open the **detail panel**: the prompt, live progress/log,
-  results, and links to related runs (e.g. crew delegations).
-- The **Status** dropdown filters the list.
+  results, and links to related runs (e.g. a retry of a failed run).
+- The **Status** chips above the list filter it: **All runs**, or one status.
+- On a phone each run is a row of two lines: the agent and its status, then
+  when it started, how long it took and what it cost. Tap it for the rest.
 - A queued run may show **"reserved for launcher's runner"** — it's waiting
   briefly for the launcher's personal runner before other runners may claim it.
 
@@ -47,6 +49,24 @@ Runs page opens the review panel where you **approve** or **reject** each
 proposed artifact change, link, or test result. Only approved proposals are
 applied.
 
+Each proposal is a card that reads as the change it makes:
+
+- a chip naming the kind of write — **New artifact**, **Edit**, **Delete**,
+  **New link**, **Remove link** or **Test result**;
+- the artifact it lands on, by reference and title (for a link, the two
+  artifacts and the link type between them);
+- for an edit, each field it changes, with what the field says now struck
+  through above what it would say; a new artifact lists the fields it sets,
+  and a deletion shows what would go;
+- **Raw payload**, which opens the exact data the agent sent;
+- **from its run**, which opens the run that made the proposal beside the list.
+
+**Approve** takes one press. **Reject** first asks why: a note field opens,
+and pressing **Reject** again rejects with whatever you wrote, or nothing.
+**Add a note** opens the same field for an approval. To decide several
+together, press **Select several**: each card gets a tick, and a bar offers
+**Select all**, one note and **Approve Selected** or **Reject Selected**.
+
 ## Runner types
 
 ### Personal runner (your machine, your subscription)
@@ -59,7 +79,7 @@ see it yourself (see *How runs are routed* below).
 The easiest setup is the **Agent Connector**:
 
 1. When a run is queued and no runner is online, the app prompts you — or open
-   your user settings (bottom-left of the sidebar) → **My Runner**.
+   your user settings (the account menu) → **My Runner**.
 2. **Download** the connector bundle, unzip it somewhere permanent, and run it
    once so it registers itself.
 3. Click **Pair connector** in OpenV — the browser opens the connector with a
@@ -167,8 +187,14 @@ address followed by \`/mcp\`, for example \`https://openv.app/mcp\`;
 2. The app opens OpenV in your browser. Sign in if asked, choose the
    **workspaces** the app may work in and whether it may **read and change**
    or **read only**, and choose **Connect**.
-3. You go back to the app, which can now list your projects, read and edit
-   artifacts and links, record test results and comment, as you.
+3. You go back to the app, which can now list your projects, create a
+   project, read and edit artifacts and links, record test results and
+   comment, as you.
+
+A project the app creates is yours, as if you had made it in OpenV, and it
+can be filed under another project as it is created. Where the app reaches
+more than one workspace, a new project goes in the first of them, the one
+listed first under **Workspaces**.
 
 Everything the app does is recorded as yours, it reaches only the
 workspaces you chose, and your role in each still applies: a viewer's app
@@ -184,7 +210,7 @@ To stop it altogether, choose **Disconnect**; it stops working at once.
   a cloud runner you hold — the run is **reserved for your runner** for a grace
   period (default 60 seconds). If it isn't claimed in time, hosted/workspace
   runners take over.
-- **Ownerless runs** (automations, board triggers, crew delegations) are
+- **Ownerless runs** (automations, board triggers) are
   claimable immediately, first come first served, by every workspace or
   hosted runner, and by the personal runner of every member who could see
   the run: one with a role in its project, or a workspace admin. A personal
@@ -197,7 +223,7 @@ To stop it altogether, choose **Disconnect**; it stops working at once.
 
 Personal and cloud runners both use your own CLI sign-ins:
 
-- Open your user settings (bottom-left of the sidebar) → **Agent sign-ins**.
+- Open your user settings (the account menu) → **Agent sign-ins**.
   Each provider card relays the CLI's own sign-in flow to whichever runner of
   yours is online, and each CLI does it differently.
 - **On your own machine:** **Gemini** shows an "Open sign-in page" link plus a

@@ -53,4 +53,9 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerConnectedAppRoutes(router)
 	h.registerMCPRoutes(router)
 	h.registerHelpRoutes(router)
+	h.registerTargetReleaseRoutes(router)
+	h.registerSavedSearchRoutes(router)
+	h.registerTodoRoutes(router)
+	h.registerCommentReadRoutes(router)
+	h.registerPlanRoutes(router)
 }

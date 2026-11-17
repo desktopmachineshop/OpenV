@@ -1,4 +1,4 @@
-import type { Automation, Crew } from '../api/client';
+import type { Automation } from '../api/client';
 import { EVENT_TYPES } from './AutomationsPageEvents';
 
 // The Automations page's form: its state, built from an automation and
@@ -46,15 +46,6 @@ export const scopeOf = (a: Automation): AutomationScope => (a.project_id ? 'proj
 export const coversProject = (a: Automation, projectId: string | undefined): boolean =>
   !a.project_id || a.project_id === projectId;
 
-/**
- * The crews a scope's automation may run. A whole-workspace automation runs
- * in the project of each event that fires it, so only a crew pinned to no
- * project can serve it; a project's automation may also have a crew pinned
- * to that project, which the list for a project already holds.
- */
-export const crewsForScope = (crews: Crew[], scope: AutomationScope): Crew[] =>
-  scope === 'workspace' ? crews.filter((c) => !c.project_id) : crews;
-
 interface FilterRow {
   key: string;
   value: string;
@@ -66,9 +57,7 @@ export interface FormState {
   scope: AutomationScope;
   /** The scope the automation is saved with; null for a new one. */
   savedScope: AutomationScope | null;
-  targetKind: 'agent' | 'team';
   agent_id: string;
-  team_id: string;
   kind: 'manual' | 'scheduled' | 'triggered';
   cron_expr: string;
   event_type: string;
@@ -83,9 +72,7 @@ export const emptyForm = (): FormState => ({
   name: '',
   scope: 'project',
   savedScope: null,
-  targetKind: 'agent',
   agent_id: '',
-  team_id: '',
   kind: 'manual',
   cron_expr: '0 9 * * *',
   event_type: EVENT_TYPES[0],
@@ -100,9 +87,7 @@ export const toForm = (a: Automation): FormState => ({
   name: a.name,
   scope: scopeOf(a),
   savedScope: scopeOf(a),
-  targetKind: a.team_id ? 'team' : 'agent',
   agent_id: a.agent_id || '',
-  team_id: a.team_id || '',
   kind: a.kind,
   cron_expr: a.cron_expr || '0 9 * * *',
   event_type: a.event_type || EVENT_TYPES[0],
@@ -118,20 +103,17 @@ export const toForm = (a: Automation): FormState => ({
 /**
  * The body that saves the form. A new automation names its scope: the
  * page's project, or none for the whole workspace. An update names a scope
- * only to move the automation, "" being the whole workspace, and clears the
- * target it no longer has with "" too, since the API leaves a field it gets
- * as null as it was.
+ * only to move the automation, "" being the whole workspace. An automation
+ * targets an agent: crews, once a target too, are gone.
  */
 export const automationPayload = (form: FormState, projectId: string | undefined): Partial<Automation> => {
   const event_filter: Record<string, any> = {};
   form.filters.forEach((f) => {
     if (f.key.trim()) event_filter[f.key.trim()] = f.value;
   });
-  const cleared = form.id ? '' : null;
   const payload: Partial<Automation> = {
     name: form.name.trim(),
-    agent_id: form.targetKind === 'agent' ? form.agent_id || null : cleared,
-    team_id: form.targetKind === 'team' ? form.team_id || null : cleared,
+    agent_id: form.agent_id || null,
     kind: form.kind,
     prompt_template: form.prompt_template,
     cron_expr: form.kind === 'scheduled' ? form.cron_expr : '',

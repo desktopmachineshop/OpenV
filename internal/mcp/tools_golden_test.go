@@ -56,7 +56,7 @@ type toolGolden struct {
 // and every call has to be a route in the API's inventory. A renamed or reordered tool, a changed schema or
 // description, a moved read-only flag or a retargeted path fails here.
 func TestMCPToolsGolden(t *testing.T) {
-	t.Parallel() // delegate_to_agent sleeps 5s before its first status poll
+	t.Parallel()
 	doc := buildToolsGolden(t)
 	// The recording also settles what TestReadOnlyToolsExcludeWriters can
 	// only infer from names: a tool granted to least-privilege agents
@@ -75,6 +75,7 @@ func TestMCPToolsGolden(t *testing.T) {
 // them is an id, so it has to sit where the route template has a parameter.
 const (
 	goldenProjectID       = "11111111-1111-4111-8111-111111111111"
+	goldenReleaseID       = "33333333-3333-4333-8333-333333333333"
 	goldenArtifactID      = "22222222-2222-4222-8222-222222222222"
 	goldenOtherArtifactID = "33333333-3333-4333-8333-333333333333"
 	goldenLinkID          = "44444444-4444-4444-8444-444444444444"
@@ -85,6 +86,8 @@ const (
 	goldenDelegateRunID   = "99999999-9999-4999-8999-999999999999"
 	goldenAttachmentID    = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 	goldenAgentID         = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+	goldenTodoID          = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"
+	goldenUserID          = "dddddddd-dddd-4ddd-8ddd-dddddddddddd"
 )
 
 // goldenArtifactRef is goldenArtifactID's stable ref. A ref is not an id:
@@ -97,7 +100,8 @@ func toolGoldenIDs() map[string]bool {
 	for _, id := range []string{
 		goldenProjectID, goldenArtifactID, goldenOtherArtifactID,
 		goldenLinkID, goldenBaselineID, goldenTestRunID, goldenTestCaseID,
-		goldenWorkItemID, goldenDelegateRunID, goldenAttachmentID, goldenAgentID,
+		goldenWorkItemID, goldenDelegateRunID, goldenAttachmentID, goldenAgentID, goldenReleaseID,
+		goldenTodoID, goldenUserID,
 	} {
 		ids[id] = true
 	}
@@ -110,6 +114,7 @@ func toolGoldenIDs() map[string]bool {
 func toolGoldenArgs() map[string]map[string]interface{} {
 	return map[string]map[string]interface{}{
 		"list_projects":           {},
+		"create_project":          {"name": "Brake assembly", "description": "The brake assembly under the landing gear.", "parent_project_id": goldenProjectID},
 		"list_artifacts":          {"project_id": goldenProjectID, "type": "requirement", "owner": "QA"},
 		"get_artifact":            {"id": goldenArtifactRef, "project_id": goldenProjectID},
 		"get_project_map":         {"project_id": goldenProjectID, "baseline_id": goldenBaselineID},
@@ -134,12 +139,32 @@ func toolGoldenArgs() map[string]map[string]interface{} {
 		"get_quality_findings":    {"artifact_id": goldenArtifactRef, "project_id": goldenProjectID},
 		"get_vv_coverage":         {"project_id": goldenProjectID, "detail": true},
 		"get_vv_gaps":             {"project_id": goldenProjectID},
+		"list_releases":           {"project_id": goldenProjectID},
+		"create_release":          {"project_id": goldenProjectID, "name": "MVP", "description": "First usable", "target_date": "2027-01-31", "status": "planned"},
+		"update_release":          {"project_id": goldenProjectID, "release_id": goldenReleaseID, "name": "V1.0", "description": "", "target_date": "", "status": "in_progress"},
+		"get_release_progress":    {"project_id": goldenProjectID, "release_id": goldenReleaseID, "detail": true},
+		"set_release_target":      {"artifact_id": goldenArtifactID, "release": "MVP", "until": goldenReleaseID, "clear": false},
 		"list_work_items":         {"project_id": goldenProjectID, "column": "todo", "assignee_id": goldenAgentID},
 		"get_work_item":           {"id": goldenWorkItemID},
 		"get_work_item_history":   {"id": goldenWorkItemID},
 		"update_work_item":        {"id": goldenWorkItemID, "comment": "Started."},
 		"record_candidate_need":   {"project_id": goldenProjectID, "need": "Operators see seal wear early", "rationale": "Downtime", "quote": "We only find out when it leaks."},
-		"delegate_to_agent":       {"role_label": "builder", "prompt": "Draft the test cases."},
+		"list_todos":              {"project_id": goldenProjectID, "include_done": false},
+		"create_todo":             {"project_id": goldenProjectID, "text": "Check the seal wording.", "assignee_id": goldenUserID, "due_date": "2027-01-31"},
+		"tick_todo":               {"id": goldenTodoID, "done": true},
+		"get_plan":                {"project_id": goldenProjectID},
+		"level_plan":              {"project_id": goldenProjectID},
+		"set_plan_resource":       {"project_id": goldenProjectID, "type": "user", "id": goldenAgentID, "daily_rate": "400", "capacity": "80"},
+		"recalculate_plan":        {"project_id": goldenProjectID, "only_later": "true"},
+		"set_plan_calendar": {"project_id": goldenProjectID, "holidays": []interface{}{"2027-12-27:Shutdown", "2027-01-01"}, "critical_slack_days": "2",
+			"scheduling_mode": "auto", "project_start": "2027-01-04", "project_finish": "2027-12-17", "schedule_from": "finish", "multiple_critical_paths": "true", "currency": "GBP", "budget": "25000", "status_date": "2027-03-05", "active_baseline_id": goldenDelegateRunID},
+		"save_plan_baseline":        {"project_id": goldenProjectID, "name": "As approved"},
+		"reschedule_remaining_work": {"project_id": goldenProjectID},
+		"set_plan_working_days":     {"project_id": goldenProjectID, "working_days": []interface{}{"1", "2", "3", "4", "6"}},
+		"schedule_work_item": {"id": goldenWorkItemID, "start_date": "2027-01-11", "due_date": "2027-01-31", "duration_days": "21", "effort_days": "7.5", "parent_id": goldenDelegateRunID, "milestone": "release:" + goldenDelegateRunID, "deadline": "2027-02-15", "elapsed": "true", "mode": "auto", "constraint_type": "snet", "constraint_date": "2027-01-11",
+			"assignments": []interface{}{"user:" + goldenAgentID + ":50", "agent:" + goldenDelegateRunID}, "fixed_cost": "250", "effort_driven": "true", "actual_start": "2027-01-12", "actual_finish": "2027-02-01", "percent_complete": "40", "actual_cost": "1200", "after_id": goldenAgentID,
+			"relationships": []interface{}{goldenDelegateRunID + ":SS:5ed", goldenAgentID + ":SF:50%"},
+			"depends_on":    []interface{}{goldenDelegateRunID}},
 	}
 }
 
@@ -154,11 +179,15 @@ func toolStubBodies() map[string]string {
 		"GET /api/v1/baselines/{id}": `{"project_id":"` + goldenProjectID + `","project_name":"Seal rig","artifacts":[],"links":[]}`,
 		"GET /api/v1/projects/{id}/baselines": `[{"id":"` + goldenBaselineID + `","project_id":"` + goldenProjectID +
 			`","name":"B1","snapshot":null,"created_at":"2026-01-01T09:30:00Z"}]`,
-		"GET /api/v1/projects/{id}/work-items":    `[]`,
+		"GET /api/v1/projects/{id}/work-items": `[]`,
+		"GET /api/v1/projects/{id}/todos": `[{"id":"` + goldenTodoID + `","text":"Check the seal wording.","done":false},` +
+			`{"id":"` + goldenTodoID + `","text":"Done one","done":true}]`,
+		"GET /api/v1/projects/{id}/releases": `[{"id":"` + goldenReleaseID + `","name":"MVP","position":0}]`,
+		"GET /api/v1/artifacts/{id}": `{"id":"` + goldenArtifactID + `","project_id":"` + goldenProjectID +
+			`","attributes":{"priority":"must","target_release":"old"}}`,
 		"GET /api/v1/work-items/{id}":             `{"id":"` + goldenWorkItemID + `","activity":[]}`,
 		"GET /api/v1/projects/{id}/quality-rules": `{"effective":{},"summary":"shall"}`,
-		"POST /api/v1/agent-runs/delegate":        `{"run_id":"` + goldenDelegateRunID + `","status":"queued"}`,
-		"GET /api/v1/agent-runs/delegate/{id}":    `{"run_id":"` + goldenDelegateRunID + `","status":"succeeded","final_text":"done"}`,
+		"POST /api/v1/projects":                   `{"id":"` + goldenProjectID + `","name":"Brake assembly"}`,
 	}
 }
 

@@ -3,7 +3,9 @@ package api
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,6 +13,7 @@ import (
 	"github.com/gorilla/mux"
 	"golang.org/x/oauth2"
 
+	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
@@ -110,6 +113,7 @@ func (c *OIDCConfig) ensure(ctx context.Context) error {
 func (h *Handler) registerOIDCRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/auth/oidc/login", h.OIDCLogin).Methods("GET")
 	router.HandleFunc("/api/v1/auth/oidc/callback", h.OIDCCallback).Methods("GET")
+	router.HandleFunc("/api/v1/auth/oidc/account-deletion", h.OIDCAccountDeletion).Methods("POST")
 }
 
 // OIDCLogin redirects to the configured provider's authorization endpoint with
@@ -158,9 +162,45 @@ func (h *Handler) OIDCLogin(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, h.OIDC.oauth.AuthCodeURL(state, opts...), http.StatusFound)
 }
 
+// oidcProviderRefused ends a flow the provider reports did not happen
+// (RFC 6749 4.1.2.1, ?error=): the person cancelled (access_denied), or it
+// refused. The flow's cookies are spent either way.
+func (h *Handler) oidcProviderRefused(w http.ResponseWriter, r *http.Request, perr string) {
+	h.clearOIDCFlowCookie(w, oidcStateCookie)
+	h.clearOIDCFlowCookie(w, oidcNonceCookie)
+	h.clearOIDCFlowCookie(w, oidcVerifierCookie)
+	code := ssoErrFailed
+	if perr == "access_denied" {
+		code = ssoErrCancelled
+	}
+	h.oidcCallbackFailed(w, r, code, "the provider answered "+perr, nil)
+}
+
+// oidcFlowCookies reads the callback's flow cookies: the state, which must
+// match the query's, the nonce and the PKCE verifier. why says what is
+// wrong, "" when nothing is.
+func oidcFlowCookies(r *http.Request) (nonce, verifier, why string) {
+	state, err := r.Cookie(oidcStateCookie)
+	if err != nil || state.Value == "" || state.Value != r.URL.Query().Get("state") {
+		return "", "", "invalid oauth state"
+	}
+	n, err := r.Cookie(oidcNonceCookie)
+	if err != nil || n.Value == "" {
+		return "", "", "missing oauth nonce"
+	}
+	v, err := r.Cookie(oidcVerifierCookie)
+	if err != nil || v.Value == "" {
+		return "", "", "missing oauth code verifier"
+	}
+	return n.Value, v.Value, ""
+}
+
 // OIDCCallback completes the code flow: it validates state, exchanges the code,
 // verifies the ID token (signature/issuer/audience/nonce), finds-or-creates the
 // user by verified email, and issues the session cookie exactly like Google.
+// A sign-on that fails goes back to the sign-in page with ?error= (see
+// oidcCallbackFailed); only an unconfigured provider and the throttle answer
+// JSON.
 func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 	if !h.OIDC.Enabled() {
 		writeJSONError(w, http.StatusNotFound, "sso sign-in is not configured")
@@ -169,26 +209,21 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 	if !h.throttleSSO(w, r) {
 		return
 	}
+	q := r.URL.Query()
+	if perr := q.Get("error"); perr != "" {
+		h.oidcProviderRefused(w, r, perr)
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
 	if err := h.OIDC.ensure(ctx); err != nil {
-		respondError(w, r, http.StatusBadGateway, "sso provider discovery failed", err)
+		h.oidcCallbackFailed(w, r, ssoErrFailed, "provider discovery failed", err)
 		return
 	}
 
-	stateCookie, err := r.Cookie(oidcStateCookie)
-	if err != nil || stateCookie.Value == "" || stateCookie.Value != r.URL.Query().Get("state") {
-		writeJSONError(w, http.StatusBadRequest, "invalid oauth state")
-		return
-	}
-	nonceCookie, err := r.Cookie(oidcNonceCookie)
-	if err != nil || nonceCookie.Value == "" {
-		writeJSONError(w, http.StatusBadRequest, "missing oauth nonce")
-		return
-	}
-	verifierCookie, err := r.Cookie(oidcVerifierCookie)
-	if err != nil || verifierCookie.Value == "" {
-		writeJSONError(w, http.StatusBadRequest, "missing oauth code verifier")
+	nonce, verifier, why := oidcFlowCookies(r)
+	if why != "" {
+		h.oidcCallbackFailed(w, r, ssoErrFailed, why, nil)
 		return
 	}
 	// One-shot: clear the flow cookies so a state/nonce pair cannot be replayed.
@@ -196,29 +231,29 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 	h.clearOIDCFlowCookie(w, oidcNonceCookie)
 	h.clearOIDCFlowCookie(w, oidcVerifierCookie)
 
-	code := r.URL.Query().Get("code")
+	code := q.Get("code")
 	if code == "" {
-		writeJSONError(w, http.StatusBadRequest, "missing authorization code")
+		h.oidcCallbackFailed(w, r, ssoErrFailed, "missing authorization code", nil)
 		return
 	}
 
-	oauthToken, err := h.OIDC.oauth.Exchange(ctx, code, oauth2.VerifierOption(verifierCookie.Value))
+	oauthToken, err := h.OIDC.oauth.Exchange(ctx, code, oauth2.VerifierOption(verifier))
 	if err != nil {
-		respondError(w, r, http.StatusBadGateway, "sso token exchange failed", err)
+		h.oidcCallbackFailed(w, r, ssoErrFailed, "token exchange failed", err)
 		return
 	}
 	rawIDToken, ok := oauthToken.Extra("id_token").(string)
 	if !ok || rawIDToken == "" {
-		writeJSONError(w, http.StatusBadGateway, "sso response is missing an id_token")
+		h.oidcCallbackFailed(w, r, ssoErrFailed, "the response is missing an id_token", nil)
 		return
 	}
 	idToken, err := h.OIDC.verifier.Verify(ctx, rawIDToken)
 	if err != nil {
-		respondError(w, r, http.StatusBadGateway, "sso id_token verification failed", err)
+		h.oidcCallbackFailed(w, r, ssoErrFailed, "id_token verification failed", err)
 		return
 	}
-	if idToken.Nonce != nonceCookie.Value {
-		writeJSONError(w, http.StatusBadRequest, "invalid oauth nonce")
+	if idToken.Nonce != nonce {
+		h.oidcCallbackFailed(w, r, ssoErrFailed, "invalid oauth nonce", nil)
 		return
 	}
 
@@ -229,11 +264,11 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		Picture       string `json:"picture"`
 	}
 	if err := idToken.Claims(&claims); err != nil {
-		writeJSONError(w, http.StatusBadGateway, "invalid id_token claims")
+		h.oidcCallbackFailed(w, r, ssoErrFailed, "invalid id_token claims", err)
 		return
 	}
 	if claims.Email == "" {
-		writeJSONError(w, http.StatusForbidden, "sso account has no email claim")
+		h.oidcCallbackFailed(w, r, ssoErrUnverified, "the id_token has no email claim", nil)
 		return
 	}
 	// Require a positively-verified email (issue #242). An account is provisioned
@@ -242,7 +277,7 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 	// address-they-do-not-own take over that address's account. Reject unless the
 	// IdP asserts email_verified == true.
 	if claims.EmailVerified == nil || !*claims.EmailVerified {
-		writeJSONError(w, http.StatusForbidden, "sso account email is not verified by the identity provider")
+		h.oidcCallbackFailed(w, r, ssoErrUnverified, "the email is not verified by the identity provider", nil)
 		return
 	}
 
@@ -255,7 +290,7 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 			h.offerIdentityLink(w, r, users.ProviderOIDC, claims.Email, h.OIDC.FrontendURL)
 			return
 		}
-		respondInternal(w, r, "failed to sign in with sso", err)
+		h.oidcCallbackFailed(w, r, ssoErrFailed, "failed to sign in", err)
 		return
 	}
 	h.provisionPersonalWorkspace(user.ID, user.Name)
@@ -272,4 +307,78 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		dest = "/"
 	}
 	http.Redirect(w, r, dest, http.StatusFound)
+}
+
+// OIDCAccountDeletion verifies a deletion token and removes the account its
+// email names: 200 deleted or not_found, 409 blocked with a reason for the
+// person, 400 invalid for any token that does not verify. Only on a
+// deployment with OIDC configured; 404 otherwise.
+func (h *Handler) OIDCAccountDeletion(w http.ResponseWriter, r *http.Request) {
+	if !h.OIDC.Enabled() || h.AccountDeleter == nil {
+		writeJSONError(w, http.StatusNotFound, "sso sign-in is not configured")
+		return
+	}
+	if ok, retryAfter := h.authIPLimiter.allow(clientIP(r)); !ok {
+		writeRateLimited(w, "Too many attempts from this address; try again later.", retryAfter)
+		return
+	}
+	invalid := func(why string, err error) {
+		slog.Warn("account deletion: request refused", "reason", why, "error", err)
+		writeJSON(w, http.StatusBadRequest, map[string]string{"status": "invalid"})
+	}
+	r.Body = http.MaxBytesReader(w, r.Body, accountDeletionMaxBody)
+	if err := r.ParseForm(); err != nil {
+		invalid("unreadable form", err)
+		return
+	}
+	raw := strings.TrimSpace(r.PostForm.Get("deletion_token"))
+	if raw == "" {
+		invalid("no deletion_token", nil)
+		return
+	}
+	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	defer cancel()
+	if err := h.OIDC.ensure(ctx); err != nil {
+		respondError(w, r, http.StatusBadGateway, "sso provider discovery failed", err)
+		return
+	}
+	email, err := h.OIDC.verifyDeletionToken(ctx, raw)
+	if err != nil {
+		invalid("token", err)
+		return
+	}
+
+	out, err := h.AccountDeleter.DeleteAccount(email)
+	if err != nil {
+		respondInternal(w, r, "failed to remove the account", err)
+		return
+	}
+	switch out.Status {
+	case users.DeletionBlocked:
+		slog.Info("account deletion: blocked", "user_id", out.UserID, "kind", out.Blocked.Kind)
+		writeJSON(w, http.StatusConflict, map[string]string{"status": "blocked", "reason": out.Blocked.Reason()})
+		return
+	case users.DeletionNotFound:
+		slog.Info("account deletion: no account for the address")
+		writeJSON(w, http.StatusOK, map[string]string{"status": "not_found"})
+		return
+	}
+	removeStoredFiles(out.Files)
+	h.recordAccountRemoved(out)
+	// The audit line names the account by id only, never by address.
+	slog.Info("account deletion: account removed at the identity provider's request",
+		"user_id", out.UserID, "workspaces_purged", len(out.PurgedWorkspaces), "workspaces_left", len(out.LeftWorkspaces))
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
+}
+
+// recordAccountRemoved records, in the history of each workspace a removed
+// account left, its leaving as its own: admins are told who went, and
+// nobody is told twice.
+func (h *Handler) recordAccountRemoved(out *users.AccountDeletion) {
+	for _, orgID := range out.LeftWorkspaces {
+		h.publishOrgEventAs("user:"+out.UserID, events.OrgMemberRemoved, orgID, out.UserID, map[string]interface{}{
+			"user_id": out.UserID,
+			"self":    true,
+		})
+	}
 }

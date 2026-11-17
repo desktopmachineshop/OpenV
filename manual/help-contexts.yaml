@@ -9,17 +9,24 @@ apps:
     routes:
       /projects: projects
       /projects/:projectId: overview
+      /projects/:projectId/home: home
       /projects/:projectId/guided: guided
       /projects/:projectId/requirements: requirements
+      /projects/:projectId/design: design
       /projects/:projectId/baselines/**: baselines
       /projects/:projectId/interviews: interviews
       /projects/:projectId/vv: vv
+      /projects/:projectId/tests: tests
+      /projects/:projectId/baselines: baselines.timeline
       /projects/:projectId/vv/runs/:runId: vv.runs
+      /projects/:projectId/releases: releases
       /projects/:projectId/evidence: evidence
       /projects/:projectId/matrix: matrix
+      /projects/:projectId/impact: impact
       /projects/:projectId/review: review
       /projects/:projectId/board: board
       /projects/:projectId/todos: todos
+      /projects/:projectId/gantt: gantt
       /projects/:projectId/crew/**: crew
       /projects/:projectId/team/**: crew
       /projects/:projectId/agents: agents
@@ -29,4 +36,5 @@ apps:
       /projects/:projectId/settings: settings
       /org/settings: org.settings
       /org/runs: org.runs
+      /org/todos: org.todos
       /admin: admin

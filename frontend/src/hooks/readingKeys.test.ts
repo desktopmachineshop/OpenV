@@ -1,4 +1,4 @@
-import { isTypingTarget, readingStepFor } from './readingKeys';
+import { isTypingTarget, overlayIsOpen, readingStepFor } from './readingKeys';
 
 // A bare letter as a shortcut lives or dies on the guard: J must step to the
 // next artifact while reading and must be the letter J everywhere else.
@@ -76,5 +76,21 @@ describe('isTypingTarget', () => {
 
   it('is false for nothing at all', () => {
     expect(isTypingTarget(null)).toBe(false);
+  });
+});
+
+describe('overlayIsOpen', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('counts a dialog that is showing', () => {
+    document.body.innerHTML = '<div role="dialog"></div>';
+    expect(overlayIsOpen()).toBe(true);
+  });
+
+  it('ignores a dialog kept mounted but hidden, as the minimised assistant is', () => {
+    document.body.innerHTML = '<div role="dialog" hidden><button>Send</button></div>';
+    expect(overlayIsOpen()).toBe(false);
   });
 });

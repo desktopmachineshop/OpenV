@@ -76,6 +76,9 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 		ProjectID  string `json:"project_id"`
 		Prompt     string `json:"prompt"`
 		WorkItemID string `json:"work_item_id"`
+		// Conversation: a person is chatting with the agent, not giving it
+		// a task; the board makes no card of the run.
+		Conversation bool `json:"conversation"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
@@ -109,6 +112,12 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 	if req.WorkItemID != "" {
 		launch.WorkItemID = &req.WorkItemID
 	}
+	// A chat with an agent is not a task: the screens where a person types
+	// to one say so (conversation), and the board then makes no card of the
+	// run. A task is a card assigned to the agent, which names itself here.
+	// Left out, the run gets its tracking card as before, so a script's run
+	// is still tracked.
+	launch.Conversation = req.Conversation && launch.WorkItemID == nil
 	run, err := h.launchRun(r, launch)
 	if err != nil {
 		writeLaunchError(w, r, launchErrs402, err)
@@ -117,7 +126,22 @@ func (h *Handler) LaunchAgentRun(w http.ResponseWriter, r *http.Request) {
 	writeJSONBareStatus(w, http.StatusCreated, run)
 }
 
-// DraftTestCases launches the seeded test-case-author agent scoped to a set of
+// testDraftingAgent is the agent the Draft test cases action launches: the
+// flat team's Test Auditor, or the earlier team's Test Case Author in a
+// workspace that has not moved to the flat team. An archived one is passed
+// over; agents.ErrNotFound when neither is there to run.
+func (h *Handler) testDraftingAgent(orgID string) (*agents.Agent, error) {
+	for _, slug := range []string{seeds.TestAuditorSlug, seeds.TestCaseAuthorSlug} {
+		agent, err := h.AgentService.GetBySlug(orgID, slug)
+		if errors.Is(err, agents.ErrNotFound) || err == nil && (agent == nil || agent.Archived) {
+			continue
+		}
+		return agent, err
+	}
+	return nil, agents.ErrNotFound
+}
+
+// DraftTestCases launches the seeded test-drafting agent scoped to a set of
 // requirement artifacts in a project. It is the "Draft test cases" action: the
 // caller passes the requirement IDs to cover, and the requirement content is
 // NOT inlined — per the lean-context rule the agent fetches each requirement
@@ -176,7 +200,7 @@ func (h *Handler) DraftTestCases(w http.ResponseWriter, r *http.Request) {
 		orgID = project.OrgID
 	}
 
-	agent, err := h.AgentService.GetBySlug(orgID, seeds.TestCaseAuthorSlug)
+	agent, err := h.testDraftingAgent(orgID)
 	if errors.Is(err, agents.ErrNotFound) || err == nil && agent == nil {
 		writeJSONError(w, http.StatusNotFound, "the test-case author agent is not available in this workspace; sync agents from disk to seed it")
 		return

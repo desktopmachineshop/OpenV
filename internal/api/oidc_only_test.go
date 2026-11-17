@@ -91,8 +91,6 @@ func TestOIDCOnlyRefusesOwnSignIn(t *testing.T) {
 		{"register", h.Register, jsonReq(http.MethodPost, "/api/v1/auth/register", `{"email":"new@example.com","password":"password1","name":"New"}`)},
 		{"google", h.GoogleLogin, httptest.NewRequest(http.MethodGet, "/api/v1/auth/google", nil)},
 		{"google callback", h.GoogleCallback, httptest.NewRequest(http.MethodGet, "/api/v1/auth/google/callback?state=s&code=c", nil)},
-		{"password reset", h.RequestPasswordReset, jsonReq(http.MethodPost, "/api/v1/auth/password-reset", `{"email":"dave@example.com"}`)},
-		{"password reset confirm", h.ConfirmPasswordReset, jsonReq(http.MethodPost, "/api/v1/auth/password-reset/confirm", `{"token":"t","new_password":"password2"}`)},
 	} {
 		rec := httptest.NewRecorder()
 		c.handler(rec, c.req)

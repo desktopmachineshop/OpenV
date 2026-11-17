@@ -30,12 +30,13 @@ import { registeredSite, registeredStartHooks } from './ext/registry';
 import { SiteHome, SitePages } from './ext/SiteSlot';
 import './index.css';
 import { pendingReturnTo } from './utils/returnTo';
+import { useFeature } from './hooks/useFeature';
+import { FLOATING_ASSISTANT_FEATURE } from './components/wizard/assistantStore';
 
 // Route-level code splitting for the heavyweight views so their large
 // dependencies stay out of the main bundle:
 //   - ModuleView pulls in react-markdown/remark-gfm (via ArtifactDetails)
 //   - ManualView pulls in react-markdown/remark-gfm
-//   - CrewBuilder pulls in cytoscape (via CrewCanvas)
 //   - TestRunView and TraceabilityMatrix pull in ag-grid
 const ModuleView = lazy(() =>
   import('./views/ModuleView').then((m) => ({ default: m.ModuleView }))
@@ -48,14 +49,17 @@ const OAuthConsent = lazy(() => import('./views/OAuthConsent').then((m) => ({ de
 const PlatformAdmin = lazy(() =>
   import('./views/PlatformAdmin').then((m) => ({ default: m.PlatformAdmin }))
 );
-const CrewBuilder = lazy(() =>
-  import('./views/CrewBuilder').then((m) => ({ default: m.CrewBuilder }))
-);
 const TestRunView = lazy(() =>
   import('./views/TestRunView').then((m) => ({ default: m.TestRunView }))
 );
 const TraceabilityMatrix = lazy(() =>
   import('./views/TraceabilityMatrix').then((m) => ({ default: m.TraceabilityMatrix }))
+);
+// The floating V&V Assistant (#726) sits above the routes, so its
+// conversation survives navigation; it brings the chat (and react-markdown)
+// with it, so it loads only once its gate is open.
+const FloatingAssistant = lazy(() =>
+  import('./components/wizard/FloatingAssistant').then((m) => ({ default: m.FloatingAssistant }))
 );
 // ImpactView traces the affected set from one artifact; a focused analysis
 // view kept out of the main bundle.
@@ -71,6 +75,16 @@ const BaselineCompare = lazy(() =>
   import('./views/BaselineCompare').then((m) => ({ default: m.BaselineCompare }))
 );
 // The workspace's runs with no project, a low-traffic view.
+const MyTodosPage = lazy(() => import('./views/MyTodos').then((m) => ({ default: m.MyTodosPage })));
+const GanttWorkspaceTasks = lazy(() =>
+  import('./views/GanttWorkspaceTasks').then((m) => ({ default: m.GanttWorkspaceTasks }))
+);
+const AgentsWorkspace = lazy(() =>
+  import('./views/AgentsWorkspace').then((m) => ({ default: m.AgentsWorkspace }))
+);
+const GanttWorkspace = lazy(() =>
+  import('./views/GanttWorkspace').then((m) => ({ default: m.GanttWorkspace }))
+);
 const WorkspaceRunsPage = lazy(() =>
   import('./views/WorkspaceRunsPage').then((m) => ({ default: m.WorkspaceRunsPage }))
 );
@@ -80,6 +94,24 @@ const SharedProjectView = lazy(() =>
 );
 const ReviewQueue = lazy(() =>
   import('./views/ReviewQueue').then((m) => ({ default: m.ReviewQueue }))
+);
+const Releases = lazy(() =>
+  import('./views/Releases').then((m) => ({ default: m.Releases }))
+);
+const ProjectHome = lazy(() =>
+  import('./views/ProjectHome').then((m) => ({ default: m.ProjectHome }))
+);
+const DesignItems = lazy(() =>
+  import('./views/DesignItems').then((m) => ({ default: m.DesignItems }))
+);
+const TestsPage = lazy(() =>
+  import('./views/TestsPage').then((m) => ({ default: m.TestsPage }))
+);
+const BaselinesPage = lazy(() =>
+  import('./views/BaselinesPage').then((m) => ({ default: m.BaselinesPage }))
+);
+const Gantt = lazy(() =>
+  import('./views/Gantt').then((m) => ({ default: m.Gantt }))
 );
 
 // How long App waits before each new try of a gate load that failed; after
@@ -154,6 +186,7 @@ function App() {
   // refuses everything else anyway; skipping the loads below just keeps the
   // console quiet.
   const walled = !!currentUser && emailVerificationRequired && !currentUser.email_verified;
+  const floatingAssistant = useFeature(FLOATING_ASSISTANT_FEATURE);
 
   // Load the user's workspaces once authenticated and resolve the active one.
   useEffect(() => {
@@ -273,6 +306,15 @@ function App() {
         {/* Gated on workspace-runs by the page itself, which waits for the
             gates and sends a member to /projects without it. */}
         <Route path="/org/runs" element={<WorkspaceRunsPage />} />
+        {/* The workspace's plan, every project on one chart: gated on
+            workspace-plan by the page itself, as Runs is. */}
+        <Route path="/org/plan" element={<GanttWorkspace />} />
+        {/* The reader's own tasks across the workspace's plans: a tab of the workspace's Plan, gated as it is. */}
+        <Route path="/org/plan/tasks" element={<GanttWorkspaceTasks />} />
+        {/* The workspace's agents, outside any project: Runs is the tab beside it. */}
+        <Route path="/org/agents" element={<AgentsWorkspace />} />
+        {/* My to-dos: gated on todos by the page itself, as Runs is. */}
+        <Route path="/org/todos" element={<MyTodosPage />} />
         <Route path="/manual" element={<ManualView />} />
         <Route path="/manual/:chapterSlug" element={<ManualView />} />
         <Route path="/whats-new" element={<WhatsNew />} />
@@ -295,22 +337,34 @@ function App() {
           <Route path="review" element={<ReviewQueue />} />
           <Route path="board" element={<KanbanBoard />} />
           <Route path="todos" element={<TodoList />} />
-          <Route path="crew" element={<CrewBuilder />} />
-          <Route path="crew/network" element={<CrewBuilder />} />
-          {/* Legacy "team" URLs redirect to the renamed "crew" routes. */}
-          <Route path="team" element={<Navigate to="../crew" replace />} />
-          <Route path="team/network" element={<Navigate to="../crew/network" replace />} />
+          {/* Crews and the Crew Builder are gone: their old URLs, and the
+              older "team" ones, land on the Agents page. */}
+          <Route path="crew" element={<Navigate to="../agents" replace />} />
+          <Route path="crew/network" element={<Navigate to="../agents" replace />} />
+          <Route path="team" element={<Navigate to="../agents" replace />} />
+          <Route path="team/network" element={<Navigate to="../agents" replace />} />
           <Route path="automations" element={<AutomationsPage />} />
           <Route path="agent-runs" element={<AgentRunsPage />} />
           <Route path="agents" element={<AgentsPage />} />
           <Route path="activity" element={<ActivityLog />} />
           <Route path="settings" element={<ProjectSettings />} />
+          <Route path="releases" element={<Releases />} />
+          <Route path="home" element={<ProjectHome />} />
+          <Route path="design" element={<DesignItems />} />
+          <Route path="tests" element={<TestsPage />} />
+          <Route path="baselines" element={<BaselinesPage />} />
+          <Route path="gantt" element={<Gantt />} />
         </Route>
           <Route path="*" element={<SitePages site={site} fallback={<Navigate to="/projects" replace />} />} />
           </>
         )}
         </Routes>
         </Suspense>
+        {currentUser && !walled && floatingAssistant && (
+          <Suspense fallback={null}>
+            <FloatingAssistant />
+          </Suspense>
+        )}
       </DialogProvider>
     </div>
   );

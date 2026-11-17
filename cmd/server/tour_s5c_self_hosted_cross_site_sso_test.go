@@ -5,6 +5,7 @@ package main
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	"golang.org/x/oauth2"
 )
@@ -61,7 +62,8 @@ import (
 //     endpoint with its state, nonce and PKCE verifier in cookies (Secure,
 //     SameSite=None, Partitioned), the verifier's S256 challenge and the
 //     redirect_uri on PUBLIC_URL; each refusal of the
-//     callback in the handler's order (the state, the nonce cookie, the code,
+//     callback in the handler's order, each sending the browser to the
+//     sign-in page with ?error= (the state, the nonce cookie, the code,
 //     the token exchange, a token answer with no id_token, an id_token that
 //     does not verify, signed by a key the provider does not publish or
 //     issued to another client, the id_token's nonce, claims that do not
@@ -76,8 +78,11 @@ import (
 //     refused, the account's password change refused (409 no_password), and
 //     a password sign-in to it refused as a wrong password is (401); an
 //     address nobody invited signing in, since the registration policy is
-//     never consulted for single sign-on; and the first account signing in
-//     again, publishing nothing;
+//     never consulted for single sign-on; the provider removing that
+//     account (dms-id ADR 0002): an ID token passed off as a deletion token
+//     refused as invalid, a deletion token removing it, its session gone,
+//     and the same token again answering not_found; and the first account
+//     signing in again, publishing nothing;
 //   - Google sign-on on the same server: the start, whose state cookie is
 //     Secure, SameSite=None and Partitioned and whose redirect_uri is on
 //     PUBLIC_URL, and a callback that makes an account (the closed
@@ -282,6 +287,25 @@ func selfHostedCrossSiteSsoTour(tr *tour, idp *tourIdP, google *tourGoogle) {
 		"never consults the closed registration", "state={{oidc.state}}&code=tour-code-uninvited", state, nonceCookie, verifierCookie)
 	uninvited := tr.adopt(un, "uninvited", fmt.Sprintf("the account an uninvited OIDC sign-on made (step %d)", un.step.n))
 	tr.step("its workspaces: its personal one alone", uninvited, "GET /api/v1/orgs")
+
+	// The provider removes an account (dms-id ADR 0002): a deletion token
+	// for the uninvited account's address, then the same again, and an ID
+	// token passed off as one.
+	deletionForm := func(name, token string) tourOpt {
+		tr.remember(name, token)
+		return rawBody("application/x-www-form-urlencoded", []byte("deletion_token="+token))
+	}
+	tr.step("the provider sends an ID token as a deletion token: refused as invalid, its typ is not "+
+		"account-deletion+jwt", anon, "POST /api/v1/auth/oidc/account-deletion",
+		deletionForm("deletion.id_token", idp.sign(map[string]any{"iss": idp.issuer(), "aud": "tour-oidc",
+			"sub": "tour-subject-x", "email": "sso-uninvited@example.com", "exp": time.Now().Add(time.Hour).Unix()})))
+	gone := idp.signDeletion("SSO-Uninvited@example.com")
+	tr.step("the provider removes the uninvited account: deleted, its session ended and its personal workspace "+
+		"purged", anon, "POST /api/v1/auth/oidc/account-deletion",
+		deletionForm("deletion.token", gone))
+	tr.step("the removed account's session is gone", uninvited, "GET /api/v1/auth/me")
+	tr.step("the same request again: not_found, nothing left to remove", anon,
+		"POST /api/v1/auth/oidc/account-deletion", deletionForm("deletion.token", gone))
 	selfHostedCrossSiteSsoCallback(tr, "the first address signs in again: a new session, and nothing published",
 		"state={{oidc.state}}&code=tour-code-sso-again", state, nonceCookie, verifierCookie)
 

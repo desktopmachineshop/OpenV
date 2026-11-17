@@ -14,8 +14,10 @@ import {
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { isUntouchedByWizard } from '../components/wizard/assistantSession';
-import { ErrorBanner } from '../components/ui';
+import { ErrorBanner, chipStyle, toneForColor } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
+import { useUiRefresh } from '../hooks/useUiRefresh';
+import { ProductOverviewParent } from './ProductOverviewParent';
 
 interface MetricRow {
   name: string;
@@ -29,6 +31,10 @@ interface ConstraintRow {
   description: string;
 }
 
+// Loaded on its own: it shares the project Home's code, which stays out of
+// the first load.
+const ProjectStatus = React.lazy(() => import('./ProjectHomeStatus'));
+
 const sectionTitle: React.CSSProperties = {
   fontSize: 16,
   fontWeight: 600,
@@ -38,21 +44,17 @@ const sectionTitle: React.CSSProperties = {
 
 const smallInput: React.CSSProperties = { padding: '6px 8px', fontSize: 13 };
 
-const chip = (bg: string): React.CSSProperties => ({
-  display: 'inline-block',
-  padding: '2px 8px',
-  borderRadius: 10,
-  fontSize: 12,
-  fontWeight: 600,
-  color: '#fff',
-  background: bg,
-});
+// A status pill in the tinted chip of the shared look; the colour names the
+// tone it used to be filled with.
+const chip = (bg: string): React.CSSProperties => chipStyle(toneForColor(bg));
 
 export const ProductOverview: React.FC = () => {
   const params = useParams<{ projectId: string }>();
   const storeProjectId = useAppStore((s) => s.projectId);
   const projectId = params.projectId || storeProjectId;
   const { isPhone } = useViewport();
+  // The refreshed interface draws the project's status beside its definition.
+  const refresh = useUiRefresh();
 
   const [profile, setProfile] = useState<ProductProfile | null>(null);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
@@ -207,17 +209,24 @@ export const ProductOverview: React.FC = () => {
     : 'Start guided definition';
 
   return (
-    <div style={{ padding: 24, maxWidth: 1100, margin: '0 auto' }}>
-      <h2 style={{ color: 'var(--text)', marginBottom: 4 }}>Product Overview</h2>
-      <p style={{ color: 'var(--text-muted)', fontSize: 13, marginBottom: 20 }}>
-        The single source of truth for what this product is and how success is measured.
-      </p>
+    <div className={refresh ? 'ov-overview ov-gutter' : undefined} style={{ padding: 16, maxWidth: refresh ? 1400 : 1100, margin: '0 auto' }}>
+      <div className={refresh ? 'ov-overview-product' : undefined}>
+      <div className="ov-page-head">
+        <h2 className="ov-page-title">Product Overview</h2>
+      </div>
+      {!refresh && (
+        <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '4px 0 16px' }}>
+          The single source of truth for what this product is and how success is measured.
+        </p>
+      )}
 
       <ErrorBanner message={error} onDismiss={() => setError('')} style={{ marginBottom: 16 }} />
+      {projectId && <ProductOverviewParent projectId={projectId} />}
 
-      {/* Quick links */}
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
-        <Link to="guided" className="button" style={{ background: 'var(--accent)', textDecoration: 'none' }}>
+      {/* Quick links: the row of pages and the rail lead to V&V and the board
+          in the refreshed interface, so only the guided definition stays. */}
+      <div style={{ display: refresh ? 'none' : 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }} data-help-key="overview.links">
+        <Link to="guided" className="button" style={{ textDecoration: 'none' }}>
           {guidedCtaLabel}
         </Link>
         <Link to="vv" className="button-secondary" style={{ textDecoration: 'none' }}>
@@ -229,9 +238,14 @@ export const ProductOverview: React.FC = () => {
       </div>
 
       {/* Product definition */}
-      <div className="card">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <div style={{ ...sectionTitle, marginBottom: 0 }}>Product definition</div>
+      <div className="card" data-help-key="overview.product">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          <div style={{ ...sectionTitle, marginBottom: 0, flex: '1 1 160px' }}>Product definition</div>
+          {refresh && !editingDef && (
+            <Link to="guided" className="button-secondary" style={{ padding: '6px 14px', textDecoration: 'none' }}>
+              {guidedCtaLabel}
+            </Link>
+          )}
           {!editingDef && (
             <button className="button-secondary" style={{ padding: '6px 14px' }} onClick={() => setEditingDef(true)}>
               Edit
@@ -290,7 +304,7 @@ export const ProductOverview: React.FC = () => {
       </div>
 
       {/* Success metrics */}
-      <div className="card">
+      <div className="card" data-help-key="overview.metrics">
         <div style={sectionTitle}>Success metrics</div>
         {metrics.length === 0 && (
           <div style={{ color: 'var(--neutral)', fontSize: 13, marginBottom: 10 }}>No success metrics defined yet.</div>
@@ -352,7 +366,7 @@ export const ProductOverview: React.FC = () => {
       </div>
 
       {/* Constraints */}
-      <div className="card">
+      <div className="card" data-help-key="overview.constraints">
         <div style={sectionTitle}>Constraints</div>
         {constraints.length === 0 && (
           <div style={{ color: 'var(--neutral)', fontSize: 13, marginBottom: 10 }}>No constraints recorded yet.</div>
@@ -395,12 +409,12 @@ export const ProductOverview: React.FC = () => {
       </div>
 
       {/* Personas & user needs */}
-      <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: 20 }}>
+      <div data-help-key="overview.personas" style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : '1fr 1fr', gap: 20, marginBottom: 20 }}>
         {[
           { label: 'Personas', items: personas },
           { label: 'User needs', items: userNeeds },
         ].map((group) => (
-          <div key={group.label} className="card" style={{ marginBottom: 20 }}>
+          <div key={group.label} className="card" style={{ marginBottom: 0 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
               <div style={{ ...sectionTitle, marginBottom: 0 }}>{group.label}</div>
               <span style={chip(group.items.length > 0 ? 'var(--accent)' : 'var(--neutral)')}>{group.items.length}</span>
@@ -440,7 +454,7 @@ export const ProductOverview: React.FC = () => {
       </div>
 
       {/* Interviews summary — the full feature lives on the Interviews page */}
-      <div className="card">
+      <div className="card" data-help-key="overview.interviews">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
           <div style={{ ...sectionTitle, marginBottom: 0 }}>User interviews</div>
           <span style={chip(interviews.length > 0 ? 'var(--accent)' : 'var(--neutral)')}>{interviews.length}</span>
@@ -477,6 +491,14 @@ export const ProductOverview: React.FC = () => {
           </Link>
         </div>
       </div>
+      </div>
+      {refresh && projectId && (
+        <aside className="ov-overview-status" aria-label="Where the project stands">
+          <React.Suspense fallback={null}>
+            <ProjectStatus projectId={projectId} />
+          </React.Suspense>
+        </aside>
+      )}
     </div>
   );
 };

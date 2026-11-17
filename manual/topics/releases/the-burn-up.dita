@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="the-burn-up">
+  <title>The burn-up</title>
+  <shortdesc>The burn-up draws two lines, day by day, from the day the release was added (or its oldest requirement, if that is older) to today, or to the day the release was released:</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="releases.burnup"/>
+  </prolog>
+  <conbody>
+    <ul>
+      <li><b>Requirements in the release</b>: the release's requirements that existed on that day.</li>
+      <li><b>Verified</b>: those verified by then. A requirement verified by test counts from the day all its test cases had passed, read from the test result history; one verified by inspection, analysis or demonstration counts from the day its current version was saved.</li>
+    </ul>
+    <p>A target date inside the span is marked on the chart. A long span is shown as one point every few days.</p>
+  </conbody>
+</concept>

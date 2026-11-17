@@ -178,6 +178,7 @@ const LOAD = [
   'baselineAPI.list("p1")',
   'qualityAPI.project("p1")',
   'attachmentAPI.listByProject("p1")',
+  'vvAPI.coverage("p1")',
   'projectAPI.linkedArtifacts("p1")',
 ];
 
@@ -206,7 +207,7 @@ const flush = async () => {
 const mount = async () => {
   await act(async () => {
     root.render(
-      <MemoryRouter initialEntries={['/projects/p1/requirements']}>
+      <MemoryRouter initialEntries={['/projects/p1/requirements?view=tree']}>
         <DialogProvider>
           <Routes>
             <Route path="/projects/:projectId/requirements" element={<ModuleView />} />
@@ -249,21 +250,23 @@ const button = (label: string) => {
   return found!;
 };
 
+// The tree's reference spans, in row order.
+const refs = () =>
+  Array.from(container.querySelectorAll('[role="treeitem"]')).map((row) =>
+    row.querySelector('span[title^="Stable reference"]')
+  );
+
 // A row's context menu, opened as a right click on its ref.
 const menu = async (ref: string, item: string) => {
   await act(async () => {
-    byText('code', ref).dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 10, clientY: 10 }));
+    refs().find((node) => node?.textContent === ref)!.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, clientX: 10, clientY: 10 }));
   });
   await flush();
   await click(byText('button', item));
 };
 
-// The tree's rows top to bottom, by ref: the document pane's codes are not
-// the tree's.
-const tree = () =>
-  Array.from(container.querySelectorAll('code'))
-    .filter((node) => !node.closest('[aria-label="Artifact document"]'))
-    .map((node) => node.textContent);
+// The tree's rows top to bottom, by ref.
+const tree = () => refs().map((node) => node?.textContent);
 
 // The create form, filled with a title and submitted.
 const createTitled = async (title: string) => {
@@ -329,8 +332,9 @@ afterEach(() => {
 });
 
 describe('ModuleView sibling ordering (X16b characterization)', () => {
-  describe('▲ and ▼ swap two rows in the tree order', () => {
+  describe('Move up and Move down swap two rows in the tree order', () => {
     it('renumbers the whole group, unordered rows included', async () => {
+      await click(button('Actions for Alpha'));
       await click(button('Move Alpha down'));
 
       // Alpha, Bravo, Delta, Charlie with the first two swapped.
@@ -341,11 +345,12 @@ describe('ModuleView sibling ordering (X16b characterization)', () => {
         update('req-c', 'hdg-1', 4),
       ]);
       expect(tree()).toEqual(['SEC-1', 'REQ-B', 'REQ-A', 'REQ-D', 'REQ-C', 'SEC-2']);
-      expect(location).toBe('/projects/p1/requirements');
+      expect(location).toBe('/projects/p1/requirements?view=tree');
       expect(alertText()).toBe('');
     });
 
     it('saves only the rows whose number changed', async () => {
+      await click(button('Actions for Delta'));
       await click(button('Move Delta up'));
 
       // Alpha keeps 1, so it is not sent.
@@ -359,6 +364,7 @@ describe('ModuleView sibling ordering (X16b characterization)', () => {
 
     it('keeps the tree as it was and says so when a save fails', async () => {
       recorder.respond = (name, args) => (name === 'artifactAPI.update' ? undefined : canned(name, args));
+      await click(button('Actions for Alpha'));
       await click(button('Move Alpha down'));
 
       // Every update is started before any answer comes back.
@@ -376,7 +382,7 @@ describe('ModuleView sibling ordering (X16b characterization)', () => {
   describe('Move to… places a row in sort-order-then-title order', () => {
     const moveTo = async (title: string, targetId: string, zone: 'before' | 'after' | 'child') => {
       await click(button(`Actions for ${title}`));
-      await click(byText('button', '↕️ Move to…'));
+      await click(byText('button', 'Move to…'));
       await setValue(container.querySelector<HTMLSelectElement>('#move-target')!, targetId);
       await click(container.querySelector(`input[name="move-zone"][value="${zone}"]`)!);
       await click(byText('button', 'Move'));
@@ -421,7 +427,7 @@ describe('ModuleView sibling ordering (X16b characterization)', () => {
 
   describe('a new artifact goes beside the row it was made from, in sort-order order', () => {
     it('Create before', async () => {
-      await menu('REQ-B', '➕ Create before');
+      await menu('REQ-B', 'Create before');
       recorder.calls = [];
       await createTitled('Echo');
 
@@ -441,7 +447,7 @@ describe('ModuleView sibling ordering (X16b characterization)', () => {
     });
 
     it('Create after leaves the new artifact where the server put it when that is its place', async () => {
-      await menu('REQ-B', '➕ Create after');
+      await menu('REQ-B', 'Create after');
       recorder.calls = [];
       await createTitled('Echo');
 
@@ -458,7 +464,7 @@ describe('ModuleView sibling ordering (X16b characterization)', () => {
     });
 
     it('Create new child renumbers nothing', async () => {
-      await menu('SEC-2', '➕ Create new child');
+      await menu('SEC-2', 'Create new child');
       recorder.calls = [];
       await createTitled('Echo');
 
@@ -468,7 +474,7 @@ describe('ModuleView sibling ordering (X16b characterization)', () => {
     });
 
     it('a form opened by hand forgets the placement a context menu asked for', async () => {
-      await menu('REQ-B', '➕ Create before');
+      await menu('REQ-B', 'Create before');
       await click(byText('button', 'Cancel'));
       await click(byText('button', '+ New Artifact'));
       recorder.calls = [];
@@ -481,7 +487,7 @@ describe('ModuleView sibling ordering (X16b characterization)', () => {
     });
 
     it('a placement that fails to save leaves the form open and says so', async () => {
-      await menu('REQ-B', '➕ Create before');
+      await menu('REQ-B', 'Create before');
       recorder.respond = (name, args) => (name === 'artifactAPI.update' ? undefined : canned(name, args));
       recorder.calls = [];
       await createTitled('Echo');
@@ -503,8 +509,8 @@ describe('ModuleView sibling ordering (X16b characterization)', () => {
     });
 
     it('Paste before', async () => {
-      await menu('REQ-C', '📋 Copy');
-      await menu('REQ-B', '📥 Paste before');
+      await menu('REQ-C', 'Copy');
+      await menu('REQ-B', 'Paste before');
 
       expect(recorder.calls).toEqual([
         'artifactAPI.create({"project_id":"p1","parent_id":"hdg-1","type":"requirement","title":"Charlie (copy)","body":"Charlie.","attributes":{},"copied_from":"req-c"})',
@@ -520,11 +526,11 @@ describe('ModuleView sibling ordering (X16b characterization)', () => {
         'attachmentAPI.listByArtifact("req-e")',
       ]);
       expect(tree()).toEqual(['SEC-1', 'REQ-D', 'REQ-C', 'REQ-A', 'REQ-E', 'REQ-B', 'SEC-2']);
-      expect(location).toBe('/projects/p1/requirements?artifact=req-e');
+      expect(location).toBe('/projects/p1/requirements?view=tree&artifact=req-e');
     });
 
     it('Duplicate puts the copy right after the original', async () => {
-      await menu('REQ-D', '🧬 Duplicate');
+      await menu('REQ-D', 'Duplicate');
 
       expect(recorder.calls).toEqual([
         'artifactAPI.create({"project_id":"p1","parent_id":"hdg-1","type":"requirement","title":"Delta (copy)","body":"Delta.","attributes":{},"copied_from":"req-d"})',
@@ -539,7 +545,7 @@ describe('ModuleView sibling ordering (X16b characterization)', () => {
         'attachmentAPI.listByArtifact("req-e")',
       ]);
       expect(tree()).toEqual(['SEC-1', 'REQ-D', 'REQ-E', 'REQ-C', 'REQ-A', 'REQ-B', 'SEC-2']);
-      expect(location).toBe('/projects/p1/requirements?artifact=req-e');
+      expect(location).toBe('/projects/p1/requirements?view=tree&artifact=req-e');
     });
   });
 });

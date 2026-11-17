@@ -27,11 +27,13 @@ Everything here is the tooling area of `docs/areas.json`, through
 | `openv/sync.py` | the OpenV requirements project from any machine: `register`, `bootstrap`, `vv`, `status`, `export`, and `api` for any endpoint (root `CLAUDE.md`, `docs/requirements-maintenance.md`) |
 | `openv/mcp-server.sh` | builds and starts `openv-mcp` for an agent session in this repository; `.mcp.json` runs it |
 | `release_notes.py` | the release-notes rules CI and the release workflows apply: `check`, `check-pr`, `cut`, `check-release`, `version`, `next`, `stable-version`, `cut-stable`, and `site`, which writes the released history the public `/changelog` page renders (`frontend/src/site/changelog/releases.json`; the release workflows regenerate it with every cut) |
+| `release_ci.py` | `judged-commit`: the master commit whose CI gates Promote to release and Cut stable release, the code under the pipeline's own notes, changelog and manual-stamp commits, which carry no CI |
 | `manual/docs.py` | the user manual's rules (`docs/docs-maintenance.md`): `sync` generates `manual/` from the chapters, `check-pr` requires a manual update with a user-visible change, and `line` and `stamp` name and stamp the release line Promote to release publishes |
 | `manual/validate.sh` | OpenD's validation of `manual/`, with a pinned OpenD built into `.cache/opend` |
 | `refactor/refactor_guard.py` | the Refactor guard (S14b): `GOLDEN_LIST`, `FROZEN_DATA`, `PROTECTED_PATHS`, `GUARD_CODE`, and the per-commit class checks |
 | `refactor/classify_commits.py` | the layers and files each commit touches, and the hub-touch rates of plan §10 |
 | `backup.sh` | the backup recipe `make backup` and the backup sidecar run |
+| `backup_drill.sh` | `make backup-drill`: backs up a scratch database and volumes with `backup.sh`, restores them as `make restore` does and compares, plain and encrypted |
 | `**/*_test.py` | the unittest suite of each script beside it |
 | `.github/workflows/ci.yml` | the jobs every pull request runs: backend, backend-pgvector, frontend, vuln, secrets, docker, e2e |
 | `.github/workflows/refactor-guard.yml` | the Refactor guard, on every pull request and every label change |

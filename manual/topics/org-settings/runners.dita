@@ -9,5 +9,6 @@
       <li><b>My runner</b> — your personal runner key and online status, with the Agent Connector pairing flow. Also reachable from your user settings.</li>
       <li><b>Worker keys</b> — shared workspace keys for self-managed always-on workers. The plaintext key is shown <b>once</b>, right after creation — store it safely. Keys can be revoked at any time.</li>
     </ul>
+    <p>A script, or an AI client that runs the <codeph>openv-mcp</codeph> server with a key, can also <b>create projects</b> with one, and file a project under a parent. A project made with a workspace key has no owner of its own: the workspace's admins manage it, and can make someone its owner under <b>Settings → Access</b> in the project. A project made with a member's personal runner key is that member's, as if they had created it in the app. Either way it counts toward the workspace's project limit.</p>
   </conbody>
 </concept>

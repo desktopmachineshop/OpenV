@@ -1,6 +1,7 @@
 import React from 'react';
 import type { NavigateFunction } from 'react-router-dom';
 import { baselineLabel } from '../../utils/baselines';
+import { buttonStyle } from '../../components/ui';
 import type { Artifact, Baseline, Setter } from './shared';
 
 // The requirements toolbar: the baseline picker, compare, delete and capture,
@@ -17,6 +18,8 @@ interface ToolbarProps {
   projectId: string;
   handleDeleteBaseline: (baselineId: string) => void;
   stacked: boolean;
+  /** In the wide screen's menu: the stacked labels at a mouse's heights. */
+  menu?: boolean;
   handleCaptureBaseline: () => void;
   handleDraftTestCases: () => void;
   isBaselineView: boolean;
@@ -34,6 +37,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   projectId,
   handleDeleteBaseline,
   stacked,
+  menu = false,
   handleCaptureBaseline,
   handleDraftTestCases,
   isBaselineView,
@@ -41,22 +45,33 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   requirementTargets,
   selectedArtifact,
   setDownloadOpen,
-}) => (
+}) => {
+  // One primary action per area, and it is + New Artifact at the end of the
+  // header: everything here is a quiet secondary button, the baseline delete
+  // a red outline, and the agent action in the agent colour.
+  const tall = stacked ? { minHeight: 44, height: 'auto' } : menu ? { minHeight: 32, height: 'auto' } : { height: 30, minHeight: 30 };
+  const worded = stacked || menu;
+  const noBaselines = baselines.length === 0;
+  const live = activeBaselineId === 'live';
+  const cannotDraft = isBaselineView || draftingTests || requirementTargets.length === 0;
+  return (
   <>
     <select
       value={activeBaselineId}
       onChange={(e) => handleBaselineChange(e.target.value)}
       title="Select baseline"
+      data-help-key="baselines"
       style={{
-        height: '36px',
-        padding: '0 10px',
-        borderRadius: '4px',
-        border: '1px solid var(--neutral-mid)',
-        fontSize: '12px',
+        height: stacked ? 44 : menu ? 32 : 30,
+        padding: '0 8px',
+        borderRadius: 6,
+        border: '1px solid var(--border)',
+        fontSize: 13,
         backgroundColor: 'var(--surface)',
+        color: 'var(--text)',
         cursor: 'pointer',
         width: 'auto',
-        minWidth: '180px',
+        minWidth: 160,
         maxWidth: '100%',
       }}
     >
@@ -68,74 +83,44 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       ))}
     </select>
     <button
+      type="button"
       onClick={() => {
         // Compare the selected baseline (or the newest one when viewing
         // live) against the live project by default.
         const base = activeBaselineId !== 'live' ? activeBaselineId : baselines[0]?.id;
         if (base) navigate(`/projects/${projectId}/baselines/${base}/compare`);
       }}
-      disabled={baselines.length === 0}
-      style={{
-        height: '36px',
-        padding: '0 12px',
-        backgroundColor: baselines.length === 0 ? 'var(--neutral-mid)' : 'var(--accent)',
-        color: 'var(--accent-fg)',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: baselines.length === 0 ? 'not-allowed' : 'pointer',
-        fontSize: '12px',
-      }}
+      disabled={noBaselines}
+      style={{ ...buttonStyle('secondary', { disabled: noBaselines }), ...tall }}
       title="Compare this baseline against another baseline or the live project"
+      data-help-key="baselines"
     >
       Compare
     </button>
     <button
+      type="button"
       onClick={() => handleDeleteBaseline(activeBaselineId)}
-      disabled={activeBaselineId === 'live'}
-      style={{
-        height: '36px',
-        padding: '0 10px',
-        backgroundColor: activeBaselineId === 'live' ? 'var(--neutral-mid)' : 'var(--danger)',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: activeBaselineId === 'live' ? 'not-allowed' : 'pointer',
-        fontSize: '12px',
-      }}
+      disabled={live}
+      style={{ ...buttonStyle('danger', { disabled: live }), ...tall }}
       title="Delete selected baseline"
+      aria-label={worded ? undefined : 'Delete baseline'}
+      data-help-key="baselines"
     >
-      {stacked ? '🗑 Delete baseline' : '🗑'}
+      {worded ? 'Delete baseline' : '🗑'}
     </button>
     <button
+      type="button"
       onClick={handleCaptureBaseline}
-      style={{
-        height: '36px',
-        padding: '0 12px',
-        backgroundColor: 'var(--success-bright)',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '12px',
-      }}
+      data-help-key="baselines"
+      style={{ ...buttonStyle('secondary'), ...tall }}
     >
       Capture Baseline
     </button>
     <button
+      type="button"
       onClick={handleDraftTestCases}
-      disabled={isBaselineView || draftingTests || requirementTargets.length === 0}
-      style={{
-        height: '36px',
-        padding: '0 12px',
-        backgroundColor:
-          isBaselineView || requirementTargets.length === 0 ? 'var(--neutral-mid)' : 'var(--success-bright)',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor:
-          isBaselineView || draftingTests || requirementTargets.length === 0 ? 'not-allowed' : 'pointer',
-        fontSize: '12px',
-      }}
+      disabled={cannotDraft}
+      style={{ ...buttonStyle('agent', { disabled: cannotDraft }), ...tall }}
       title={
         requirementTargets.length === 0
           ? 'No requirements to draft test cases for'
@@ -144,25 +129,19 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             : `Draft test cases for all ${requirementTargets.length} requirements in view (as proposals)`
       }
     >
-      {draftingTests ? 'Drafting…' : '🧪 Draft test cases'}
+      {draftingTests ? 'Drafting…' : 'Draft test cases'}
     </button>
     {/* One way out of a project: the wizard asks what shape and how much,
         and every format reads the same narrowed snapshot. */}
     <button
+      type="button"
       onClick={() => setDownloadOpen(true)}
-      style={{
-        height: '36px',
-        padding: '0 12px',
-        backgroundColor: 'var(--accent-alt)',
-        color: 'white',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '12px',
-      }}
+      style={{ ...buttonStyle('secondary'), ...tall }}
       title="Download this project — choose a format, sections and attachments"
+      data-help-key="projects.download"
     >
       ↓ Download
     </button>
   </>
-);
+  );
+};

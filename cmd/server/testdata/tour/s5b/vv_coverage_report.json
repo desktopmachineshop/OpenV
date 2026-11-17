@@ -2274,10 +2274,10 @@
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 905,
+      "content_length": 1193,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"artifact_id\":\"<r_pass>\",\"direction\":\"downstream\",\"downstream\":[{\"type\":\"design-item\",\"count\":2,\"nodes\":[{\"artifact_id\":\"<d2>\",\"title\":\"Answer cache\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d2>\"]},{\"artifact_id\":\"<d1>\",\"title\":\"Timing loop\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d1>\"]}]},{\"type\":\"test-case\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<tc_pass>\",\"title\":\"Time the answer\",\"type\":\"test-case\",\"distance\":1,\"via\":\"verifies\",\"path\":[\"<r_pass>\",\"<tc_pass>\"]}]}],\"upstream\":[],\"total\":3}"
+        "{\"project_id\":\"<p>\",\"artifact_id\":\"<r_pass>\",\"direction\":\"downstream\",\"downstream\":[{\"type\":\"design-item\",\"count\":2,\"nodes\":[{\"artifact_id\":\"<d2>\",\"title\":\"Answer cache\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d2>\"]},{\"artifact_id\":\"<d1>\",\"title\":\"Timing loop\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d1>\"]}]},{\"type\":\"test-case\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<tc_pass>\",\"title\":\"Time the answer\",\"type\":\"test-case\",\"distance\":1,\"via\":\"verifies\",\"path\":[\"<r_pass>\",\"<tc_pass>\"]}]},{\"type\":\"hazard\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<h1>\",\"title\":\"Late answer\",\"type\":\"hazard\",\"distance\":2,\"via\":\"mitigates\",\"path\":[\"<r_pass>\",\"<d1>\",\"<h1>\"]}]}],\"upstream\":[],\"total\":4}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2329,10 +2329,28 @@
                 ]
               }
             ]
+          },
+          {
+            "type": "hazard",
+            "count": 1,
+            "nodes": [
+              {
+                "artifact_id": "<h1>",
+                "title": "Late answer",
+                "type": "hazard",
+                "distance": 2,
+                "via": "mitigates",
+                "path": [
+                  "<r_pass>",
+                  "<d1>",
+                  "<h1>"
+                ]
+              }
+            ]
           }
         ],
         "upstream": [],
-        "total": 3
+        "total": 4
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -2398,10 +2416,10 @@
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 1163,
+      "content_length": 1451,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"artifact_id\":\"<r_pass>\",\"direction\":\"both\",\"downstream\":[{\"type\":\"design-item\",\"count\":2,\"nodes\":[{\"artifact_id\":\"<d2>\",\"title\":\"Answer cache\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d2>\"]},{\"artifact_id\":\"<d1>\",\"title\":\"Timing loop\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d1>\"]}]},{\"type\":\"test-case\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<tc_pass>\",\"title\":\"Time the answer\",\"type\":\"test-case\",\"distance\":1,\"via\":\"verifies\",\"path\":[\"<r_pass>\",\"<tc_pass>\"]}]}],\"upstream\":[{\"type\":\"user-need\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<un1>\",\"title\":\"Get an answer fast\",\"type\":\"user-need\",\"distance\":1,\"via\":\"derives-from\",\"path\":[\"<r_pass>\",\"<un1>\"]}]}],\"total\":4}"
+        "{\"project_id\":\"<p>\",\"artifact_id\":\"<r_pass>\",\"direction\":\"both\",\"downstream\":[{\"type\":\"design-item\",\"count\":2,\"nodes\":[{\"artifact_id\":\"<d2>\",\"title\":\"Answer cache\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d2>\"]},{\"artifact_id\":\"<d1>\",\"title\":\"Timing loop\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d1>\"]}]},{\"type\":\"test-case\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<tc_pass>\",\"title\":\"Time the answer\",\"type\":\"test-case\",\"distance\":1,\"via\":\"verifies\",\"path\":[\"<r_pass>\",\"<tc_pass>\"]}]},{\"type\":\"hazard\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<h1>\",\"title\":\"Late answer\",\"type\":\"hazard\",\"distance\":2,\"via\":\"mitigates\",\"path\":[\"<r_pass>\",\"<d1>\",\"<h1>\"]}]}],\"upstream\":[{\"type\":\"user-need\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<un1>\",\"title\":\"Get an answer fast\",\"type\":\"user-need\",\"distance\":1,\"via\":\"derives-from\",\"path\":[\"<r_pass>\",\"<un1>\"]}]}],\"total\":5}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2453,6 +2471,24 @@
                 ]
               }
             ]
+          },
+          {
+            "type": "hazard",
+            "count": 1,
+            "nodes": [
+              {
+                "artifact_id": "<h1>",
+                "title": "Late answer",
+                "type": "hazard",
+                "distance": 2,
+                "via": "mitigates",
+                "path": [
+                  "<r_pass>",
+                  "<d1>",
+                  "<h1>"
+                ]
+              }
+            ]
           }
         ],
         "upstream": [
@@ -2474,9 +2510,13 @@
             ]
           }
         ],
-        "total": 4
+        "total": 5
       },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": null,
+        "vary": "Accept-Encoding"
+      }
     },
     {
       "n": 36,
@@ -2492,10 +2532,10 @@
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 1163,
+      "content_length": 1451,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"artifact_id\":\"<r_pass>\",\"direction\":\"both\",\"downstream\":[{\"type\":\"design-item\",\"count\":2,\"nodes\":[{\"artifact_id\":\"<d2>\",\"title\":\"Answer cache\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d2>\"]},{\"artifact_id\":\"<d1>\",\"title\":\"Timing loop\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d1>\"]}]},{\"type\":\"test-case\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<tc_pass>\",\"title\":\"Time the answer\",\"type\":\"test-case\",\"distance\":1,\"via\":\"verifies\",\"path\":[\"<r_pass>\",\"<tc_pass>\"]}]}],\"upstream\":[{\"type\":\"user-need\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<un1>\",\"title\":\"Get an answer fast\",\"type\":\"user-need\",\"distance\":1,\"via\":\"derives-from\",\"path\":[\"<r_pass>\",\"<un1>\"]}]}],\"total\":4}"
+        "{\"project_id\":\"<p>\",\"artifact_id\":\"<r_pass>\",\"direction\":\"both\",\"downstream\":[{\"type\":\"design-item\",\"count\":2,\"nodes\":[{\"artifact_id\":\"<d2>\",\"title\":\"Answer cache\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d2>\"]},{\"artifact_id\":\"<d1>\",\"title\":\"Timing loop\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d1>\"]}]},{\"type\":\"test-case\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<tc_pass>\",\"title\":\"Time the answer\",\"type\":\"test-case\",\"distance\":1,\"via\":\"verifies\",\"path\":[\"<r_pass>\",\"<tc_pass>\"]}]},{\"type\":\"hazard\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<h1>\",\"title\":\"Late answer\",\"type\":\"hazard\",\"distance\":2,\"via\":\"mitigates\",\"path\":[\"<r_pass>\",\"<d1>\",\"<h1>\"]}]}],\"upstream\":[{\"type\":\"user-need\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<un1>\",\"title\":\"Get an answer fast\",\"type\":\"user-need\",\"distance\":1,\"via\":\"derives-from\",\"path\":[\"<r_pass>\",\"<un1>\"]}]}],\"total\":5}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2547,6 +2587,24 @@
                 ]
               }
             ]
+          },
+          {
+            "type": "hazard",
+            "count": 1,
+            "nodes": [
+              {
+                "artifact_id": "<h1>",
+                "title": "Late answer",
+                "type": "hazard",
+                "distance": 2,
+                "via": "mitigates",
+                "path": [
+                  "<r_pass>",
+                  "<d1>",
+                  "<h1>"
+                ]
+              }
+            ]
           }
         ],
         "upstream": [
@@ -2568,9 +2626,13 @@
             ]
           }
         ],
-        "total": 4
+        "total": 5
       },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": null,
+        "vary": "Accept-Encoding"
+      }
     },
     {
       "n": 37,
@@ -2586,10 +2648,10 @@
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 1163,
+      "content_length": 1451,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"artifact_id\":\"<r_pass>\",\"direction\":\"both\",\"downstream\":[{\"type\":\"design-item\",\"count\":2,\"nodes\":[{\"artifact_id\":\"<d2>\",\"title\":\"Answer cache\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d2>\"]},{\"artifact_id\":\"<d1>\",\"title\":\"Timing loop\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d1>\"]}]},{\"type\":\"test-case\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<tc_pass>\",\"title\":\"Time the answer\",\"type\":\"test-case\",\"distance\":1,\"via\":\"verifies\",\"path\":[\"<r_pass>\",\"<tc_pass>\"]}]}],\"upstream\":[{\"type\":\"user-need\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<un1>\",\"title\":\"Get an answer fast\",\"type\":\"user-need\",\"distance\":1,\"via\":\"derives-from\",\"path\":[\"<r_pass>\",\"<un1>\"]}]}],\"total\":4}"
+        "{\"project_id\":\"<p>\",\"artifact_id\":\"<r_pass>\",\"direction\":\"both\",\"downstream\":[{\"type\":\"design-item\",\"count\":2,\"nodes\":[{\"artifact_id\":\"<d2>\",\"title\":\"Answer cache\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d2>\"]},{\"artifact_id\":\"<d1>\",\"title\":\"Timing loop\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d1>\"]}]},{\"type\":\"test-case\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<tc_pass>\",\"title\":\"Time the answer\",\"type\":\"test-case\",\"distance\":1,\"via\":\"verifies\",\"path\":[\"<r_pass>\",\"<tc_pass>\"]}]},{\"type\":\"hazard\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<h1>\",\"title\":\"Late answer\",\"type\":\"hazard\",\"distance\":2,\"via\":\"mitigates\",\"path\":[\"<r_pass>\",\"<d1>\",\"<h1>\"]}]}],\"upstream\":[{\"type\":\"user-need\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<un1>\",\"title\":\"Get an answer fast\",\"type\":\"user-need\",\"distance\":1,\"via\":\"derives-from\",\"path\":[\"<r_pass>\",\"<un1>\"]}]}],\"total\":5}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -2641,91 +2703,6 @@
                 ]
               }
             ]
-          }
-        ],
-        "upstream": [
-          {
-            "type": "user-need",
-            "count": 1,
-            "nodes": [
-              {
-                "artifact_id": "<un1>",
-                "title": "Get an answer fast",
-                "type": "user-need",
-                "distance": 1,
-                "via": "derives-from",
-                "path": [
-                  "<r_pass>",
-                  "<un1>"
-                ]
-              }
-            ]
-          }
-        ],
-        "total": 4
-      },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
-    },
-    {
-      "n": 38,
-      "title": "the design item's impact upstream: a path two links long",
-      "actor": "owner",
-      "route": "GET /api/v1/projects/{id}/impact",
-      "request": {
-        "method": "GET",
-        "path": "/api/v1/projects/<p>/impact",
-        "query": "artifact=<d1>&direction=upstream"
-      },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
-      "headers": [],
-      "security_headers": "standard",
-      "content_length": 984,
-      "kind": "json",
-      "body": [
-        "{\"project_id\":\"<p>\",\"artifact_id\":\"<d1>\",\"direction\":\"upstream\",\"downstream\":[],\"upstream\":[{\"type\":\"user-need\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<un1>\",\"title\":\"Get an answer fast\",\"type\":\"user-need\",\"distance\":2,\"via\":\"derives-from\",\"path\":[\"<d1>\",\"<r_pass>\",\"<un1>\"]}]},{\"type\":\"requirement\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<r_pass>\",\"title\":\"Answer in time\",\"type\":\"requirement\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<d1>\",\"<r_pass>\"]}]},{\"type\":\"hazard\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<h1>\",\"title\":\"Late answer\",\"type\":\"hazard\",\"distance\":1,\"via\":\"mitigates\",\"path\":[\"<d1>\",\"<h1>\"]}]}],\"total\":3}"
-      ],
-      "trailing_newline": true,
-      "parsed": {
-        "project_id": "<p>",
-        "artifact_id": "<d1>",
-        "direction": "upstream",
-        "downstream": [],
-        "upstream": [
-          {
-            "type": "user-need",
-            "count": 1,
-            "nodes": [
-              {
-                "artifact_id": "<un1>",
-                "title": "Get an answer fast",
-                "type": "user-need",
-                "distance": 2,
-                "via": "derives-from",
-                "path": [
-                  "<d1>",
-                  "<r_pass>",
-                  "<un1>"
-                ]
-              }
-            ]
-          },
-          {
-            "type": "requirement",
-            "count": 1,
-            "nodes": [
-              {
-                "artifact_id": "<r_pass>",
-                "title": "Answer in time",
-                "type": "requirement",
-                "distance": 1,
-                "via": "satisfies",
-                "path": [
-                  "<d1>",
-                  "<r_pass>"
-                ]
-              }
-            ]
           },
           {
             "type": "hazard",
@@ -2735,9 +2712,10 @@
                 "artifact_id": "<h1>",
                 "title": "Late answer",
                 "type": "hazard",
-                "distance": 1,
+                "distance": 2,
                 "via": "mitigates",
                 "path": [
+                  "<r_pass>",
                   "<d1>",
                   "<h1>"
                 ]
@@ -2745,13 +2723,61 @@
             ]
           }
         ],
-        "total": 3
+        "upstream": [
+          {
+            "type": "user-need",
+            "count": 1,
+            "nodes": [
+              {
+                "artifact_id": "<un1>",
+                "title": "Get an answer fast",
+                "type": "user-need",
+                "distance": 1,
+                "via": "derives-from",
+                "path": [
+                  "<r_pass>",
+                  "<un1>"
+                ]
+              }
+            ]
+          }
+        ],
+        "total": 5
+      },
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": null,
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 38,
+      "title": "the design item's impact: refused, impact starts from a requirement",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{id}/impact",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<p>/impact",
+        "query": "artifact=<d1>&direction=upstream"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 54,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"impact analysis starts from a requirement\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "impact analysis starts from a requirement"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
       "n": 39,
-      "title": "the first user need's impact downstream: a path two links long",
+      "title": "the first user need's impact: refused, impact starts from a requirement",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/impact",
       "request": {
@@ -2759,89 +2785,18 @@
         "path": "/api/v1/projects/<p>/impact",
         "query": "artifact=<un1>&direction=downstream"
       },
-      "status": 200,
-      "content_type": "text/plain; charset=utf-8",
+      "status": 400,
+      "content_type": "application/json",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 1287,
+      "content_length": 54,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"artifact_id\":\"<un1>\",\"direction\":\"downstream\",\"downstream\":[{\"type\":\"requirement\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<r_pass>\",\"title\":\"Answer in time\",\"type\":\"requirement\",\"distance\":1,\"via\":\"derives-from\",\"path\":[\"<un1>\",\"<r_pass>\"]}]},{\"type\":\"design-item\",\"count\":2,\"nodes\":[{\"artifact_id\":\"<d2>\",\"title\":\"Answer cache\",\"type\":\"design-item\",\"distance\":2,\"via\":\"satisfies\",\"path\":[\"<un1>\",\"<r_pass>\",\"<d2>\"]},{\"artifact_id\":\"<d1>\",\"title\":\"Timing loop\",\"type\":\"design-item\",\"distance\":2,\"via\":\"satisfies\",\"path\":[\"<un1>\",\"<r_pass>\",\"<d1>\"]}]},{\"type\":\"test-case\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<tc_pass>\",\"title\":\"Time the answer\",\"type\":\"test-case\",\"distance\":2,\"via\":\"verifies\",\"path\":[\"<un1>\",\"<r_pass>\",\"<tc_pass>\"]}]}],\"upstream\":[],\"total\":4}"
+        "{\"error\":\"impact analysis starts from a requirement\"}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "project_id": "<p>",
-        "artifact_id": "<un1>",
-        "direction": "downstream",
-        "downstream": [
-          {
-            "type": "requirement",
-            "count": 1,
-            "nodes": [
-              {
-                "artifact_id": "<r_pass>",
-                "title": "Answer in time",
-                "type": "requirement",
-                "distance": 1,
-                "via": "derives-from",
-                "path": [
-                  "<un1>",
-                  "<r_pass>"
-                ]
-              }
-            ]
-          },
-          {
-            "type": "design-item",
-            "count": 2,
-            "nodes": [
-              {
-                "artifact_id": "<d2>",
-                "title": "Answer cache",
-                "type": "design-item",
-                "distance": 2,
-                "via": "satisfies",
-                "path": [
-                  "<un1>",
-                  "<r_pass>",
-                  "<d2>"
-                ]
-              },
-              {
-                "artifact_id": "<d1>",
-                "title": "Timing loop",
-                "type": "design-item",
-                "distance": 2,
-                "via": "satisfies",
-                "path": [
-                  "<un1>",
-                  "<r_pass>",
-                  "<d1>"
-                ]
-              }
-            ]
-          },
-          {
-            "type": "test-case",
-            "count": 1,
-            "nodes": [
-              {
-                "artifact_id": "<tc_pass>",
-                "title": "Time the answer",
-                "type": "test-case",
-                "distance": 2,
-                "via": "verifies",
-                "path": [
-                  "<un1>",
-                  "<r_pass>",
-                  "<tc_pass>"
-                ]
-              }
-            ]
-          }
-        ],
-        "upstream": [],
-        "total": 4
+        "error": "impact analysis starts from a requirement"
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -2904,21 +2859,21 @@
       "request": {
         "method": "GET",
         "path": "/api/v1/projects/<p>/impact",
-        "query": "artifact=%20<tc_pass>%20&direction=upstream"
+        "query": "artifact=%20<r_pass>%20&direction=upstream"
       },
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 734,
+      "content_length": 434,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"artifact_id\":\"<tc_pass>\",\"direction\":\"upstream\",\"downstream\":[],\"upstream\":[{\"type\":\"user-need\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<un1>\",\"title\":\"Get an answer fast\",\"type\":\"user-need\",\"distance\":2,\"via\":\"derives-from\",\"path\":[\"<tc_pass>\",\"<r_pass>\",\"<un1>\"]}]},{\"type\":\"requirement\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<r_pass>\",\"title\":\"Answer in time\",\"type\":\"requirement\",\"distance\":1,\"via\":\"verifies\",\"path\":[\"<tc_pass>\",\"<r_pass>\"]}]}],\"total\":2}"
+        "{\"project_id\":\"<p>\",\"artifact_id\":\"<r_pass>\",\"direction\":\"upstream\",\"downstream\":[],\"upstream\":[{\"type\":\"user-need\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<un1>\",\"title\":\"Get an answer fast\",\"type\":\"user-need\",\"distance\":1,\"via\":\"derives-from\",\"path\":[\"<r_pass>\",\"<un1>\"]}]}],\"total\":1}"
       ],
       "trailing_newline": true,
       "parsed": {
         "project_id": "<p>",
-        "artifact_id": "<tc_pass>",
+        "artifact_id": "<r_pass>",
         "direction": "upstream",
         "downstream": [],
         "upstream": [
@@ -2930,35 +2885,17 @@
                 "artifact_id": "<un1>",
                 "title": "Get an answer fast",
                 "type": "user-need",
-                "distance": 2,
+                "distance": 1,
                 "via": "derives-from",
                 "path": [
-                  "<tc_pass>",
                   "<r_pass>",
                   "<un1>"
                 ]
               }
             ]
-          },
-          {
-            "type": "requirement",
-            "count": 1,
-            "nodes": [
-              {
-                "artifact_id": "<r_pass>",
-                "title": "Answer in time",
-                "type": "requirement",
-                "distance": 1,
-                "via": "verifies",
-                "path": [
-                  "<tc_pass>",
-                  "<r_pass>"
-                ]
-              }
-            ]
           }
         ],
-        "total": 2
+        "total": 1
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
@@ -2976,10 +2913,10 @@
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 1163,
+      "content_length": 1451,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"artifact_id\":\"<r_pass>\",\"direction\":\"both\",\"downstream\":[{\"type\":\"design-item\",\"count\":2,\"nodes\":[{\"artifact_id\":\"<d2>\",\"title\":\"Answer cache\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d2>\"]},{\"artifact_id\":\"<d1>\",\"title\":\"Timing loop\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d1>\"]}]},{\"type\":\"test-case\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<tc_pass>\",\"title\":\"Time the answer\",\"type\":\"test-case\",\"distance\":1,\"via\":\"verifies\",\"path\":[\"<r_pass>\",\"<tc_pass>\"]}]}],\"upstream\":[{\"type\":\"user-need\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<un1>\",\"title\":\"Get an answer fast\",\"type\":\"user-need\",\"distance\":1,\"via\":\"derives-from\",\"path\":[\"<r_pass>\",\"<un1>\"]}]}],\"total\":4}"
+        "{\"project_id\":\"<p>\",\"artifact_id\":\"<r_pass>\",\"direction\":\"both\",\"downstream\":[{\"type\":\"design-item\",\"count\":2,\"nodes\":[{\"artifact_id\":\"<d2>\",\"title\":\"Answer cache\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d2>\"]},{\"artifact_id\":\"<d1>\",\"title\":\"Timing loop\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d1>\"]}]},{\"type\":\"test-case\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<tc_pass>\",\"title\":\"Time the answer\",\"type\":\"test-case\",\"distance\":1,\"via\":\"verifies\",\"path\":[\"<r_pass>\",\"<tc_pass>\"]}]},{\"type\":\"hazard\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<h1>\",\"title\":\"Late answer\",\"type\":\"hazard\",\"distance\":2,\"via\":\"mitigates\",\"path\":[\"<r_pass>\",\"<d1>\",\"<h1>\"]}]}],\"upstream\":[{\"type\":\"user-need\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<un1>\",\"title\":\"Get an answer fast\",\"type\":\"user-need\",\"distance\":1,\"via\":\"derives-from\",\"path\":[\"<r_pass>\",\"<un1>\"]}]}],\"total\":5}"
       ],
       "trailing_newline": true,
       "parsed": {
@@ -3031,6 +2968,24 @@
                 ]
               }
             ]
+          },
+          {
+            "type": "hazard",
+            "count": 1,
+            "nodes": [
+              {
+                "artifact_id": "<h1>",
+                "title": "Late answer",
+                "type": "hazard",
+                "distance": 2,
+                "via": "mitigates",
+                "path": [
+                  "<r_pass>",
+                  "<d1>",
+                  "<h1>"
+                ]
+              }
+            ]
           }
         ],
         "upstream": [
@@ -3052,9 +3007,13 @@
             ]
           }
         ],
-        "total": 4
+        "total": 5
       },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": null,
+        "vary": "Accept-Encoding"
+      }
     },
     {
       "n": 43,
@@ -3189,43 +3148,89 @@
       "request": {
         "method": "GET",
         "path": "/api/v1/projects/<p>/impact",
-        "query": "artifact=<h1>"
+        "query": "artifact=<r_pass>&direction=downstream"
       },
       "status": 200,
       "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 424,
+      "content_length": 1193,
       "kind": "json",
       "body": [
-        "{\"project_id\":\"<p>\",\"artifact_id\":\"<h1>\",\"direction\":\"both\",\"downstream\":[{\"type\":\"design-item\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<d1>\",\"title\":\"Timing loop\",\"type\":\"design-item\",\"distance\":1,\"via\":\"mitigates\",\"path\":[\"<h1>\",\"<d1>\"]}]}],\"upstream\":[],\"total\":1}"
+        "{\"project_id\":\"<p>\",\"artifact_id\":\"<r_pass>\",\"direction\":\"downstream\",\"downstream\":[{\"type\":\"design-item\",\"count\":2,\"nodes\":[{\"artifact_id\":\"<d2>\",\"title\":\"Answer cache\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d2>\"]},{\"artifact_id\":\"<d1>\",\"title\":\"Timing loop\",\"type\":\"design-item\",\"distance\":1,\"via\":\"satisfies\",\"path\":[\"<r_pass>\",\"<d1>\"]}]},{\"type\":\"test-case\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<tc_pass>\",\"title\":\"Time the answer\",\"type\":\"test-case\",\"distance\":1,\"via\":\"verifies\",\"path\":[\"<r_pass>\",\"<tc_pass>\"]}]},{\"type\":\"hazard\",\"count\":1,\"nodes\":[{\"artifact_id\":\"<h1>\",\"title\":\"Late answer\",\"type\":\"hazard\",\"distance\":2,\"via\":\"mitigates\",\"path\":[\"<r_pass>\",\"<d1>\",\"<h1>\"]}]}],\"upstream\":[],\"total\":4}"
       ],
       "trailing_newline": true,
       "parsed": {
         "project_id": "<p>",
-        "artifact_id": "<h1>",
-        "direction": "both",
+        "artifact_id": "<r_pass>",
+        "direction": "downstream",
         "downstream": [
           {
             "type": "design-item",
-            "count": 1,
+            "count": 2,
             "nodes": [
+              {
+                "artifact_id": "<d2>",
+                "title": "Answer cache",
+                "type": "design-item",
+                "distance": 1,
+                "via": "satisfies",
+                "path": [
+                  "<r_pass>",
+                  "<d2>"
+                ]
+              },
               {
                 "artifact_id": "<d1>",
                 "title": "Timing loop",
                 "type": "design-item",
                 "distance": 1,
+                "via": "satisfies",
+                "path": [
+                  "<r_pass>",
+                  "<d1>"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "test-case",
+            "count": 1,
+            "nodes": [
+              {
+                "artifact_id": "<tc_pass>",
+                "title": "Time the answer",
+                "type": "test-case",
+                "distance": 1,
+                "via": "verifies",
+                "path": [
+                  "<r_pass>",
+                  "<tc_pass>"
+                ]
+              }
+            ]
+          },
+          {
+            "type": "hazard",
+            "count": 1,
+            "nodes": [
+              {
+                "artifact_id": "<h1>",
+                "title": "Late answer",
+                "type": "hazard",
+                "distance": 2,
                 "via": "mitigates",
                 "path": [
-                  "<h1>",
-                  "<d1>"
+                  "<r_pass>",
+                  "<d1>",
+                  "<h1>"
                 ]
               }
             ]
           }
         ],
         "upstream": [],
-        "total": 1
+        "total": 4
       },
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },

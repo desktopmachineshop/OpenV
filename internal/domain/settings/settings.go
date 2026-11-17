@@ -62,6 +62,11 @@ type Service interface {
 	ProjectParties(projectID string) ([]Party, error)
 	// SetProjectParties replaces that list; an empty list clears it.
 	SetProjectParties(projectID string, parties []Party) ([]Party, error)
+	// ProjectPriorityDetection reports whether the artifact editor fills a
+	// requirement's priority from its normative keyword (priority.go).
+	ProjectPriorityDetection(projectID string) (bool, error)
+	// SetProjectPriorityDetection turns that on or off.
+	SetProjectPriorityDetection(projectID string, on bool) (bool, error)
 }
 
 // DefaultService is the standard Service.

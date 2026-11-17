@@ -19,7 +19,7 @@ interface PersonaStepProps {
  */
 export const renderPersonaStep = ({ personas, setPersonas }: PersonaStepProps): React.ReactElement => {
   return (
-    <div>
+    <div data-help-key="guided.steps.personas">
       <div className="card" style={{ marginBottom: 12 }}>
         <h3>Personas</h3>
         <div style={{ ...helpText, marginBottom: 0 }}>

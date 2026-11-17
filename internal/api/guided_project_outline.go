@@ -28,6 +28,11 @@ type projectOutline struct {
 	// moves. Off, the assistant is told so and offers only the wizard's
 	// shapes, which land as drafts under the standard headings.
 	Edits bool
+	// Full reports whether it also has the feature that lets the assistant
+	// propose every other project change as a card (FeatureAssistantFullScope):
+	// releases and targets, links, status, delete, comments, to-dos, tasks,
+	// baselines, a review round and test runs.
+	Full bool
 }
 
 // outlineBudget bounds the outline in characters: about six thousand

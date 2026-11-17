@@ -3,6 +3,9 @@
 <concept id="reviewing-sessions">
   <title>Reviewing sessions</title>
   <shortdesc>Expand an interview to see its <b>sessions</b> — one per participant, with name, status, and start time.</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="interviews.sessions"/>
+  </prolog>
   <conbody>
     <ul>
       <li>Open a session to read the full <b>transcript</b>.</li>

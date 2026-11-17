@@ -38,7 +38,7 @@ export const ReposTab: React.FC<ReposTabProps> = ({
   handleSaveMyPath,
 }) => (
   <>
-    <div className="card">
+    <div className="card" data-help-key="settings.repos">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <h3 style={{ marginBottom: 0 }}>Repository connections</h3>
         <button

@@ -3,5 +3,8 @@
 <concept id="repository-access">
   <title>Repository access</title>
   <shortdesc>Agents with repository access can clone repositories connected in <b>Project Settings → Repositories</b>. Such runs only execute on personal or workspace runners — never on the hosted runner (see <i>Runs &amp; runners</i>).</shortdesc>
+  <prolog>
+    <resourceid appname="openv-web" appid="agents.repos"/>
+  </prolog>
   <conbody/>
 </concept>
