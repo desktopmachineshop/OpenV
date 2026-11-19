@@ -83,6 +83,7 @@ POST /api/v1/projects: 201, 400; projects_templates
 POST /api/v1/projects/import: 201, 400, 401; exports_imports
 POST /api/v1/projects/{id}/baselines: 201, 400, 404; baselines_documents
 POST /api/v1/projects/{id}/cover: 200, 400, 404, 413; project_covers
+POST /api/v1/projects/{id}/cover/generate: 400, 404, 409; project_covers (errors only)
 POST /api/v1/projects/{id}/reindex-embeddings: 200, 403, 404; review_chatter_search
 POST /api/v1/projects/{id}/review-round: 200, 400, 403, 404; review_chatter_search
 POST /api/v1/projects/{id}/share-links: 201, 400, 404; share_links_public
@@ -97,4 +98,4 @@ PUT /api/v1/links/{id}/confirm: 200, 404; links_managed_edits
 PUT /api/v1/me/comment-reads: 200, 400; review_chatter_search
 PUT /api/v1/projects/{id}: 200, 400; projects_templates
 
-s5a: 85 of 396 routes reached (21.5%), 85 with a 2xx or 3xx answer (21.5%)
+s5a: 86 of 397 routes reached (21.7%), 85 with a 2xx or 3xx answer (21.4%)

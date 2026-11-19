@@ -11,6 +11,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 	"github.com/openv/requirements-platform/internal/domain/plan"
 	"github.com/openv/requirements-platform/internal/domain/products"
+	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/savedsearches"
 	"github.com/openv/requirements-platform/internal/domain/settings"
 	"github.com/openv/requirements-platform/internal/domain/sharedproducts"
@@ -73,4 +74,7 @@ func (a *app) projects() {
 	a.guidedService = guided.NewDefaultService(a.guidedRepo, a.artifactService, a.linkService, a.chatterService, a.productService, a.bus)
 	a.interviewService = interviews.NewDefaultService(a.interviewRepo)
 	a.shareLinkService = sharelinks.NewService(postgres.NewShareLinkRepository(a.db))
+	// Projects' cover photos, which a member or an agent can also generate
+	// from a prompt with the workspace's own OpenAI key.
+	a.projectCoverService = projects.NewCoverService(a.projectCoverRepo).WithGenerator(projects.NewOpenAIImages(a.env().CoverImageModel()))
 }

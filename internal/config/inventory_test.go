@@ -149,6 +149,8 @@ func accessorCases() []accessorCase {
 			def: sharedproducts.DefaultDailyOrgLimit, get: func(c *Config) any { return c.SharedProductDailyLimit() }},
 		{name: "OPENV_SHARED_PRODUCT_POOL_LIMIT", read: "cmd/server:envInt(key)", accessor: "SharedProductPoolLimit()",
 			def: sharedproducts.DefaultPoolLimit, get: func(c *Config) any { return c.SharedProductPoolLimit() }},
+		{name: "OPENV_COVER_IMAGE_MODEL", read: "os.Getenv", accessor: "CoverImageModel()", def: "",
+			get: func(c *Config) any { return c.CoverImageModel() }, pinned: raw("OPENV_COVER_IMAGE_MODEL")},
 		// stage agents
 		{name: "OPENV_RUN_MAX_ATTEMPTS", read: "cmd/server:envInt(key)", accessor: "RunMaxAttempts()", def: agentruns.DefaultMaxAttempts,
 			get: func(c *Config) any { return c.RunMaxAttempts() }},

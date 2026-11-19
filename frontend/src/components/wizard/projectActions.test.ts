@@ -90,3 +90,19 @@ describe('the card face', () => {
     expect(projectActionLabels({ kind: 'archive', refs: ['REQ-1'] }).button).toBe('Archive');
   });
 });
+
+describe('the cover card', () => {
+  it('generates from a description, or removes the cover', () => {
+    expect(ok({ kind: 'cover', prompt: ' A rover on red sand ' })).toEqual({ kind: 'cover', action: 'generate', prompt: 'A rover on red sand' });
+    expect(ok({ kind: 'cover', action: 'remove' })).toEqual({ kind: 'cover', action: 'remove' });
+    expect(refused({ kind: 'cover' })).toMatch(/does not say what the picture shows/);
+    expect(refused({ kind: 'cover', prompt: 'x'.repeat(1001) })).toMatch(/longer than 1000/);
+  });
+
+  it('says what it will do on its face', () => {
+    expect(projectActionSummary({ kind: 'cover', prompt: 'A rover' })).toEqual({ title: 'Generate a cover photo', detail: 'A rover' });
+    expect(projectActionSummary({ kind: 'cover', action: 'remove' }).title).toBe('Remove the cover photo');
+    expect(projectActionLabels({ kind: 'cover', prompt: 'A rover' }).button).toBe('Generate cover');
+    expect(projectActionLabels({ kind: 'cover', action: 'remove' }).button).toBe('Remove cover');
+  });
+});

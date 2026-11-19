@@ -296,6 +296,7 @@ POST /api/v1/projects: project-create
 POST /api/v1/projects/import: project-create
 POST /api/v1/projects/{id}/baselines: project:editor
 POST /api/v1/projects/{id}/cover: project:editor
+POST /api/v1/projects/{id}/cover/generate: project:editor
 POST /api/v1/projects/{id}/draft-test-cases: project:editor
 POST /api/v1/projects/{id}/evidence-bundles: project:editor
 POST /api/v1/projects/{id}/interviews: no-proposal-run, project:editor, project-visible

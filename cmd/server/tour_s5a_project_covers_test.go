@@ -22,13 +22,15 @@ import (
 // stored type, removal (twice: nothing to remove is no error) and the image
 // gone. An outsider, an account in a workspace of its own, finds no project
 // to read or change, and a request with no session is refused before
-// anything is read.
+// anything is read. Generating a cover from a prompt is refused for an
+// empty prompt and, since the tour's workspace has no OpenAI key, answered
+// 409 with where to add one: the tour never calls a provider.
 func TestTourS5aProjectCovers(t *testing.T) {
 	runTourArea(t, tourArea{
 		slice: "s5a",
 		key:   "project_covers",
 		about: "Project cover photos: upload (each refusal, then a PNG and a WebP replacing it), the image as its " +
-			"stored type, cover_updated_at on the project and its list, removal, and the guards.",
+			"stored type, cover_updated_at on the project and its list, generation's refusals, removal, and the guards.",
 		run: projectCoversTour,
 	})
 }
@@ -80,6 +82,17 @@ func projectCoversTour(tr *tour) {
 	tr.step("no session: 401", tr.anon, "GET /api/v1/projects/{id}/cover", p)
 	tr.step("a project that does not exist: 404", o, "GET /api/v1/projects/{id}/cover", at("id", "{{phantom}}"))
 	tr.step("still the WebP: the refused calls changed nothing", o, "GET /api/v1/projects/{id}/cover", p)
+
+	// Generation, from a prompt with the workspace's OpenAI key: this
+	// workspace has none, so the request is answered with what to do
+	// before any provider is called; a bad prompt is refused first.
+	gen := "POST /api/v1/projects/{id}/cover/generate"
+	tr.step("generate with an empty prompt: 400", o, gen, p, jsonBody(`{"prompt":"  "}`))
+	tr.step("generate with a malformed body: 400", o, gen, p, jsonBody(`{`))
+	tr.step("generate without a workspace OpenAI key: 409, saying where to add one", o, gen, p,
+		jsonBody(`{"prompt":"A cover for the tour, wide shot, no text"}`))
+	tr.step("the outsider generates one: 404", outsider, gen, p, jsonBody(`{"prompt":"x"}`))
+	tr.step("still the WebP: no generation stored anything", o, "GET /api/v1/projects/{id}/cover", p)
 
 	// Removal.
 	tr.step("remove it: the project, without cover_updated_at", o, "DELETE /api/v1/projects/{id}/cover", p)

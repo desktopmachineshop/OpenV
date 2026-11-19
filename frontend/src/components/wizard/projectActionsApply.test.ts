@@ -5,6 +5,7 @@ import {
   chatterAPI,
   linkAPI,
   membersAPI,
+  projectAPI,
   releasesAPI,
   reviewAPI,
   todosAPI,
@@ -12,6 +13,7 @@ import {
   workItemsAPI,
 } from '../../api/client';
 import { applySuggestionsToProject } from './applySuggestion';
+import { useAppStore } from '../../state/store';
 
 vi.mock('../../api/client', async (orig) => mockApi(await orig()));
 
@@ -151,5 +153,34 @@ describe('applying project-action cards', () => {
     const [reason] = await apply([{ kind: 'test_run', name: 'Bench', results: [{ ref: 'TC-9', status: 'pass' }] }]);
     expect(reason).toMatch(/no artifact TC-9/);
     expect(vvAPI.createRun).not.toHaveBeenCalled();
+  });
+});
+
+describe('the cover card', () => {
+  const project = (cover?: string) => ({ id: 'p1', name: 'Rover', cover_updated_at: cover }) as any;
+
+  it('generates the cover with the description and puts the project in the store', async () => {
+    useAppStore.setState({ projects: [project()] } as never);
+    vi.mocked(projectAPI.generateCover).mockResolvedValue({ data: project('2026-11-19T10:00:00Z') } as any);
+    expect(await apply([{ kind: 'cover', prompt: 'A rover on red sand' }])).toEqual([null]);
+    expect(projectAPI.generateCover).toHaveBeenCalledWith('p1', 'A rover on red sand');
+    expect(useAppStore.getState().projects[0].cover_updated_at).toBe('2026-11-19T10:00:00Z');
+  });
+
+  it('removes the cover', async () => {
+    useAppStore.setState({ projects: [project('t1')] } as never);
+    vi.mocked(projectAPI.removeCover).mockResolvedValue({ data: project() } as any);
+    expect(await apply([{ kind: 'cover', action: 'remove' }])).toEqual([null]);
+    expect(projectAPI.removeCover).toHaveBeenCalledWith('p1');
+    expect(useAppStore.getState().projects[0].cover_updated_at).toBeUndefined();
+  });
+
+  it("shows the server's reason when the workspace has no key", async () => {
+    vi.mocked(projectAPI.generateCover).mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 409, data: { error: "Generating a cover photo uses the workspace's OpenAI API key" } },
+    } as any);
+    const [reason] = await apply([{ kind: 'cover', prompt: 'A rover' }]);
+    expect(reason).toMatch(/OpenAI API key/);
   });
 });

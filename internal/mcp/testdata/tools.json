@@ -38,6 +38,64 @@
       ]
     },
     {
+      "name": "set_project_cover",
+      "read_only": false,
+      "description": "Set a project's cover photo from an image you have: the photo across the top of its Overview and beside it in All projects. PNG, JPEG, GIF or WebP, at most 5 MB, as base64 (a data: URL is accepted too); it replaces any cover the project has. To make a new image from a description, use generate_project_cover instead. Answers the project, with its cover_updated_at.",
+      "input_schema": {
+        "properties": {
+          "image_base64": {
+            "description": "The image's bytes as base64, or a data:image/...;base64, URL",
+            "type": "string"
+          },
+          "mime_type": {
+            "description": "Optional image/png, image/jpeg, image/gif or image/webp; read from the bytes when left out",
+            "type": "string"
+          },
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id", "image_base64"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/projects/{id}/cover"],
+      "requests": [
+        "POST /api/v1/projects/11111111-1111-4111-8111-111111111111/cover --openv-mcp-upload\r\nContent-Disposition: form-data; name=\"file\"; filename=\"cover.gif\"\r\nContent-Type: image/gif\r\n\r\nGIF89a\u0001\u0000\u0001\u0000�\u0000\u0000���\u0000\u0000\u0000,\u0000\u0000\u0000\u0000\u0001\u0000\u0001\u0000\u0000\u0002\u0002D\u0001\u0000;\r\n--openv-mcp-upload--\r\n"
+      ]
+    },
+    {
+      "name": "generate_project_cover",
+      "read_only": false,
+      "description": "Generate a project's cover photo from a description and set it, replacing any cover the project has. The image is made with the workspace's own OpenAI API key, so the workspace pays for it; without one the call is refused with what to do. Describe a wide picture of the product or its setting, with no text in it. Takes up to a minute. Generations are limited per workspace, so generate once and set it, rather than trying many. Answers the project, with its cover_updated_at.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"},
+          "prompt": {
+            "description": "What the picture shows, up to 1,000 characters",
+            "type": "string"
+          }
+        },
+        "required": ["project_id", "prompt"],
+        "type": "object"
+      },
+      "calls": ["POST /api/v1/projects/{id}/cover/generate"],
+      "requests": [
+        "POST /api/v1/projects/11111111-1111-4111-8111-111111111111/cover/generate {\"prompt\":\"A brake assembly on a test rig, wide shot, no text\"}"
+      ]
+    },
+    {
+      "name": "remove_project_cover",
+      "read_only": false,
+      "description": "Remove a project's cover photo. A project with none is not an error. Answers the project.",
+      "input_schema": {
+        "properties": {
+          "project_id": {"description": "Project ID", "type": "string"}
+        },
+        "required": ["project_id"],
+        "type": "object"
+      },
+      "calls": ["DELETE /api/v1/projects/{id}/cover"],
+      "requests": ["DELETE /api/v1/projects/11111111-1111-4111-8111-111111111111/cover"]
+    },
+    {
       "name": "list_artifacts",
       "read_only": true,
       "description": "List artifacts in a project, optionally filtered by type and by owner (the \"owner\" attribute: a person, team or supplier).",

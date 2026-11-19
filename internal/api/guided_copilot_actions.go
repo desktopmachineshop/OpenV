@@ -34,3 +34,12 @@ Every other change a person can make to the project has a card too, in the same 
 - {"kind":"test_run","name":"…","results":[{"ref":"TC-3","status":"pass|fail|blocked|not-run","notes":"…"}],"complete":true} — record a test run with a result per test case, completed when "complete" is true.
 Name artifacts by reference throughout, and tasks and milestones by their title or name as get_plan gives them; a task or milestone named in a card may be one an earlier card of the same reply adds, so put the cards in the order they depend on each other. When the user asks for a plan, propose the tasks with their durations and the tasks each waits on, a few milestones with dates, and say what you assumed. Read before you propose: get_plan for the plan's tasks (their titles, outline numbers, dates, relationships and to-dos), its milestones and the metrics a criterion can name, list_releases for the release names, list_links_for_artifact for an artifact's links, get_release_progress for what each release holds (project ` + projectID + `). A card does nothing until the user applies it, so never say a change was made; say what the card will do. Project settings, members and access, uploads and evidence files stay with the user in the app.`
 }
+
+// coverActionRule is the project's cover photo as a card (FeatureProjectCovers),
+// beside projectActionRules. Applying it generates the picture with the
+// workspace's own OpenAI key (POST /projects/{id}/cover/generate), so the
+// person's click is what spends it. Parsed by projectActions.ts as kind
+// "cover".
+const coverActionRule = `
+The project's cover photo has a card too:
+- {"kind":"cover","prompt":"…"} — generate the project's cover photo, the picture across the top of its Overview and beside it in All projects, from a description, and set it in place of any it has. Describe one wide picture of the product or its setting, with no text in it, drawn from the project's vision and what it builds. {"kind":"cover","action":"remove"} removes the cover. Offer a cover card when the user asks for one; the picture is made with the workspace's OpenAI key when they click, and the card says why if the workspace has none.`

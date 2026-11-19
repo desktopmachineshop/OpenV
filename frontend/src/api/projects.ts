@@ -67,6 +67,13 @@ export const projectAPI = {
     return client.post<Project>(`/api/v1/projects/${id}/cover`, formData, uploadConfig());
   },
   removeCover: (id: string) => client.delete<Project>(`/api/v1/projects/${id}/cover`),
+  /**
+   * Generate the cover from a description with the workspace's own OpenAI
+   * key, replacing any cover. 409 when the workspace has no key, 429 past
+   * the workspace's generation limit; can take up to a minute.
+   */
+  generateCover: (id: string, prompt: string) =>
+    client.post<Project>(`/api/v1/projects/${id}/cover/generate`, { prompt }, { timeout: 150000 }),
   /** The cover's URL, versioned by its cover_updated_at so a new cover is a new URL. */
   coverUrl: (id: string, version: string) =>
     `${API_BASE_URL}/api/v1/projects/${id}/cover?v=${encodeURIComponent(version)}`,

@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +17,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/projects"
+	"github.com/openv/requirements-platform/internal/domain/providers"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
@@ -241,5 +244,122 @@ func TestProjectCoverDelete(t *testing.T) {
 	}
 	if w := serveCover(h, coverReq(http.MethodGet, "/api/v1/projects/p-1/cover", "viewer", nil, "")); w.Code != http.StatusNotFound {
 		t.Fatalf("get after delete: status %d, want 404", w.Code)
+	}
+}
+
+// coverKeys is the workspace key store: org-1's OpenAI key, when set.
+type coverKeys struct {
+	providers.KeyService
+	key string
+}
+
+func (k *coverKeys) RevealKey(orgID, keyEnv string) (string, error) {
+	if orgID == "org-1" && keyEnv == projects.CoverKeyEnv {
+		return k.key, nil
+	}
+	return "", nil
+}
+
+type coverGen struct {
+	img    []byte
+	err    error
+	prompt string
+	key    string
+}
+
+func (g *coverGen) Generate(_ context.Context, apiKey, prompt string) ([]byte, error) {
+	g.key, g.prompt = apiKey, prompt
+	return g.img, g.err
+}
+
+// generateFixture is coverFixture with org-1's key store and a stub
+// generator behind the cover service.
+func generateFixture(t *testing.T, key string, gen *coverGen) (http.Handler, *memCoverRepo) {
+	t.Helper()
+	store := &fakeProjectService{byID: map[string]*projects.Project{"p-1": {ID: "p-1", OrgID: "org-1", Name: "One"}}}
+	repo := &memCoverRepo{covers: map[string]*projects.Cover{}, known: map[string]bool{"p-1": true}, clock: time.Date(2026, 11, 19, 10, 0, 0, 0, time.UTC)}
+	h := NewHandler(HandlerDeps{
+		ProjectService:      store,
+		ProjectCoverService: projects.NewCoverService(repo).WithGenerator(gen),
+		ProviderKeyService:  &coverKeys{key: key},
+		OrgService:          &fakeOrgService{roles: map[string]map[string]string{"org-1": {"editor": orgs.RoleMember, "viewer": orgs.RoleMember}}},
+		MemberService: &fakeMemberService{roles: map[string]map[string]string{
+			"p-1": {"editor": members.RoleEditor, "viewer": members.RoleViewer},
+		}},
+	})
+	router := mux.NewRouter()
+	h.RegisterRoutes(router)
+	return router, repo
+}
+
+func generateReq(user, body string) *http.Request {
+	return coverReq(http.MethodPost, "/api/v1/projects/p-1/cover/generate", user, bytes.NewBufferString(body), "application/json")
+}
+
+// An editor's prompt is generated with the workspace's key and stored as
+// the cover, and the answer is the project stamped with it.
+func TestGenerateProjectCover(t *testing.T) {
+	gen := &coverGen{img: smallPNG(t)}
+	h, repo := generateFixture(t, "sk-workspace", gen)
+	w := serveCover(h, generateReq("editor", `{"prompt":"A brake rig, wide shot"}`))
+	if w.Code != http.StatusOK || !bytes.Contains(w.Body.Bytes(), []byte("cover_updated_at")) {
+		t.Fatalf("status %d, body %q; want 200 with cover_updated_at", w.Code, w.Body.String())
+	}
+	if gen.key != "sk-workspace" || gen.prompt != "A brake rig, wide shot" {
+		t.Errorf("generated with key %q, prompt %q", gen.key, gen.prompt)
+	}
+	if c := repo.covers["p-1"]; c == nil || c.Mime != "image/png" {
+		t.Errorf("stored %+v, want the PNG", c)
+	}
+}
+
+// Every refusal stores nothing: a viewer (403), a workspace with no key
+// (409, saying where to add one), a bad prompt (400) and the provider's
+// failure (502, with its reason).
+func TestGenerateProjectCoverRefusals(t *testing.T) {
+	cases := []struct {
+		name, user, key, body string
+		err                   error
+		want                  int
+		says                  string
+	}{
+		{"viewer", "viewer", "sk", `{"prompt":"x"}`, nil, http.StatusForbidden, ""},
+		{"no key", "editor", "", `{"prompt":"x"}`, nil, http.StatusConflict, "Workspace settings"},
+		{"empty prompt", "editor", "sk", `{"prompt":"  "}`, nil, http.StatusBadRequest, "1 to 1000"},
+		{"long prompt", "editor", "sk", `{"prompt":"` + strings.Repeat("a", projects.MaxCoverPromptRunes+1) + `"}`, nil, http.StatusBadRequest, "1 to 1000"},
+		{"provider", "editor", "sk", `{"prompt":"x"}`, fmt.Errorf("%w: rejected by the safety system", projects.ErrCoverProvider), http.StatusBadGateway, "safety system"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			gen := &coverGen{img: smallPNG(t), err: tc.err}
+			h, repo := generateFixture(t, tc.key, gen)
+			w := serveCover(h, generateReq(tc.user, tc.body))
+			if w.Code != tc.want || !strings.Contains(w.Body.String(), tc.says) {
+				t.Fatalf("status %d, body %q; want %d saying %q", w.Code, w.Body.String(), tc.want, tc.says)
+			}
+			if len(repo.covers) != 0 {
+				t.Fatalf("a refused generation stored a cover")
+			}
+		})
+	}
+}
+
+// Generations are limited per workspace: past the burst the answer is 429
+// with Retry-After, and the provider is not called.
+func TestGenerateProjectCoverIsRateLimited(t *testing.T) {
+	gen := &coverGen{img: smallPNG(t)}
+	h, _ := generateFixture(t, "sk", gen)
+	for i := 0; i < defaultCoverGenBurst; i++ {
+		if w := serveCover(h, generateReq("editor", `{"prompt":"x"}`)); w.Code != http.StatusOK {
+			t.Fatalf("generation %d: status %d (body %q)", i+1, w.Code, w.Body.String())
+		}
+	}
+	gen.prompt = ""
+	w := serveCover(h, generateReq("editor", `{"prompt":"one more"}`))
+	if w.Code != http.StatusTooManyRequests || w.Header().Get("Retry-After") == "" {
+		t.Fatalf("over the burst: status %d, Retry-After %q; want 429 with one", w.Code, w.Header().Get("Retry-After"))
+	}
+	if gen.prompt != "" {
+		t.Errorf("the provider was called past the limit")
 	}
 }

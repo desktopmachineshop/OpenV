@@ -199,6 +199,7 @@ buckets live in the API process, so they assume a single API instance.
 |---|---|---|---|
 | `OPENV_SHARED_PRODUCT_DAILY_LIMIT` | server | `20` | Demo products one workspace may add to the community pool per day. |
 | `OPENV_SHARED_PRODUCT_POOL_LIMIT` | server | `5000` | The most products the community pool holds. |
+| `OPENV_COVER_IMAGE_MODEL` | server | `gpt-image-2` | The OpenAI image model a project's cover photo is generated with, using the workspace's own `OPENAI_API_KEY`. Set it when the vendor retires the default. |
 
 ### billing
 

@@ -12,7 +12,6 @@ import (
 	"github.com/openv/requirements-platform/internal/config"
 	"github.com/openv/requirements-platform/internal/domain/help"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
-	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/users"
 	"github.com/openv/requirements-platform/internal/notify"
 	"github.com/openv/requirements-platform/internal/seeds"
@@ -77,7 +76,7 @@ func (a *app) handlers() {
 		ArtifactService:      a.artifactService,
 		LinkService:          a.linkService,
 		ProjectService:       a.projectService,
-		ProjectCoverService:  projects.NewCoverService(a.projectCoverRepo),
+		ProjectCoverService:  a.projectCoverService,
 		AttachmentService:    a.attachmentService,
 		ExportService:        a.exportService,
 		DownloadService:      a.downloadService,

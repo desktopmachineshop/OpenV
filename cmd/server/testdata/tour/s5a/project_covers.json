@@ -1,7 +1,7 @@
 {
   "golden": "cmd/server/testdata/tour/s5a/project_covers.json",
   "test": "TestTourS5aProjectCovers",
-  "about": "Project cover photos: upload (each refusal, then a PNG and a WebP replacing it), the image as its stored type, cover_updated_at on the project and its list, removal, and the guards.",
+  "about": "Project cover photos: upload (each refusal, then a PNG and a WebP replacing it), the image as its stored type, cover_updated_at on the project and its list, generation's refusals, removal, and the guards.",
   "regenerate": [
     "OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5aProjectCovers$' (which also rewrites the slice's coverage.txt)",
     "UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$' (coverage.txt alone, no database)"
@@ -712,6 +712,143 @@
     },
     {
       "n": 21,
+      "title": "generate with an empty prompt: 400",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/cover/generate",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<project>/cover/generate",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"prompt\":\"  \"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 56,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"a cover prompt must be 1 to 1000 characters\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "a cover prompt must be 1 to 1000 characters"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 22,
+      "title": "generate with a malformed body: 400",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/cover/generate",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<project>/cover/generate",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 33,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"invalid request body\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "invalid request body"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 23,
+      "title": "generate without a workspace OpenAI key: 409, saying where to add one",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/cover/generate",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<project>/cover/generate",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"prompt\":\"A cover for the tour, wide shot, no text\"}"
+      },
+      "status": 409,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 140,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"Generating a cover photo uses the workspace's OpenAI API key: a workspace admin adds one under Workspace settings, AI providers\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "Generating a cover photo uses the workspace's OpenAI API key: a workspace admin adds one under Workspace settings, AI providers"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 24,
+      "title": "the outsider generates one: 404",
+      "actor": "outsider",
+      "route": "POST /api/v1/projects/{id}/cover/generate",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<project>/cover/generate",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"prompt\":\"x\"}"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 30,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"project not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "project not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 25,
+      "title": "still the WebP: no generation stored anything",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{id}/cover",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<project>/cover"
+      },
+      "status": 200,
+      "content_type": "image/webp",
+      "headers": [
+        "Cache-Control: private, max-age=86400",
+        "Content-Disposition: inline"
+      ],
+      "security_headers": "standard",
+      "content_length": 34,
+      "kind": "bytes",
+      "body_base64": "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==",
+      "gzip": "not compressed: the same answer as without Accept-Encoding"
+    },
+    {
+      "n": 26,
       "title": "remove it: the project, without cover_updated_at",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/cover",
@@ -743,7 +880,7 @@
       "events": []
     },
     {
-      "n": 22,
+      "n": 27,
       "title": "remove it again: nothing to remove, 200 all the same",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/cover",
@@ -775,7 +912,7 @@
       "events": []
     },
     {
-      "n": 23,
+      "n": 28,
       "title": "fetch it once removed: 404",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/cover",

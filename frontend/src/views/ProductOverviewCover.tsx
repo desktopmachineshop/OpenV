@@ -33,6 +33,14 @@ export const ProductOverviewCover: React.FC<{ projectId: string; figuresSlot?: (
   const [error, setError] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
 
+  // A cover changed elsewhere in the app, such as by the assistant's card,
+  // reaches the store's copy first.
+  const storeVersion = fromStore?.cover_updated_at;
+  useEffect(() => {
+    if (fromStore) setProject(fromStore);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storeVersion]);
+
   // The project as the server has it now: the store's copy may predate a
   // cover changed elsewhere.
   useEffect(() => {

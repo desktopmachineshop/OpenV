@@ -1,6 +1,7 @@
 package projects
 
 import (
+	"context"
 	"errors"
 	"time"
 )
@@ -48,16 +49,36 @@ type CoverService interface {
 	Delete(projectID string) error
 	// Stamp sets CoverUpdatedAt on each project that has a cover.
 	Stamp(list ...*Project) error
+	// Generate makes a cover from prompt with the workspace's API key and
+	// stores it, replacing any the project had; ErrCoverPrompt,
+	// ErrNoCoverGenerator or ErrCoverProvider when nothing is stored.
+	Generate(ctx context.Context, projectID, apiKey, prompt string) (time.Time, error)
 }
 
 // DefaultCoverService implements CoverService over a CoverRepository.
 type DefaultCoverService struct {
 	repo CoverRepository
+	gen  ImageGenerator
 }
 
 // NewCoverService builds the cover service.
 func NewCoverService(repo CoverRepository) *DefaultCoverService {
 	return &DefaultCoverService{repo: repo}
+}
+
+// WithGenerator gives the service the generator Generate uses.
+func (s *DefaultCoverService) WithGenerator(gen ImageGenerator) *DefaultCoverService {
+	s.gen = gen
+	return s
+}
+
+// Generate implements CoverService.
+func (s *DefaultCoverService) Generate(ctx context.Context, projectID, apiKey, prompt string) (time.Time, error) {
+	img, mime, err := generateCover(ctx, s.gen, apiKey, prompt)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return s.repo.SetCover(projectID, mime, img)
 }
 
 // Get implements CoverService.

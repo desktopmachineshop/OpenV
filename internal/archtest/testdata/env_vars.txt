@@ -70,6 +70,7 @@ OPENV_BILLING_WRITE_REFILL_PER_HOUR	internal/config:Config.rateLimit(refillVar)	
 OPENV_BUDGET_ENFORCE	internal/config:Config.boolean(name)	false
 OPENV_BUILD_SHA	internal/config:Config.text(name)	(computed)
 OPENV_CLIENT_IP_HEADER	os.Getenv	-
+OPENV_COVER_IMAGE_MODEL	internal/config:Config.getenv(name)	-
 OPENV_DATA_DIR	internal/config:Config.text(name)	"./data"
 OPENV_DEPLOYMENT	internal/config:Config.text(name)	"shared"
 OPENV_DOCS_ADMIN_TOKEN	internal/config:Config.text(name)	""

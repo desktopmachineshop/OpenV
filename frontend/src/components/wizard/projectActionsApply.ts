@@ -5,6 +5,7 @@ import {
   chatterAPI,
   linkAPI,
   membersAPI,
+  projectAPI,
   releasesAPI,
   reviewAPI,
   todosAPI,
@@ -14,6 +15,7 @@ import {
   type TargetRelease,
 } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
+import { useAppStore } from '../../state/store';
 import type { ProjectAction } from './projectActions';
 import { applyPlanAction, scheduleNewTask } from './planActionsApply';
 
@@ -193,6 +195,14 @@ export const applyProjectAction = async (ctx: ActionContext, a: ProjectAction): 
     case 'review':
       await reviewAPI.startRound(projectId, a.types);
       return;
+
+    case 'cover': {
+      // The same calls as the Overview's own buttons; the store's copy of
+      // the project follows, so an open Overview or All projects shows it.
+      const res = a.action === 'remove' ? await projectAPI.removeCover(projectId) : await projectAPI.generateCover(projectId, a.prompt);
+      useAppStore.getState().updateProject(res.data);
+      return;
+    }
 
     case 'test_run': {
       // Every test case is resolved before the run exists, so a misnamed one

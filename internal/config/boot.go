@@ -239,6 +239,15 @@ func (c *Config) SharedProductPoolLimit() int {
 	return c.count("OPENV_SHARED_PRODUCT_POOL_LIMIT", sharedproducts.DefaultPoolLimit)
 }
 
+// CoverImageModel is the OpenAI image model a project's cover photo is
+// generated with (OPENV_COVER_IMAGE_MODEL, trimmed); "" when unset, which
+// projects.NewOpenAIImages reads as its DefaultCoverImageModel. The vendor
+// retires image models within months, so a deployment can move to a new one
+// without a release.
+func (c *Config) CoverImageModel() string {
+	return strings.TrimSpace(c.getenv("OPENV_COVER_IMAGE_MODEL"))
+}
+
 // SecretsKey is the key the server seals workspaces' pasted provider API
 // keys and members' saved subscription tokens with (OPENV_SECRETS_KEY, a credential, exactly as set), "" when
 // unset, which leaves the app unable to store one. Changing it makes every

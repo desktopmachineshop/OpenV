@@ -1020,6 +1020,26 @@ actual requirement text at run time via MCP tools. This keeps prompts small,
 avoids stale copies of requirements, and means access control is enforced by
 the API on every read — not by whatever happened to be pasted into a prompt.
 
+## Project cover photos
+
+An agent can change a project's cover photo, the picture across the top of
+its Overview and beside it in All projects, with three tools:
+
+- **`generate_project_cover`** makes the picture from a description and sets
+  it (`POST /api/v1/projects/{id}/cover/generate`). It uses the workspace's
+  own OpenAI API key, the one its admins add under AI providers, so the
+  workspace pays; without one it is refused with what to do. Generations are
+  limited per workspace (10 at once, 20 an hour), and one can take a minute.
+- **`set_project_cover`** sets an image the agent already has, as base64 or a
+  `data:` URL: PNG, JPEG, GIF or WebP up to 5 MB.
+- **`remove_project_cover`** removes it.
+
+They are ordinary writes: an agent run acts in its own project as an editor,
+and a connected app or a runner key acts as its member or workspace, so the
+same rules apply as to a person clicking the Overview's buttons. The V&V
+Assistant, which writes nothing itself, offers a **Cover photo** card
+instead: the person's click generates or removes the picture.
+
 ## The AI context surface
 
 Reading a whole project through `list_artifacts` costs tens of thousands of

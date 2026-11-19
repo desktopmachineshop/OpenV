@@ -17,7 +17,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   Overview with the project's traced, verified, failing and suspect
   figures on it, and fills the left of the project's row in All
   projects, so projects are easier to tell apart at a glance. A large
-  photo is scaled down before it is saved.
+  photo is scaled down before it is saved. Ask the V&V Assistant for a
+  cover and it offers a card that generates one with the workspace's
+  OpenAI key; agents and connected AI apps can generate, set or remove a
+  cover with their OpenV tools.
 
 ### Bug fixes
 

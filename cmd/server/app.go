@@ -124,6 +124,7 @@ type app struct {
 	linkService          *links.DefaultService
 	embeddingService     *embeddings.Service
 	projectService       projects.Service
+	projectCoverService  projects.CoverService
 	attachmentService    attachments.Service
 	baselineService      *baselines.DefaultService
 	chatterService       *chatter.DefaultService

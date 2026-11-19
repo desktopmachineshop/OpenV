@@ -255,6 +255,10 @@ type Handler struct {
 	// address: a client registers once and refreshes once an hour, so the
 	// bucket only stops a script from filling the clients table or guessing.
 	oauthLimiter *rateLimiter
+	// coverGenLimiter bounds cover photo generations per workspace: each
+	// one is paid for with the workspace's own provider key, and an agent
+	// in a loop must not run up its bill (project_handlers_cover.go).
+	coverGenLimiter *rateLimiter
 	// mcpRouter is the router the remote MCP endpoint sends each tool's API
 	// request through, as the member (mcp_handlers.go); see SetMCPRouter.
 	mcpRouter http.Handler
@@ -285,6 +289,7 @@ func NewHandler(deps HandlerDeps) *Handler {
 		inviteLimiter:          newRateLimiterOr(deps.RateLimits.Invite, defaultInviteBurst, defaultInviteRefill),
 		visitLimiter:           newRateLimiter(defaultVisitBurst, defaultVisitRefill),
 		oauthLimiter:           newRateLimiter(defaultOAuthBurst, defaultOAuthRefill),
+		coverGenLimiter:        newRateLimiter(defaultCoverGenBurst, defaultCoverGenRefill),
 	}
 	h.HandlerDeps = deps
 	for _, m := range h.Modules {

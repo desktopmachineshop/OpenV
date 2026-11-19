@@ -6,6 +6,8 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/members"
@@ -19,6 +21,7 @@ func (h *Handler) registerProjectCoverRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/cover", h.GetProjectCover).Methods("GET")
 	router.HandleFunc("/api/v1/projects/{id}/cover", h.UploadProjectCover).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/cover", h.DeleteProjectCover).Methods("DELETE")
+	router.HandleFunc("/api/v1/projects/{id}/cover/generate", h.GenerateProjectCover).Methods("POST")
 }
 
 // stampCovers marks each project that has a cover photo with when it was
@@ -140,6 +143,73 @@ func (h *Handler) DeleteProjectCover(w http.ResponseWriter, r *http.Request) {
 	}
 	if err := h.ProjectCoverService.Delete(id); err != nil {
 		respondInternal(w, r, "Failed to remove cover photo", err)
+		return
+	}
+	h.writeProjectWithCover(w, r, id)
+}
+
+// noCoverKeyMessage answers a generation the workspace has no key for.
+const noCoverKeyMessage = "Generating a cover photo uses the workspace's OpenAI API key: a workspace admin adds one under Workspace settings, AI providers"
+
+// GenerateProjectCover makes the project's cover photo from a prompt
+// (editor) and answers the project. The image is generated with the
+// workspace's own OpenAI API key (projects.CoverKeyEnv), so the workspace
+// pays for it and a workspace with none is answered 409 with what to do.
+// Generations are rate-limited per workspace (coverGenLimiter): an agent in
+// a loop must not run up the workspace's bill. The prompt is 1 to 1,000
+// characters (400 otherwise); the provider's refusal is answered 502 with
+// its reason. Nothing is stored unless an image comes back.
+func (h *Handler) GenerateProjectCover(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	if !h.requireProjectRole(w, r, id, members.RoleEditor) {
+		return
+	}
+	if h.coverUnavailable(w) {
+		return
+	}
+	var req struct {
+		Prompt string `json:"prompt"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if p := strings.TrimSpace(req.Prompt); p == "" || utf8.RuneCountInString(p) > projects.MaxCoverPromptRunes {
+		writeJSONError(w, http.StatusBadRequest, projects.ErrCoverPrompt.Error())
+		return
+	}
+	orgID := h.orgIDForProject(id)
+	key := ""
+	if h.ProviderKeyService != nil && orgID != "" {
+		var err error
+		if key, err = h.ProviderKeyService.RevealKey(orgID, projects.CoverKeyEnv); err != nil {
+			respondInternal(w, r, "Failed to read the workspace's API key", err)
+			return
+		}
+	}
+	if key == "" {
+		writeJSONError(w, http.StatusConflict, noCoverKeyMessage)
+		return
+	}
+	if h.coverGenLimiter != nil {
+		if ok, retry := h.coverGenLimiter.allow(orgID); !ok {
+			writeRateLimited(w, "Too many cover photos generated in this workspace; try again later", retry)
+			return
+		}
+	}
+	if _, err := h.ProjectCoverService.Generate(r.Context(), id, key, req.Prompt); err != nil {
+		switch {
+		case errors.Is(err, projects.ErrCoverPrompt):
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, projects.ErrNoCoverGenerator):
+			writeJSONError(w, http.StatusConflict, err.Error())
+		case errors.Is(err, projects.ErrCoverProvider):
+			slog.Warn("api: cover generation failed", "project_id", id, "error", err)
+			writeJSONError(w, http.StatusBadGateway, err.Error())
+		case errors.Is(err, projects.ErrNotFound):
+			unknownProject.write(w)
+		default:
+			respondInternal(w, r, "Failed to save cover photo", err)
+		}
 		return
 	}
 	h.writeProjectWithCover(w, r, id)
