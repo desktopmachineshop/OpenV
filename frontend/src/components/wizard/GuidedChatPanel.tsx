@@ -6,6 +6,7 @@ import { RECONNECT, useEventStream } from '../../hooks/useEventStream';
 import type { ArtifactTypeValue } from '../../generated/contract';
 import { quickActionsFor, useAutoSend } from './guidedChatActions';
 import { ONE_AT_A_TIME_KINDS, PROJECT_ACTION_LABELS, isProjectActionKind, projectActionLabels, projectActionSummary } from './projectActions';
+import { coverPreview } from './coverCard';
 
 /**
  * One structured proposal embedded in a copilot reply: a wizard entry, or —
@@ -716,6 +717,7 @@ export const GuidedChatPanel = forwardRef<GuidedChatPanelHandle, GuidedChatPanel
         </div>
         <div style={{ fontSize: 13, color: 'var(--text)', marginBottom: detail ? 2 : 6 }}>{title}</div>
         {detail && <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{detail}</div>}
+        {coverPreview(s)}
         {s.replaces && (
           <div style={{ fontSize: 12, color: 'var(--neutral)', fontStyle: 'italic', marginBottom: 6 }}>
             Replaces: {replacesLabel(s)}

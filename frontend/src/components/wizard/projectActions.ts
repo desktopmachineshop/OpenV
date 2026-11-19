@@ -1,5 +1,6 @@
 import { ARTIFACT_STATUSES, LINK_TYPE_RULES, type FeatureKey } from '../../generated/contract';
 import { text } from './artifactTemplates';
+import { COVER_SVG_MAX, coverDrawing, drawable } from './coverCard';
 import { PLAN_ACTION_KINDS, PLAN_ACTION_LABELS, planActionLabels, planActionSummary, planPlanAction, scheduleFields, scheduleSummary, type PlanAction, type ScheduleFields } from './planActions';
 
 /**
@@ -95,6 +96,7 @@ export type ProjectAction =
       results: { ref: string; status: string; notes: string }[];
       complete: boolean;
     }
+  | { kind: 'cover'; action: 'draw'; svg: string }
   | { kind: 'cover'; action: 'generate'; prompt: string }
   | { kind: 'cover'; action: 'remove' };
 
@@ -250,8 +252,14 @@ export const planProjectAction = (s: Suggestion): ProjectActionPlan => {
 
     case 'cover': {
       if (text(s.action) === 'remove') return act({ kind: 'cover', action: 'remove' });
+      const svg = coverDrawing(s);
+      if (svg) {
+        if (svg.length > COVER_SVG_MAX) return refuse('The drawing is larger than 256 KB.');
+        if (!drawable(svg)) return refuse('The drawing is not SVG: it should start with <svg.');
+        return act({ kind: 'cover', action: 'draw', svg });
+      }
       const prompt = text(s.prompt);
-      if (!prompt) return refuse('The cover card does not say what the picture shows.');
+      if (!prompt) return refuse('The cover card has no drawing.');
       if ([...prompt].length > COVER_PROMPT_MAX) return refuse(`The description is longer than ${COVER_PROMPT_MAX} characters.`);
       return act({ kind: 'cover', action: 'generate', prompt });
     }
@@ -303,6 +311,7 @@ export const projectActionSummary = (s: Suggestion): { title: string; detail: st
     case 'review':
       return { title: 'Start a review round', detail: a.types ? `Every draft ${a.types.join(', ')} goes to in review` : 'Every draft goes to in review' };
     case 'cover':
+      if (a.action === 'draw') return { title: 'A cover photo the assistant drew', detail: '' };
       return a.action === 'remove'
         ? { title: 'Remove the cover photo', detail: 'The project goes back to having no picture' }
         : { title: 'Generate a cover photo', detail: a.prompt };
@@ -346,7 +355,8 @@ export const projectActionLabels = (s: Suggestion): { button: string; done: stri
     case 'test_run':
       return { button: 'Record run', done: '✓ Recorded' };
     case 'cover':
-      return text(s.action) === 'remove' ? { button: 'Remove cover', done: '✓ Removed' } : { button: 'Generate cover', done: '✓ Generated' };
+      if (text(s.action) === 'remove') return { button: 'Remove cover', done: '✓ Removed' };
+      return coverDrawing(s) ? { button: 'Set as cover', done: '✓ Set' } : { button: 'Generate cover', done: '✓ Generated' };
     default:
       return PLAN_ACTION_KINDS.has(s.kind) ? planActionLabels(s) : { button: 'Apply', done: '✓ Applied' };
   }

@@ -291,6 +291,7 @@ POST /api/v1/projects/import
 POST /api/v1/projects/{id}/baselines
 POST /api/v1/projects/{id}/cover
 POST /api/v1/projects/{id}/cover/generate
+POST /api/v1/projects/{id}/cover/svg
 POST /api/v1/projects/{id}/draft-test-cases
 POST /api/v1/projects/{id}/evidence-bundles
 POST /api/v1/projects/{id}/interviews

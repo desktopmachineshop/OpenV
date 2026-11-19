@@ -74,6 +74,11 @@ export const projectAPI = {
    */
   generateCover: (id: string, prompt: string) =>
     client.post<Project>(`/api/v1/projects/${id}/cover/generate`, { prompt }, { timeout: 150000 }),
+  /**
+   * Set the cover from an SVG drawing, which the server renders to a PNG
+   * (the SVG itself is not kept); 400 with the reason for one it cannot draw.
+   */
+  drawCover: (id: string, svg: string) => client.post<Project>(`/api/v1/projects/${id}/cover/svg`, { svg }),
   /** The cover's URL, versioned by its cover_updated_at so a new cover is a new URL. */
   coverUrl: (id: string, version: string) =>
     `${API_BASE_URL}/api/v1/projects/${id}/cover?v=${encodeURIComponent(version)}`,

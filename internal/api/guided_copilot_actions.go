@@ -36,10 +36,15 @@ Name artifacts by reference throughout, and tasks and milestones by their title 
 }
 
 // coverActionRule is the project's cover photo as a card (FeatureProjectCovers),
-// beside projectActionRules. Applying it generates the picture with the
-// workspace's own OpenAI key (POST /projects/{id}/cover/generate), so the
-// person's click is what spends it. Parsed by projectActions.ts as kind
-// "cover".
+// beside projectActionRules. The assistant draws the cover itself, as SVG in
+// the card; applying it renders the drawing in the member's browser and
+// uploads the picture, so the assistant's own run makes it, with no image
+// model and no key. Parsed by projectActions.ts as kind "cover".
 const coverActionRule = `
-The project's cover photo has a card too:
-- {"kind":"cover","prompt":"…"} — generate the project's cover photo, the picture across the top of its Overview and beside it in All projects, from a description, and set it in place of any it has. Describe one wide picture of the product or its setting, with no text in it, drawn from the project's vision and what it builds. {"kind":"cover","action":"remove"} removes the cover. Offer a cover card when the user asks for one; the picture is made with the workspace's OpenAI key when they click, and the card says why if the workspace has none.`
+The project's cover photo, the picture across the top of its Overview and beside it in All projects, has a card too. You make the picture yourself, by drawing it:
+- {"kind":"cover","svg":"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1536 1024'>…</svg>"} — draw the cover as SVG and set it in place of any the project has. Draw one wide illustration of the product or its setting, drawn from the project's vision and what it builds: fill the whole frame with a background and keep the subject in the middle, since the Overview shows a wide band across the middle of the picture; then rect, circle, ellipse, line, polyline, polygon and path shapes, grouped in g with transforms, in colours or linearGradient and radialGradient, with opacity. Leave out text, images, filters, masks and patterns. Write attribute values in single quotes so the JSON stays readable, and keep it under 256 KB. {"kind":"cover","action":"remove"} removes the cover. Offer a cover card when the user asks for a cover; the card shows the picture before they apply it.`
+
+// coverPhotoRule offers a photo-like cover from an image model, which only
+// a workspace with an OpenAI key has (GenerateProjectCover).
+const coverPhotoRule = `
+- {"kind":"cover","prompt":"…"} — instead of drawing, have an image model paint a photo-like cover from a description, with the workspace's OpenAI key, which the workspace pays for. Offer this only when the user asks for a photo or a realistic picture; describe one wide picture with no text in it.`

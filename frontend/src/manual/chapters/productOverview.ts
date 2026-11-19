@@ -23,13 +23,19 @@ to the top of their column. Anyone who can see the project sees its cover;
 changing it takes an editor.
 
 You can also have a cover made for you. Ask the **V&V Assistant** for one
-("make a cover photo for this project") and it offers a **Cover photo** card
-describing the picture; **Generate cover** makes it and sets it, and a card
-can remove the cover too. Agents, and AI apps you connect to the workspace,
-can generate, set or remove a cover with their OpenV tools. A generated
-picture is made with the workspace's own OpenAI API key, which a workspace
-admin adds under **Workspace settings**, **AI providers**; without one the
-card says so. A workspace can generate a limited number of covers an hour.
+("draw a cover for this project") and it draws a picture of the product or
+its setting into a **Cover photo** card, which shows the picture; **Set as
+cover** sets it. The assistant draws it itself, on your own runner, so there
+is no image service to set up and nothing extra to pay. Ask again for a
+different picture, or ask it to remove the cover. Agents, and AI apps you
+connect to the workspace, can draw, set or remove a cover with their OpenV
+tools in the same way.
+
+A drawn cover is an illustration. For a photo-like picture, a workspace
+admin can add the workspace's OpenAI API key under **Workspace settings**,
+**AI providers**; the assistant then offers a photo card when you ask for a
+photo, made by OpenAI's image model and paid for with that key. A workspace
+can generate a limited number of photos an hour.
 
 ## Where the project sits
 

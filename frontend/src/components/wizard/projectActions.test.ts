@@ -92,16 +92,23 @@ describe('the card face', () => {
 });
 
 describe('the cover card', () => {
-  it('generates from a description, or removes the cover', () => {
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1536 1024'><rect width='1536' height='1024' fill='#123'/></svg>`;
+
+  it('draws, generates from a description, or removes the cover', () => {
+    expect(ok({ kind: 'cover', svg: `  ${svg}  ` })).toEqual({ kind: 'cover', action: 'draw', svg });
     expect(ok({ kind: 'cover', prompt: ' A rover on red sand ' })).toEqual({ kind: 'cover', action: 'generate', prompt: 'A rover on red sand' });
     expect(ok({ kind: 'cover', action: 'remove' })).toEqual({ kind: 'cover', action: 'remove' });
-    expect(refused({ kind: 'cover' })).toMatch(/does not say what the picture shows/);
+    expect(refused({ kind: 'cover' })).toMatch(/has no drawing/);
+    expect(refused({ kind: 'cover', svg: '<html></html>' })).toMatch(/not SVG/);
+    expect(refused({ kind: 'cover', svg: `<svg>${'x'.repeat(256 * 1024)}</svg>` })).toMatch(/larger than 256 KB/);
     expect(refused({ kind: 'cover', prompt: 'x'.repeat(1001) })).toMatch(/longer than 1000/);
   });
 
   it('says what it will do on its face', () => {
+    expect(projectActionSummary({ kind: 'cover', svg }).title).toBe('A cover photo the assistant drew');
     expect(projectActionSummary({ kind: 'cover', prompt: 'A rover' })).toEqual({ title: 'Generate a cover photo', detail: 'A rover' });
     expect(projectActionSummary({ kind: 'cover', action: 'remove' }).title).toBe('Remove the cover photo');
+    expect(projectActionLabels({ kind: 'cover', svg }).button).toBe('Set as cover');
     expect(projectActionLabels({ kind: 'cover', prompt: 'A rover' }).button).toBe('Generate cover');
     expect(projectActionLabels({ kind: 'cover', action: 'remove' }).button).toBe('Remove cover');
   });

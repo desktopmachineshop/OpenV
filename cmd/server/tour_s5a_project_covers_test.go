@@ -22,7 +22,9 @@ import (
 // stored type, removal (twice: nothing to remove is no error) and the image
 // gone. An outsider, an account in a workspace of its own, finds no project
 // to read or change, and a request with no session is refused before
-// anything is read. Generating a cover from a prompt is refused for an
+// anything is read. A drawing is rendered and stored as a PNG with no key,
+// and one that is no SVG or draws nothing is refused. Generating a cover
+// from a prompt is refused for an
 // empty prompt and, since the tour's workspace has no OpenAI key, answered
 // 409 with where to add one: the tour never calls a provider.
 func TestTourS5aProjectCovers(t *testing.T) {
@@ -30,7 +32,8 @@ func TestTourS5aProjectCovers(t *testing.T) {
 		slice: "s5a",
 		key:   "project_covers",
 		about: "Project cover photos: upload (each refusal, then a PNG and a WebP replacing it), the image as its " +
-			"stored type, cover_updated_at on the project and its list, generation's refusals, removal, and the guards.",
+			"stored type, cover_updated_at on the project and its list, a drawing rendered, generation's refusals, " +
+			"removal, and the guards.",
 		run: projectCoversTour,
 	})
 }
@@ -82,6 +85,19 @@ func projectCoversTour(tr *tour) {
 	tr.step("no session: 401", tr.anon, "GET /api/v1/projects/{id}/cover", p)
 	tr.step("a project that does not exist: 404", o, "GET /api/v1/projects/{id}/cover", at("id", "{{phantom}}"))
 	tr.step("still the WebP: the refused calls changed nothing", o, "GET /api/v1/projects/{id}/cover", p)
+
+	// A drawing, which the server renders: how an agent makes a cover, with
+	// no provider and no key.
+	draw := "POST /api/v1/projects/{id}/cover/svg"
+	tr.step("draw it as SVG: rendered to a PNG and stored, with no key", o, draw, p,
+		jsonBody(`{"svg":"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1536 1024'><rect width='1536' height='1024' fill='#1d3557'/><circle cx='768' cy='512' r='200' fill='gold'/></svg>"}`))
+	tr.step("fetch it: the rendered PNG, never the SVG", o, "GET /api/v1/projects/{id}/cover", p)
+	tr.step("a drawing that is not SVG: 400 with the reason", o, draw, p, jsonBody(`{"svg":"<html></html>"}`))
+	tr.step("a drawing of nothing the renderer draws: 400", o, draw, p,
+		jsonBody(`{"svg":"<svg xmlns='http://www.w3.org/2000/svg'><text>Hi</text></svg>"}`))
+	tr.step("no drawing at all: 400", o, draw, p, jsonBody(`{}`))
+	tr.step("the outsider draws one: 404", outsider, draw, p, jsonBody(`{"svg":"<svg/>"}`))
+	tr.step("put the WebP back", o, cover, p, projectCoversFile("cover.webp", "image/webp", []byte(tourWebP)))
 
 	// Generation, from a prompt with the workspace's OpenAI key: this
 	// workspace has none, so the request is answered with what to do

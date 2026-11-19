@@ -14,8 +14,11 @@ import {
 } from '../../api/client';
 import { applySuggestionsToProject } from './applySuggestion';
 import { useAppStore } from '../../state/store';
+import { renderCoverDrawing } from './coverCard';
 
 vi.mock('../../api/client', async (orig) => mockApi(await orig()));
+// jsdom draws no images: the browser's rendering of a drawing is stubbed.
+vi.mock('./coverCard', async (orig) => ({ ...(await orig<typeof import('./coverCard')>()), renderCoverDrawing: vi.fn() }));
 
 const art = (id: string, ref: string, attributes: Record<string, any> = {}) =>
   ({ id, ref, project_id: 'p1', type: 'requirement', title: ref, body: '', attributes } as any);
@@ -158,6 +161,28 @@ describe('applying project-action cards', () => {
 
 describe('the cover card', () => {
   const project = (cover?: string) => ({ id: 'p1', name: 'Rover', cover_updated_at: cover }) as any;
+
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg'><rect width='9' height='9'/></svg>`;
+
+  it('renders a drawing in the browser and uploads the picture', async () => {
+    useAppStore.setState({ projects: [project()] } as never);
+    const png = new Blob(['png'], { type: 'image/png' });
+    vi.mocked(renderCoverDrawing).mockResolvedValue(png);
+    vi.mocked(projectAPI.uploadCover).mockResolvedValue({ data: project('t2') } as any);
+    expect(await apply([{ kind: 'cover', svg }])).toEqual([null]);
+    expect(renderCoverDrawing).toHaveBeenCalledWith(svg);
+    expect(projectAPI.uploadCover).toHaveBeenCalledWith('p1', png, 'cover.png');
+    expect(projectAPI.drawCover).not.toHaveBeenCalled();
+    expect(useAppStore.getState().projects[0].cover_updated_at).toBe('t2');
+  });
+
+  it('has the server render a drawing the browser cannot', async () => {
+    vi.mocked(renderCoverDrawing).mockRejectedValue(new Error('no canvas'));
+    vi.mocked(projectAPI.drawCover).mockResolvedValue({ data: project('t3') } as any);
+    expect(await apply([{ kind: 'cover', svg }])).toEqual([null]);
+    expect(projectAPI.drawCover).toHaveBeenCalledWith('p1', svg);
+    expect(projectAPI.uploadCover).not.toHaveBeenCalled();
+  });
 
   it('generates the cover with the description and puts the project in the store', async () => {
     useAppStore.setState({ projects: [project()] } as never);

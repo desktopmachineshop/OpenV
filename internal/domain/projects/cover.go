@@ -53,6 +53,10 @@ type CoverService interface {
 	// stores it, replacing any the project had; ErrCoverPrompt,
 	// ErrNoCoverGenerator or ErrCoverProvider when nothing is stored.
 	Generate(ctx context.Context, projectID, apiKey, prompt string) (time.Time, error)
+	// Draw renders an SVG drawing (RenderCoverSVG) and stores the image as
+	// the cover, replacing any the project had; ErrCoverSVG with the reason
+	// when the drawing cannot be rendered, and nothing is stored.
+	Draw(projectID, svg string) (time.Time, error)
 }
 
 // DefaultCoverService implements CoverService over a CoverRepository.
@@ -75,6 +79,15 @@ func (s *DefaultCoverService) WithGenerator(gen ImageGenerator) *DefaultCoverSer
 // Generate implements CoverService.
 func (s *DefaultCoverService) Generate(ctx context.Context, projectID, apiKey, prompt string) (time.Time, error) {
 	img, mime, err := generateCover(ctx, s.gen, apiKey, prompt)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return s.repo.SetCover(projectID, mime, img)
+}
+
+// Draw implements CoverService.
+func (s *DefaultCoverService) Draw(projectID, svg string) (time.Time, error) {
+	img, mime, err := RenderCoverSVG(svg)
 	if err != nil {
 		return time.Time{}, err
 	}

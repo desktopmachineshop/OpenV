@@ -18,9 +18,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   figures on it, and fills the left of the project's row in All
   projects, so projects are easier to tell apart at a glance. A large
   photo is scaled down before it is saved. Ask the V&V Assistant for a
-  cover and it offers a card that generates one with the workspace's
-  OpenAI key; agents and connected AI apps can generate, set or remove a
-  cover with their OpenV tools.
+  cover and it draws one for you, shown on a card you apply with one
+  click, with nothing to set up; agents and connected AI apps can draw,
+  set or remove a cover with their OpenV tools. With the workspace's
+  OpenAI key, the assistant can also make a photo-like cover when asked.
 
 ### Bug fixes
 

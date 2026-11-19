@@ -16,6 +16,7 @@ import {
 } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import { useAppStore } from '../../state/store';
+import { renderCoverDrawing } from './coverCard';
 import type { ProjectAction } from './projectActions';
 import { applyPlanAction, scheduleNewTask } from './planActionsApply';
 
@@ -70,6 +71,21 @@ const memberNamed = async (projectId: string, name: string): Promise<string> => 
   );
   if (!m) throw new Error(`${name} is not a member of this project.`);
   return m.user_id;
+};
+
+/**
+ * A drawn cover, rendered here in the browser, which draws all of SVG, and
+ * uploaded as the picture; where the browser cannot draw it, the server
+ * renders it instead. A refusal of the upload itself is not retried.
+ */
+const setDrawnCover = async (projectId: string, svg: string) => {
+  let png: Blob;
+  try {
+    png = await renderCoverDrawing(svg);
+  } catch {
+    return projectAPI.drawCover(projectId, svg);
+  }
+  return projectAPI.uploadCover(projectId, png, 'cover.png');
 };
 
 const due = (date?: string): string | null => (date ? `${date}T00:00:00Z` : null);
@@ -199,7 +215,12 @@ export const applyProjectAction = async (ctx: ActionContext, a: ProjectAction): 
     case 'cover': {
       // The same calls as the Overview's own buttons; the store's copy of
       // the project follows, so an open Overview or All projects shows it.
-      const res = a.action === 'remove' ? await projectAPI.removeCover(projectId) : await projectAPI.generateCover(projectId, a.prompt);
+      const res =
+        a.action === 'remove'
+          ? await projectAPI.removeCover(projectId)
+          : a.action === 'draw'
+            ? await setDrawnCover(projectId, a.svg)
+            : await projectAPI.generateCover(projectId, a.prompt);
       useAppStore.getState().updateProject(res.data);
       return;
     }

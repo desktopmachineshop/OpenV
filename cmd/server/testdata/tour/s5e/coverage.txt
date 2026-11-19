@@ -304,6 +304,7 @@ POST /api/v1/projects/import: 201, 400, 401, 403; over_plan_self_hosted, over_pl
 POST /api/v1/projects/{id}/baselines: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/cover: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/cover/generate: 401, 404; phantom_matrix (errors only)
+POST /api/v1/projects/{id}/cover/svg: 401, 404; phantom_matrix (errors only)
 POST /api/v1/projects/{id}/draft-test-cases: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/evidence-bundles: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
 POST /api/v1/projects/{id}/interviews: 400, 401, 403, 404; phantom_matrix, real_id_reads (errors only)
@@ -409,4 +410,4 @@ PUT /api/v1/work-items/{id}/external-links/{otherId}: 401, 404; phantom_matrix (
 PUT /api/v1/work-items/{id}/relationships/{otherId}: 401, 404; phantom_matrix (errors only)
 PUT /api/v1/work-items/{id}/schedule: 401, 404; phantom_matrix (errors only)
 
-s5e: 396 of 397 routes reached (99.7%), 176 with a 2xx or 3xx answer (44.3%)
+s5e: 397 of 398 routes reached (99.7%), 176 with a 2xx or 3xx answer (44.2%)
