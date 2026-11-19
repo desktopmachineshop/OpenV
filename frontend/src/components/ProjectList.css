@@ -123,8 +123,9 @@
 }
 
 /* A project's cover photo (project-covers): a banner across the top of its
-   card in the grid, bleeding to the card's edges, and a thumbnail before
-   its name in the rows of the redesigned Home. */
+   card in the grid, bleeding to the card's edges. In the rows of the
+   redesigned Home it is a column on the left of each row instead, as tall as
+   the row (.has-side-cover, below). */
 .project-card-cover {
   display: block;
   width: calc(100% + 28px);
@@ -135,14 +136,6 @@
   background: var(--surface-hover);
 }
 
-.project-card-thumb {
-  flex: none;
-  width: 64px;
-  height: 40px;
-  object-fit: cover;
-  border-radius: 4px;
-  background: var(--surface-hover);
-}
 
 .delete-btn {
   background: none;
@@ -391,6 +384,50 @@
 .projects-grid.is-rows.is-tree .project-meters,
 .projects-grid.is-rows.is-tree .project-footer {
   margin-left: 24px;
+}
+
+/* A row beside its cover photo (project-covers): the photo on the left, as
+   tall as the row, and the row's content to its right. A row with no photo
+   keeps the column, with the project's initial, so the rows line up. */
+.projects-grid.is-rows .project-card.has-side-cover {
+  flex-direction: row;
+  align-items: stretch;
+  gap: 14px;
+}
+
+.project-card-side {
+  flex: none;
+  align-self: stretch;
+  width: 148px;
+  min-height: 76px;
+  height: auto;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--surface-hover);
+}
+
+.project-card-side.is-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.project-card-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+@media (max-width: 600px) {
+  .project-card-side {
+    width: 80px;
+    min-height: 64px;
+  }
 }
 
 .projects-grid.is-rows .project-card:last-child {

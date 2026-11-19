@@ -3,7 +3,7 @@ import { createRoot, Root } from 'react-dom/client';
 import { mockApi } from '../test/mockApi';
 import { projectAPI, type Project } from '../api/client';
 import { ProductOverviewCover } from './ProductOverviewCover';
-import { ProjectCoverImage } from '../components/ProjectListCover';
+import { ProjectCardWithCover, ProjectCoverImage } from '../components/ProjectListCover';
 import { useAppStore } from '../state/store';
 
 // A project's cover photo: added, changed and removed at the top of its
@@ -94,6 +94,21 @@ describe('ProductOverviewCover', () => {
     expect(buttons()).toEqual(['Add a cover photo']);
   });
 
+  it('offers a place on the photo for the figures only while there is a photo', async () => {
+    gates(true);
+    vi.mocked(projectAPI.get).mockResolvedValue({ data: project('2026-11-19T10:00:00Z') } as never);
+    vi.mocked(projectAPI.removeCover).mockResolvedValue({ data: project() } as never);
+    const slots: (HTMLDivElement | null)[] = [];
+    await mount(<ProductOverviewCover projectId="p1" figuresSlot={(el) => slots.push(el)} />);
+    const slot = slots[slots.length - 1];
+    expect(slot).not.toBeNull();
+    expect(container.querySelector('.ov-overview-cover.has-photo')!.contains(slot)).toBe(true);
+    await click('Remove');
+    // The photo gone, the slot goes with it, and the figures return to their column.
+    expect(slots[slots.length - 1]).toBeNull();
+    expect(container.querySelector('.ov-overview-cover.has-photo')).toBeNull();
+  });
+
   it('says why an upload was refused', async () => {
     gates(true);
     vi.mocked(projectAPI.get).mockResolvedValue({ data: project() } as never);
@@ -137,5 +152,44 @@ describe('ProjectCoverImage', () => {
       container.querySelector('img')!.dispatchEvent(new Event('error'));
     });
     expect(container.querySelector('img')).toBeNull();
+  });
+});
+
+describe('ProjectCardWithCover', () => {
+  beforeEach(() => {
+    vi.mocked(projectAPI.coverUrl).mockImplementation((id: string, v: string) => `/api/v1/projects/${id}/cover?v=${v}`);
+  });
+
+  it('puts the photo on the left and the content beside it', async () => {
+    await mount(
+      <ProjectCardWithCover project={project('t1')} side>
+        <h3>Rover</h3>
+      </ProjectCardWithCover>
+    );
+    const [side, body] = Array.from(container.children);
+    expect(side.tagName).toBe('IMG');
+    expect(side.className).toBe('project-card-side');
+    expect(body.className).toBe('project-card-body');
+    expect(body.querySelector('h3')!.textContent).toBe('Rover');
+  });
+
+  it("keeps the column with the project's initial when it has no photo", async () => {
+    await mount(
+      <ProjectCardWithCover project={{ id: 'p2', name: ' ground station', cover_updated_at: undefined }} side>
+        <h3>Ground station</h3>
+      </ProjectCardWithCover>
+    );
+    const tile = container.querySelector('.project-card-side.is-empty')!;
+    expect(tile.textContent).toBe('G');
+    expect(container.querySelector('img')).toBeNull();
+  });
+
+  it('draws the content alone, as before, when no project in the list has a photo', async () => {
+    await mount(
+      <ProjectCardWithCover project={project('t1')} side={false}>
+        <h3>Rover</h3>
+      </ProjectCardWithCover>
+    );
+    expect(container.innerHTML).toBe('<h3>Rover</h3>');
   });
 });

@@ -36,7 +36,7 @@ const Figure: React.FC<{ value: string; label: string; danger?: boolean }> = ({ 
   </span>
 );
 
-export const PhoneFigure: React.FC<{ value: string; label: string; to: string; danger?: boolean }> = ({ value, label, to, danger }) => (
+export const PhoneFigure: React.FC<{ value: string; label: string; to: string; danger?: boolean; style?: React.CSSProperties }> = ({ value, label, to, danger, style }) => (
   <Link
     to={to}
     style={{
@@ -48,6 +48,7 @@ export const PhoneFigure: React.FC<{ value: string; label: string; to: string; d
       padding: '8px 4px',
       color: 'var(--text)',
       textDecoration: 'none',
+      ...style,
     }}
   >
     <b style={{ fontSize: 18, color: danger ? 'var(--danger-strong)' : undefined }}>{value}</b>

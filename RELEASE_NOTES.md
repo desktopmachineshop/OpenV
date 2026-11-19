@@ -14,9 +14,10 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 - **Cover photos for projects.** Give a project a cover photo from the
   top of its Overview: **Add a cover photo**, then **Change cover** or
   **Remove** once it has one. The photo runs across the top of the
-  Overview and shows beside the project's name in All projects, so
-  projects are easier to tell apart at a glance. A large photo is scaled
-  down before it is saved.
+  Overview with the project's traced, verified, failing and suspect
+  figures on it, and fills the left of the project's row in All
+  projects, so projects are easier to tell apart at a glance. A large
+  photo is scaled down before it is saved.
 
 ### Bug fixes
 

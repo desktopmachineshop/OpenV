@@ -2013,6 +2013,12 @@ input[type='checkbox'].ov-switch:focus-visible {
   top: 16px;
   min-width: 0;
 }
+/* The project's cover photo (project-covers) spans both columns, with the
+   figures on its foot; on one column the photo comes first, above the rest
+   of where the project stands. */
+.ov-overview-cover {
+  grid-column: 1 / -1;
+}
 @media (max-width: 900px) {
   .ov-overview {
     grid-template-columns: minmax(0, 1fr);
@@ -2020,6 +2026,9 @@ input[type='checkbox'].ov-switch:focus-visible {
   .ov-overview-status {
     position: static;
     order: -1;
+  }
+  .ov-overview-cover.has-photo {
+    order: -2;
   }
 }
 

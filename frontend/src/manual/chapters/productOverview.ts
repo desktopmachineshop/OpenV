@@ -11,13 +11,16 @@ phone, where the project stands comes first.
 ## Cover photo
 
 A project can have a cover photo, shown across the top of its Overview and
-on the project in **All projects**. Before there is one, a slim box at the
-top of the page offers **Add a cover photo**; choose a PNG, JPEG, GIF or
+beside the project in **All projects**. Before there is one, a slim box at
+the top of the page offers **Add a cover photo**; choose a PNG, JPEG, GIF or
 WebP image. A large photo is scaled down in your browser before it is
-saved, and a file over 5 MB is refused. Once there is a cover,
-**Change cover** in its corner replaces it and **Remove** takes it away.
-Anyone who can see the project sees its cover; changing it takes an
-editor.
+saved, and a file over 5 MB is refused. Once there is a cover, it runs
+across the whole page, with the project's four figures (**traced**,
+**verified**, **failing** and **suspect**) along its foot, so the panels
+beside the definition start higher up. **Change cover** in the photo's top
+corner replaces it and **Remove** takes it away; the figures then go back
+to the top of their column. Anyone who can see the project sees its cover;
+changing it takes an editor.
 
 ## Where the project sits
 

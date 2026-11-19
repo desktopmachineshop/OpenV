@@ -11,12 +11,19 @@ const coverButton: React.CSSProperties = { padding: '6px 14px', width: 'auto' };
 
 /**
  * The project's cover photo at the top of its Overview (project-covers):
- * the photo across the page with **Change cover** and **Remove** over its
+ * the photo across the page with **Change cover** and **Remove** in its top
  * corner, or, before there is one, a slim box with **Add a cover photo**.
- * A large photo is scaled down in the browser before it is uploaded; the
- * same photo shows on the project's card in All projects.
+ * It spans the Overview's two columns (ov-overview-cover). figuresSlot, when
+ * given, receives the place along the photo's foot where the project's
+ * figures go (ProjectHomeStatus's figuresTarget); it is null while there is
+ * no photo, and the figures then stay in their column. A large photo is
+ * scaled down in the browser before it is uploaded; the same photo shows on
+ * the project's row in All projects.
  */
-export const ProductOverviewCover: React.FC<{ projectId: string }> = ({ projectId }) => {
+export const ProductOverviewCover: React.FC<{ projectId: string; figuresSlot?: (el: HTMLDivElement | null) => void }> = ({
+  projectId,
+  figuresSlot,
+}) => {
   const on = useFeature(PROJECT_COVERS_FEATURE);
   const { isPhone } = useViewport();
   const fromStore = useAppStore((s) => s.projects.find((p) => p.id === projectId));
@@ -87,7 +94,7 @@ export const ProductOverviewCover: React.FC<{ projectId: string }> = ({ projectI
 
   if (!version) {
     return (
-      <div data-help-key="overview.cover" style={{ marginBottom: 16 }}>
+      <div className="ov-overview-cover" data-help-key="overview.cover" style={{ marginBottom: 16 }}>
         <div
           style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap',
@@ -106,14 +113,24 @@ export const ProductOverviewCover: React.FC<{ projectId: string }> = ({ projectI
   }
 
   return (
-    <div data-help-key="overview.cover" style={{ marginBottom: 16 }}>
+    <div className="ov-overview-cover has-photo" data-help-key="overview.cover" style={{ marginBottom: figuresSlot ? 0 : 16 }}>
       <div style={{ position: 'relative', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border)', background: 'var(--surface-hover)' }}>
         <img
           src={projectAPI.coverUrl(projectId, version)}
           alt={project?.name ? `${project.name} cover photo` : 'Project cover photo'}
-          style={{ display: 'block', width: '100%', height: isPhone ? 140 : 220, objectFit: 'cover' }}
+          style={{ display: 'block', width: '100%', height: isPhone ? 190 : 260, objectFit: 'cover' }}
         />
-        <div style={{ position: 'absolute', right: 10, bottom: 10, display: 'flex', gap: 8 }}>
+        {figuresSlot && (
+          <>
+            {/* A shade along the foot, so the figures stand out from a bright photo. */}
+            <div
+              aria-hidden
+              style={{ position: 'absolute', inset: 'auto 0 0 0', height: '55%', background: 'linear-gradient(transparent, rgba(0, 0, 0, 0.35))', pointerEvents: 'none' }}
+            />
+            <div ref={figuresSlot} style={{ position: 'absolute', left: 12, right: 12, bottom: 12, maxWidth: isPhone ? undefined : 480 }} />
+          </>
+        )}
+        <div style={{ position: 'absolute', right: 10, top: 10, display: 'flex', gap: 8 }}>
           <button className="button-secondary" style={coverButton} onClick={pick} disabled={busy}>
             {busy ? 'Saving…' : 'Change cover'}
           </button>

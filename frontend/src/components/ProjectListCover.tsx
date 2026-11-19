@@ -75,3 +75,40 @@ export const ProjectCoverImage: React.FC<{
     />
   );
 };
+
+/**
+ * ProjectCardWithCover lays a project's row out in two: its cover photo on
+ * the left, as tall as the row, and the row's content beside it. side is
+ * set when any project in the list has a cover, so every row keeps the
+ * same column: one with no photo shows its initial on a plain tile there.
+ * Without side it draws the content alone, exactly as before.
+ */
+export const ProjectCardWithCover: React.FC<{
+  project: Pick<Project, 'id' | 'name' | 'cover_updated_at'>;
+  side: boolean;
+  children: React.ReactNode;
+}> = ({ project, side, children }) => {
+  const [failed, setFailed] = useState<string | null>(null);
+  if (!side) return <>{children}</>;
+  const version = project.cover_updated_at;
+  const photo = version && failed !== version;
+  return (
+    <>
+      {photo ? (
+        <img
+          className="project-card-side"
+          src={projectAPI.coverUrl(project.id, version)}
+          alt=""
+          loading="lazy"
+          decoding="async"
+          onError={() => setFailed(version)}
+        />
+      ) : (
+        <div className="project-card-side is-empty" aria-hidden>
+          {project.name.trim().charAt(0).toUpperCase()}
+        </div>
+      )}
+      <div className="project-card-body">{children}</div>
+    </>
+  );
+};

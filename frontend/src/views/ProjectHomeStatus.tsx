@@ -4,6 +4,7 @@
 // content in one column, loaded on its own so the Overview, which is in the
 // first load, does not bring the Home page's code with it.
 import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { apiErrorMessage } from '../api/errors';
 import { ErrorBanner, pageType } from '../components/ui';
 import { useFeature } from '../hooks/useFeature';
@@ -31,7 +32,20 @@ const proposalNeeds = (data: HomeData, projectId: string): TodoItem[] =>
  * Overview of the refreshed interface (ui-refresh) draws it next to the
  * product's definition, so the one page answers both questions.
  */
-const ProjectStatus: React.FC<{ projectId: string }> = ({ projectId }) => {
+// A figure on the project's cover photo: near-solid, so its number reads on
+// any photo, with a shadow to lift it off the picture.
+const onPhoto: React.CSSProperties = {
+  background: 'color-mix(in srgb, var(--surface) 92%, transparent)',
+  backdropFilter: 'blur(6px)',
+  boxShadow: '0 1px 4px rgba(0, 0, 0, 0.25)',
+};
+
+/**
+ * figuresTarget, when set, is the place on the project's cover photo
+ * (ProductOverviewCover) where the four figures go instead of the top of
+ * this column (project-covers).
+ */
+const ProjectStatus: React.FC<{ projectId: string; figuresTarget?: HTMLElement | null }> = ({ projectId, figuresTarget }) => {
   const [data, setData] = useState<HomeData | null>(null);
   const [error, setError] = useState('');
   const commentReadsOn = useFeature(COMMENT_READS_FEATURE);
@@ -49,14 +63,18 @@ const ProjectStatus: React.FC<{ projectId: string }> = ({ projectId }) => {
   if (error) return <ErrorBanner message={error} />;
   if (!data) return <div style={{ padding: 12, color: 'var(--text-muted)' }}>Loading…</div>;
   const base = `/projects/${projectId}`;
+  const tile = figuresTarget ? onPhoto : undefined;
+  const figures = (
+    <div style={{ display: 'flex', gap: 8, ...(figuresTarget ? pageType(true) : {}) }} data-help-key="home.figures">
+      <PhoneFigure value={figure(data.traced, '%')} label="traced" to={`${base}/matrix`} style={tile} />
+      <PhoneFigure value={figure(data.verified, '%')} label="verified" to={`${base}/vv`} style={tile} />
+      <PhoneFigure value={figure(data.failing)} label="failing" to={`${base}/tests`} danger={!!data.failing} style={tile} />
+      <PhoneFigure value={figure(data.suspect)} label="suspect" to={`${base}/review`} style={tile} />
+    </div>
+  );
   return (
     <div data-help-pane="home" style={{ ...pageType(true), display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <div style={{ display: 'flex', gap: 8 }} data-help-key="home.figures">
-        <PhoneFigure value={figure(data.traced, '%')} label="traced" to={`${base}/matrix`} />
-        <PhoneFigure value={figure(data.verified, '%')} label="verified" to={`${base}/vv`} />
-        <PhoneFigure value={figure(data.failing)} label="failing" to={`${base}/tests`} danger={!!data.failing} />
-        <PhoneFigure value={figure(data.suspect)} label="suspect" to={`${base}/review`} />
-      </div>
+      {figuresTarget ? createPortal(figures, figuresTarget) : figures}
       <NeedsYou items={[...data.todo, ...proposalNeeds(data, projectId)]} projectId={projectId} limit={6} flex="none" />
       <AuditTrail items={data.activity.slice(0, 5)} projectId={projectId} title="Recent activity" flex="none" />
     </div>
