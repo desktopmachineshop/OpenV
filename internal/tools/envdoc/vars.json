@@ -271,6 +271,12 @@
       "default": "none",
       "text": "A header the proxy in front sets to the real client address (`CF-Connecting-IP`), which the rate limits then key on. Read on each request that needs it."
     },
+    "OPENV_COVER_IMAGE_MODEL": {
+      "area": "requirements-core",
+      "read_by": "server",
+      "default": "`gpt-image-2`",
+      "text": "The OpenAI image model a project's cover photo is generated with, using the workspace's own `OPENAI_API_KEY`. Set it when the vendor retires the default."
+    },
     "OPENV_DATA_DIR": {
       "area": "platform-http",
       "read_by": "server",
