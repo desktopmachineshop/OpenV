@@ -25,6 +25,7 @@ DELETE /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}
 DELETE /api/v1/orgs/{id}/runner-session
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}
 DELETE /api/v1/projects/{id}
+DELETE /api/v1/projects/{id}/cover
 DELETE /api/v1/projects/{id}/members/{userId}
 DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}
 DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}
@@ -136,6 +137,7 @@ GET /api/v1/projects/{id}
 GET /api/v1/projects/{id}/ai-map
 GET /api/v1/projects/{id}/baselines
 GET /api/v1/projects/{id}/children
+GET /api/v1/projects/{id}/cover
 GET /api/v1/projects/{id}/download/csv
 GET /api/v1/projects/{id}/download/docx
 GET /api/v1/projects/{id}/download/excel
@@ -287,6 +289,7 @@ POST /api/v1/orgs/{id}/worker-keys
 POST /api/v1/projects
 POST /api/v1/projects/import
 POST /api/v1/projects/{id}/baselines
+POST /api/v1/projects/{id}/cover
 POST /api/v1/projects/{id}/draft-test-cases
 POST /api/v1/projects/{id}/evidence-bundles
 POST /api/v1/projects/{id}/interviews

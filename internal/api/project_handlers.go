@@ -83,6 +83,7 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 		respondError(w, r, http.StatusNotFound, "project not found", err)
 		return
 	}
+	h.stampCovers(r, project)
 
 	writeJSONOK(w, project)
 }
@@ -153,6 +154,7 @@ func (h *Handler) ListProjects(w http.ResponseWriter, r *http.Request) {
 			projectList = filtered
 		}
 	}
+	h.stampCovers(r, projectList...)
 
 	writeJSONOK(w, projectList)
 }
@@ -194,6 +196,7 @@ func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	h.stampCovers(r, project)
 
 	writeJSONOK(w, project)
 }
@@ -220,6 +223,7 @@ func (h *Handler) ListChildProjects(w http.ResponseWriter, r *http.Request) {
 	if children == nil {
 		children = []*projects.Project{}
 	}
+	h.stampCovers(r, children...)
 	writeJSONOK(w, children)
 }
 

@@ -1,12 +1,12 @@
 # METHOD PATH pairs the frontend API layer calls, matched to internal/api/testdata/routes.txt (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-call sites: 356
-  axios instance calls: 346 (DELETE 42, GET 136, HEAD 1, POST 111, PUT 56)
+call sites: 359
+  axios instance calls: 348 (DELETE 43, GET 136, HEAD 1, POST 112, PUT 56)
   helper calls (a function that passes its argument to the instance): 1
-  plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 9
+  plain URLs built on API_BASE_URL (streams, downloads, logo, sign-in): 10
   needing normalisation: 6 (3 of them axios calls)
-distinct METHOD PATH lines below: 351; server routes reached: 351
+distinct METHOD PATH lines below: 354; server routes reached: 354
 
 GET     /api/v1/admin/metrics/usage                                       adminAPI.usage
 GET     /api/v1/admin/metrics/users                                       adminAPI.userMetrics
@@ -222,6 +222,9 @@ PUT     /api/v1/projects/{id}                                             projec
 GET     /api/v1/projects/{id}/baselines                                   baselineAPI.list
 POST    /api/v1/projects/{id}/baselines                                   baselineAPI.create
 GET     /api/v1/projects/{id}/children                                    projectAPI.children
+DELETE  /api/v1/projects/{id}/cover                                       projectAPI.removeCover
+GET     /api/v1/projects/{id}/cover                                       projectAPI.coverUrl (url)
+POST    /api/v1/projects/{id}/cover                                       projectAPI.uploadCover
 GET     /api/v1/projects/{id}/download/csv                                projectAPI.download
 GET     /api/v1/projects/{id}/download/docx                               projectAPI.download
 GET     /api/v1/projects/{id}/download/excel                              projectAPI.download

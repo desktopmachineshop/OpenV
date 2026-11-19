@@ -949,6 +949,14 @@ table product_profiles rows 0
   constraint product_profiles_pkey PRIMARY KEY (project_id)
   constraint product_profiles_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
   index product_profiles_pkey CREATE UNIQUE INDEX product_profiles_pkey ON public.product_profiles USING btree (project_id)
+table project_covers rows 0
+  column project_id uuid NOT NULL
+  column mime text NOT NULL
+  column data bytea NOT NULL
+  column updated_at timestamp with time zone NOT NULL DEFAULT now()
+  constraint project_covers_pkey PRIMARY KEY (project_id)
+  constraint project_covers_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  index project_covers_pkey CREATE UNIQUE INDEX project_covers_pkey ON public.project_covers USING btree (project_id)
 table project_members rows 0
   column project_id uuid NOT NULL
   column user_id uuid NOT NULL
@@ -1133,7 +1141,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 90
+table schema_migrations rows 91
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1509,3 +1517,4 @@ ledger 0087 plan_workspace_calendar
 ledger 0088 plan_sizing
 ledger 0089 plan_milestone_links
 ledger 0090 joined_baselines
+ledger 0091 project_covers

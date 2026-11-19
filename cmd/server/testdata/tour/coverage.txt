@@ -37,6 +37,7 @@ DELETE /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}: s5b, s5e; 2xx or 3x
 DELETE /api/v1/orgs/{id}/runner-session: s5c, s5e; 2xx or 3xx in s5c
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: s5c, s5e; 2xx or 3xx in s5c, s5e
 DELETE /api/v1/projects/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
+DELETE /api/v1/projects/{id}/cover: s5a, s5e; 2xx or 3xx in s5a
 DELETE /api/v1/projects/{id}/members/{userId}: s5c, s5e; 2xx or 3xx in s5c
 DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}: s5b, s5e (errors only)
 DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}: s5b, s5e; 2xx or 3xx in s5b
@@ -148,6 +149,7 @@ GET /api/v1/projects/{id}: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/projects/{id}/ai-map: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
 GET /api/v1/projects/{id}/baselines: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
 GET /api/v1/projects/{id}/children: s5a, s5e; 2xx or 3xx in s5a, s5e
+GET /api/v1/projects/{id}/cover: s5a, s5e; 2xx or 3xx in s5a
 GET /api/v1/projects/{id}/download/csv: s5a, s5e; 2xx or 3xx in s5a, s5e
 GET /api/v1/projects/{id}/download/docx: s5a, s5b, s5e; 2xx or 3xx in s5a, s5b, s5e
 GET /api/v1/projects/{id}/download/excel: s5a, s5e; 2xx or 3xx in s5a, s5e
@@ -299,6 +301,7 @@ POST /api/v1/orgs/{id}/worker-keys: s5c, s5e; 2xx or 3xx in s5c
 POST /api/v1/projects: s5a, s5e; 2xx or 3xx in s5a, s5e
 POST /api/v1/projects/import: s5a, s5e; 2xx or 3xx in s5a, s5e
 POST /api/v1/projects/{id}/baselines: s5a, s5e; 2xx or 3xx in s5a
+POST /api/v1/projects/{id}/cover: s5a, s5e; 2xx or 3xx in s5a
 POST /api/v1/projects/{id}/draft-test-cases: s5d, s5e; 2xx or 3xx in s5d
 POST /api/v1/projects/{id}/evidence-bundles: s5b, s5e; 2xx or 3xx in s5b
 POST /api/v1/projects/{id}/interviews: s5b, s5e; 2xx or 3xx in s5b
@@ -404,4 +407,4 @@ PUT /api/v1/work-items/{id}/external-links/{otherId}: s5b, s5e; 2xx or 3xx in s5
 PUT /api/v1/work-items/{id}/relationships/{otherId}: s5b, s5e; 2xx or 3xx in s5b
 PUT /api/v1/work-items/{id}/schedule: s5b, s5e; 2xx or 3xx in s5b
 
-the tour: 393 of 393 routes reached (100.0%), 378 with a 2xx or 3xx answer (96.2%); the floor is 90%, 354 routes
+the tour: 396 of 396 routes reached (100.0%), 381 with a 2xx or 3xx answer (96.2%); the floor is 90%, 357 routes

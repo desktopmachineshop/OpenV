@@ -18,7 +18,8 @@ import (
 // been reachable). Every multipart handler in this API sets its own
 // MaxBytesReader before it parses anything, so the exemption hands a request
 // to a handler that bounds it, not to one that does not: see UploadAttachment,
-// UploadAttachmentVersion, UploadEvidenceFile, UploadAvatar and UploadOrgLogo.
+// UploadAttachmentVersion, UploadEvidenceFile, UploadAvatar, UploadOrgLogo and
+// UploadProjectCover.
 func BodyLimitMiddleware(maxBytes int64) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

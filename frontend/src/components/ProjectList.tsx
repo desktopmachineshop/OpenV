@@ -49,7 +49,8 @@ import { PanelHeader, SegmentedControl, useConfirm, usePrompt } from './ui';
 import { WORKSPACE_RUNS_FEATURE, workspaceRunPath } from './agents/workspaceRuns';
 import { useFeature } from '../hooks/useFeature';
 import { useHelpShortcut } from '../hooks/useHelpShortcut';
-import { COMPACT_LAYOUT_FEATURE, FLOW_DOWN_FEATURE, REDESIGN_PAGES_FEATURE, TODOS_FEATURE } from '../features';
+import { COMPACT_LAYOUT_FEATURE, FLOW_DOWN_FEATURE, PROJECT_COVERS_FEATURE, REDESIGN_PAGES_FEATURE, TODOS_FEATURE } from '../features';
+import { ProjectCoverImage } from './ProjectListCover';
 import { NewProjectAction, ProjectCount, ProjectMeters } from './ProjectListFigures';
 import { ProjectListHome } from './ProjectListHome';
 import { ProjectActions } from './ProjectListActions';
@@ -126,6 +127,7 @@ export const ProjectList: React.FC = () => {
   const tree = homeDesign && refresh;
   const rows = React.useMemo(() => (tree ? projectRows(projects, folded) : projects.map((project) => ({ project, depth: 0, below: 0, folded: false }))), [tree, projects, folded]);
   const todosOn = useFeature(TODOS_FEATURE);
+  const coversOn = useFeature(PROJECT_COVERS_FEATURE);
   const commentReadsOn = useFeature(COMMENT_READS_FEATURE);
   const meId = useAppStore((s) => s.currentUser?.id || null);
   const location = useLocation();
@@ -757,8 +759,10 @@ export const ProjectList: React.FC = () => {
                   style={tree && row.depth ? { paddingLeft: 12 + row.depth * 20 } : undefined}
                   onClick={() => handleSelectProject(project.id)}
                 >
+                  {coversOn && !homeDesign && <ProjectCoverImage project={project} className="project-card-cover" />}
                   <div className="project-card-header">
                     {tree && <ProjectFold row={{ project, ...row }} onToggle={toggleFold} />}
+                    {coversOn && homeDesign && <ProjectCoverImage project={project} className="project-card-thumb" />}
                     <h3>{project.name}</h3>
                     {tree && row.folded && <span className="project-count">+{row.below} folded</span>}
                     {homeDesign && <ProjectCount figures={figures[project.id]} />}

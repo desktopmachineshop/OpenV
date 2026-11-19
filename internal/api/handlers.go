@@ -59,17 +59,19 @@ import (
 
 // HandlerDeps carries every service the API layer depends on.
 type HandlerDeps struct {
-	ArtifactService   artifacts.Service
-	LinkService       links.Service
-	ProjectService    projects.Service
-	AttachmentService attachments.Service
-	ExportService     exports.Service
-	DownloadService   downloads.Service
-	BaselineService   baselines.Service
-	ReportService     reports.Service
-	TemplateService   templates.Service
-	ChatterService    chatter.Service
-	AttributeService  attributes.Service
+	ArtifactService artifacts.Service
+	LinkService     links.Service
+	ProjectService  projects.Service
+	// ProjectCoverService is the projects' cover photos (project_cover_handlers.go).
+	ProjectCoverService projects.CoverService
+	AttachmentService   attachments.Service
+	ExportService       exports.Service
+	DownloadService     downloads.Service
+	BaselineService     baselines.Service
+	ReportService       reports.Service
+	TemplateService     templates.Service
+	ChatterService      chatter.Service
+	AttributeService    attributes.Service
 	// TargetReleaseService is a project's target releases (vv_release_handlers.go).
 	TargetReleaseService targetreleases.Service
 	SharedProductService sharedproducts.Service

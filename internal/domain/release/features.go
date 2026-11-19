@@ -89,6 +89,7 @@ var Registry = []Feature{
 	// (featureEnabled): the key is registered so the features endpoint and
 	// What's new list it, and the create itself is unconditional.
 	{Key: FeatureKeyProjects, ShippedIn: "0.36.0", Summary: "Create a project with a runner key: scripts, and AI clients connected through the openv MCP server's new create_project tool, make projects and file them under a parent"},
+	{Key: FeatureProjectCovers, ShippedIn: "0.37.0", Summary: "Give a project a cover photo from its Overview, and see each project's photo on its card in All projects"},
 }
 
 // Feature keys the code gates on.
@@ -363,6 +364,11 @@ const (
 	// workspace whose members may be on either channel, so the creates are
 	// unconditional.
 	FeatureKeyProjects = "key-projects"
+	// FeatureProjectCovers is a project's cover photo: the Change cover
+	// control and the photo on the Overview, and the photo on each card in
+	// All projects. The server stores and serves covers either way; the key
+	// gates the interface.
+	FeatureProjectCovers = "project-covers"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

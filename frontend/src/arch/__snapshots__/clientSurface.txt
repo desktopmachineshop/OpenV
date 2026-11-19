@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 283; members of exported objects: 353
+exports: 283; members of exported objects: 356
 
 interface AdminUsage
 interface AdminUser
@@ -501,6 +501,7 @@ const     productProfileAPI
             .update
 const     projectAPI
             .children
+            .coverUrl
             .create
             .delete
             .download
@@ -511,9 +512,11 @@ const     projectAPI
             .list
             .parties
             .priorityDetection
+            .removeCover
             .setParties
             .setPriorityDetection
             .update
+            .uploadCover
 const     projectTeamAccessAPI
             .grant
             .list

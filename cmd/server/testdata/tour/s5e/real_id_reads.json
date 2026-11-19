@@ -177,6 +177,7 @@
           "GET /api/v1/projects/{id}/ai-map | 401: authentication required | 200 md | 200 md | 200 md | 404: project not found | 200 md | 200 md | 200 md",
           "GET /api/v1/projects/{id}/baselines | 401: authentication required | 200 json[1] | 200 json[1] | 200 json[1] | 404: project not found | 200 json[1] | 200 json[1] | 200 json[1]",
           "GET /api/v1/projects/{id}/children | 401: authentication required | 200 json[0] | 200 json[0] | 200 json[0] | 404: project not found | 200 json[0] | 200 json[0] | 200 json[0]",
+          "GET /api/v1/projects/{id}/cover | 401: authentication required | 404: project has no cover photo | 404: project has no cover photo | 404: project has no cover photo | 404: project not found | 404: project has no cover photo | 404: project has no cover photo | 404: project has no cover photo",
           "GET /api/v1/projects/{id}/download/csv | 401: authentication required | 200 csv | 200 csv | 200 csv | 404: project not found | 200 csv | 200 csv | 200 csv",
           "GET /api/v1/projects/{id}/download/docx | 401: authentication required | 200 docx | 200 docx | 200 docx | 404: project not found | 200 docx | 200 docx | 200 docx",
           "GET /api/v1/projects/{id}/download/excel | 401: authentication required | 200 xlsx | 200 xlsx | 200 xlsx | 404: project not found | 200 xlsx | 200 xlsx | 200 xlsx",

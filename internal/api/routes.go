@@ -14,6 +14,7 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 	h.registerDownloadRoutes(router)
 	h.registerAIMapRoutes(router)
 	h.registerProjectChildRoutes(router)
+	h.registerProjectCoverRoutes(router)
 	h.registerShareRoutes(router)
 	h.registerAdminRoutes(router)
 	h.registerModuleRoutes(router)

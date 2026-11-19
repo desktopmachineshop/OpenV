@@ -57,6 +57,14 @@ JSONB (the quality rule set under `quality`; the reference parties a project
 recognises as owners under `parties`, `[{name, note}]`, the workspace's own
 company never stored because it is always implied), timestamps.
 
+### project_covers
+A project's cover photo (migration 0091): `project_id` (primary key,
+`ON DELETE CASCADE` from `projects`), `mime` (PNG, JPEG, GIF or WebP),
+`data` BYTEA (the image itself, at most 5 MiB, kept in the row rather than
+under `UPLOADS_DIR` so it goes with its project), `updated_at`, which the
+API answers on the project as `cover_updated_at` and the app uses to version
+the image's URL.
+
 ### artifacts
 Temporally versioned: **primary key `(id, version)`**; each update inserts a
 new row and closes the old one (`valid_to`). Current version = `valid_to IS

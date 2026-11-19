@@ -25,6 +25,11 @@ export interface Project {
   parent_project_id: string;
   created_at: string;
   updated_at: string;
+  /**
+   * When the project's cover photo was stored; absent when it has none.
+   * The image is at projectAPI.coverUrl(id, cover_updated_at).
+   */
+  cover_updated_at?: string;
 }
 
 /**

@@ -18,6 +18,7 @@ import { ErrorBanner, chipStyle, toneForColor } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 import { useUiRefresh } from '../hooks/useUiRefresh';
 import { ProductOverviewParent } from './ProductOverviewParent';
+import { ProductOverviewCover } from './ProductOverviewCover';
 
 interface MetricRow {
   name: string;
@@ -211,6 +212,7 @@ export const ProductOverview: React.FC = () => {
   return (
     <div className={refresh ? 'ov-overview ov-gutter' : undefined} style={{ padding: 16, maxWidth: refresh ? 1400 : 1100, margin: '0 auto' }}>
       <div className={refresh ? 'ov-overview-product' : undefined}>
+      {projectId && <ProductOverviewCover projectId={projectId} />}
       <div className="ov-page-head">
         <h2 className="ov-page-title">Product Overview</h2>
       </div>

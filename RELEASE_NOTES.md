@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Cover photos for projects.** Give a project a cover photo from the
+  top of its Overview: **Add a cover photo**, then **Change cover** or
+  **Remove** once it has one. The photo runs across the top of the
+  Overview and shows beside the project's name in All projects, so
+  projects are easier to tell apart at a glance. A large photo is scaled
+  down before it is saved.
+
 ### Bug fixes
 
 - **A card opened in full on the board shows its plan.** The board's

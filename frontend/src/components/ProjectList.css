@@ -122,6 +122,28 @@
   overflow-wrap: anywhere;
 }
 
+/* A project's cover photo (project-covers): a banner across the top of its
+   card in the grid, bleeding to the card's edges, and a thumbnail before
+   its name in the rows of the redesigned Home. */
+.project-card-cover {
+  display: block;
+  width: calc(100% + 28px);
+  height: 120px;
+  margin: -12px -14px 10px;
+  object-fit: cover;
+  border-radius: 5px 5px 0 0;
+  background: var(--surface-hover);
+}
+
+.project-card-thumb {
+  flex: none;
+  width: 64px;
+  height: 40px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--surface-hover);
+}
+
 .delete-btn {
   background: none;
   border: none;

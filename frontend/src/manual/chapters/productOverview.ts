@@ -8,6 +8,17 @@ definition, metrics, constraints, personas and needs on the left, and on the
 right the project's figures, what needs you and its latest activity. On a
 phone, where the project stands comes first.
 
+## Cover photo
+
+A project can have a cover photo, shown across the top of its Overview and
+on the project in **All projects**. Before there is one, a slim box at the
+top of the page offers **Add a cover photo**; choose a PNG, JPEG, GIF or
+WebP image. A large photo is scaled down in your browser before it is
+saved, and a file over 5 MB is refused. Once there is a cover,
+**Change cover** in its corner replaces it and **Remove** takes it away.
+Anyone who can see the project sees its cover; changing it takes an
+editor.
+
 ## Where the project sits
 
 At the top of the page, **Part of** names the project this one belongs
