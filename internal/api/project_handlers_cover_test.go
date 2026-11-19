@@ -363,3 +363,53 @@ func TestGenerateProjectCoverIsRateLimited(t *testing.T) {
 		t.Errorf("the provider was called past the limit")
 	}
 }
+
+func drawReq(user, svg string) *http.Request {
+	body, _ := json.Marshal(map[string]string{"svg": svg})
+	return coverReq(http.MethodPost, "/api/v1/projects/p-1/cover/svg", user, bytes.NewBuffer(body), "application/json")
+}
+
+// An editor's drawing is rendered and stored as a PNG, with no key: the
+// answer is the project stamped with it, and the SVG itself is not kept.
+func TestDrawProjectCover(t *testing.T) {
+	h, repo := coverFixture(t)
+	svg := `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1536 1024"><rect width="1536" height="1024" fill="#1d3557"/><circle cx="768" cy="512" r="200" fill="gold"/></svg>`
+	w := serveCover(h, drawReq("editor", svg))
+	if w.Code != http.StatusOK || !bytes.Contains(w.Body.Bytes(), []byte("cover_updated_at")) {
+		t.Fatalf("status %d, body %q; want 200 with cover_updated_at", w.Code, w.Body.String())
+	}
+	c := repo.covers["p-1"]
+	if c == nil || c.Mime != "image/png" || !bytes.HasPrefix(c.Data, []byte("\x89PNG")) {
+		t.Fatalf("stored %+v; want the rendered PNG", c)
+	}
+	if bytes.Contains(c.Data, []byte("<svg")) {
+		t.Error("the SVG source was stored")
+	}
+}
+
+// A viewer cannot draw one, and a drawing that is empty, is not SVG or
+// draws nothing is refused with the reason; none stores anything.
+func TestDrawProjectCoverRefusals(t *testing.T) {
+	cases := []struct {
+		name, user, svg string
+		want            int
+		says            string
+	}{
+		{"viewer", "viewer", `<svg xmlns="http://www.w3.org/2000/svg"><rect width="9" height="9"/></svg>`, http.StatusForbidden, ""},
+		{"empty", "editor", "  ", http.StatusBadRequest, "svg is required"},
+		{"not svg", "editor", `<html/>`, http.StatusBadRequest, "not an svg element"},
+		{"text only", "editor", `<svg xmlns="http://www.w3.org/2000/svg"><text>Hi</text></svg>`, http.StatusBadRequest, "draws nothing"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			h, repo := coverFixture(t)
+			w := serveCover(h, drawReq(tc.user, tc.svg))
+			if w.Code != tc.want || !strings.Contains(w.Body.String(), tc.says) {
+				t.Fatalf("status %d, body %q; want %d saying %q", w.Code, w.Body.String(), tc.want, tc.says)
+			}
+			if len(repo.covers) != 0 {
+				t.Fatal("a refused drawing stored a cover")
+			}
+		})
+	}
+}

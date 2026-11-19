@@ -15,6 +15,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/guided"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/products"
+	"github.com/openv/requirements-platform/internal/domain/projects"
 	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/domain/runnersessions"
 )
@@ -387,6 +388,7 @@ func (h *Handler) launchGuidedTurn(launchedBy, parentRunID *string, session *gui
 	}
 	outline.Full = outline.Edits && h.memberFeatureEnabled(orgID, launchedBy, release.FeatureAssistantFullScope)
 	outline.Covers = outline.Full && h.memberFeatureEnabled(orgID, launchedBy, release.FeatureProjectCovers)
+	outline.CoverPhotos = outline.Covers && h.workspaceHasKey(orgID, projects.CoverKeyEnv)
 
 	prompt := buildGuidedCopilotPrompt(session, profile, transcript, step, stepLabel, state, event, focus, outline)
 
@@ -552,6 +554,9 @@ The user clicks Add/Apply/Replace on a suggestion to put it into the wizard, so 
 		}
 		if outline.Covers {
 			b.WriteString(coverActionRule)
+			if outline.CoverPhotos {
+				b.WriteString(coverPhotoRule)
+			}
 		}
 	}
 	b.WriteString("\nYou never write to the project yourself: every change reaches it through a card the person clicks.")

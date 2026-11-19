@@ -1,7 +1,7 @@
 {
   "golden": "cmd/server/testdata/tour/s5a/project_covers.json",
   "test": "TestTourS5aProjectCovers",
-  "about": "Project cover photos: upload (each refusal, then a PNG and a WebP replacing it), the image as its stored type, cover_updated_at on the project and its list, generation's refusals, removal, and the guards.",
+  "about": "Project cover photos: upload (each refusal, then a PNG and a WebP replacing it), the image as its stored type, cover_updated_at on the project and its list, a drawing rendered, generation's refusals, removal, and the guards.",
   "regenerate": [
     "OPENV_TEST_DATABASE_URL=<server URL> UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourS5aProjectCovers$' (which also rewrites the slice's coverage.txt)",
     "UPDATE_GOLDEN=1 go test ./cmd/server -count=1 -run '^TestTourCoverage$' (coverage.txt alone, no database)"
@@ -712,6 +712,237 @@
     },
     {
       "n": 21,
+      "title": "draw it as SVG: rendered to a PNG and stored, with no key",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/cover/svg",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<project>/cover/svg",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"svg\":\"<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1536 1024'><rect width='1536' height='1024' fill='#1d3557'/><circle cx='768' cy='512' r='200' fill='gold'/></svg>\"}"
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<project>\",\"org_id\":\"<owner.workspace>\",\"name\":\"Tour cover\",\"description\":\"\",\"agent_auth\":\"user-account\",\"parent_project_id\":\"\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\",\"cover_updated_at\":\"<time@step 21>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<project>",
+        "org_id": "<owner.workspace>",
+        "name": "Tour cover",
+        "description": "",
+        "agent_auth": "user-account",
+        "parent_project_id": "",
+        "created_at": "<time@before step 1>",
+        "updated_at": "<time@before step 1>",
+        "cover_updated_at": "<time@step 21>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 22,
+      "title": "fetch it: the rendered PNG, never the SVG",
+      "actor": "owner",
+      "route": "GET /api/v1/projects/{id}/cover",
+      "request": {
+        "method": "GET",
+        "path": "/api/v1/projects/<project>/cover"
+      },
+      "status": 200,
+      "content_type": "image/png",
+      "headers": [
+        "Cache-Control: private, max-age=86400",
+        "Content-Disposition: inline"
+      ],
+      "security_headers": "standard",
+      "content_length": 15781,
+      "kind": "png",
+      "summary": {
+        "width": 1536,
+        "height": 1024,
+        "color_model": "rgba",
+        "pixels_sha256": "f90e7775e09a78aeb40372add1f2f334825c95ae07e521ac5d37ca7493d51d91"
+      },
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": "image/png",
+        "vary": "Accept-Encoding"
+      }
+    },
+    {
+      "n": 23,
+      "title": "a drawing that is not SVG: 400 with the reason",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/cover/svg",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<project>/cover/svg",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"svg\":\"<html></html>\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 89,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"the cover drawing cannot be rendered: its root element is not an svg element\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "the cover drawing cannot be rendered: its root element is not an svg element"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 24,
+      "title": "a drawing of nothing the renderer draws: 400",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/cover/svg",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<project>/cover/svg",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"svg\":\"<svg xmlns='http://www.w3.org/2000/svg'><text>Hi</text></svg>\"}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 196,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"the cover drawing cannot be rendered: it draws nothing this renderer can draw: use shapes and paths filled or stroked with colours or gradients (text, images and filters are left out)\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "the cover drawing cannot be rendered: it draws nothing this renderer can draw: use shapes and paths filled or stroked with colours or gradients (text, images and filters are left out)"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 25,
+      "title": "no drawing at all: 400",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/cover/svg",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<project>/cover/svg",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{}"
+      },
+      "status": 400,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 56,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"svg is required: the drawing, as SVG source\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "svg is required: the drawing, as SVG source"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 26,
+      "title": "the outsider draws one: 404",
+      "actor": "outsider",
+      "route": "POST /api/v1/projects/{id}/cover/svg",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<project>/cover/svg",
+        "headers": [
+          "Content-Type: application/json"
+        ],
+        "body": "{\"svg\":\"<svg/>\"}"
+      },
+      "status": 404,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": 30,
+      "kind": "json",
+      "body": [
+        "{\"error\":\"project not found\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "error": "project not found"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 27,
+      "title": "put the WebP back",
+      "actor": "owner",
+      "route": "POST /api/v1/projects/{id}/cover",
+      "request": {
+        "method": "POST",
+        "path": "/api/v1/projects/<project>/cover",
+        "headers": [
+          "Content-Type: multipart/form-data; boundary=TourFormBoundary7MA4YWxkTrZu0gW"
+        ],
+        "body": {
+          "kind": "multipart",
+          "summary": [
+            {
+              "headers": [
+                "Content-Disposition: form-data; name=\"file\"; filename=\"cover.webp\"",
+                "Content-Type: image/webp"
+              ],
+              "body_base64": "UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA=="
+            }
+          ]
+        }
+      },
+      "status": 200,
+      "content_type": "application/json",
+      "headers": [],
+      "security_headers": "standard",
+      "content_length": "<varies>",
+      "kind": "json",
+      "body": [
+        "{\"id\":\"<project>\",\"org_id\":\"<owner.workspace>\",\"name\":\"Tour cover\",\"description\":\"\",\"agent_auth\":\"user-account\",\"parent_project_id\":\"\",\"created_at\":\"<time@before step 1>\",\"updated_at\":\"<time@before step 1>\",\"cover_updated_at\":\"<time@step 27>\"}"
+      ],
+      "trailing_newline": true,
+      "parsed": {
+        "id": "<project>",
+        "org_id": "<owner.workspace>",
+        "name": "Tour cover",
+        "description": "",
+        "agent_auth": "user-account",
+        "parent_project_id": "",
+        "created_at": "<time@before step 1>",
+        "updated_at": "<time@before step 1>",
+        "cover_updated_at": "<time@step 27>"
+      },
+      "gzip": "not sent: a write is sent once, without Accept-Encoding",
+      "events": []
+    },
+    {
+      "n": 28,
       "title": "generate with an empty prompt: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/cover/generate",
@@ -740,7 +971,7 @@
       "events": []
     },
     {
-      "n": 22,
+      "n": 29,
       "title": "generate with a malformed body: 400",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/cover/generate",
@@ -769,7 +1000,7 @@
       "events": []
     },
     {
-      "n": 23,
+      "n": 30,
       "title": "generate without a workspace OpenAI key: 409, saying where to add one",
       "actor": "owner",
       "route": "POST /api/v1/projects/{id}/cover/generate",
@@ -798,7 +1029,7 @@
       "events": []
     },
     {
-      "n": 24,
+      "n": 31,
       "title": "the outsider generates one: 404",
       "actor": "outsider",
       "route": "POST /api/v1/projects/{id}/cover/generate",
@@ -827,7 +1058,7 @@
       "events": []
     },
     {
-      "n": 25,
+      "n": 32,
       "title": "still the WebP: no generation stored anything",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/cover",
@@ -848,7 +1079,7 @@
       "gzip": "not compressed: the same answer as without Accept-Encoding"
     },
     {
-      "n": 26,
+      "n": 33,
       "title": "remove it: the project, without cover_updated_at",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/cover",
@@ -880,7 +1111,7 @@
       "events": []
     },
     {
-      "n": 27,
+      "n": 34,
       "title": "remove it again: nothing to remove, 200 all the same",
       "actor": "owner",
       "route": "DELETE /api/v1/projects/{id}/cover",
@@ -912,7 +1143,7 @@
       "events": []
     },
     {
-      "n": 28,
+      "n": 35,
       "title": "fetch it once removed: 404",
       "actor": "owner",
       "route": "GET /api/v1/projects/{id}/cover",

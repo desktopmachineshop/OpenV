@@ -119,6 +119,7 @@ func toolGoldenArgs() map[string]map[string]interface{} {
 		"set_project_cover":       {"project_id": goldenProjectID, "image_base64": "R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs=", "mime_type": "image/gif"},
 		"generate_project_cover":  {"project_id": goldenProjectID, "prompt": "A brake assembly on a test rig, wide shot, no text"},
 		"remove_project_cover":    {"project_id": goldenProjectID},
+		"draw_project_cover":      {"project_id": goldenProjectID, "svg": `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1536 1024"><rect width="1536" height="1024" fill="#1d3557"/></svg>`},
 		"list_artifacts":          {"project_id": goldenProjectID, "type": "requirement", "owner": "QA"},
 		"get_artifact":            {"id": goldenArtifactRef, "project_id": goldenProjectID},
 		"get_project_map":         {"project_id": goldenProjectID, "baseline_id": goldenBaselineID},

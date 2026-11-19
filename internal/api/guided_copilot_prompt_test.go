@@ -287,15 +287,24 @@ func TestGuidedCopilotPromptOffersEveryProjectActionBehindItsGate(t *testing.T) 
 }
 
 // The cover card is offered only where the workspace has the cover photo
-// (project-covers) on top of the full-scope cards.
+// (project-covers) on top of the full-scope cards, and the assistant draws
+// it itself; the photo shape, from an image model, only where the workspace
+// also has an OpenAI key.
 func TestGuidedCopilotPromptOffersTheCoverCardOnlyWithCovers(t *testing.T) {
 	session := &guided.Session{ID: "sess-1", ProjectID: "proj-1"}
 	full := buildGuidedCopilotPrompt(session, nil, nil, 0, "", nil, "", nil, &projectOutline{Edits: true, Full: true})
 	covers := buildGuidedCopilotPrompt(session, nil, nil, 0, "", nil, "", nil, &projectOutline{Edits: true, Full: true, Covers: true})
+	photos := buildGuidedCopilotPrompt(session, nil, nil, 0, "", nil, "", nil, &projectOutline{Edits: true, Full: true, Covers: true, CoverPhotos: true})
 	if strings.Contains(full, `"kind":"cover"`) {
 		t.Error("without project-covers the assistant was offered the cover card")
 	}
-	if !strings.Contains(covers, `{"kind":"cover","prompt":`) || !strings.Contains(covers, `{"kind":"cover","action":"remove"}`) {
-		t.Error("with project-covers the assistant was not offered the cover card's two shapes")
+	if !strings.Contains(covers, `{"kind":"cover","svg":`) || !strings.Contains(covers, `{"kind":"cover","action":"remove"}`) {
+		t.Error("with project-covers the assistant was not offered to draw or remove the cover")
+	}
+	if strings.Contains(covers, `{"kind":"cover","prompt":`) {
+		t.Error("without an OpenAI key the assistant was offered a generated photo")
+	}
+	if !strings.Contains(photos, `{"kind":"cover","prompt":`) || !strings.Contains(photos, `{"kind":"cover","svg":`) {
+		t.Error("with an OpenAI key the assistant was not offered both the drawing and the photo")
 	}
 }

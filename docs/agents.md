@@ -1023,22 +1023,35 @@ the API on every read — not by whatever happened to be pasted into a prompt.
 ## Project cover photos
 
 An agent can change a project's cover photo, the picture across the top of
-its Overview and beside it in All projects, with three tools:
+its Overview and beside it in All projects. An agent cannot make pixels, but
+it can draw, so the usual way is for the agent to draw the cover itself:
 
-- **`generate_project_cover`** makes the picture from a description and sets
-  it (`POST /api/v1/projects/{id}/cover/generate`). It uses the workspace's
-  own OpenAI API key, the one its admins add under AI providers, so the
-  workspace pays; without one it is refused with what to do. Generations are
-  limited per workspace (10 at once, 20 an hour), and one can take a minute.
+- **`draw_project_cover`** takes the drawing as SVG
+  (`POST /api/v1/projects/{id}/cover/svg`). The server renders it to a
+  1536x1024 PNG and stores that; the SVG is never stored or served. It needs
+  no image model and no key: the agent's own run, on the person's runner and
+  subscription, makes the picture. The renderer draws shapes, paths, groups
+  with transforms, colours, gradients and opacity, and leaves out text,
+  images and filters, so the tool's description tells the agent to draw
+  without them.
 - **`set_project_cover`** sets an image the agent already has, as base64 or a
   `data:` URL: PNG, JPEG, GIF or WebP up to 5 MB.
 - **`remove_project_cover`** removes it.
+- **`generate_project_cover`** is the exception, for a photo-like picture:
+  an image model paints it from a description
+  (`POST /api/v1/projects/{id}/cover/generate`) with the workspace's own
+  OpenAI API key, so the workspace pays for each, a workspace without a key
+  is refused with what to do, and generations are limited per workspace (10
+  at once, 20 an hour). The tool's description tells agents to draw instead
+  unless they are asked for a photo.
 
 They are ordinary writes: an agent run acts in its own project as an editor,
 and a connected app or a runner key acts as its member or workspace, so the
 same rules apply as to a person clicking the Overview's buttons. The V&V
-Assistant, which writes nothing itself, offers a **Cover photo** card
-instead: the person's click generates or removes the picture.
+Assistant, which writes nothing itself, draws the cover into a **Cover
+photo** card that shows the picture; the person's click renders it in their
+browser and sets it. Where the workspace has an OpenAI key the assistant may
+also offer a photo card, when asked for a photo.
 
 ## The AI context surface
 

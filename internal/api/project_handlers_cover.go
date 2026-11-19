@@ -22,6 +22,7 @@ func (h *Handler) registerProjectCoverRoutes(router *mux.Router) {
 	router.HandleFunc("/api/v1/projects/{id}/cover", h.UploadProjectCover).Methods("POST")
 	router.HandleFunc("/api/v1/projects/{id}/cover", h.DeleteProjectCover).Methods("DELETE")
 	router.HandleFunc("/api/v1/projects/{id}/cover/generate", h.GenerateProjectCover).Methods("POST")
+	router.HandleFunc("/api/v1/projects/{id}/cover/svg", h.DrawProjectCover).Methods("POST")
 }
 
 // stampCovers marks each project that has a cover photo with when it was
@@ -148,6 +149,44 @@ func (h *Handler) DeleteProjectCover(w http.ResponseWriter, r *http.Request) {
 	h.writeProjectWithCover(w, r, id)
 }
 
+// DrawProjectCover sets the project's cover from an SVG drawing (editor) and
+// answers the project. This is how an agent, which cannot make pixels but
+// can write a drawing, makes a cover with no provider key: the server
+// renders the drawing (projects.RenderCoverSVG) and stores the PNG; the SVG
+// itself is never stored or served. A drawing it cannot render, or one with
+// nothing it draws, is answered 400 with the reason, and nothing is stored.
+func (h *Handler) DrawProjectCover(w http.ResponseWriter, r *http.Request) {
+	id := mux.Vars(r)["id"]
+	if !h.requireProjectRole(w, r, id, members.RoleEditor) {
+		return
+	}
+	if h.coverUnavailable(w) {
+		return
+	}
+	var req struct {
+		SVG string `json:"svg"`
+	}
+	if !decodeJSON(w, r, &req) {
+		return
+	}
+	if strings.TrimSpace(req.SVG) == "" {
+		writeJSONError(w, http.StatusBadRequest, "svg is required: the drawing, as SVG source")
+		return
+	}
+	if _, err := h.ProjectCoverService.Draw(id, req.SVG); err != nil {
+		switch {
+		case errors.Is(err, projects.ErrCoverSVG):
+			writeJSONError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, projects.ErrNotFound):
+			unknownProject.write(w)
+		default:
+			respondInternal(w, r, "Failed to save cover photo", err)
+		}
+		return
+	}
+	h.writeProjectWithCover(w, r, id)
+}
+
 // noCoverKeyMessage answers a generation the workspace has no key for.
 const noCoverKeyMessage = "Generating a cover photo uses the workspace's OpenAI API key: a workspace admin adds one under Workspace settings, AI providers"
 
@@ -224,4 +263,22 @@ func (h *Handler) writeProjectWithCover(w http.ResponseWriter, r *http.Request, 
 	}
 	h.stampCovers(r, project)
 	writeJSONOK(w, project)
+}
+
+// workspaceHasKey reports whether the workspace has a pasted provider key
+// for keyEnv, from the key list alone: the key itself is not opened.
+func (h *Handler) workspaceHasKey(orgID, keyEnv string) bool {
+	if h.ProviderKeyService == nil || orgID == "" {
+		return false
+	}
+	keys, err := h.ProviderKeyService.ListKeys(orgID)
+	if err != nil {
+		return false
+	}
+	for _, k := range keys {
+		if k.KeyEnv == keyEnv {
+			return true
+		}
+	}
+	return false
 }

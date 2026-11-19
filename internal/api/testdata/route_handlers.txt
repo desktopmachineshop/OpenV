@@ -23,6 +23,7 @@ GET /api/v1/projects/{id}/cover -> GetProjectCover
 POST /api/v1/projects/{id}/cover -> UploadProjectCover
 DELETE /api/v1/projects/{id}/cover -> DeleteProjectCover
 POST /api/v1/projects/{id}/cover/generate -> GenerateProjectCover
+POST /api/v1/projects/{id}/cover/svg -> DrawProjectCover
 GET /api/v1/projects/{id}/share-links -> ListShareLinks
 POST /api/v1/projects/{id}/share-links -> CreateShareLink
 DELETE /api/v1/share-links/{id} -> RevokeShareLink [alwaysWritable]

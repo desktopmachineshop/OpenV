@@ -49,9 +49,10 @@ func projectTools() []Tool {
 		},
 		{
 			Name: "generate_project_cover",
-			Description: "Generate a project's cover photo from a description and set it, replacing any cover the project has. " +
-				"The image is made with the workspace's own OpenAI API key, so the workspace pays for it; without one the call is refused with what to do. " +
-				"Describe a wide picture of the product or its setting, with no text in it. Takes up to a minute. Generations are limited per workspace, so generate once and set it, rather than trying many. Answers the project, with its cover_updated_at.",
+			Description: "Generate a photo-like cover for a project from a description, with an image model, and set it, replacing any cover the project has. " +
+				"This uses the workspace's own OpenAI API key, so the workspace pays for each one, and without a key it is refused. " +
+				"To make a cover yourself, with no key, draw it with draw_project_cover instead, and use this only when asked for a photo. " +
+				"Describe a wide picture of the product or its setting, with no text in it. Takes up to a minute; generations are limited per workspace. Answers the project, with its cover_updated_at.",
 			InputSchema: schema([]string{"project_id", "prompt"}, map[string]interface{}{
 				"project_id": str("Project ID"),
 				"prompt":     str("What the picture shows, up to 1,000 characters"),
@@ -70,6 +71,24 @@ func projectTools() []Tool {
 			}),
 			Handler: func(c *Client, args map[string]interface{}) (string, error) {
 				out, _, err := c.request("DELETE", "/api/v1/projects/"+strArg(args, "project_id")+"/cover", nil, nil)
+				return out, err
+			},
+		},
+		{
+			Name: "draw_project_cover",
+			Description: "Draw a project's cover photo yourself, as SVG, and set it, replacing any cover the project has: the picture across the top of its Overview and beside it in All projects. " +
+				"This is the way to make a cover: it needs no image model and no key. The server renders the drawing to a 1536x1024 image. " +
+				"Use viewBox=\"0 0 1536 1024\" (another shape is scaled to cover it and cropped). Draw a wide illustration of the product or its setting: " +
+				"rect, circle, ellipse, line, polyline, polygon and path (arcs included), grouped in g with transform, filled and stroked with colours " +
+				"(#hex, rgb() or names) or linearGradient and radialGradient, with opacity. Text, image, use, filter, mask, clipPath, pattern and dashes are not drawn, so leave them out. " +
+				"Fill the whole frame with a background, and keep the subject in the middle: the Overview shows a wide band across the middle of the picture, and All projects a small 3:2 tile. At most 256 KB. A drawing that cannot be rendered is refused with the reason. Answers the project, with its cover_updated_at.",
+			InputSchema: schema([]string{"project_id", "svg"}, map[string]interface{}{
+				"project_id": str("Project ID"),
+				"svg":        str("The drawing: SVG source, starting <svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1536 1024\">"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				out, _, err := c.request("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/cover/svg", nil,
+					map[string]interface{}{"svg": strArg(args, "svg")})
 				return out, err
 			},
 		},
