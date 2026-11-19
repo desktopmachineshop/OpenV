@@ -71,15 +71,12 @@ func (a *app) billing() {
 // nudges.
 func (a *app) handlers() {
 	cfg := a.env()
-	// The in-app help reads the manual from OpenD when a docs site is set (docs/plans/opend-help.md).
-	var helpService *help.Service
-	if docs := cfg.HelpDocs(); docs != nil {
-		helpService = help.NewService(help.Config{URL: docs.URL, Secret: docs.EmbedSecret, AdminToken: docs.AdminToken}, nil)
-	}
+	helpService := helpServiceFor(cfg)
 	a.handler = api.NewHandler(api.HandlerDeps{
 		ArtifactService:      a.artifactService,
 		LinkService:          a.linkService,
 		ProjectService:       a.projectService,
+		ProjectCoverService:  a.projectCoverService,
 		AttachmentService:    a.attachmentService,
 		ExportService:        a.exportService,
 		DownloadService:      a.downloadService,
@@ -274,3 +271,13 @@ func (m extMail) SendToAdmins(ctx context.Context, orgID string, n ext.Notice) (
 }
 
 var _ ext.MailBoot = extBoot{}
+
+// helpServiceFor builds the in-app help, which reads the manual from OpenD
+// when a docs site is set (docs/plans/opend-help.md); nil otherwise.
+func helpServiceFor(cfg *config.Config) *help.Service {
+	docs := cfg.HelpDocs()
+	if docs == nil {
+		return nil
+	}
+	return help.NewService(help.Config{URL: docs.URL, Secret: docs.EmbedSecret, AdminToken: docs.AdminToken}, nil)
+}

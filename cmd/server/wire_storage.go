@@ -41,6 +41,7 @@ func (a *app) storage() {
 	a.artifactRepo = postgres.NewArtifactRepository(a.db)
 	a.linkRepo = postgres.NewLinkRepository(a.db)
 	a.projectRepo = postgres.NewProjectRepository(a.db)
+	a.projectCoverRepo = postgres.NewProjectCoverRepository(a.db)
 	a.attachmentRepo = postgres.NewAttachmentRepository(a.db)
 	a.projectInfoRepo = postgres.NewProjectInfoRepository(a.db)
 	a.baselineRepo = postgres.NewBaselineRepository(a.db)

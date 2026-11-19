@@ -18,6 +18,7 @@ import { ErrorBanner, chipStyle, toneForColor } from '../components/ui';
 import { useViewport } from '../hooks/useViewport';
 import { useUiRefresh } from '../hooks/useUiRefresh';
 import { ProductOverviewParent } from './ProductOverviewParent';
+import { ProductOverviewCover } from './ProductOverviewCover';
 
 interface MetricRow {
   name: string;
@@ -55,6 +56,8 @@ export const ProductOverview: React.FC = () => {
   const { isPhone } = useViewport();
   // The refreshed interface draws the project's status beside its definition.
   const refresh = useUiRefresh();
+  // Where the project's figures go on its cover photo, while it has one.
+  const [figuresSlot, setFiguresSlot] = useState<HTMLDivElement | null>(null);
 
   const [profile, setProfile] = useState<ProductProfile | null>(null);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
@@ -210,6 +213,7 @@ export const ProductOverview: React.FC = () => {
 
   return (
     <div className={refresh ? 'ov-overview ov-gutter' : undefined} style={{ padding: 16, maxWidth: refresh ? 1400 : 1100, margin: '0 auto' }}>
+      {projectId && <ProductOverviewCover projectId={projectId} figuresSlot={refresh ? setFiguresSlot : undefined} />}
       <div className={refresh ? 'ov-overview-product' : undefined}>
       <div className="ov-page-head">
         <h2 className="ov-page-title">Product Overview</h2>
@@ -495,7 +499,7 @@ export const ProductOverview: React.FC = () => {
       {refresh && projectId && (
         <aside className="ov-overview-status" aria-label="Where the project stands">
           <React.Suspense fallback={null}>
-            <ProjectStatus projectId={projectId} />
+            <ProjectStatus projectId={projectId} figuresTarget={figuresSlot} />
           </React.Suspense>
         </aside>
       )}

@@ -83,6 +83,7 @@ type app struct {
 	artifactRepo         *postgres.ArtifactRepository
 	linkRepo             *postgres.LinkRepository
 	projectRepo          projects.Repository
+	projectCoverRepo     projects.CoverRepository
 	attachmentRepo       attachments.Repository
 	projectInfoRepo      *postgres.ProjectInfoRepository
 	baselineRepo         *postgres.BaselineRepository
@@ -123,6 +124,7 @@ type app struct {
 	linkService          *links.DefaultService
 	embeddingService     *embeddings.Service
 	projectService       projects.Service
+	projectCoverService  projects.CoverService
 	attachmentService    attachments.Service
 	baselineService      *baselines.DefaultService
 	chatterService       *chatter.DefaultService

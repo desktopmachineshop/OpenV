@@ -155,6 +155,7 @@ SECTION_KEYS = {
     # overview.links was the Quick links section, which the merged Overview
     # replaced; the key stays, on the section that took its place.
     ('product-overview', 'where-the-project-stands'): ['overview.links'],
+    ('product-overview', 'cover-photo'): ['overview.cover'],
     ('product-overview', 'product-definition'): ['overview.product'],
     ('product-overview', 'success-metrics'): ['overview.metrics'],
     ('product-overview', 'constraints'): ['overview.constraints'],

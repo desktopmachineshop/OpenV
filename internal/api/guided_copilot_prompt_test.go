@@ -285,3 +285,17 @@ func TestGuidedCopilotPromptOffersEveryProjectActionBehindItsGate(t *testing.T) 
 		t.Error("the assistant is not told that a card does nothing until applied")
 	}
 }
+
+// The cover card is offered only where the workspace has the cover photo
+// (project-covers) on top of the full-scope cards.
+func TestGuidedCopilotPromptOffersTheCoverCardOnlyWithCovers(t *testing.T) {
+	session := &guided.Session{ID: "sess-1", ProjectID: "proj-1"}
+	full := buildGuidedCopilotPrompt(session, nil, nil, 0, "", nil, "", nil, &projectOutline{Edits: true, Full: true})
+	covers := buildGuidedCopilotPrompt(session, nil, nil, 0, "", nil, "", nil, &projectOutline{Edits: true, Full: true, Covers: true})
+	if strings.Contains(full, `"kind":"cover"`) {
+		t.Error("without project-covers the assistant was offered the cover card")
+	}
+	if !strings.Contains(covers, `{"kind":"cover","prompt":`) || !strings.Contains(covers, `{"kind":"cover","action":"remove"}`) {
+		t.Error("with project-covers the assistant was not offered the cover card's two shapes")
+	}
+}

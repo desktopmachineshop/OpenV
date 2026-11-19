@@ -386,6 +386,7 @@ func (h *Handler) launchGuidedTurn(launchedBy, parentRunID *string, session *gui
 		Edits:     h.memberFeatureEnabled(orgID, launchedBy, release.FeatureAssistantEdits),
 	}
 	outline.Full = outline.Edits && h.memberFeatureEnabled(orgID, launchedBy, release.FeatureAssistantFullScope)
+	outline.Covers = outline.Full && h.memberFeatureEnabled(orgID, launchedBy, release.FeatureProjectCovers)
 
 	prompt := buildGuidedCopilotPrompt(session, profile, transcript, step, stepLabel, state, event, focus, outline)
 
@@ -548,6 +549,9 @@ The user clicks Add/Apply/Replace on a suggestion to put it into the wizard, so 
 		b.WriteString(projectChangeRules(outline.Edits, inWizard))
 		if outline.Full {
 			b.WriteString(projectActionRules(session.ProjectID))
+		}
+		if outline.Covers {
+			b.WriteString(coverActionRule)
 		}
 	}
 	b.WriteString("\nYou never write to the project yourself: every change reaches it through a card the person clicks.")

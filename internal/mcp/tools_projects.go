@@ -4,8 +4,11 @@
 package mcp
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"strings"
 )
 
 // projectTools returns the project tools, in Tools() order.
@@ -32,7 +35,82 @@ func projectTools() []Tool {
 			}),
 			Handler: createProject,
 		},
+		{
+			Name: "set_project_cover",
+			Description: "Set a project's cover photo from an image you have: the photo across the top of its Overview and beside it in All projects. " +
+				"PNG, JPEG, GIF or WebP, at most 5 MB, as base64 (a data: URL is accepted too); it replaces any cover the project has. " +
+				"To make a new image from a description, use generate_project_cover instead. Answers the project, with its cover_updated_at.",
+			InputSchema: schema([]string{"project_id", "image_base64"}, map[string]interface{}{
+				"project_id":   str("Project ID"),
+				"image_base64": str("The image's bytes as base64, or a data:image/...;base64, URL"),
+				"mime_type":    str("Optional image/png, image/jpeg, image/gif or image/webp; read from the bytes when left out"),
+			}),
+			Handler: setProjectCover,
+		},
+		{
+			Name: "generate_project_cover",
+			Description: "Generate a project's cover photo from a description and set it, replacing any cover the project has. " +
+				"The image is made with the workspace's own OpenAI API key, so the workspace pays for it; without one the call is refused with what to do. " +
+				"Describe a wide picture of the product or its setting, with no text in it. Takes up to a minute. Generations are limited per workspace, so generate once and set it, rather than trying many. Answers the project, with its cover_updated_at.",
+			InputSchema: schema([]string{"project_id", "prompt"}, map[string]interface{}{
+				"project_id": str("Project ID"),
+				"prompt":     str("What the picture shows, up to 1,000 characters"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				out, _, err := c.requestSlow("POST", "/api/v1/projects/"+strArg(args, "project_id")+"/cover/generate",
+					map[string]interface{}{"prompt": strArg(args, "prompt")})
+				return out, err
+			},
+		},
+		{
+			Name:        "remove_project_cover",
+			Description: "Remove a project's cover photo. A project with none is not an error. Answers the project.",
+			InputSchema: schema([]string{"project_id"}, map[string]interface{}{
+				"project_id": str("Project ID"),
+			}),
+			Handler: func(c *Client, args map[string]interface{}) (string, error) {
+				out, _, err := c.request("DELETE", "/api/v1/projects/"+strArg(args, "project_id")+"/cover", nil, nil)
+				return out, err
+			},
+		},
 	}
+}
+
+// coverTypes are the image types a cover may be, with the file name each is
+// sent under.
+var coverTypes = map[string]string{"image/png": "cover.png", "image/jpeg": "cover.jpg", "image/gif": "cover.gif", "image/webp": "cover.webp"}
+
+// setProjectCover answers set_project_cover: the base64 (or data: URL)
+// decoded and sent as the upload the app sends, its type the one given or,
+// when none is, the one its bytes read as. The server judges it: it checks
+// the bytes against the type and refuses anything but the four types.
+func setProjectCover(c *Client, args map[string]interface{}) (string, error) {
+	raw := strings.TrimSpace(strArg(args, "image_base64"))
+	mimeType := strings.TrimSpace(strArg(args, "mime_type"))
+	if strings.HasPrefix(raw, "data:") {
+		head, data, ok := strings.Cut(raw, ",")
+		if !ok || !strings.HasSuffix(head, ";base64") {
+			return "", fmt.Errorf("image_base64 is a data: URL that is not base64")
+		}
+		if mimeType == "" {
+			mimeType = strings.TrimSuffix(strings.TrimPrefix(head, "data:"), ";base64")
+		}
+		raw = data
+	}
+	img, err := base64.StdEncoding.DecodeString(strings.Join(strings.Fields(raw), ""))
+	if err != nil {
+		return "", fmt.Errorf("image_base64 is not base64: %v", err)
+	}
+	if mimeType == "" {
+		mimeType = http.DetectContentType(img)
+	}
+	// Any other type goes up as it is, for the server to refuse in its words.
+	name, ok := coverTypes[mimeType]
+	if !ok {
+		name = "cover"
+	}
+	out, _, err := c.uploadFile("/api/v1/projects/"+strArg(args, "project_id")+"/cover", name, mimeType, img)
+	return out, err
 }
 
 // createProject answers create_project. A project is created and then filed

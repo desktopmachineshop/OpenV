@@ -130,3 +130,11 @@ export const UI_REFRESH_FEATURE: FeatureKey = 'ui-refresh';
  * records the plan with every baseline either way; the key gates the page.
  */
 export const JOINED_BASELINES_FEATURE: FeatureKey = 'joined-baselines';
+
+/**
+ * A project's cover photo: the photo at the top of its Overview with the
+ * controls to add, change and remove it, and the photo on each project's
+ * card in All projects. The server stores covers either way; the key gates
+ * the interface.
+ */
+export const PROJECT_COVERS_FEATURE: FeatureKey = 'project-covers';

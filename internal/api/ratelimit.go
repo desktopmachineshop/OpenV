@@ -123,6 +123,14 @@ const (
 	defaultOAuthRefill = 300.0
 )
 
+// Cover photo generations (project_handlers_cover.go), per workspace: each
+// is a paid call on the workspace's own provider key. A person trying a few
+// prompts stays inside this; an agent generating in a loop does not.
+const (
+	defaultCoverGenBurst  = 10
+	defaultCoverGenRefill = 20.0
+)
+
 // cleanupEvery bounds how often a limiter sweeps stale buckets, and
 // staleAfter is how long a bucket must sit untouched before the sweep drops
 // it (any bucket idle that long has refilled to burst, so dropping it is

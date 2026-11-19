@@ -59,6 +59,7 @@ export interface WireProject {
   parent_project_id: string;
   created_at: string;
   updated_at: string;
+  cover_updated_at?: string;
 }
 
 /** orgs.Org (internal/domain/orgs). */

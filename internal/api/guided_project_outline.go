@@ -33,6 +33,10 @@ type projectOutline struct {
 	// releases and targets, links, status, delete, comments, to-dos, tasks,
 	// baselines, a review round and test runs.
 	Full bool
+	// Covers reports whether it also has the project's cover photo
+	// (FeatureProjectCovers), which the assistant may then offer to
+	// generate or remove as a card.
+	Covers bool
 }
 
 // outlineBudget bounds the outline in characters: about six thousand

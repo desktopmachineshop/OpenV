@@ -43,7 +43,12 @@ of the rail on every page.
   share of its requirements that are traced (a test case or a manual
   verification stands behind them) and the share verified (their tests
   pass, or they are verified by hand). A project with no requirements yet
-  says so instead. The project you opened last is marked with a blue edge.
+  says so instead. Once any project has a cover photo (added on its
+  **Overview**), each row shows its project's photo on the left, as tall
+  as the row, with the rest of the row beside it; a project with no photo
+  shows its initial there, so the rows line up. In the older card layout
+  the photo runs across the top of the card.
+  The project you opened last is marked with a blue edge.
   A project that has a parent (set on its **Overview**) is listed under
   it, indented, and the arrow before a parent's name folds its children
   away; the fold is remembered in this browser.

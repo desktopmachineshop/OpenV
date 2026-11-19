@@ -113,8 +113,12 @@ func toolGoldenIDs() map[string]bool {
 // so the lookup call is recorded too.
 func toolGoldenArgs() map[string]map[string]interface{} {
 	return map[string]map[string]interface{}{
-		"list_projects":           {},
-		"create_project":          {"name": "Brake assembly", "description": "The brake assembly under the landing gear.", "parent_project_id": goldenProjectID},
+		"list_projects":  {},
+		"create_project": {"name": "Brake assembly", "description": "The brake assembly under the landing gear.", "parent_project_id": goldenProjectID},
+		// A 1x1 GIF: small enough to read in the golden, and a real image.
+		"set_project_cover":       {"project_id": goldenProjectID, "image_base64": "R0lGODlhAQABAIAAAP///wAAACwAAAAAAQABAAACAkQBADs=", "mime_type": "image/gif"},
+		"generate_project_cover":  {"project_id": goldenProjectID, "prompt": "A brake assembly on a test rig, wide shot, no text"},
+		"remove_project_cover":    {"project_id": goldenProjectID},
 		"list_artifacts":          {"project_id": goldenProjectID, "type": "requirement", "owner": "QA"},
 		"get_artifact":            {"id": goldenArtifactRef, "project_id": goldenProjectID},
 		"get_project_map":         {"project_id": goldenProjectID, "baseline_id": goldenBaselineID},

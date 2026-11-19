@@ -35,6 +35,7 @@ export const PROJECT_ACTION_KINDS: ReadonlySet<string> = new Set([
   'baseline',
   'review',
   'test_run',
+  'cover',
   ...PLAN_ACTION_KINDS,
 ]);
 /** Each card's heading. A kind the chat panel has no label for is shown read-only. */
@@ -50,6 +51,7 @@ export const PROJECT_ACTION_LABELS: Record<string, string> = {
   baseline: 'Baseline',
   review: 'Review round',
   test_run: 'Test run',
+  cover: 'Cover photo',
   ...PLAN_ACTION_LABELS,
 };
 /**
@@ -66,6 +68,8 @@ export const RESULT_STATUSES = ['pass', 'fail', 'blocked', 'not-run'] as const;
 const LINK_TYPES: readonly string[] = LINK_TYPE_RULES.map((r) => r.type);
 const STATUSES: readonly string[] = ARTIFACT_STATUSES.map((s) => s.value);
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** A cover description's limit, the server's (projects.MaxCoverPromptRunes). */
+const COVER_PROMPT_MAX = 1000;
 
 export type ProjectAction =
   | {
@@ -90,7 +94,9 @@ export type ProjectAction =
       description: string;
       results: { ref: string; status: string; notes: string }[];
       complete: boolean;
-    };
+    }
+  | { kind: 'cover'; action: 'generate'; prompt: string }
+  | { kind: 'cover'; action: 'remove' };
 
 export type ProjectActionPlan = { outcome: 'action'; action: ProjectAction } | { outcome: 'refused'; reason: string };
 
@@ -242,6 +248,14 @@ export const planProjectAction = (s: Suggestion): ProjectActionPlan => {
       return act({ kind: 'test_run', name, description: String(s.description ?? ''), results, complete: s.complete === true });
     }
 
+    case 'cover': {
+      if (text(s.action) === 'remove') return act({ kind: 'cover', action: 'remove' });
+      const prompt = text(s.prompt);
+      if (!prompt) return refuse('The cover card does not say what the picture shows.');
+      if ([...prompt].length > COVER_PROMPT_MAX) return refuse(`The description is longer than ${COVER_PROMPT_MAX} characters.`);
+      return act({ kind: 'cover', action: 'generate', prompt });
+    }
+
     default:
       return PLAN_ACTION_KINDS.has(s.kind) ? planPlanAction(s) : refuse(`I do not know how to apply a "${s.kind}".`);
   }
@@ -288,6 +302,10 @@ export const projectActionSummary = (s: Suggestion): { title: string; detail: st
       return { title: a.name, detail: 'A snapshot of the project as it stands' };
     case 'review':
       return { title: 'Start a review round', detail: a.types ? `Every draft ${a.types.join(', ')} goes to in review` : 'Every draft goes to in review' };
+    case 'cover':
+      return a.action === 'remove'
+        ? { title: 'Remove the cover photo', detail: 'The project goes back to having no picture' }
+        : { title: 'Generate a cover photo', detail: a.prompt };
     case 'test_run':
       return {
         title: a.name,
@@ -327,6 +345,8 @@ export const projectActionLabels = (s: Suggestion): { button: string; done: stri
       return { button: 'Start review', done: '✓ Started' };
     case 'test_run':
       return { button: 'Record run', done: '✓ Recorded' };
+    case 'cover':
+      return text(s.action) === 'remove' ? { button: 'Remove cover', done: '✓ Removed' } : { button: 'Generate cover', done: '✓ Generated' };
     default:
       return PLAN_ACTION_KINDS.has(s.kind) ? planActionLabels(s) : { button: 'Apply', done: '✓ Applied' };
   }

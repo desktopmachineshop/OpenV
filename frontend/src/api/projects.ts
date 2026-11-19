@@ -6,7 +6,7 @@
 
 import { filenameFromContentDisposition } from './contentDisposition';
 import { downloadExtension, downloadQuery } from '../utils/downloadSelection';
-import { client, saveBlob } from './http';
+import { API_BASE_URL, client, saveBlob, uploadConfig } from './http';
 import type { LinkedArtifact } from './types/artifacts';
 import type {
   ArtifactTypeDef,
@@ -56,6 +56,27 @@ export const projectAPI = {
     client.put<Project>(`/api/v1/projects/${id}`, payload),
   delete: (id: string) =>
     client.delete(`/api/v1/projects/${id}`),
+  /**
+   * The project's cover photo, shown on its Overview and its card in All
+   * projects. PNG, JPEG, GIF or WebP up to 5 MB; editors upload and remove,
+   * anyone who can see the project views. Each answers the project.
+   */
+  uploadCover: (id: string, file: Blob, filename = 'cover') => {
+    const formData = new FormData();
+    formData.append('file', file, filename);
+    return client.post<Project>(`/api/v1/projects/${id}/cover`, formData, uploadConfig());
+  },
+  removeCover: (id: string) => client.delete<Project>(`/api/v1/projects/${id}/cover`),
+  /**
+   * Generate the cover from a description with the workspace's own OpenAI
+   * key, replacing any cover. 409 when the workspace has no key, 429 past
+   * the workspace's generation limit; can take up to a minute.
+   */
+  generateCover: (id: string, prompt: string) =>
+    client.post<Project>(`/api/v1/projects/${id}/cover/generate`, { prompt }, { timeout: 150000 }),
+  /** The cover's URL, versioned by its cover_updated_at so a new cover is a new URL. */
+  coverUrl: (id: string, version: string) =>
+    `${API_BASE_URL}/api/v1/projects/${id}/cover?v=${encodeURIComponent(version)}`,
   /** The projects filed under this one (REQ-144). */
   children: (id: string) => client.get<Project[]>(`/api/v1/projects/${id}/children`),
   /** The far end of every link crossing out of the project (REQ-145). */

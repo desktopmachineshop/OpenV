@@ -8,6 +8,29 @@ definition, metrics, constraints, personas and needs on the left, and on the
 right the project's figures, what needs you and its latest activity. On a
 phone, where the project stands comes first.
 
+## Cover photo
+
+A project can have a cover photo, shown across the top of its Overview and
+beside the project in **All projects**. Before there is one, a slim box at
+the top of the page offers **Add a cover photo**; choose a PNG, JPEG, GIF or
+WebP image. A large photo is scaled down in your browser before it is
+saved, and a file over 5 MB is refused. Once there is a cover, it runs
+across the whole page, with the project's four figures (**traced**,
+**verified**, **failing** and **suspect**) along its foot, so the panels
+beside the definition start higher up. **Change cover** in the photo's top
+corner replaces it and **Remove** takes it away; the figures then go back
+to the top of their column. Anyone who can see the project sees its cover;
+changing it takes an editor.
+
+You can also have a cover made for you. Ask the **V&V Assistant** for one
+("make a cover photo for this project") and it offers a **Cover photo** card
+describing the picture; **Generate cover** makes it and sets it, and a card
+can remove the cover too. Agents, and AI apps you connect to the workspace,
+can generate, set or remove a cover with their OpenV tools. A generated
+picture is made with the workspace's own OpenAI API key, which a workspace
+admin adds under **Workspace settings**, **AI providers**; without one the
+card says so. A workspace can generate a limited number of covers an hour.
+
 ## Where the project sits
 
 At the top of the page, **Part of** names the project this one belongs

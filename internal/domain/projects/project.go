@@ -39,6 +39,11 @@ type Project struct {
 	ParentProjectID string    `json:"parent_project_id"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
+	// CoverUpdatedAt is when the project's cover photo was stored, absent
+	// when it has none (CoverService.Stamp sets it; the project's own row
+	// does not hold it). Clients fetch the image from the cover endpoint,
+	// with this as its version.
+	CoverUpdatedAt *time.Time `json:"cover_updated_at,omitempty"`
 }
 
 // CreateProjectRequest represents the request to create a project

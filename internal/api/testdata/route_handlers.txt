@@ -19,6 +19,10 @@ GET /api/v1/projects/{id}/download/pdf -> DownloadPDF
 GET /api/v1/projects/{id}/download/docx -> DownloadDOCX
 GET /api/v1/projects/{id}/ai-map -> ProjectAIMap
 GET /api/v1/projects/{id}/children -> ListChildProjects
+GET /api/v1/projects/{id}/cover -> GetProjectCover
+POST /api/v1/projects/{id}/cover -> UploadProjectCover
+DELETE /api/v1/projects/{id}/cover -> DeleteProjectCover
+POST /api/v1/projects/{id}/cover/generate -> GenerateProjectCover
 GET /api/v1/projects/{id}/share-links -> ListShareLinks
 POST /api/v1/projects/{id}/share-links -> CreateShareLink
 DELETE /api/v1/share-links/{id} -> RevokeShareLink [alwaysWritable]

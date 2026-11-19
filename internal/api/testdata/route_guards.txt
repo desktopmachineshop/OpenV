@@ -31,6 +31,7 @@ DELETE /api/v1/orgs/{id}/plan-calendar/time-off/{timeOffId}: org:member
 DELETE /api/v1/orgs/{id}/runner-session: org:member, runner-sessions
 DELETE /api/v1/orgs/{id}/worker-keys/{keyId}: org:admin
 DELETE /api/v1/projects/{id}: project:owner
+DELETE /api/v1/projects/{id}/cover: project:editor
 DELETE /api/v1/projects/{id}/members/{userId}: project:owner
 DELETE /api/v1/projects/{id}/plan/baselines/{baselineId}: project:editor
 DELETE /api/v1/projects/{id}/plan/milestones/{milestoneId}: project:editor
@@ -142,6 +143,7 @@ GET /api/v1/projects/{id}: project:viewer
 GET /api/v1/projects/{id}/ai-map: project:viewer
 GET /api/v1/projects/{id}/baselines: project:viewer
 GET /api/v1/projects/{id}/children: project:viewer
+GET /api/v1/projects/{id}/cover: project:viewer
 GET /api/v1/projects/{id}/download/csv: project:viewer
 GET /api/v1/projects/{id}/download/docx: project:viewer
 GET /api/v1/projects/{id}/download/excel: project:viewer
@@ -293,6 +295,8 @@ POST /api/v1/orgs/{id}/worker-keys: org:admin
 POST /api/v1/projects: project-create
 POST /api/v1/projects/import: project-create
 POST /api/v1/projects/{id}/baselines: project:editor
+POST /api/v1/projects/{id}/cover: project:editor
+POST /api/v1/projects/{id}/cover/generate: project:editor
 POST /api/v1/projects/{id}/draft-test-cases: project:editor
 POST /api/v1/projects/{id}/evidence-bundles: project:editor
 POST /api/v1/projects/{id}/interviews: no-proposal-run, project:editor, project-visible
