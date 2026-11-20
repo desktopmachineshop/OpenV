@@ -9,6 +9,8 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+## 0.37.0 — 2026-11-20
+
 ### New features
 
 - **Cover photos for projects.** Give a project a cover photo from the
