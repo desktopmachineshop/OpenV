@@ -229,7 +229,8 @@
     "workspace-plan",
     "joined-baselines",
     "key-projects",
-    "project-covers"
+    "project-covers",
+    "google-ai-studio"
   ],
   "event_types": [
     "artifact.created",

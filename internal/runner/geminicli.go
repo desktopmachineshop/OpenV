@@ -209,12 +209,20 @@ func (a *GeminiCLIAdapter) Detect(ctx context.Context) Availability {
 // final object, so stdout events stream only at the end; stderr is surfaced
 // live (EmitStderr) so a long run isn't silent and failures stay visible.
 func (a *GeminiCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, error) {
+	return startGemini(ctx, spec, providers.ProviderGeminiCLI, geminiRunEnv)
+}
+
+// startGemini is a headless gemini run for provider: gemini-cli, or Google
+// AI Studio, which drives the same CLI pinned to an API key. runEnv is the
+// provider's environment for the run, given the isolated settings path.
+func startGemini(ctx context.Context, spec RunSpec, provider string,
+	runEnv func(RunSpec, string) map[string]string) (RunHandle, error) {
 	spec = withOpenVToolFilter(spec)
 	args, err := buildGeminiArgs(spec)
 	if err != nil {
 		return nil, err
 	}
-	noteMaxTurnsUnenforced(providers.ProviderGeminiCLI, spec)
+	noteMaxTurnsUnenforced(provider, spec)
 
 	// Isolated settings file: rather than overwriting the user's workspace
 	// .gemini/settings.json, write our own and point gemini's *system*
@@ -223,10 +231,14 @@ func (a *GeminiCLIAdapter) Start(ctx context.Context, spec RunSpec) (RunHandle, 
 	// least-privilege approval mode. The run token is referenced via $VAR and
 	// resolved from the process environment, so it never lands in the file.
 	settingsPath := filepath.Join(spec.WorkDir, ".openv", "gemini-settings.json")
-	if err := writeGeminiSettings(settingsPath, spec.MCP, geminiApprovalMode(spec), spec.AllowedTools); err != nil {
+	authType := ""
+	if provider == providers.ProviderGoogleAPI {
+		authType = geminiAPIKeyAuthType
+	}
+	if err := writeGeminiSettings(settingsPath, spec.MCP, geminiApprovalMode(spec), spec.AllowedTools, authType); err != nil {
 		return nil, err
 	}
-	procEnv := geminiRunEnv(spec, settingsPath)
+	procEnv := runEnv(spec, settingsPath)
 
 	prompt := spec.Prompt
 	if spec.SystemPrompt != "" {
@@ -317,7 +329,11 @@ func geminiUnsupported(spec RunSpec) error {
 // this server"). tools.allowed and --allowed-tools are NOT used: despite the
 // name they are an auto-approval list, which would widen the run rather than
 // narrow it.
-func writeGeminiSettings(path string, mcp MCPServerConfig, approvalMode string, allowedTools []string) error {
+//
+// authType, when set, pins security.auth.selectedAuthType: the system
+// settings path outranks the member's own settings, so a Google AI Studio
+// run cannot be moved onto a Google sign-in by a file under HOME.
+func writeGeminiSettings(path string, mcp MCPServerConfig, approvalMode string, allowedTools []string, authType string) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return err
 	}
@@ -354,6 +370,11 @@ func writeGeminiSettings(path string, mcp MCPServerConfig, approvalMode string, 
 		"mcpServers": map[string]interface{}{
 			"openv": openv,
 		},
+	}
+	if authType != "" {
+		cfg["security"] = map[string]interface{}{
+			"auth": map[string]interface{}{"selectedAuthType": authType},
+		}
 	}
 	buf, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {

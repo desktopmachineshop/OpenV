@@ -90,6 +90,7 @@ var Registry = []Feature{
 	// What's new list it, and the create itself is unconditional.
 	{Key: FeatureKeyProjects, ShippedIn: "0.36.0", Summary: "Create a project with a runner key: scripts, and AI clients connected through the openv MCP server's new create_project tool, make projects and file them under a parent"},
 	{Key: FeatureProjectCovers, ShippedIn: "0.37.0", Summary: "Give a project a cover photo from its Overview, and see each project's photo on its card in All projects"},
+	{Key: FeatureGoogleAIStudio, ShippedIn: "0.38.0", Summary: "Google AI Studio as an agent provider: paste a Gemini API key from AI Studio into workspace settings and agents run on it in every project, with no Google sign-in"},
 }
 
 // Feature keys the code gates on.
@@ -369,6 +370,11 @@ const (
 	// All projects. The server stores and serves covers either way; the key
 	// gates the interface.
 	FeatureProjectCovers = "project-covers"
+	// FeatureGoogleAIStudio is the google-api agent provider, offered as
+	// Google AI Studio: agents run on the workspace's AI Studio (Gemini API)
+	// key whatever the project's agent auth. Like antigravity-cli it gates
+	// choosing the provider, never a run.
+	FeatureGoogleAIStudio = "google-ai-studio"
 )
 
 // Enabled reports whether a feature is on for a workspace on the given

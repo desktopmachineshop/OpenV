@@ -243,7 +243,7 @@ func TestWriteGeminiSettings(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".openv", "gemini-settings.json")
 	spec := geminiSpec()
-	if err := writeGeminiSettings(path, spec.MCP, geminiApprovalMode(spec), spec.AllowedTools); err != nil {
+	if err := writeGeminiSettings(path, spec.MCP, geminiApprovalMode(spec), spec.AllowedTools, ""); err != nil {
 		t.Fatalf("writeGeminiSettings: %v", err)
 	}
 

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { providerLabel } from './providerLabels';
 import type { AgentDef, AgentStats } from '../../api/client';
 import { AgentGlyph, buttonStyle, chipStyle } from '../ui';
 import { HierarchyNode, groupColor, possibleParents } from './agentHierarchy';
@@ -188,7 +189,7 @@ export const AgentHierarchyCard: React.FC<CardProps> = ({
                 {agent.description && <div>{agent.description}</div>}
                 <div>
                   <span style={{ color: 'var(--text-muted)' }}>Runs on </span>
-                  {agent.provider}
+                  {providerLabel(agent.provider)}
                   {agent.model ? ` · ${agent.model}` : ''}
                 </div>
                 <div>

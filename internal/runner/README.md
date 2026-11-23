@@ -26,7 +26,7 @@ server, so what they send is a contract. This README covers both packages;
 | `worker.go` | `Worker`: the claim loop, its two slot pools, a run from claim to finish or release |
 | `client.go` | `Client`: every request of the worker wire (claim, start, logs, finish, release, sign-ins, pool) |
 | `internal/workerproto/workerproto.go` | the worker wire's bodies, a types-only leaf (K7) the API and the runner both use; `agentruns.FinishRequest` and `LogEntry` and this package's `RunAuth`, `PoolNode` and `PoolAssignment` are aliases of its types |
-| `adapter.go`, `claudecode.go`, `codexcli.go`, `geminicli.go`, `antigravity.go` | the provider adapters, one per vendor CLI, and detection |
+| `adapter.go`, `claudecode.go`, `codexcli.go`, `geminicli.go`, `antigravity.go`, `googleaistudio.go` | the provider adapters, one per vendor CLI (Google AI Studio drives the Gemini CLI on an API key), and detection |
 | `classify.go`, `process.go` | the failure taxonomy (where a run ended, its class, whether it retries); the CLI process and its watchdog |
 | `toolallow.go`, `childenv.go` | the agent's tool allowlist translated for each vendor CLI; the environment a CLI starts with |
 | `login*.go`, `pty_*.go` | the CLI sign-in broker and its pseudo-terminal relay |

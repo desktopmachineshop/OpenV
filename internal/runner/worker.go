@@ -503,8 +503,16 @@ func (w *Worker) runEnv(claim *ClaimResponse) (map[string]string, bool) {
 	// A project on api-key auth overrides the host's CLI sign-in: inject the
 	// configured key from the runner host's environment into the variable the
 	// provider CLI natively reads. The run still executes on this runner.
-	if claim.Auth != nil && claim.Auth.Mode == "api-key" {
-		keyEnv := claim.Auth.APIKeyEnv
+	//
+	// A provider with no sign-in of its own (Google AI Studio) is always on
+	// api-key auth: a server older than it sends no such auth for it, and
+	// the host's variable then serves.
+	apiKeyAuth := claim.Auth != nil && claim.Auth.Mode == "api-key"
+	if apiKeyAuth || providers.AlwaysAPIKey(claim.Agent.Provider) {
+		keyEnv, stored := "", ""
+		if claim.Auth != nil && apiKeyAuth {
+			keyEnv, stored = claim.Auth.APIKeyEnv, claim.Auth.APIKey
+		}
 		if keyEnv == "" {
 			keyEnv = providers.DefaultAPIKeyEnv(claim.Agent.Provider)
 		}
@@ -519,9 +527,15 @@ func (w *Worker) runEnv(claim *ClaimResponse) (map[string]string, bool) {
 		}
 		// The key the workspace pasted in the app comes with the claim; only
 		// without one does the runner read its host's variable.
-		key := claim.Auth.APIKey
+		key := stored
 		if key == "" {
 			key = os.Getenv(keyEnv)
+		}
+		if key == "" && !apiKeyAuth {
+			w.failRun(run.ID, "Google AI Studio runs on an API key, but no "+keyEnv+
+				" is stored for the workspace or set on the runner host — paste a key from AI Studio in Workspace settings → AI providers",
+				siteAPIKeyMissing, nil)
+			return nil, false
 		}
 		if key == "" {
 			w.failRun(run.ID, "this project uses API-key auth, but no "+keyEnv+

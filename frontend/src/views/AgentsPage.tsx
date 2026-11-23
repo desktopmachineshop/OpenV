@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { providerLabel } from '../components/agents/providerLabels';
 import { useParams } from 'react-router-dom';
 import { AgentDef, agentsAPI } from '../api/client';
 import { useAppStore } from '../state/store';
@@ -189,7 +190,7 @@ export const AgentsList: React.FC = () => {
                     borderLeft: `3px solid ${providerBadgeColor(agent.provider)}`,
                   }}
                 >
-                  {agent.provider}
+                  {providerLabel(agent.provider)}
                 </span>
                 <span
                   style={chipStyle(agent.write_mode === 'direct' ? 'danger' : 'warning')}

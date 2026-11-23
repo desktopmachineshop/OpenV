@@ -4,6 +4,7 @@ import { ModelSelect } from './ModelSelect';
 import { useViewport } from '../../hooks/useViewport';
 import { useFeature } from '../../hooks/useFeature';
 import { AGENT_PROVIDERS, FeatureKey } from '../../generated/contract';
+import { GOOGLE_AI_STUDIO_FEATURE, providerLabel } from './providerLabels';
 
 // Used until the provider settings load (or if they fail to) — the server
 // returns the same list, in the same order, with each provider's models:
@@ -78,6 +79,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
   const [saving, setSaving] = useState(false);
   const [providerSettings, setProviderSettings] = useState<ProviderSetting[]>([]);
   const antigravityOn = useFeature(ANTIGRAVITY_FEATURE);
+  const gatedOff: Record<string, boolean> = { 'antigravity-cli': !antigravityOn, 'google-api': !useFeature(GOOGLE_AI_STUDIO_FEATURE) };
 
   // Provider settings carry each provider's available models; a failure here
   // is not worth an error banner — the form falls back to free-text entry.
@@ -185,7 +187,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
 
   const activeProvider = providerSettings.find((p) => p.provider === form.provider);
   const providerNames = (providerSettings.length ? providerSettings.map((p) => p.provider) : FALLBACK_PROVIDERS).filter(
-    (p) => p !== 'antigravity-cli' || antigravityOn || agent?.provider === p
+    (p) => agent?.provider === p || !gatedOff[p]
   );
 
   return (
@@ -278,7 +280,7 @@ export const AgentEditor: React.FC<AgentEditorProps> = ({ agent, onSaved, onCanc
               >
                 {providerNames.map((p) => (
                   <option key={p} value={p}>
-                    {p}
+                    {providerLabel(p)}
                   </option>
                 ))}
               </select>

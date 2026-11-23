@@ -126,6 +126,13 @@ func (h *Handler) releaseFailedClaim(runID, workerID string) {
 // sign-in. Everything else uses the runner's local sign-in.
 func (h *Handler) resolveRunAuth(r *http.Request, run *agentruns.Run, agent *agents.Agent) map[string]string {
 	auth := map[string]string{"mode": projects.AgentAuthUserAccount}
+	// A provider with no sign-in of its own (Google AI Studio) runs on the
+	// workspace's key in every project, on every runner, including a run
+	// that belongs to no project.
+	if providers.AlwaysAPIKey(agent.Provider) {
+		h.resolveAPIKeyAuth(auth, run, agent)
+		return auth
+	}
 	if run.ProjectID != nil && *run.ProjectID != "" {
 		project, err := h.ProjectService.GetProject(*run.ProjectID)
 		if err == nil && project != nil && project.AgentAuth == projects.AgentAuthAPIKey {

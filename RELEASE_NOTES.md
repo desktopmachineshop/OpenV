@@ -9,6 +9,15 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Google AI Studio as an agent provider.** Make a Gemini API key in
+  Google AI Studio, paste it on the new **Google AI Studio** card in
+  **Workspace settings → AI providers**, and choose Google AI Studio as an
+  agent's provider. Its agents run on that key in every project, on every
+  runner, with no Google sign-in and nothing to set on the runner's
+  machine; a run with no key says so straight away.
+
 ## 0.37.0 — 2026-11-20
 
 ### New features

@@ -257,6 +257,10 @@ project gets it with the run, members' own machines included, so nobody sets
 an environment variable. **Remove key** takes it back; runners then fall back
 to the variable on their own machine, if it is set there.
 
+Agents on **Google AI Studio** always run on the workspace's Gemini API key,
+in user-account projects as well: the provider has no sign-in to use
+instead.
+
 ## Repositories
 
 **Project Settings → Repositories** connects repositories (name, remote URL,
