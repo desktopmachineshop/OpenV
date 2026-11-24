@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
 
@@ -104,9 +105,17 @@ func (h *Handler) AddOrgTeamMember(w http.ResponseWriter, r *http.Request) {
 	if team == nil {
 		return
 	}
-	if err := h.OrgTeamService.AddTeamMember(team.ID, mux.Vars(r)["userId"]); err != nil {
+	userID := mux.Vars(r)["userId"]
+	already := teamHasMember(team, userID)
+	if err := h.OrgTeamService.AddTeamMember(team.ID, userID); err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
+	}
+	// Joining a team hands over every project the team holds, so the person
+	// is told; adding somebody who is already in it changes nothing and
+	// says nothing.
+	if !already {
+		h.publishOrgEvent(r, events.OrgTeamMemberAdded, team.OrgID, userID, teamMemberPayload(team, userID))
 	}
 	w.WriteHeader(http.StatusCreated)
 }
@@ -116,9 +125,33 @@ func (h *Handler) RemoveOrgTeamMember(w http.ResponseWriter, r *http.Request) {
 	if team == nil {
 		return
 	}
-	if err := h.OrgTeamService.RemoveTeamMember(team.ID, mux.Vars(r)["userId"]); err != nil {
+	userID := mux.Vars(r)["userId"]
+	was := teamHasMember(team, userID)
+	if err := h.OrgTeamService.RemoveTeamMember(team.ID, userID); err != nil {
 		respondInternal(w, r, "failed to remove team member", err)
 		return
 	}
+	if was {
+		h.publishOrgEvent(r, events.OrgTeamMemberRemoved, team.OrgID, userID, teamMemberPayload(team, userID))
+	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// teamHasMember reports whether the team, as loaded with its members, holds
+// the account: whether adding it changes anything, or removing it does.
+func teamHasMember(team *orgs.OrgTeam, userID string) bool {
+	for _, m := range team.Members {
+		if m != nil && m.UserID == userID {
+			return true
+		}
+	}
+	return false
+}
+
+func teamMemberPayload(team *orgs.OrgTeam, userID string) map[string]interface{} {
+	return map[string]interface{}{
+		"user_id":   userID,
+		"team_id":   team.ID,
+		"team_name": team.Name,
+	}
 }

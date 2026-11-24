@@ -1,7 +1,7 @@
 # Exports of src/api/client.ts: kind and name, with the members of each exported object (invariant I23).
 # Regenerate: npx vitest run src/arch -u
 
-exports: 283; members of exported objects: 358
+exports: 284; members of exported objects: 358
 
 interface AdminUsage
 interface AdminUser
@@ -77,6 +77,7 @@ interface InterviewMessage
 interface InterviewSession
 type      InvitationOutcome
 interface InvitationPreview
+interface InvitationProject
 interface LimitUsage
 interface Link
 interface LinkTypeRule

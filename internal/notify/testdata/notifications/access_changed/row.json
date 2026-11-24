@@ -163,6 +163,146 @@
         "UserID": "user-ben"
       },
       "scenario": "project.member_removed by an owner"
+    },
+    {
+      "delivery": "1 of 1",
+      "row": {
+        "Body": "You are now in the Design team in this workspace, and can open every project the team has access to.",
+        "ClearedAt": null,
+        "CreatedAt": "<time.Now() when the row was built>",
+        "EntityRef": {
+          "kind": "team_membership",
+          "org_id": "org-acme",
+          "team_id": "team-1",
+          "user_id": "user-ben"
+        },
+        "EntityRef Go types": {
+          "kind": "string",
+          "org_id": "string",
+          "team_id": "string",
+          "user_id": "string"
+        },
+        "Flagged": false,
+        "ID": "<uuid>",
+        "OrgID": "org-acme",
+        "Read": false,
+        "Title": "You were added to a team",
+        "Type": "access_changed",
+        "UserID": "user-ben"
+      },
+      "scenario": "org.team_member_added: an admin puts a member in the Design team"
+    },
+    {
+      "delivery": "1 of 1",
+      "row": {
+        "Body": "You are no longer in the Test team. Projects you could open only through the team are closed to you now.",
+        "ClearedAt": null,
+        "CreatedAt": "<time.Now() when the row was built>",
+        "EntityRef": {
+          "kind": "team_membership",
+          "org_id": "org-acme",
+          "team_id": "team-2",
+          "user_id": "user-ben"
+        },
+        "EntityRef Go types": {
+          "kind": "string",
+          "org_id": "string",
+          "team_id": "string",
+          "user_id": "string"
+        },
+        "Flagged": false,
+        "ID": "<uuid>",
+        "OrgID": "org-acme",
+        "Read": false,
+        "Title": "You were removed from a team",
+        "Type": "access_changed",
+        "UserID": "user-ben"
+      },
+      "scenario": "org.team_member_removed from a team named Test team"
+    },
+    {
+      "delivery": "1 of 2",
+      "row": {
+        "Body": "The Design team now has editor access to this project, and you are in that team.",
+        "ClearedAt": null,
+        "CreatedAt": "<time.Now() when the row was built>",
+        "EntityRef": {
+          "kind": "project_membership",
+          "org_id": "org-acme",
+          "project_id": "proj-apollo",
+          "user_id": "user-ben"
+        },
+        "EntityRef Go types": {
+          "kind": "string",
+          "org_id": "string",
+          "project_id": "string",
+          "user_id": "string"
+        },
+        "Flagged": false,
+        "ID": "<uuid>",
+        "OrgID": "org-acme",
+        "Read": false,
+        "Title": "Your team has access to a project",
+        "Type": "access_changed",
+        "UserID": "user-ben"
+      },
+      "scenario": "project.team_access_granted: the granting owner is in the team"
+    },
+    {
+      "delivery": "2 of 2",
+      "row": {
+        "Body": "The Design team now has editor access to this project, and you are in that team.",
+        "ClearedAt": null,
+        "CreatedAt": "<time.Now() when the row was built>",
+        "EntityRef": {
+          "kind": "project_membership",
+          "org_id": "org-acme",
+          "project_id": "proj-apollo",
+          "user_id": "user-cy"
+        },
+        "EntityRef Go types": {
+          "kind": "string",
+          "org_id": "string",
+          "project_id": "string",
+          "user_id": "string"
+        },
+        "Flagged": false,
+        "ID": "<uuid>",
+        "OrgID": "org-acme",
+        "Read": false,
+        "Title": "Your team has access to a project",
+        "Type": "access_changed",
+        "UserID": "user-cy"
+      },
+      "scenario": "project.team_access_granted: the granting owner is in the team"
+    },
+    {
+      "delivery": "1 of 1",
+      "row": {
+        "Body": "The Design team no longer has access to this project. Any access you were given yourself stays.",
+        "ClearedAt": null,
+        "CreatedAt": "<time.Now() when the row was built>",
+        "EntityRef": {
+          "kind": "project_membership",
+          "org_id": "org-acme",
+          "project_id": "proj-apollo",
+          "user_id": "user-ben"
+        },
+        "EntityRef Go types": {
+          "kind": "string",
+          "org_id": "string",
+          "project_id": "string",
+          "user_id": "string"
+        },
+        "Flagged": false,
+        "ID": "<uuid>",
+        "OrgID": "org-acme",
+        "Read": false,
+        "Title": "Your team's access to a project ended",
+        "Type": "access_changed",
+        "UserID": "user-ben"
+      },
+      "scenario": "project.team_access_revoked, member_ids read back from storage"
     }
   ],
   "regenerate": "UPDATE_GOLDEN=1 go test ./internal/notify -count=1 -run '^TestNotificationContent$'",

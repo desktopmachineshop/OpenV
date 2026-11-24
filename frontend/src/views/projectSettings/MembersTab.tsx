@@ -37,6 +37,9 @@ interface MembersTabProps extends ShareLinksCardProps {
   addRole: string;
   setAddRole: Setter<string>;
   addingMember: boolean;
+  // email-invites: an address with no account is invited, not refused.
+  emailInvitesOn: boolean;
+  inviteLink: string;
   teamGrantsLoading: boolean;
   teamGrants: TeamGrant[];
   handleSetTeamRole: (grant: TeamGrant, role: string) => void;
@@ -63,6 +66,8 @@ export const MembersTab: React.FC<MembersTabProps> = ({
   addRole,
   setAddRole,
   addingMember,
+  emailInvitesOn,
+  inviteLink,
   teamGrantsLoading,
   teamGrants,
   handleSetTeamRole,
@@ -145,10 +150,18 @@ export const MembersTab: React.FC<MembersTabProps> = ({
 
     <div className="card" data-help-key="settings.members.invite">
       <h3>Add member</h3>
-      <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-        The person must already have an OpenV account — invite them to sign up first, then add
-        their email here.
-      </p>
+      {emailInvitesOn ? (
+        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+          Add anyone by email. Someone with no OpenV account yet is emailed an invitation to the
+          workspace that opens this project when they accept it; only a workspace admin can invite
+          someone new.
+        </p>
+      ) : (
+        <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+          The person must already have an OpenV account — invite them to sign up first, then add
+          their email here.
+        </p>
+      )}
       <form onSubmit={handleAddMember} style={{ display: 'flex', gap: 10, alignItems: 'flex-end', flexWrap: 'wrap' }}>
         <div style={{ flex: 1, minWidth: 220 }}>
           <label style={{ fontSize: 12 }}>Email</label>
@@ -172,6 +185,12 @@ export const MembersTab: React.FC<MembersTabProps> = ({
           {addingMember ? 'Adding…' : 'Add member'}
         </button>
       </form>
+      {inviteLink && (
+        <div style={{ marginTop: 10 }}>
+          <label style={{ fontSize: 12 }}>Invitation link</label>
+          <input readOnly value={inviteLink} onFocus={(e) => e.currentTarget.select()} aria-label="Invitation link" />
+        </div>
+      )}
     </div>
 
     <div className="card" data-help-key="settings.members.teams">

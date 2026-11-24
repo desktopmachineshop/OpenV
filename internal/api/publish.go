@@ -53,6 +53,16 @@ func (h *Handler) publishOrgEventAs(actor, eventType, orgID, entityID string, pa
 	h.Bus.Publish(events.New(eventType, "", entityID, actor, payload).WithOrg(orgID))
 }
 
+// publishProjectEventAs publishes a project's event from a path with no
+// request to read the actor or the workspace from: a project joined by
+// taking up an invitation, during a sign-up or a sign-in.
+func (h *Handler) publishProjectEventAs(actor, eventType, projectID, orgID, entityID string, payload map[string]interface{}) {
+	if h.Bus == nil || projectID == "" {
+		return
+	}
+	h.Bus.Publish(events.New(eventType, projectID, entityID, actor, payload).WithOrg(orgID))
+}
+
 // logAutoNote writes a system note of the given type to an artifact's feed,
 // attributed to the caller when there is one.
 func (h *Handler) logAutoNote(r *http.Request, artifactID, message, entryType string) {

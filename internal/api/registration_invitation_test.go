@@ -55,6 +55,33 @@ type fakeInviteService struct {
 	// Send, before the goroutine gets to MarkEmailed, so a test asserting the
 	// stamp waits here instead.
 	markedEmailed chan string
+	// grants are the projects each invitation opens, by invitation id;
+	// an acceptance reports them all as joined.
+	grants map[string][]invitations.ProjectGrant
+}
+
+// GrantProject adds a project to an invitation, re-roling one it has.
+func (f *fakeInviteService) GrantProject(invID, projectID, role string) ([]invitations.ProjectGrant, error) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.grants == nil {
+		f.grants = map[string][]invitations.ProjectGrant{}
+	}
+	for i, g := range f.grants[invID] {
+		if g.ProjectID == projectID {
+			f.grants[invID][i].Role = role
+			return append([]invitations.ProjectGrant{}, f.grants[invID]...), nil
+		}
+	}
+	f.grants[invID] = append(f.grants[invID], invitations.ProjectGrant{ProjectID: projectID, Role: role, ProjectName: "Project " + projectID})
+	return append([]invitations.ProjectGrant{}, f.grants[invID]...), nil
+}
+
+// projectsOf answers an invitation's projects, as joined on acceptance.
+func (f *fakeInviteService) projectsOf(invID string) []invitations.ProjectGrant {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return append([]invitations.ProjectGrant(nil), f.grants[invID]...)
 }
 
 func newFakeInviteService() *fakeInviteService {
@@ -203,7 +230,7 @@ func (f *fakeInviteService) acceptResolved(inv *invitations.Invitation, email, u
 		// and nothing is granted, so no claim is needed.
 		f.accepted = append(f.accepted, label+":"+userID)
 		delete(f.pending, inv.Email)
-		return &invitations.Acceptance{Invitation: inv, Role: existing, AlreadyMember: true}, nil
+		return &invitations.Acceptance{Invitation: inv, Role: existing, AlreadyMember: true, Projects: f.projectsOf(inv.ID)}, nil
 	}
 	if f.gone[inv.ID] {
 		// Revoked or spent since it was resolved: the claim finds nothing.
@@ -212,7 +239,7 @@ func (f *fakeInviteService) acceptResolved(inv *invitations.Invitation, email, u
 	f.gone[inv.ID] = true
 	f.accepted = append(f.accepted, label+":"+userID)
 	delete(f.pending, inv.Email)
-	return &invitations.Acceptance{Invitation: inv, Role: inv.Role}, nil
+	return &invitations.Acceptance{Invitation: inv, Role: inv.Role, Projects: f.projectsOf(inv.ID)}, nil
 }
 
 // revoke takes an invitation out of circulation the way an admin's DELETE
@@ -346,6 +373,7 @@ func setTestServices(h *Handler, d HandlerDeps) {
 	h.VVService = d.VVService
 	h.RunService = d.RunService
 	h.GuidedService = d.GuidedService
+	h.OrgTeamService = d.OrgTeamService
 }
 
 func TestRegistrationOpenByDefault(t *testing.T) {

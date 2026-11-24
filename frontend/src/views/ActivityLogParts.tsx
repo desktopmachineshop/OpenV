@@ -329,6 +329,14 @@ const Detail: React.FC<{ e: DomainEvent; names: ArtifactNames }> = ({ e, names }
           <Chip>{humanWord(p.to)}</Chip>
         </div>
       );
+    case 'project.team_access_granted':
+      return (
+        <span>
+          {String(p.team_name || 'A team')} now has {humanWord(p.role)} access to this project.
+        </span>
+      );
+    case 'project.team_access_revoked':
+      return <span>{String(p.team_name || 'A team')} no longer has access to this project.</span>;
     default:
       return <Fields e={e} />;
   }

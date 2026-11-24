@@ -171,6 +171,8 @@ func payloadDrives() []payloadDrive {
 		// Project membership.
 		httpDrive("POST /api/v1/projects/{id}/members", "/api/v1/projects/proj-1/members",
 			`{"email":"known@example.com","role":"editor"}`),
+		httpDrive("POST /api/v1/projects/{id}/members (address without an account)", "/api/v1/projects/proj-1/members",
+			`{"email":"stranger@example.com","role":"editor"}`),
 		httpDrive("PUT /api/v1/projects/{id}/members/{userId}", "/api/v1/projects/proj-1/members/u-known", `{"role":"viewer"}`),
 		httpDrive("DELETE /api/v1/projects/{id}/members/{userId}", "/api/v1/projects/proj-1/members/u-known", ""),
 		// Workspace membership and invitations.
@@ -182,6 +184,12 @@ func payloadDrives() []payloadDrive {
 			`{"email":"newcomer@example.com","role":"admin"}`),
 		httpDrive("PUT /api/v1/orgs/{id}/members/{userId}", "/api/v1/orgs/org-1/members/u-known", `{"role":"admin"}`),
 		httpDrive("DELETE /api/v1/orgs/{id}/members/{userId}", "/api/v1/orgs/org-1/members/u-known", ""),
+		// People-teams and the projects granted to them.
+		httpDrive("POST /api/v1/org-teams/{id}/members/{userId}", "/api/v1/org-teams/team-design/members/u-new", ""),
+		httpDrive("DELETE /api/v1/org-teams/{id}/members/{userId}", "/api/v1/org-teams/team-design/members/u-known", ""),
+		httpDrive("PUT /api/v1/projects/{id}/team-access", "/api/v1/projects/proj-1/team-access",
+			`{"org_team_id":"team-design","role":"editor"}`),
+		httpDrive("DELETE /api/v1/projects/{id}/team-access/{teamId}", "/api/v1/projects/proj-1/team-access/team-old", ""),
 		httpDrive("POST /api/v1/auth/invitations/accept", "/api/v1/auth/invitations/accept",
 			`{"token":"tok-invited@example.com"}`, withSessionCookie("cookie-invited")),
 		callDrive("OIDC sign-in with a provider-verified address", func(t *testing.T, fx *payloadFixture) {
@@ -238,7 +246,11 @@ func newPayloadFixture(t *testing.T) *payloadFixture {
 	known := &users.User{ID: "u-known", Email: "known@example.com", Name: "Known", EmailVerified: true}
 	logins.accounts = map[string]*users.User{"known@example.com": known}
 	logins.sessions = map[string]*users.User{"cookie-invited": {ID: "u-invited", Email: "invited@example.com"}}
-	invites.invite(payloadOrg, "invited@example.com", orgs.RoleMember)
+	invited := invites.invite(payloadOrg, "invited@example.com", orgs.RoleMember)
+	// The invitation also opens the project, so taking it up joins it.
+	if _, err := invites.GrantProject(invited.ID, payloadProject, "viewer"); err != nil {
+		t.Fatal(err)
+	}
 	invites.invite(payloadOrg, "sso@example.com", orgs.RoleAdmin)
 
 	arts := &payloadArtifacts{applierArtifactService: &applierArtifactService{byID: map[string]*artifacts.Artifact{
@@ -258,6 +270,12 @@ func newPayloadFixture(t *testing.T) *payloadFixture {
 	deps.ExportService = &fakeExportService{data: []byte(`{"artifacts":[]}`)}
 	deps.BaselineService = &payloadBaselines{}
 	deps.MemberService = &payloadMembers{}
+	deps.OrgTeamService = &payloadTeams{byID: map[string]*orgs.OrgTeam{
+		"team-design": {ID: "team-design", OrgID: payloadOrg, Name: "Design",
+			Members: []*orgs.Member{{OrgID: payloadOrg, UserID: "u-known", Role: orgs.RoleMember}}},
+		"team-old": {ID: "team-old", OrgID: payloadOrg, Name: "Old",
+			Members: []*orgs.Member{{OrgID: payloadOrg, UserID: "u-known", Role: orgs.RoleMember}}},
+	}}
 	deps.OrgService = &payloadOrgs{fakeMemberOrgs: &fakeMemberOrgs{roles: map[string]string{}}}
 	deps.AgentService = &fakeAgentService{byID: map[string]*agents.Agent{
 		"agent-proposal": {ID: "agent-proposal", OrgID: payloadOrg, WriteMode: agents.WriteModeProposal},
@@ -398,6 +416,27 @@ func (f *payloadMembers) RemoveMember(projectID, userID string) error    { retur
 func (f *payloadMembers) RoleFor(projectID, userID string) (string, error) {
 	return members.RoleEditor, nil
 }
+
+// The project grants team-old viewer access and team-design none.
+func (f *payloadMembers) ListTeamGrants(projectID string) ([]*members.TeamGrant, error) {
+	return []*members.TeamGrant{{ProjectID: projectID, OrgTeamID: "team-old", Role: members.RoleViewer, TeamName: "Old"}}, nil
+}
+func (f *payloadMembers) GrantTeam(projectID, orgTeamID, role string) error { return nil }
+func (f *payloadMembers) RevokeTeam(projectID, orgTeamID string) error      { return nil }
+
+type payloadTeams struct {
+	orgs.TeamService
+	byID map[string]*orgs.OrgTeam
+}
+
+func (f *payloadTeams) GetTeam(id string) (*orgs.OrgTeam, error) {
+	if t, ok := f.byID[id]; ok {
+		return t, nil
+	}
+	return nil, errors.New("team not found")
+}
+func (f *payloadTeams) AddTeamMember(teamID, userID string) error    { return nil }
+func (f *payloadTeams) RemoveTeamMember(teamID, userID string) error { return nil }
 
 type payloadOrgs struct{ *fakeMemberOrgs }
 

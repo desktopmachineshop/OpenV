@@ -15,6 +15,7 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/invitations"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/release"
 	"github.com/openv/requirements-platform/internal/domain/users"
 )
 
@@ -553,6 +554,13 @@ func (h *Handler) AddProjectMember(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if user == nil {
+		// With email-invites, an address with no account is invited to the
+		// workspace with the project attached (inviteToProject); without it,
+		// the person has to sign up first, as before.
+		if h.InvitationService != nil && h.projectFeatureEnabled(r, projectID, release.FeatureEmailInvites) {
+			h.inviteToProject(w, r, projectID, req.Email, req.Role)
+			return
+		}
 		writeJSONError(w, http.StatusNotFound, "no user with that email — they must sign up first")
 		return
 	}

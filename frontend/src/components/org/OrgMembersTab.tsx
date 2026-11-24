@@ -4,7 +4,7 @@ import { Org, OrgInvitation, OrgMember, User, orgsAPI } from '../../api/client';
 import { apiErrorMessage } from '../../api/errors';
 import { ErrorBanner, useConfirm } from '../ui';
 import { Avatar } from '../Avatar';
-import { InvitationRows, MemberRows } from './OrgMembersRows';
+import { InvitationRows, MemberRows, invitationProjectsText } from './OrgMembersRows';
 import { useUiRefresh } from '../../hooks/useUiRefresh';
 import { useViewport } from '../../hooks/useViewport';
 
@@ -313,7 +313,12 @@ export const OrgMembersTab: React.FC<OrgMembersTabProps> = ({ org, isAdmin, curr
               <tbody>
                 {invitations.map((inv) => (
                   <tr key={inv.id}>
-                    <td style={td}>{inv.email}</td>
+                    <td style={td}>
+                      {inv.email}
+                      {invitationProjectsText(inv) && (
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{invitationProjectsText(inv)}</div>
+                      )}
+                    </td>
                     <td style={td}>{inv.role}</td>
                     <td style={td}>{new Date(inv.expires_at).toLocaleDateString()}</td>
                     <td style={{ ...td, textAlign: 'right' }}>

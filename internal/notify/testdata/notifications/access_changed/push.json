@@ -79,6 +79,71 @@
       "sent with the default allow-list": true,
       "sent with the override": false,
       "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 1",
+      "scenario": "org.team_member_added: an admin puts a member in the Design team",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"You were added to a team\",\"body\":\"You are now in the Design team in this workspace, and can open every project the team has access to.\",\"url\":\"/org/settings?tab=teams\",\"tag\":\"access_changed:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 1",
+      "scenario": "org.team_member_removed from a team named Test team",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"You were removed from a team\",\"body\":\"You are no longer in the Test team. Projects you could open only through the team are closed to you now.\",\"url\":\"/org/settings?tab=teams\",\"tag\":\"access_changed:org-acme\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "1 of 2",
+      "scenario": "project.team_access_granted: the granting owner is in the team",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"Your team has access to a project\",\"body\":\"The Design team now has editor access to this project, and you are in that team.\",\"url\":\"/projects/proj-apollo/settings?tab=members\",\"tag\":\"access_changed:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
+    },
+    {
+      "delivery": "2 of 2",
+      "scenario": "project.team_access_granted: the granting owner is in the team",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-cy",
+          "payload": "{\"title\":\"Your team has access to a project\",\"body\":\"The Design team now has editor access to this project, and you are in that team.\",\"url\":\"/projects/proj-apollo/settings?tab=members\",\"tag\":\"access_changed:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-cy"
+    },
+    {
+      "delivery": "1 of 1",
+      "scenario": "project.team_access_revoked, member_ids read back from storage",
+      "sends": [
+        {
+          "endpoint": "https://push.example.test/user-ben",
+          "payload": "{\"title\":\"Your team's access to a project ended\",\"body\":\"The Design team no longer has access to this project. Any access you were given yourself stays.\",\"url\":\"/projects/proj-apollo/settings?tab=members\",\"tag\":\"access_changed:proj-apollo\"}"
+        }
+      ],
+      "sent with the default allow-list": true,
+      "sent with the override": false,
+      "user": "user-ben"
     }
   ],
   "pushed by default": true,

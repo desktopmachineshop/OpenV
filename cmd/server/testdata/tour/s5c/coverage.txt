@@ -110,7 +110,7 @@ POST /api/v1/orgs/{id}/runner-session: 200, 201, 400, 403, 503; runner_keys_conn
 POST /api/v1/orgs/{id}/runner-session/extend: 200, 400, 404; runner_keys_connector, tiers_secure_runner_sessions
 POST /api/v1/orgs/{id}/teams: 201, 400, 403, 404; members_teams, tiers_secure_runner_sessions
 POST /api/v1/orgs/{id}/worker-keys: 201, 400, 403; runner_keys_connector
-POST /api/v1/projects/{id}/members: 201, 400, 403, 404; members_teams
+POST /api/v1/projects/{id}/members: 201, 202, 400, 403; members_teams
 POST /api/v1/projects/{id}/share-links: 201; self_hosted_cross_site_sso
 POST /api/v1/public/connector/pair: 200, 400, 403; runner_keys_connector
 POST /api/v1/public/visits: 204, 400; mail_password_admin

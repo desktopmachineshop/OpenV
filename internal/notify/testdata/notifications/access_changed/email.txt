@@ -130,3 +130,108 @@ https://openv.example.test/projects/proj-apollo/settings?tab=members
 —
 You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
 -------- end
+
+======== org.team_member_added: an admin puts a member in the Design team | delivery 1 of 1 | to user-ben
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: You were added to a team
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+You were added to a team
+
+You are now in the Design team in this workspace, and can open every project the team has access to.
+
+Open it in OpenV:
+https://openv.example.test/org/settings?tab=teams
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== org.team_member_removed from a team named Test team | delivery 1 of 1 | to user-ben
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: You were removed from a team
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+You were removed from a team
+
+You are no longer in the Test team. Projects you could open only through the team are closed to you now.
+
+Open it in OpenV:
+https://openv.example.test/org/settings?tab=teams
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== project.team_access_granted: the granting owner is in the team | delivery 1 of 2 | to user-ben
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: Your team has access to a project
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Your team has access to a project
+
+The Design team now has editor access to this project, and you are in that team.
+
+Open it in OpenV:
+https://openv.example.test/projects/proj-apollo/settings?tab=members
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== project.team_access_granted: the granting owner is in the team | delivery 2 of 2 | to user-cy
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO cy@example.test, no auth
+-------- message
+From: openv@example.test
+To: cy@example.test
+Subject: Your team has access to a project
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Your team has access to a project
+
+The Design team now has editor access to this project, and you are in that team.
+
+Open it in OpenV:
+https://openv.example.test/projects/proj-apollo/settings?tab=members
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end
+
+======== project.team_access_revoked, member_ids read back from storage | delivery 1 of 1 | to user-ben
+with the default allow-list: sent; with the override: not sent
+envelope: smtp.example.test:587, MAIL FROM openv@example.test, RCPT TO ben@example.test, no auth
+-------- message
+From: openv@example.test
+To: ben@example.test
+Subject: Your team's access to a project ended
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Your team's access to a project ended
+
+The Design team no longer has access to this project. Any access you were given yourself stays.
+
+Open it in OpenV:
+https://openv.example.test/projects/proj-apollo/settings?tab=members
+
+—
+You are receiving this because email notifications are enabled for your OpenV account. Turn them off in Settings → Notifications.
+-------- end

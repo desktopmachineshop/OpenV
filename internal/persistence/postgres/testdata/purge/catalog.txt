@@ -49,6 +49,7 @@ notifications scope org_id deleted
 oauth_clients scope - not reached
 oauth_codes scope - cascade from connected_apps
 oauth_tokens scope - cascade from connected_apps
+org_invitation_projects scope project_id cascade from org_invitations,projects
 org_invitations scope org_id cascade from organizations
 org_members scope org_id cascade from organizations
 org_team_members scope - cascade from org_teams

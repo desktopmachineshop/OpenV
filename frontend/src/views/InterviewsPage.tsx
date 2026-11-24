@@ -10,6 +10,7 @@ import {
 } from '../api/client';
 import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
+import { InterviewEmailInvite } from './InterviewEmailInvite';
 import { ErrorBanner, useConfirm, usePrompt, chipStyle, toneForColor, buttonStyle } from '../components/ui';
 
 const sectionTitle: React.CSSProperties = {
@@ -322,6 +323,7 @@ export const InterviewsPage: React.FC = () => {
                 >
                   {copiedInterviewId === iv.id ? '✓ Copied!' : 'Copy invite link'}
                 </button>
+                <InterviewEmailInvite interview={iv} onError={setError} />
                 {iv.status !== 'closed' && (
                   <button
                     style={{ ...buttonStyle('danger', { compact: true }), minHeight: 32 }}

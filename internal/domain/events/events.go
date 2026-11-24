@@ -82,6 +82,24 @@ const (
 	ProjectMemberRoleChanged = "project.member_role_changed"
 	// ProjectMemberRemoved carries {user_id, self}.
 	ProjectMemberRemoved = "project.member_removed"
+
+	// People-teams. A team carries access: a project granted to a team is
+	// granted to everyone in it, so joining or leaving a team, and a team
+	// gaining or losing a project, change what somebody can open just as a
+	// membership does.
+	//
+	// OrgTeamMemberAdded carries {user_id, team_id, team_name}. Workspace
+	// level, like the membership events: no ProjectID.
+	OrgTeamMemberAdded = "org.team_member_added"
+	// OrgTeamMemberRemoved carries {user_id, team_id, team_name}.
+	OrgTeamMemberRemoved = "org.team_member_removed"
+	// ProjectTeamAccessGranted carries {team_id, team_name, role,
+	// member_ids}: member_ids ([]string) are the team's members when the
+	// grant was made, the people whose access it changed. Re-granting a
+	// team with another role publishes it again.
+	ProjectTeamAccessGranted = "project.team_access_granted"
+	// ProjectTeamAccessRevoked carries {team_id, team_name, member_ids}.
+	ProjectTeamAccessRevoked = "project.team_access_revoked"
 )
 
 // Actor constants; user actors are "user:<id>", agent actors "agent:<run_id>".

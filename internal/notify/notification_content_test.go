@@ -477,6 +477,24 @@ func ncScenarios() []ncScenario {
 			ch.handle(ncProjectEvent(domainevents.ProjectMemberRemoved, "user:user-ada",
 				map[string]interface{}{"user_id": "user-ben", "self": false}))
 		}},
+		{"org.team_member_added: an admin puts a member in the Design team", func(t *testing.T, ch *ncChannels) {
+			ch.handle(ncOrgEvent(domainevents.OrgTeamMemberAdded, "user:user-ada",
+				map[string]interface{}{"user_id": "user-ben", "team_id": "team-1", "team_name": "Design"}))
+		}},
+		{"org.team_member_removed from a team named Test team", func(t *testing.T, ch *ncChannels) {
+			ch.handle(ncOrgEvent(domainevents.OrgTeamMemberRemoved, "user:user-ada",
+				map[string]interface{}{"user_id": "user-ben", "team_id": "team-2", "team_name": "Test team"}))
+		}},
+		{"project.team_access_granted: the granting owner is in the team", func(t *testing.T, ch *ncChannels) {
+			ch.handle(ncProjectEvent(domainevents.ProjectTeamAccessGranted, "user:user-ada",
+				map[string]interface{}{"team_id": "team-1", "team_name": "Design", "role": "editor",
+					"member_ids": []string{"user-ada", "user-ben", "user-cy"}}))
+		}},
+		{"project.team_access_revoked, member_ids read back from storage", func(t *testing.T, ch *ncChannels) {
+			ch.handle(ncProjectEvent(domainevents.ProjectTeamAccessRevoked, "user:user-ada",
+				map[string]interface{}{"team_id": "team-1", "team_name": "Design",
+					"member_ids": []interface{}{"user-ben"}}))
+		}},
 
 		// The budget and hosted-minutes monitors.
 		{"agentrun.finished takes the month's spend past 80% of the budget", func(t *testing.T, ch *ncChannels) {

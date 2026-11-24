@@ -41,6 +41,12 @@ access changed by noticing a button has gone.
 - **Project** role changes reach the member but not the workspace admins:
   they happen often enough that reporting them would bury the arrivals and
   departures that matter.
+- **Teams** change access too, so they are not silent either. Someone added
+  to a team or removed from one is told, and the notice opens the **Teams**
+  section. When a project is given to a team, given to it with a new role,
+  or taken away from it, everyone in the team is told, as if they had been
+  added to or removed from the project themselves. Workspace admins are not
+  told of team changes.
 - An address with **no account yet** cannot be notified in the app — the
   invitation email is their notification, and the admins are told the
   invitation went out. They are told again when it is accepted, which is the
@@ -72,6 +78,12 @@ first:
   address to sign in as instead. The link is what grants the membership, and
   only to the address it was sent to: signing up for the invited address
   without the link joins nothing.
+- An invitation can also open **projects**: a workspace admin who adds an
+  address with no account to a project (Project Settings → Access) makes an
+  invitation like this one that names the project. The email says which
+  projects, the pending invitations list them under the address, and
+  accepting joins each of them at the role chosen. A project the person can
+  already open keeps the role they have there.
 - An invitation never changes a role somebody already has. If you invite an
   existing admin as a member, they stay an admin — use the members table to
   change a role.

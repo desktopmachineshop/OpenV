@@ -15,6 +15,16 @@ export interface OrgInvitation {
   expires_at: string;
   created_at: string;
   invited_by_name?: string;
+  // The projects the invitation also opens (email-invites): a project
+  // owner added this address to them, and accepting joins each.
+  projects?: InvitationProject[];
+}
+
+/** A project an invitation opens, at the role it gives there. */
+export interface InvitationProject {
+  project_id: string;
+  role: string;
+  project_name?: string;
 }
 
 // The answer to creating an invitation: the row, the one-time link (shown

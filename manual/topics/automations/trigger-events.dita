@@ -18,7 +18,9 @@
       <li>agentrun.finished / agentrun.successors_skipped</li>
       <li>proposal.created</li>
       <li>project.member_added / project.member_role_changed / project.member_removed</li>
+      <li>project.team_access_granted / project.team_access_revoked</li>
       <li>org.member_added / org.member_role_changed / org.member_removed / org.invitation_sent / org.invitation_accepted</li>
+      <li>org.team_member_added / org.team_member_removed</li>
     </ul>
     <p>The org.<i> events belong to the workspace, not to a project, so they fire only automations that cover the whole workspace (see </i>What an automation covers*); an automation that covers one project never sees them.</p>
     <p><b>Filters</b> narrow the match with key/value pairs on the event payload (for example only artifacts of a certain type). Two safety valves keep triggered automations from running away:</p>

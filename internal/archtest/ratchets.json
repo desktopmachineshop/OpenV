@@ -219,6 +219,14 @@
     "internal/domain/mentions": [
       "internal/domain/members"
     ],
+    "internal/domain/plan": [
+      "internal/domain/artifacts",
+      "internal/domain/links",
+      "internal/domain/targetreleases",
+      "internal/domain/todos",
+      "internal/domain/vv",
+      "internal/domain/workitems"
+    ],
     "internal/domain/providers/usertokens": [
       "internal/domain/providers"
     ],
@@ -260,14 +268,6 @@
       "internal/domain/exports",
       "internal/domain/links",
       "internal/domain/snapshot"
-    ],
-    "internal/domain/plan": [
-      "internal/domain/artifacts",
-      "internal/domain/links",
-      "internal/domain/targetreleases",
-      "internal/domain/todos",
-      "internal/domain/vv",
-      "internal/domain/workitems"
     ],
     "internal/domain/todos": [
       "internal/domain/workitems"
@@ -440,7 +440,7 @@
     "internal/runner:loginBroker.handlePTYLogin": 157,
     "internal/runner:startProc": 184,
     "internal/seeds:builtinProducts": 136,
-    "internal/seeds:defaultAgents": 138
+    "internal/seeds:defaultAgents": 128
   },
   "side_effect_vars": [
     "internal/domain/quality:conventionPatterns",
@@ -488,5 +488,5 @@
     "internal/api:uploadIsRasterImage",
     "internal/api:writeAddOrInviteOutcome"
   ],
-  "api_spec_undocumented_routes": 16
+  "api_spec_undocumented_routes": 15
 }

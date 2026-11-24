@@ -38,7 +38,6 @@ import (
 	"github.com/openv/requirements-platform/internal/domain/invitations"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 	"github.com/openv/requirements-platform/internal/domain/users"
-	"github.com/openv/requirements-platform/internal/notify"
 )
 
 func (h *Handler) registerInvitationRoutes(router *mux.Router) {
@@ -165,7 +164,7 @@ func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (
 		return nil, err
 	}
 	if user == nil {
-		resp, err := h.inviteToOrg(r, orgID, email, role)
+		resp, err := h.inviteToOrg(r, orgID, email, role, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -183,7 +182,7 @@ func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (
 		return nil, errAlreadyOrgMember
 	}
 	if h.EmailVerification.Required && !user.EmailVerified {
-		resp, err := h.inviteToOrg(r, orgID, email, role)
+		resp, err := h.inviteToOrg(r, orgID, email, role, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -206,128 +205,6 @@ func (h *Handler) addOrInviteToOrg(r *http.Request, orgID, email, role string) (
 		UserEmail: user.Email,
 		AvatarURL: user.AvatarURL,
 	}}, nil
-}
-
-// inviteToOrg mints the invitation and mails it when the deployment can, and
-// is shared with AddOrgMember's fallback for an address that has no account.
-//
-// Two things stand between a click and an outbound mail. An invitation that
-// is already pending for the address, unchanged (same role, not expired) and
-// whose link was actually DELIVERED less than an hour ago, is handed
-// straight back WITHOUT mailing anything: re-posting the same invitation —
-// an impatient admin, a double-submitted form, a retrying script — must not
-// turn into repeated mail to somebody who has one link sitting in their
-// inbox already. An invitation whose send failed, or never happened, has
-// nothing sitting in any inbox, so it is minted and sent again. The link is not
-// re-shown, because it exists only in that mail: the server keeps a hash,
-// and minting a new one is what "resend" means (it replaces the old link).
-// That trade only holds where the server can mail at all: with no SMTP the
-// link in the response IS the delivery, and withholding it would leave an
-// admin who closed the dialog with no way to invite that person for an
-// hour, so a mailer-less deployment always mints a fresh one.
-//
-// What is left is bounded per inviting account, because minting a link DOES
-// send mail to an address the sender chose — the endpoint is a relay, and
-// an unbounded one spends the deployment's sending reputation.
-func (h *Handler) inviteToOrg(r *http.Request, orgID, email, role string) (*invitationResponse, error) {
-	if h.InvitationService == nil {
-		return nil, errInvitationsUnavailable
-	}
-	if h.Mailer != nil && h.Mailer.Enabled() {
-		if pending := h.unchangedPendingInvitation(orgID, email, role); pending != nil {
-			return &invitationResponse{Invitation: pending, Reason: inviteReasonRecentlySent}, nil
-		}
-	}
-	if ok, retryAfter := h.inviteLimiter.allow(inviteBudgetKey(r)); !ok {
-		return nil, &errThrottled{
-			message:    "Too many invitations from this account; try again later.",
-			retryAfter: retryAfter,
-		}
-	}
-	var invitedBy *string
-	if user := CurrentUser(r); user != nil {
-		invitedBy = &user.ID
-	}
-	inv, token, err := h.InvitationService.Create(orgID, email, role, invitedBy)
-	if err != nil {
-		return nil, err
-	}
-	link := notify.InvitationLink(h.EmailLinkBase, token)
-	// Admins are told an invitation went out. The invitee is not notified in
-	// app — the address usually has no account yet, so there is nobody to
-	// notify; the invitation email IS their notification.
-	h.publishOrgEvent(r, events.OrgInvitationSent, orgID, inv.ID, map[string]interface{}{
-		"email": email,
-		"role":  role,
-	})
-	return &invitationResponse{Invitation: inv, Link: link, Emailed: h.sendInvitationMailAsync(inv, link)}, nil
-}
-
-// inviteBudgetKey is the bucket an invitation is charged to: the inviting
-// account, so one admin's bulk invite cannot exhaust their colleagues'
-// budget wherever either of them works from. The address is only a fallback
-// for a caller with no session, which the admin check ahead of here already
-// rules out.
-func inviteBudgetKey(r *http.Request) string {
-	if user := CurrentUser(r); user != nil {
-		return "user:" + user.ID
-	}
-	return "ip:" + clientIP(r)
-}
-
-// unchangedPendingInvitation returns the workspace's live invitation for the
-// address when it says exactly what a fresh one would — same role, still
-// valid — AND its link reached the address inside inviteResendWindow. The
-// row is looked up by (workspace, address), not by reading every pending
-// invitation the workspace holds.
-//
-// The window is measured from the delivery, never from the row: mail goes
-// out off the request path, so an invitation that exists is not an
-// invitation anybody received. A row whose send failed, or has not been
-// attempted, has no last_emailed_at and is re-sent.
-//
-// nil means "mint and mail one", which is also the answer when the lookup
-// fails: failing to suppress a mail is better than failing to invite
-// somebody.
-func (h *Handler) unchangedPendingInvitation(orgID, email, role string) *invitations.Invitation {
-	inv, err := h.InvitationService.FindPending(orgID, email)
-	if err != nil || inv == nil {
-		return nil
-	}
-	now := time.Now()
-	if inv.Role == role && inv.Pending(now) &&
-		inv.LastEmailedAt != nil && now.Sub(*inv.LastEmailedAt) < inviteResendWindow {
-		return inv
-	}
-	return nil
-}
-
-// sendInvitationMailAsync hands the link to SMTP without making the request
-// wait, the way registration's verification link goes out: an admin's click
-// must not sit on a slow relay. It reports whether the send was QUEUED — a
-// mailer is configured and the goroutine is away — which is what the
-// response's emailed means.
-//
-// A failure is logged and swallowed: the invitation is already real, and the
-// admin can still hand the link over. Only a send that SUCCEEDED stamps the
-// row, so a failed one is re-sent by the next click rather than suppressed
-// as "already emailed".
-func (h *Handler) sendInvitationMailAsync(inv *invitations.Invitation, link string) bool {
-	if h.Mailer == nil || !h.Mailer.Enabled() {
-		return false
-	}
-	subject, body := notify.RenderInvitationEmail(inv.OrgName, inv.InvitedByName, link, invitations.DefaultTTL)
-	go func() {
-		if err := notify.SendWithTimeout(h.Mailer, inv.Email, subject, body, notify.VerificationSendTimeout); err != nil {
-			slog.Warn("invitation: failed to send invitation email", "org_id", inv.OrgID, "error", err)
-			return
-		}
-		if err := h.InvitationService.MarkEmailed(inv.ID, time.Now()); err != nil {
-			slog.Warn("invitation: could not record that the link was emailed",
-				"invitation_id", inv.ID, "org_id", inv.OrgID, "error", err)
-		}
-	}()
-	return true
 }
 
 // errInvitationsUnavailable marks a deployment wired without the invitation
@@ -531,15 +408,27 @@ func (h *Handler) acceptInvitationsForProviderVerifiedEmail(userID, email string
 // middleware leaves /api/v1/auth/ open, so Actor would say "system", and the
 // notifier, which skips the actor, would tell the joiner what they just did.
 // Someone who was already a member joined nothing, so nothing is said.
+//
+// Each project the invitation opened is a project member added, published
+// as the project's own event with the joiner as its actor, as the join is.
 func (h *Handler) publishInvitationAccepted(userID string, acc *invitations.Acceptance) {
-	if acc == nil || acc.AlreadyMember || acc.Invitation == nil {
+	if acc == nil || acc.Invitation == nil {
 		return
 	}
-	h.publishOrgEventAs("user:"+userID, events.OrgInvitationAccepted, acc.Invitation.OrgID, userID,
-		map[string]interface{}{
-			"user_id": userID,
-			"role":    acc.Role,
-		})
+	if !acc.AlreadyMember {
+		h.publishOrgEventAs("user:"+userID, events.OrgInvitationAccepted, acc.Invitation.OrgID, userID,
+			map[string]interface{}{
+				"user_id": userID,
+				"role":    acc.Role,
+			})
+	}
+	for _, g := range acc.Projects {
+		h.publishProjectEventAs("user:"+userID, events.ProjectMemberAdded, g.ProjectID, acc.Invitation.OrgID, userID,
+			map[string]interface{}{
+				"user_id": userID,
+				"role":    g.Role,
+			})
+	}
 }
 
 // Invitation outcomes a registration reports back, so the sign-up page can

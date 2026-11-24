@@ -11,6 +11,7 @@ import {
   shareLinkAPI,
   ArtifactTypeDef,
   AttributeDefinition,
+  OrgInvitationCreated,
   OrgTeam,
   Project,
   ProjectMember,
@@ -24,7 +25,7 @@ import { apiErrorMessage } from '../api/errors';
 import { useAppStore } from '../state/store';
 import { ErrorBanner, SettingsLayout, useConfirm } from '../components/ui';
 import { useFeature } from '../hooks/useFeature';
-import { FLOW_DOWN_FEATURE, ARTIFACT_OWNERS_FEATURE, SHARE_LINKS_FEATURE } from '../features';
+import { FLOW_DOWN_FEATURE, ARTIFACT_OWNERS_FEATURE, SHARE_LINKS_FEATURE, EMAIL_INVITES_FEATURE } from '../features';
 import { QualityRulesHeld, emptyQualityRulesHeld } from '../components/QualityRulesEditor';
 import { AttributeForm, RepoForm, emptyAttributeForm, emptyRepoForm } from './projectSettings/shared';
 import { GeneralTab } from './projectSettings/GeneralTab';
@@ -76,6 +77,7 @@ export const ProjectSettings: React.FC = () => {
   const flowDown = useFeature(FLOW_DOWN_FEATURE);
   const ownersOn = useFeature(ARTIFACT_OWNERS_FEATURE);
   const shareLinksOn = useFeature(SHARE_LINKS_FEATURE);
+  const emailInvitesOn = useFeature(EMAIL_INVITES_FEATURE);
 
   // The active tab lives in the URL (?tab=…) so refreshes and deep links keep
   // it; unknown values fall back to the first tab.
@@ -104,6 +106,8 @@ export const ProjectSettings: React.FC = () => {
   const [addEmail, setAddEmail] = useState('');
   const [addRole, setAddRole] = useState('editor');
   const [addingMember, setAddingMember] = useState(false);
+  // The one-time link of an invitation the server could not email.
+  const [inviteLink, setInviteLink] = useState('');
 
   // Share links (REQ-149)
   const [shareLinks, setShareLinks] = useState<ShareLink[]>([]);
@@ -365,11 +369,27 @@ export const ProjectSettings: React.FC = () => {
     if (!projectId || !addEmail.trim()) return;
     setAddingMember(true);
     setError('');
+    setInviteLink('');
     try {
-      await membersAPI.add(projectId, addEmail.trim(), addRole);
+      const email = addEmail.trim();
+      const res = await membersAPI.add(projectId, email, addRole);
       setAddEmail('');
-      flash('Member added.');
-      await loadMembers();
+      // 202: no account has the address, so it was invited to the workspace
+      // with this project attached (email-invites); it joins on acceptance.
+      if (res.status === 202 && res.data) {
+        const created = res.data as OrgInvitationCreated;
+        if (created.emailed) {
+          flash(`Invitation emailed to ${email}. They join this project when they accept it.`);
+        } else if (created.reason) {
+          flash(`${email} already has an invitation, and it now opens this project too.`);
+        } else {
+          setInviteLink(created.link || '');
+          flash('Invitation created. Send them the link below; it is shown only once.');
+        }
+      } else {
+        flash('Member added.');
+        await loadMembers();
+      }
     } catch (err: any) {
       if (err.response?.status === 404) {
         setError(
@@ -697,6 +717,8 @@ export const ProjectSettings: React.FC = () => {
             addRole={addRole}
             setAddRole={setAddRole}
             addingMember={addingMember}
+            emailInvitesOn={emailInvitesOn}
+            inviteLink={inviteLink}
             teamGrantsLoading={teamGrantsLoading}
             teamGrants={teamGrants}
             handleSetTeamRole={handleSetTeamRole}
