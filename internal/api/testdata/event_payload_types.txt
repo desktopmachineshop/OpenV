@@ -123,12 +123,16 @@ org.invitation_accepted       user_id            string                   OIDC s
 org.invitation_accepted       user_id            string                   POST /api/v1/auth/invitations/accept
 org.invitation_sent           (actor)            user:u-admin             POST /api/v1/orgs/{id}/invitations
 org.invitation_sent           (actor)            user:u-admin             POST /api/v1/orgs/{id}/members (address without an account)
+org.invitation_sent           (actor)            user:u-admin             POST /api/v1/projects/{id}/members (address without an account)
 org.invitation_sent           (org)              org-1                    POST /api/v1/orgs/{id}/invitations
 org.invitation_sent           (org)              org-1                    POST /api/v1/orgs/{id}/members (address without an account)
+org.invitation_sent           (org)              org-1                    POST /api/v1/projects/{id}/members (address without an account)
 org.invitation_sent           email              string                   POST /api/v1/orgs/{id}/invitations
 org.invitation_sent           email              string                   POST /api/v1/orgs/{id}/members (address without an account)
+org.invitation_sent           email              string                   POST /api/v1/projects/{id}/members (address without an account)
 org.invitation_sent           role               string                   POST /api/v1/orgs/{id}/invitations
 org.invitation_sent           role               string                   POST /api/v1/orgs/{id}/members (address without an account)
+org.invitation_sent           role               string                   POST /api/v1/projects/{id}/members (address without an account)
 org.member_added              (actor)            user:u-admin             POST /api/v1/orgs/{id}/members (address with an account)
 org.member_added              (org)              org-1                    POST /api/v1/orgs/{id}/members (address with an account)
 org.member_added              role               string                   POST /api/v1/orgs/{id}/members (address with an account)
@@ -146,9 +150,23 @@ org.member_role_changed       (org)              org-1                    PUT /a
 org.member_role_changed       from               string                   PUT /api/v1/orgs/{id}/members/{userId}
 org.member_role_changed       to                 string                   PUT /api/v1/orgs/{id}/members/{userId}
 org.member_role_changed       user_id            string                   PUT /api/v1/orgs/{id}/members/{userId}
+org.team_member_added         (actor)            user:u-admin             POST /api/v1/org-teams/{id}/members/{userId}
+org.team_member_added         (org)              org-1                    POST /api/v1/org-teams/{id}/members/{userId}
+org.team_member_added         team_id            string                   POST /api/v1/org-teams/{id}/members/{userId}
+org.team_member_added         team_name          string                   POST /api/v1/org-teams/{id}/members/{userId}
+org.team_member_added         user_id            string                   POST /api/v1/org-teams/{id}/members/{userId}
+org.team_member_removed       (actor)            user:u-admin             DELETE /api/v1/org-teams/{id}/members/{userId}
+org.team_member_removed       (org)              org-1                    DELETE /api/v1/org-teams/{id}/members/{userId}
+org.team_member_removed       team_id            string                   DELETE /api/v1/org-teams/{id}/members/{userId}
+org.team_member_removed       team_name          string                   DELETE /api/v1/org-teams/{id}/members/{userId}
+org.team_member_removed       user_id            string                   DELETE /api/v1/org-teams/{id}/members/{userId}
 project.member_added          (actor)            user:u-admin             POST /api/v1/projects/{id}/members
+project.member_added          (actor)            user:u-invited           POST /api/v1/auth/invitations/accept
+project.member_added          (org)              org-1                    POST /api/v1/auth/invitations/accept
 project.member_added          (org)              org-1                    POST /api/v1/projects/{id}/members
+project.member_added          role               string                   POST /api/v1/auth/invitations/accept
 project.member_added          role               string                   POST /api/v1/projects/{id}/members
+project.member_added          user_id            string                   POST /api/v1/auth/invitations/accept
 project.member_added          user_id            string                   POST /api/v1/projects/{id}/members
 project.member_removed        (actor)            user:u-admin             DELETE /api/v1/projects/{id}/members/{userId}
 project.member_removed        (org)              org-1                    DELETE /api/v1/projects/{id}/members/{userId}
@@ -165,6 +183,17 @@ project.review_round_started  already_in_review  int                      POST /
 project.review_round_started  approved           int                      POST /api/v1/projects/{id}/review-round
 project.review_round_started  moved              int                      POST /api/v1/projects/{id}/review-round
 project.review_round_started  types              []string                 POST /api/v1/projects/{id}/review-round
+project.team_access_granted   (actor)            user:u-admin             PUT /api/v1/projects/{id}/team-access
+project.team_access_granted   (org)              org-1                    PUT /api/v1/projects/{id}/team-access
+project.team_access_granted   member_ids         []string                 PUT /api/v1/projects/{id}/team-access
+project.team_access_granted   role               string                   PUT /api/v1/projects/{id}/team-access
+project.team_access_granted   team_id            string                   PUT /api/v1/projects/{id}/team-access
+project.team_access_granted   team_name          string                   PUT /api/v1/projects/{id}/team-access
+project.team_access_revoked   (actor)            user:u-admin             DELETE /api/v1/projects/{id}/team-access/{teamId}
+project.team_access_revoked   (org)              org-1                    DELETE /api/v1/projects/{id}/team-access/{teamId}
+project.team_access_revoked   member_ids         []string                 DELETE /api/v1/projects/{id}/team-access/{teamId}
+project.team_access_revoked   team_id            string                   DELETE /api/v1/projects/{id}/team-access/{teamId}
+project.team_access_revoked   team_name          string                   DELETE /api/v1/projects/{id}/team-access/{teamId}
 proposal.created              (actor)            agent:run-proposal       POST /api/v1/artifacts (proposal-mode agent run)
 proposal.created              (org)              org-1                    POST /api/v1/artifacts (proposal-mode agent run)
 proposal.created              op                 string                   POST /api/v1/artifacts (proposal-mode agent run)

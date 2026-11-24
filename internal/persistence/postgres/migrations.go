@@ -146,4 +146,5 @@ var migrations = []Migration{
 	{Version: 89, Name: "plan_milestone_links", Run: m0089PlanMilestoneLinks},
 	{Version: 90, Name: "joined_baselines", Run: m0090JoinedBaselines},
 	{Version: 91, Name: "project_covers", Run: m0091ProjectCovers},
+	{Version: 92, Name: "invitation_projects", Run: m0092InvitationProjects},
 }

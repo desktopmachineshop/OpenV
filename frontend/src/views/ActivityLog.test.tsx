@@ -84,6 +84,8 @@ describe('ActivityLog type filter', () => {
       'project.member_added',
       'project.member_role_changed',
       'project.member_removed',
+      'project.team_access_granted',
+      'project.team_access_revoked',
     ]);
 
     // A status change, which the filter could not find before, is asked for

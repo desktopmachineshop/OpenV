@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/openv/requirements-platform/internal/domain/events"
 	"github.com/openv/requirements-platform/internal/domain/members"
 	"github.com/openv/requirements-platform/internal/domain/orgs"
 )
@@ -66,6 +67,7 @@ func (h *Handler) GrantProjectTeamAccess(w http.ResponseWriter, r *http.Request)
 		h.writeLimitError(w, err)
 		return
 	}
+	previous := h.teamGrantRole(projectID, team.ID)
 	if err := h.MemberService.GrantTeam(projectID, req.OrgTeamID, req.Role); err != nil {
 		if errors.Is(err, members.ErrInvalidRole) {
 			writeJSONError(w, http.StatusBadRequest, err.Error())
@@ -74,7 +76,33 @@ func (h *Handler) GrantProjectTeamAccess(w http.ResponseWriter, r *http.Request)
 		}
 		return
 	}
+	// Everyone in the team gains the project (or a new role on it), so
+	// each of them is told; re-granting the role the team already has
+	// changes nothing.
+	if previous != req.Role {
+		h.publish(r, events.ProjectTeamAccessGranted, projectID, team.ID, map[string]interface{}{
+			"team_id":    team.ID,
+			"team_name":  team.Name,
+			"role":       req.Role,
+			"member_ids": teamMemberIDs(team),
+		})
+	}
 	w.WriteHeader(http.StatusCreated)
+}
+
+// teamGrantRole returns the role the project grants the team, "" when it
+// grants none (or the grants cannot be read, which only costs a notice).
+func (h *Handler) teamGrantRole(projectID, teamID string) string {
+	grants, err := h.MemberService.ListTeamGrants(projectID)
+	if err != nil {
+		return ""
+	}
+	for _, g := range grants {
+		if g != nil && g.OrgTeamID == teamID {
+			return g.Role
+		}
+	}
+	return ""
 }
 
 func (h *Handler) RevokeProjectTeamAccess(w http.ResponseWriter, r *http.Request) {
@@ -82,9 +110,36 @@ func (h *Handler) RevokeProjectTeamAccess(w http.ResponseWriter, r *http.Request
 	if !h.requireProjectRole(w, r, vars["id"], members.RoleOwner) {
 		return
 	}
+	held := h.teamGrantRole(vars["id"], vars["teamId"]) != ""
 	if err := h.MemberService.RevokeTeam(vars["id"], vars["teamId"]); err != nil {
 		respondInternal(w, r, "failed to revoke team grant", err)
 		return
 	}
+	// Only a grant that existed tells anyone it ended. The team is read
+	// for its name and members; one deleted since has no one left to tell.
+	if held && h.OrgTeamService != nil {
+		if team, err := h.OrgTeamService.GetTeam(vars["teamId"]); err == nil && team != nil {
+			h.publish(r, events.ProjectTeamAccessRevoked, vars["id"], team.ID, map[string]interface{}{
+				"team_id":    team.ID,
+				"team_name":  team.Name,
+				"member_ids": teamMemberIDs(team),
+			})
+		}
+	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// teamMemberIDs lists the team's members, the people a grant to it reaches.
+// Never nil, so the payload always carries a list.
+func teamMemberIDs(team *orgs.OrgTeam) []string {
+	ids := []string{}
+	if team == nil {
+		return ids
+	}
+	for _, m := range team.Members {
+		if m != nil && m.UserID != "" {
+			ids = append(ids, m.UserID)
+		}
+	}
+	return ids
 }

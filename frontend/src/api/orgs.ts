@@ -106,8 +106,11 @@ export const projectTeamAccessAPI = {
 export const membersAPI = {
   list: (projectId: string) =>
     client.get<ProjectMember[]>(`/api/v1/projects/${projectId}/members`),
+  // 201 when the address has an account and joined. With email-invites,
+  // 202 with an OrgInvitationCreated when it has none: it is invited to the
+  // workspace, and the invitation opens this project.
   add: (projectId: string, email: string, role: string) =>
-    client.post(`/api/v1/projects/${projectId}/members`, { email, role }),
+    client.post<OrgInvitationCreated | ''>(`/api/v1/projects/${projectId}/members`, { email, role }),
   setRole: (projectId: string, userId: string, role: string) =>
     client.put(`/api/v1/projects/${projectId}/members/${userId}`, { role }),
   remove: (projectId: string, userId: string) =>

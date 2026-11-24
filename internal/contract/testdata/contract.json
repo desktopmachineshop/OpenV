@@ -52,7 +52,8 @@
     "workspace-plan",
     "joined-baselines",
     "key-projects",
-    "project-covers"
+    "project-covers",
+    "email-invites"
   ],
   "event_types": [
     "artifact.created",
@@ -82,7 +83,11 @@
     "org.invitation_accepted",
     "project.member_added",
     "project.member_role_changed",
-    "project.member_removed"
+    "project.member_removed",
+    "org.team_member_added",
+    "org.team_member_removed",
+    "project.team_access_granted",
+    "project.team_access_revoked"
   ],
   "sse_events": [
     "assistant_partial",

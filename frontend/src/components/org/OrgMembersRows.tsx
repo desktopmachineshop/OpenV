@@ -61,6 +61,16 @@ export const MemberRows: React.FC<{
   </div>
 );
 
+/**
+ * The projects an invitation opens (email-invites), as one line: "Also
+ * opens Brakes (editor), Steering (viewer)"; '' for a workspace-only one.
+ */
+export const invitationProjectsText = (inv: OrgInvitation): string => {
+  const projects = inv.projects || [];
+  if (projects.length === 0) return '';
+  return `Also opens ${projects.map((p) => `${p.project_name || 'a project'} (${p.role})`).join(', ')}`;
+};
+
 export const InvitationRows: React.FC<{ invitations: OrgInvitation[]; onRevoke: (inv: OrgInvitation) => void }> = ({ invitations, onRevoke }) => (
   <div role="list" aria-label="Pending invitations">
     {invitations.map((inv) => (
@@ -70,6 +80,7 @@ export const InvitationRows: React.FC<{ invitations: OrgInvitation[]; onRevoke: 
           <div style={quiet}>
             {inv.role} · expires {new Date(inv.expires_at).toLocaleDateString()}
           </div>
+          {invitationProjectsText(inv) && <div style={quiet}>{invitationProjectsText(inv)}</div>}
         </div>
         <button type="button" onClick={() => onRevoke(inv)} style={danger}>
           Revoke

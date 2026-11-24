@@ -453,3 +453,81 @@ func TestReplaceKeepsTheIDAndReturnsTheStoredRow(t *testing.T) {
 		t.Errorf("FindPending crossed a workspace boundary: %+v (%v)", got, err)
 	}
 }
+
+// TestInvitationProjectGrants exercises migration 0092: an invitation's
+// projects come back named, in the order granted; a second grant of a
+// project re-roles it; a resend keeps them; an expired row reused by a
+// re-invite drops them; and a deleted project or invitation takes its rows.
+func TestInvitationProjectGrants(t *testing.T) {
+	db := testDB(t)
+	initTestSchema(t, db)
+	repo := NewInvitationRepository(db)
+
+	orgID := saveTestOrg(t, db, "Grants")
+	p1, p2 := uuid.New().String(), uuid.New().String()
+	for _, p := range [][2]string{{p1, "Brakes"}, {p2, "Steering"}} {
+		if _, err := db.Exec(`INSERT INTO projects (id, org_id, name) VALUES ($1, $2, $3)`, p[0], orgID, p[1]); err != nil {
+			t.Fatalf("insert project: %v", err)
+		}
+	}
+	future := time.Now().UTC().Add(invitations.DefaultTTL)
+	inv := saveInvitation(t, repo, orgID, "pat@example.com", orgs.RoleMember, "tok-g1", future, nil)
+
+	if got, err := repo.ListProjectGrants(inv.ID); err != nil || len(got) != 0 || got == nil {
+		t.Fatalf("no grants: got %#v, %v; want an empty list", got, err)
+	}
+	if got, err := repo.ListProjectGrants("not-a-uuid"); err != nil || len(got) != 0 {
+		t.Fatalf("malformed id: got %v, %v", got, err)
+	}
+	for _, g := range [][2]string{{p1, "editor"}, {p2, "viewer"}, {p1, "owner"}} {
+		if err := repo.AddProjectGrant(inv.ID, g[0], g[1]); err != nil {
+			t.Fatalf("AddProjectGrant: %v", err)
+		}
+	}
+	got, err := repo.ListProjectGrants(inv.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []invitations.ProjectGrant{{ProjectID: p1, Role: "owner", ProjectName: "Brakes"}, {ProjectID: p2, Role: "viewer", ProjectName: "Steering"}}
+	if fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("grants = %+v, want %+v", got, want)
+	}
+
+	// A resend of a live invitation keeps its projects.
+	again := saveInvitation(t, repo, orgID, "pat@example.com", orgs.RoleMember, "tok-g2", future, nil)
+	if again.ID != inv.ID {
+		t.Fatalf("resend changed the id")
+	}
+	if got, _ := repo.ListProjectGrants(inv.ID); len(got) != 2 {
+		t.Fatalf("after a resend: %d grants, want 2", len(got))
+	}
+
+	// A deleted project takes its grant.
+	if _, err := db.Exec(`DELETE FROM projects WHERE id = $1`, p2); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := repo.ListProjectGrants(inv.ID); len(got) != 1 {
+		t.Fatalf("after deleting a project: %d grants, want 1", len(got))
+	}
+
+	// An expired row reused by a fresh invitation drops what it offered.
+	if _, err := db.Exec(`UPDATE org_invitations SET expires_at = $2 WHERE id = $1`, inv.ID, time.Now().UTC().Add(-time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	fresh := saveInvitation(t, repo, orgID, "pat@example.com", orgs.RoleMember, "tok-g3", future, nil)
+	if got, _ := repo.ListProjectGrants(fresh.ID); len(got) != 0 {
+		t.Fatalf("an expired invitation's projects survived its reuse: %+v", got)
+	}
+
+	// Deleting the invitation takes the rest.
+	if err := repo.AddProjectGrant(fresh.ID, p1, "editor"); err != nil {
+		t.Fatal(err)
+	}
+	if err := repo.Delete(fresh.ID); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM org_invitation_projects`).Scan(&n); err != nil || n != 0 {
+		t.Fatalf("rows left after delete: %d, %v", n, err)
+	}
+}

@@ -65,6 +65,16 @@ under `UPLOADS_DIR` so it goes with its project), `updated_at`, which the
 API answers on the project as `cover_updated_at` and the app uses to version
 the image's URL.
 
+### org_invitation_projects
+The projects a workspace invitation also opens (migration 0092,
+`email-invites`): `invitation_id` (`ON DELETE CASCADE` from
+`org_invitations`), `project_id` (`ON DELETE CASCADE` from `projects`),
+`role` (the project role accepting the invitation grants), `created_at`;
+primary key `(invitation_id, project_id)`. A re-invite keeps the
+invitation's id and so its projects; an expired invitation reused by a new
+one loses them. Accepting writes each to `project_members`, leaving a role
+the account already holds there alone.
+
 ### artifacts
 Temporally versioned: **primary key `(id, version)`**; each update inserts a
 new row and closes the old one (`valid_to`). Current version = `valid_to IS

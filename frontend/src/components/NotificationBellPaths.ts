@@ -23,6 +23,8 @@ export const pathForNotification = (n: AppNotification, workspaceRuns: boolean):
   // Membership and privilege changes land on the people list they are about:
   // the workspace's members tab, or the project's own.
   if (ref.kind === 'membership') return '/org/settings?tab=members';
+  // Joining or leaving a people-team lands on the workspace's teams.
+  if (ref.kind === 'team_membership') return '/org/settings?tab=teams';
   if (ref.kind === 'project_membership' && ref.project_id) {
     return `/projects/${ref.project_id}/settings?tab=members`;
   }

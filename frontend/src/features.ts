@@ -138,3 +138,11 @@ export const JOINED_BASELINES_FEATURE: FeatureKey = 'joined-baselines';
  * the interface.
  */
 export const PROJECT_COVERS_FEATURE: FeatureKey = 'project-covers';
+
+/**
+ * Invitations OpenV emails from a project: Email invite on an interview,
+ * which mails the participant their link, and adding an address with no
+ * account on a project's Access tab, which invites it to the workspace
+ * with the project attached. The server refuses both while the key is off.
+ */
+export const EMAIL_INVITES_FEATURE: FeatureKey = 'email-invites';

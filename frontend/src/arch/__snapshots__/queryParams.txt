@@ -108,6 +108,7 @@ signed_out
 tab
   /org/settings?tab=billing
   /org/settings?tab=members
+  /org/settings?tab=teams
   /org/settings?tab=usage
   /org/settings?tab=worker-keys
   /projects/{}/settings?tab=members

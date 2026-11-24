@@ -21,6 +21,7 @@ package invitations
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 
@@ -62,6 +63,30 @@ type Acceptance struct {
 	Invitation    *Invitation `json:"invitation"`
 	Role          string      `json:"role"`
 	AlreadyMember bool        `json:"already_member"`
+	// Projects are the projects the acceptance joined the account to, at
+	// the role each grant named (email-invites). A project the account
+	// could already open, or one deleted since, is not listed.
+	Projects []ProjectGrant `json:"projects,omitempty"`
+}
+
+// ProjectGrant is a project an invitation also opens: the role the invitee
+// is given on it once they have joined the workspace. A project owner adds
+// somebody with no account to a project, and what that makes is a
+// workspace invitation carrying the project.
+type ProjectGrant struct {
+	ProjectID string `json:"project_id"`
+	Role      string `json:"role"`
+	// ProjectName is denormalized for display, as OrgName is.
+	ProjectName string `json:"project_name,omitempty"`
+}
+
+// ProjectMembers is the slice of the project membership service an
+// acceptance needs to honour an invitation's projects. Declared here so the
+// domain stays free of the members package; cmd/server wires it.
+type ProjectMembers interface {
+	// RoleFor returns the account's role on the project, "" when none.
+	RoleFor(projectID, userID string) (string, error)
+	AddMember(projectID, userID, role string) error
 }
 
 // Invitation is one pending or accepted invitation to a workspace. Token is
@@ -88,6 +113,11 @@ type Invitation struct {
 	// read it from.
 	OrgName       string `json:"org_name,omitempty"`
 	InvitedByName string `json:"invited_by_name,omitempty"`
+
+	// Projects lists the projects the invitation also opens. Filled where
+	// an admin or the invitee is shown the invitation; empty for a plain
+	// workspace invitation.
+	Projects []ProjectGrant `json:"projects,omitempty"`
 }
 
 // Pending reports whether the invitation can still be accepted at now.
@@ -136,6 +166,11 @@ type Repository interface {
 	// DeleteExpired removes expired, never-accepted rows; housekeeping only,
 	// correctness never depends on it.
 	DeleteExpired(before time.Time) error
+	// AddProjectGrant records (or re-roles) a project the invitation opens.
+	AddProjectGrant(invitationID, projectID, role string) error
+	// ListProjectGrants returns the invitation's projects with their names,
+	// oldest first; an empty list when it has none.
+	ListProjectGrants(invitationID string) ([]ProjectGrant, error)
 }
 
 // Workspaces is the slice of orgs.Service invitations need: the membership
@@ -217,13 +252,28 @@ type Service interface {
 	AcceptAllForProviderVerifiedEmail(email, userID string) ([]*Acceptance, error)
 	// PurgeExpired drops expired rows (boot/reaper housekeeping).
 	PurgeExpired(now time.Time) error
+	// GrantProject adds a project to a pending invitation, so accepting it
+	// also joins the project at role. The role is the caller's to have
+	// validated: the invitations domain does not know project roles.
+	// ErrNotFound when the invitation is not pending. It answers every
+	// project the invitation now opens.
+	GrantProject(invID, projectID, role string) ([]ProjectGrant, error)
 }
 
 // DefaultService implements Service.
 type DefaultService struct {
-	repo    Repository
-	members Workspaces
-	ttl     time.Duration
+	repo     Repository
+	members  Workspaces
+	projects ProjectMembers
+	ttl      time.Duration
+}
+
+// SetProjectMembers attaches the project membership an acceptance writes
+// for an invitation's projects. Without it those projects are skipped,
+// and the workspace membership is granted alone.
+func (s *DefaultService) SetProjectMembers(pm ProjectMembers) *DefaultService {
+	s.projects = pm
+	return s
 }
 
 // NewDefaultService creates an invitation service.
@@ -280,6 +330,11 @@ func (s *DefaultService) Create(orgID, email, role string, invitedBy *string) (*
 	if err := s.repo.Replace(inv); err != nil {
 		return nil, "", err
 	}
+	// A resend keeps the projects the invitation already opens, and the
+	// mail names them.
+	if err := s.withProjects(inv); err != nil {
+		return nil, "", err
+	}
 	return inv, token, nil
 }
 
@@ -300,9 +355,47 @@ func (s *DefaultService) MarkEmailed(invID string, at time.Time) error {
 	return s.repo.MarkEmailed(invID, at.UTC())
 }
 
-// ListPending returns a workspace's live invitations.
+// ListPending returns a workspace's live invitations, each with the
+// projects it opens.
 func (s *DefaultService) ListPending(orgID string) ([]*Invitation, error) {
-	return s.repo.ListPending(orgID, time.Now())
+	list, err := s.repo.ListPending(orgID, time.Now())
+	if err != nil {
+		return nil, err
+	}
+	for _, inv := range list {
+		if err := s.withProjects(inv); err != nil {
+			return nil, err
+		}
+	}
+	return list, nil
+}
+
+// withProjects fills the invitation's projects.
+func (s *DefaultService) withProjects(inv *Invitation) error {
+	if inv == nil {
+		return nil
+	}
+	grants, err := s.repo.ListProjectGrants(inv.ID)
+	if err != nil {
+		return err
+	}
+	inv.Projects = grants
+	return nil
+}
+
+// GrantProject adds a project to a pending invitation; see Service.
+func (s *DefaultService) GrantProject(invID, projectID, role string) ([]ProjectGrant, error) {
+	inv, err := s.repo.FindByID(invID)
+	if err != nil {
+		return nil, err
+	}
+	if inv == nil || !inv.Pending(time.Now()) {
+		return nil, ErrNotFound
+	}
+	if err := s.repo.AddProjectGrant(invID, projectID, role); err != nil {
+		return nil, err
+	}
+	return s.repo.ListProjectGrants(invID)
 }
 
 // Revoke deletes one of the workspace's invitations.
@@ -331,6 +424,10 @@ func (s *DefaultService) Lookup(token string) (*Invitation, error) {
 	}
 	if !inv.Pending(time.Now()) {
 		return nil, ErrInvalidToken
+	}
+	// The sign-up page shows which projects the link opens.
+	if err := s.withProjects(inv); err != nil {
+		return nil, err
 	}
 	return inv, nil
 }
@@ -425,7 +522,8 @@ func (s *DefaultService) accept(inv *Invitation, userID string, now time.Time) (
 			return nil, err
 		}
 		inv.AcceptedAt = &now
-		return &Acceptance{Invitation: inv, Role: existing, AlreadyMember: true}, nil
+		return &Acceptance{Invitation: inv, Role: existing, AlreadyMember: true,
+			Projects: s.joinProjects(inv, userID)}, nil
 	}
 	won, err := s.repo.MarkAccepted(inv.ID, now)
 	if err != nil {
@@ -441,7 +539,45 @@ func (s *DefaultService) accept(inv *Invitation, userID string, now time.Time) (
 		return nil, err
 	}
 	inv.AcceptedAt = &now
-	return &Acceptance{Invitation: inv, Role: inv.Role}, nil
+	return &Acceptance{Invitation: inv, Role: inv.Role, Projects: s.joinProjects(inv, userID)}, nil
+}
+
+// joinProjects gives the account each project the invitation opens, once
+// the workspace membership is in place. It never lowers or changes a role
+// the account already holds on a project, as an invitation never changes
+// a workspace role. A project that cannot be joined (deleted since, or a
+// write that failed) is logged and skipped: the workspace membership is
+// what the link promised first, and it stands.
+func (s *DefaultService) joinProjects(inv *Invitation, userID string) []ProjectGrant {
+	if s.projects == nil {
+		return nil
+	}
+	grants, err := s.repo.ListProjectGrants(inv.ID)
+	if err != nil {
+		slog.Error("invitation: could not read the projects an invitation opens",
+			"invitation_id", inv.ID, "org_id", inv.OrgID, "error", err)
+		return nil
+	}
+	var joined []ProjectGrant
+	for _, g := range grants {
+		existing, err := s.projects.RoleFor(g.ProjectID, userID)
+		if err != nil {
+			slog.Error("invitation: could not read a project role", "invitation_id", inv.ID,
+				"project_id", g.ProjectID, "error", err)
+			continue
+		}
+		if existing != "" {
+			continue
+		}
+		if err := s.projects.AddMember(g.ProjectID, userID, g.Role); err != nil {
+			slog.Error("invitation: could not join an invited project", "invitation_id", inv.ID,
+				"project_id", g.ProjectID, "error", err)
+			continue
+		}
+		joined = append(joined, g)
+	}
+	inv.Projects = grants
+	return joined
 }
 
 // PurgeExpired drops expired rows.

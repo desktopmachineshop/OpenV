@@ -9,6 +9,28 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
 
 ## Unreleased
 
+### New features
+
+- **Email an interview invite, and add someone with no account to a
+  project.** On an interview, **Email invite** asks for an address and
+  OpenV emails that person their own link to the interview, with its name
+  and yours; they answer without an account. On a project's **Settings →
+  Access**, a workspace admin can now add an email address that has no
+  OpenV account: OpenV emails them an invitation to the workspace that also
+  opens the project, at the role you chose, and they join both when they
+  accept it. Pending invitations in workspace settings show which projects
+  each one opens. Where the server has no email set up, the link is shown
+  for you to send instead.
+
+### Bug fixes
+
+- **Teams no longer change access silently.** Being added to a team or
+  removed from one, and a team being given a project, a new role on it, or
+  losing it, now notifies everyone it affects in the app and by email, like
+  joining or leaving a project does. A team's notice opens the workspace's
+  Teams section, and the project's activity log records team access given
+  and removed.
+
 ## 0.37.0 — 2026-11-20
 
 ### New features

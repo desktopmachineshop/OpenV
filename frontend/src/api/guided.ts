@@ -62,10 +62,13 @@ export const interviewsAPI = {
   close: (id: string) => client.post<Interview>(`/api/v1/interviews/${id}/close`),
   setPersona: (id: string, personaArtifactId: string | null) =>
     client.put<Interview>(`/api/v1/interviews/${id}/persona`, { persona_artifact_id: personaArtifactId }),
-  createInvite: (interviewId: string, inviteeLabel?: string) =>
-    client.post<{ invite: any; token: string; path: string }>(
+  // With an email (email-invites) the server also mails the link there,
+  // and answers emailed: false when it has no mailer, so the link is
+  // shown to pass on by hand.
+  createInvite: (interviewId: string, inviteeLabel?: string, email?: string) =>
+    client.post<{ invite: any; token: string; path: string; emailed?: boolean }>(
       `/api/v1/interviews/${interviewId}/invites`,
-      { invitee_label: inviteeLabel || '' }
+      email ? { invitee_label: inviteeLabel || '', email } : { invitee_label: inviteeLabel || '' }
     ),
   listInvites: (interviewId: string) =>
     client.get<any[]>(`/api/v1/interviews/${interviewId}/invites`),

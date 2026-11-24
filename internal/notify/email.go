@@ -310,6 +310,9 @@ func notificationPath(ref map[string]interface{}) string {
 		// Membership and privilege changes land on the people list they are
 		// about: the workspace's members tab, or the project's own.
 		return "/org/settings?tab=members"
+	case "team_membership":
+		// Joining or leaving a people-team lands on the workspace's teams.
+		return "/org/settings?tab=teams"
 	}
 	projectID := refString(ref, "project_id")
 	if projectID == "" {

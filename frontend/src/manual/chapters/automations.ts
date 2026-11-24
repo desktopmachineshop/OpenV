@@ -52,8 +52,10 @@ Triggered automations listen to the workspace's events. Available events:
 - agentrun.finished / agentrun.successors_skipped
 - proposal.created
 - project.member_added / project.member_role_changed / project.member_removed
+- project.team_access_granted / project.team_access_revoked
 - org.member_added / org.member_role_changed / org.member_removed /
   org.invitation_sent / org.invitation_accepted
+- org.team_member_added / org.team_member_removed
 
 The org.* events belong to the workspace, not to a project, so they fire only
 automations that cover the whole workspace (see *What an automation covers*);

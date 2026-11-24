@@ -76,6 +76,8 @@ export const VERBS: Record<string, string> = {
   'project.member_added': 'added a member',
   'project.member_role_changed': "changed a member's role",
   'project.member_removed': 'removed a member',
+  'project.team_access_granted': 'gave a team access',
+  'project.team_access_revoked': "removed a team's access",
 };
 
 /** What each kind of event is called, for the log's type filter. */
@@ -103,6 +105,8 @@ export const EVENT_TYPE_LABELS: Record<string, string> = {
   'project.member_added': 'Member added',
   'project.member_role_changed': 'Member role changed',
   'project.member_removed': 'Member removed',
+  'project.team_access_granted': 'Team access given',
+  'project.team_access_revoked': 'Team access removed',
 };
 
 /** A status, board column or other stored word as a reader writes it: "in_review" → "in review". */

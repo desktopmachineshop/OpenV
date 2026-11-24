@@ -5,6 +5,7 @@
   <shortdesc>Click <b>Copy invite link</b> on an interview to create an invite and copy its URL. The link opens a public, mobile-friendly chat page:</shortdesc>
   <prolog>
     <resourceid appname="openv-web" appid="interviews.invite"/>
+    <resourceid appname="openv-web" appid="interviews.email-invite"/>
   </prolog>
   <conbody>
     <ol>
@@ -12,7 +13,17 @@
       <li>They chat with the interviewer agent — replies stream in live.</li>
       <li>When they're done, the session is complete.</li>
     </ol>
-    <p>Invite links are token-authenticated and can be revoked: <b>Close</b> an interview and its invite links stop working (you'll be asked to confirm). Closing is permanent — a closed interview can't issue new invites, so create a new interview if you need more sessions.</p>
-    <p>The interviewer agent needs a runner online to reply — automations-style ownerless routing applies, so a hosted runner keeps interviews responsive even when no one is at their desk (see <i>Runs &amp; runners</i>).</p>
+    <section id="emailing-an-invite">
+      <title>Emailing an invite</title>
+      <p>To have OpenV send the invite for you, click <b>Email invite</b> on an open interview and enter the person's email address. OpenV makes a new invite, names it after the address, and emails them the link with the interview's name and yours. They need no account: the link opens the same chat page.</p>
+      <ul>
+        <li>Each address gets its own link, so you can tell the sessions apart.</li>
+        <li>The email asks them not to forward it: anyone with the link can answer in their place.</li>
+        <li>If email is not set up on the server, OpenV still makes the invite and shows you the link to send yourself.</li>
+        <li>Emailing invites counts towards the same hourly allowance as workspace invitations, so a long list may have to wait a little.</li>
+      </ul>
+      <p>Invite links are token-authenticated and can be revoked: <b>Close</b> an interview and its invite links stop working (you'll be asked to confirm). Closing is permanent — a closed interview can't issue new invites, so create a new interview if you need more sessions.</p>
+      <p>The interviewer agent needs a runner online to reply — automations-style ownerless routing applies, so a hosted runner keeps interviews responsive even when no one is at their desk (see <i>Runs &amp; runners</i>).</p>
+    </section>
   </conbody>
 </concept>

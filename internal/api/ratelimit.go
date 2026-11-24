@@ -442,3 +442,15 @@ func writeRateLimited(w http.ResponseWriter, message string, retryAfter time.Dur
 	w.Header().Set("Retry-After", strconv.Itoa(seconds))
 	writeJSON(w, http.StatusTooManyRequests, map[string]string{"error": message})
 }
+
+// inviteBudgetKey is the bucket an invitation is charged to: the inviting
+// account, so one admin's bulk invite cannot exhaust their colleagues'
+// budget wherever either of them works from. The address is only a fallback
+// for a caller with no session, which the admin check ahead of here already
+// rules out.
+func inviteBudgetKey(r *http.Request) string {
+	if user := CurrentUser(r); user != nil {
+		return "user:" + user.ID
+	}
+	return "ip:" + clientIP(r)
+}

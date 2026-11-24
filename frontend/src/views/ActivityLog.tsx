@@ -44,6 +44,8 @@ const EVENT_TYPES: DomainEventType[] = [
   'project.member_added',
   'project.member_role_changed',
   'project.member_removed',
+  'project.team_access_granted',
+  'project.team_access_revoked',
 ];
 
 // Cursor pagination: each page asks for PAGE_SIZE events older than the

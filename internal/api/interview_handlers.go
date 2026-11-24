@@ -1,13 +1,19 @@
 package api
 
 import (
+	"log/slog"
 	"net/http"
+	"net/mail"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/openv/requirements-platform/internal/domain/artifacts"
 	"github.com/openv/requirements-platform/internal/domain/interviews"
 	"github.com/openv/requirements-platform/internal/domain/members"
+	"github.com/openv/requirements-platform/internal/domain/release"
+	"github.com/openv/requirements-platform/internal/domain/users"
+	"github.com/openv/requirements-platform/internal/notify"
 )
 
 // registerInterviewRoutes wires the interviews' internal management: a
@@ -176,20 +182,75 @@ func (h *Handler) CreateInterviewInvite(w http.ResponseWriter, r *http.Request) 
 	var req struct {
 		InviteeLabel string     `json:"invitee_label"`
 		ExpiresAt    *time.Time `json:"expires_at"`
+		// Email, when given, is where OpenV sends the link (email-invites).
+		Email string `json:"email"`
 	}
 	if !decodeJSON(w, r, &req) {
 		return
+	}
+	email := strings.TrimSpace(req.Email)
+	if email != "" {
+		if !h.projectFeatureEnabled(r, interview.ProjectID, release.FeatureEmailInvites) {
+			writeJSONError(w, http.StatusForbidden, featureGateMessage)
+			return
+		}
+		email = users.NormalizeEmail(email)
+		// A bare address only: a display name or a list would make the
+		// recipient something other than what the list shows.
+		if addr, err := mail.ParseAddress(email); err != nil || addr.Address != email {
+			writeJSONError(w, http.StatusBadRequest, "a valid email is required")
+			return
+		}
+		// Sending is a relay to an address the caller chose, so it spends the
+		// same per-account budget as a workspace invitation.
+		if ok, retryAfter := h.inviteLimiter.allow(inviteBudgetKey(r)); !ok {
+			writeRateLimited(w, "Too many invitations from this account; try again later.", retryAfter)
+			return
+		}
+		// The address names the invite in the list when nothing else does.
+		if strings.TrimSpace(req.InviteeLabel) == "" {
+			req.InviteeLabel = email
+		}
 	}
 	invite, token, err := h.InterviewService.CreateInvite(interview.ID, req.InviteeLabel, req.ExpiresAt)
 	if err != nil {
 		writeJSONError(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	writeJSONBareStatus(w, http.StatusCreated, map[string]interface{}{
+	resp := map[string]interface{}{
 		"invite": invite,
 		"token":  token,
 		"path":   "/interview/" + token,
-	})
+	}
+	// emailed is answered only when an address was given, so a link-only
+	// invite answers exactly as it always has.
+	if email != "" {
+		resp["emailed"] = h.sendInterviewInviteAsync(r, interview, invite, email, token)
+	}
+	writeJSONBareStatus(w, http.StatusCreated, resp)
+}
+
+// sendInterviewInviteAsync mails the invite's link without making the
+// request wait, as a workspace invitation's goes out. It reports whether the
+// send was QUEUED: false when the server has no mailer, so the member knows
+// to send the link themselves. A failure is logged; the invite stands and
+// its link can still be copied.
+func (h *Handler) sendInterviewInviteAsync(r *http.Request, interview *interviews.Interview, invite *interviews.Invite, email, token string) bool {
+	if h.Mailer == nil || !h.Mailer.Enabled() {
+		return false
+	}
+	inviter := ""
+	if user := CurrentUser(r); user != nil {
+		inviter = user.Name
+	}
+	link := notify.InterviewInviteLink(h.EmailLinkBase, token)
+	subject, body := notify.RenderInterviewInviteEmail(inviter, interview.Name, link, invite.ExpiresAt)
+	go func() {
+		if err := notify.SendWithTimeout(h.Mailer, email, subject, body, notify.VerificationSendTimeout); err != nil {
+			slog.Warn("interview: failed to send invite email", "interview_id", interview.ID, "invite_id", invite.ID, "error", err)
+		}
+	}()
+	return true
 }
 
 func (h *Handler) ListInterviewInvites(w http.ResponseWriter, r *http.Request) {
