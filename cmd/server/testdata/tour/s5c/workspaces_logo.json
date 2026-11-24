@@ -2187,7 +2187,11 @@
         "preview": false,
         "features": "<every feature off>"
       },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": null,
+        "vary": "Accept-Encoding"
+      }
     },
     {
       "n": 46,
@@ -2276,7 +2280,11 @@
         "preview": false,
         "features": "<every feature off>"
       },
-      "gzip": "not compressed: the same answer as without Accept-Encoding"
+      "gzip": {
+        "content_encoding": "gzip",
+        "content_type": null,
+        "vary": "Accept-Encoding"
+      }
     },
     {
       "n": 49,

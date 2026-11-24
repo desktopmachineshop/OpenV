@@ -1160,7 +1160,20 @@
       "content_length": 0,
       "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "project.team_access_granted",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<team>",
+          "payload": {
+            "member_ids": "array[] []",
+            "role": "string \"editor\"",
+            "team_id": "string \"<team>\"",
+            "team_name": "string \"Tour Team\""
+          }
+        }
+      ]
     },
     {
       "n": 23,
