@@ -39,3 +39,19 @@ func TestIsAllowedAPIKeyEnvCoversEveryProviderDefault(t *testing.T) {
 		}
 	}
 }
+
+// Google AI Studio has no sign-in, so a setting cannot put it on one.
+func TestUpsertKeepsGoogleAIStudioOnAPIKeyAuth(t *testing.T) {
+	repo := &memRepo{}
+	svc := NewDefaultService(repo)
+	err := svc.Upsert(&ProviderSetting{OrgID: "org", Provider: ProviderGoogleAPI, AuthMode: AuthSubscriptionCLI})
+	if !errors.Is(err, ErrInvalidSetting) || repo.saved != nil {
+		t.Fatalf("subscription-cli for google-api: err = %v, saved = %v; want refused", err, repo.saved)
+	}
+	if err := svc.Upsert(&ProviderSetting{OrgID: "org", Provider: ProviderGoogleAPI, AuthMode: AuthAPIKey}); err != nil {
+		t.Fatalf("api-key for google-api refused: %v", err)
+	}
+	if !AlwaysAPIKey(ProviderGoogleAPI) || AlwaysAPIKey(ProviderGeminiCLI) {
+		t.Fatal("AlwaysAPIKey: want google-api only")
+	}
+}

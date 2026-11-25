@@ -230,7 +230,8 @@
     "joined-baselines",
     "key-projects",
     "project-covers",
-    "email-invites"
+    "email-invites",
+    "google-ai-studio"
   ],
   "event_types": [
     "artifact.created",

@@ -311,5 +311,6 @@ func Registry() []Adapter {
 		&CodexCLIAdapter{},
 		&GeminiCLIAdapter{},
 		&AntigravityAdapter{},
+		&GoogleAIStudioAdapter{},
 	}
 }

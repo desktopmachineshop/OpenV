@@ -217,3 +217,30 @@ func TestAClaimCarriesTheWorkspacesPastedKeyOnlyForAnAPIKeyProject(t *testing.T)
 		t.Errorf("org-2's run: auth = %v, want no key", auth)
 	}
 }
+
+// Google AI Studio has no sign-in of its own: its runs carry the
+// workspace's pasted Gemini key in every project, user-account ones and
+// runs with no project included.
+func TestAGoogleAIStudioClaimCarriesTheKeyInEveryProject(t *testing.T) {
+	h, _ := apiKeyFixture(t, orgs.PlanSingle, "", true)
+	if w := putKey(h, "admin", "GEMINI_API_KEY", pastedKey); w.Code != http.StatusOK {
+		t.Fatalf("PUT: status = %d", w.Code)
+	}
+	accountProject := "p-account"
+	h.ProjectService = &fakeProjectService{byID: map[string]*projects.Project{
+		accountProject: {ID: accountProject, OrgID: "org-1", AgentAuth: projects.AgentAuthUserAccount},
+	}}
+	agent := &agents.Agent{Provider: providers.ProviderGoogleAPI}
+	for name, run := range map[string]*agentruns.Run{
+		"user-account project": {OrgID: "org-1", ProjectID: &accountProject},
+		"no project":           {OrgID: "org-1"},
+	} {
+		auth := h.resolveRunAuth(httptest.NewRequest("POST", "/api/v1/agent-runs/claim", nil), run, agent)
+		if auth["mode"] != projects.AgentAuthAPIKey || auth["api_key_env"] != "GEMINI_API_KEY" || auth["api_key"] != pastedKey {
+			t.Errorf("%s: auth = %v, want the pasted key for GEMINI_API_KEY", name, auth)
+		}
+	}
+	if auth := h.resolveRunAuth(httptest.NewRequest("POST", "/api/v1/agent-runs/claim", nil), &agentruns.Run{OrgID: "org-2"}, agent); auth["api_key"] != "" {
+		t.Errorf("org-2's run: auth = %v, want no key of org-1's", auth)
+	}
+}

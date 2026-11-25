@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE concept PUBLIC "-//OASIS//DTD DITA Concept//EN" "concept.dtd">
+<concept id="google-ai-studio">
+  <title>Google AI Studio</title>
+  <conbody>
+    <p>Choose <b>Google AI Studio</b> as the provider to run an agent on a Gemini API key from <xref href="https://aistudio.google.com/apikey" scope="external" format="html">Google AI Studio</xref>, with no Google sign-in. A workspace admin makes the key in AI Studio and pastes it once on the <b>Google AI Studio</b> card in <b>Workspace settings → AI providers</b>. Agents on Google AI Studio then use that key in every project, whatever the project's agent auth, on every runner, including members' own machines; nobody sets an environment variable. It is the same key the Gemini CLI and Antigravity CLI use on API-key auth.</p>
+    <p>The runner drives the Gemini CLI with the key, so a runner needs the <codeph>gemini</codeph> command installed, and the agent behaves as a gemini-cli agent does: the same models, the allowlist applied the same way, no repository access and no effort setting. A run with no key stored and none on the runner fails at once and says to paste one. Usage is billed by Google to the key's AI Studio project.</p>
+  </conbody>
+</concept>

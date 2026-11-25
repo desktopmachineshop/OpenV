@@ -22,6 +22,13 @@ is in [CONTRIBUTING.md](CONTRIBUTING.md#release-notes).
   each one opens. Where the server has no email set up, the link is shown
   for you to send instead.
 
+- **Google AI Studio as an agent provider.** Make a Gemini API key in
+  Google AI Studio, paste it on the new **Google AI Studio** card in
+  **Workspace settings → AI providers**, and choose Google AI Studio as an
+  agent's provider. Its agents run on that key in every project, on every
+  runner, with no Google sign-in and nothing to set on the runner's
+  machine; a run with no key says so straight away.
+
 ### Bug fixes
 
 - **Teams no longer change access silently.** Being added to a team or

@@ -19,8 +19,18 @@ const (
 	ProviderAntigravityCLI = "antigravity-cli"
 	ProviderAnthropicAPI   = "anthropic-api"
 	ProviderOpenAIAPI      = "openai-api"
-	ProviderGoogleAPI      = "google-api"
+	// ProviderGoogleAPI is Google AI Studio: the Gemini API on an AI Studio
+	// key. It always runs on API-key auth (see AlwaysAPIKey); the runner
+	// drives the Gemini CLI engine pinned to that key.
+	ProviderGoogleAPI = "google-api"
 )
+
+// AlwaysAPIKey reports whether a provider runs only on a workspace API key,
+// whatever its project's agent auth: it has no sign-in of its own to fall
+// back on. Google AI Studio is such a provider.
+func AlwaysAPIKey(provider string) bool {
+	return provider == ProviderGoogleAPI
+}
 
 // Auth modes.
 const (
@@ -220,6 +230,9 @@ func (s *DefaultService) Upsert(setting *ProviderSetting) error {
 	}
 	if setting.AuthMode != AuthSubscriptionCLI && setting.AuthMode != AuthAPIKey {
 		return fmt.Errorf("%w: invalid auth_mode %q", ErrInvalidSetting, setting.AuthMode)
+	}
+	if AlwaysAPIKey(setting.Provider) && setting.AuthMode != AuthAPIKey {
+		return fmt.Errorf("%w: %s runs only on an API key; its auth_mode must be %q", ErrInvalidSetting, setting.Provider, AuthAPIKey)
 	}
 	if !IsAllowedAPIKeyEnv(setting.APIKeyEnv) {
 		return fmt.Errorf("%w: api_key_env %q is not a provider key variable (one of %v)", ErrInvalidSetting, setting.APIKeyEnv, AllowedAPIKeyEnvs())

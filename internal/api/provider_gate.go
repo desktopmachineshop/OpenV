@@ -17,6 +17,7 @@ import (
 // previewing the next stable release keeps working.
 var gatedProviders = map[string]string{
 	providers.ProviderAntigravityCLI: release.FeatureAntigravity,
+	providers.ProviderGoogleAPI:      release.FeatureGoogleAIStudio,
 }
 
 // providerOffered reports whether the caller may choose provider in workspace

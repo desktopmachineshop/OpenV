@@ -122,7 +122,7 @@ to watch progress.
 | --- | --- |
 | Slug | Stable identifier (can't change after creation) |
 | Name / Description | Display info |
-| Provider | claude-code, codex-cli, gemini-cli, anthropic-api, openai-api, google-api |
+| Provider | claude-code, codex-cli, gemini-cli, antigravity-cli, anthropic-api, openai-api, Google AI Studio (google-api) |
 | Model | Dropdown of the provider's known models, or *provider default*, or **Custom…** to type any model id the vendor accepts |
 | Effort | Reasoning effort: low, medium, high, xhigh, max — or provider default. Applies to claude-code; codex-cli caps it at high; gemini-cli ignores it |
 | Write mode | *proposal* (changes need approval) or *direct* (writes immediately) |
@@ -134,6 +134,24 @@ to watch progress.
 
 Existing agents also have a **Raw markdown** tab showing the underlying
 definition file (frontmatter + system prompt) for direct editing.
+
+## Google AI Studio
+
+Choose **Google AI Studio** as the provider to run an agent on a Gemini API
+key from [Google AI Studio](https://aistudio.google.com/apikey), with no
+Google sign-in. A workspace admin makes the key in AI Studio and pastes it
+once on the **Google AI Studio** card in **Workspace settings → AI
+providers**. Agents on Google AI Studio then use that key in every project,
+whatever the project's agent auth, on every runner, including members' own
+machines; nobody sets an environment variable. It is the same key the
+Gemini CLI and Antigravity CLI use on API-key auth.
+
+The runner drives the Gemini CLI with the key, so a runner needs the
+\`gemini\` command installed, and the agent behaves as a gemini-cli agent
+does: the same models, the allowlist applied the same way, no repository
+access and no effort setting. A run with no key stored and none on the
+runner fails at once and says to paste one. Usage is billed by Google to
+the key's AI Studio project.
 
 ## Every agent needs an allowlist
 

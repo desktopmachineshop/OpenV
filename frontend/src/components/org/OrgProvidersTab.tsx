@@ -6,6 +6,7 @@ import { ModelSelect } from '../agents/ModelSelect';
 import { ProviderAPIKeyField, WORKSPACE_API_KEYS_FEATURE, providerKeyEnv } from '../agents/ProviderAPIKeyField';
 import { ProviderConnectCard } from '../agents/ProviderConnectCard';
 import { providerCaution } from '../agents/providerCautions';
+import { AI_STUDIO_KEY_URL, alwaysAPIKey, providerLabel } from '../agents/providerLabels';
 import { ErrorBanner } from '../ui';
 
 const chipStyle = (bg: string, color = '#fff'): React.CSSProperties => ({
@@ -92,7 +93,7 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
     try {
       const res = await providerSettingsAPI.upsert(setting);
       setProviders(providers.map((p) => (p.provider === setting.provider ? res.data : p)));
-      flash(`${setting.provider} settings saved.`);
+      flash(`${providerLabel(setting.provider)} settings saved.`);
     } catch (err: any) {
       setError(`Failed to save provider settings: ${apiErrorMessage(err)}`);
     } finally {
@@ -157,7 +158,7 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
         providers.map((p, i) => (
           <div key={p.provider || p.id} className="card">
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-              <h3 style={{ marginBottom: 0, textTransform: 'capitalize' }}>{p.provider}</h3>
+              <h3 style={{ marginBottom: 0, textTransform: 'capitalize' }}>{providerLabel(p.provider)}</h3>
               {detectionChip(p)}
               <div style={{ flex: 1 }} />
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 400, marginBottom: 0 }}>
@@ -171,17 +172,19 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
               </label>
             </div>
             <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-              <div style={{ width: 200 }}>
-                <label style={{ fontSize: 12 }}>Auth mode</label>
-                <select
-                  value={p.auth_mode}
-                  onChange={(e) => updateProviderLocal(i, { auth_mode: e.target.value as ProviderSetting['auth_mode'] })}
-                  style={{ padding: '6px 8px', fontSize: 13 }}
-                >
-                  <option value="subscription-cli">subscription-cli</option>
-                  <option value="api-key">api-key</option>
-                </select>
-              </div>
+              {!alwaysAPIKey(p.provider) && (
+                <div style={{ width: 200 }}>
+                  <label style={{ fontSize: 12 }}>Auth mode</label>
+                  <select
+                    value={p.auth_mode}
+                    onChange={(e) => updateProviderLocal(i, { auth_mode: e.target.value as ProviderSetting['auth_mode'] })}
+                    style={{ padding: '6px 8px', fontSize: 13 }}
+                  >
+                    <option value="subscription-cli">subscription-cli</option>
+                    <option value="api-key">api-key</option>
+                  </select>
+                </div>
+              )}
               <div style={{ flex: 1, minWidth: 180 }}>
                 <label style={{ fontSize: 12 }}>Default model</label>
                 <ModelSelect
@@ -212,6 +215,16 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
                 {savingProvider === p.provider ? 'Saving…' : 'Save'}
               </button>
             </div>
+            {alwaysAPIKey(p.provider) && (
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }} data-testid="ai-studio-note">
+                Agents on Google AI Studio run on this workspace's Gemini API key in every project, whatever the
+                project's agent auth. Make a key at{' '}
+                <a href={AI_STUDIO_KEY_URL} target="_blank" rel="noreferrer">
+                  aistudio.google.com/apikey
+                </a>{' '}
+                and paste it here; it is the same key the Gemini and Antigravity CLIs use on API-key auth.
+              </div>
+            )}
             {keysOn && apiKeys ? (
               <ProviderAPIKeyField
                 keyEnv={providerKeyEnv(p.provider, p.api_key_env)}
@@ -229,7 +242,7 @@ export const OrgProvidersTab: React.FC<OrgProvidersTabProps> = ({ isAdmin }) => 
                 </div>
               )
             )}
-            {p.auth_mode === 'subscription-cli' && (
+            {p.auth_mode === 'subscription-cli' && !alwaysAPIKey(p.provider) && (
               <ProviderConnectCard
                 provider={p.provider}
                 loggedIn={Boolean((p.last_detected || {})['logged_in'])}

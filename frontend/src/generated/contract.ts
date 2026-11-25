@@ -68,6 +68,7 @@ export const FEATURE_KEYS = [
   'key-projects',
   'project-covers',
   'email-invites',
+  'google-ai-studio',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
 

@@ -66,6 +66,7 @@
   "/manual/agents#the-agent-list": "topics/agents/the-agent-list",
   "/manual/agents#launching-a-run": "topics/agents/launching-a-run",
   "/manual/agents#the-agent-editor": "topics/agents/the-agent-editor",
+  "/manual/agents#google-ai-studio": "topics/agents/google-ai-studio",
   "/manual/agents#every-agent-needs-an-allowlist": "topics/agents/every-agent-needs-an-allowlist",
   "/manual/agents#write-mode-proposal-vs-direct": "topics/agents/write-mode-proposal-vs-direct",
   "/manual/agents#repository-access": "topics/agents/repository-access",

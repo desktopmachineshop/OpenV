@@ -62,12 +62,15 @@ func (f fakeAgentRawService) SaveRawFile(orgID, slug, content string) (*agents.A
 }
 
 // providerGateFixture: workspace org-1 on the given plan and turned-on
-// stable release, with the provider's feature shipped in 0.3.0; the notes
+// stable release, with the gated providers' features shipped in 0.3.0; the notes
 // know 0.2.0 and 0.3.0 as stable releases. "admin" administers org-1.
 func providerGateFixture(t *testing.T, plan, stableRelease string, existing map[string]*agents.Agent) (*Handler, *memProviderRepo, *fakeAgentDefService) {
 	t.Helper()
 	saved := release.Registry
-	release.Registry = []release.Feature{{Key: release.FeatureAntigravity, ShippedIn: "0.3.0"}}
+	release.Registry = []release.Feature{
+		{Key: release.FeatureAntigravity, ShippedIn: "0.3.0"},
+		{Key: release.FeatureGoogleAIStudio, ShippedIn: "0.3.0"},
+	}
 	t.Cleanup(func() { release.Registry = saved })
 	notes, err := release.Parse("## 0.3.0 — 2026-10-20\n\nStable channel release since 2026-11-02.\n\n### New features\n\n- x\n\n## 0.2.0 — 2026-09-20\n\nStable channel release since 2026-10-01.\n\n### New features\n\n- y\n")
 	if err != nil {
@@ -139,12 +142,12 @@ func TestProviderSettingsOfferAntigravityOnlyWhereItsFeatureIsOn(t *testing.T) {
 		h, _, _ := providerGateFixture(t, c[0], c[1], nil)
 		got := listedProviders(t, h)
 		for _, p := range got {
-			if p == providers.ProviderAntigravityCLI {
-				t.Errorf("%s on %q: antigravity-cli offered: %v", c[0], c[1], got)
+			if _, gated := gatedProviders[p]; gated {
+				t.Errorf("%s on %q: gated provider %s offered: %v", c[0], c[1], p, got)
 			}
 		}
-		if len(got) != len(all)-1 {
-			t.Errorf("%s on %q: listed %v, want every provider but antigravity-cli", c[0], c[1], got)
+		if len(got) != len(all)-len(gatedProviders) {
+			t.Errorf("%s on %q: listed %v, want every provider but the gated ones (antigravity-cli, google-api)", c[0], c[1], got)
 		}
 	}
 	for _, c := range gateOpen {
