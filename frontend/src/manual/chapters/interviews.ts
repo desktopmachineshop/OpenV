@@ -30,6 +30,21 @@ URL. The link opens a public, mobile-friendly chat page:
 2. They chat with the interviewer agent — replies stream in live.
 3. When they're done, the session is complete.
 
+### Emailing an invite
+
+To have OpenV send the invite for you, click **Email invite** on an open
+interview and enter the person's email address. OpenV makes a new invite,
+names it after the address, and emails them the link with the interview's
+name and yours. They need no account: the link opens the same chat page.
+
+- Each address gets its own link, so you can tell the sessions apart.
+- The email asks them not to forward it: anyone with the link can answer in
+  their place.
+- If email is not set up on the server, OpenV still makes the invite and
+  shows you the link to send yourself.
+- Emailing invites counts towards the same hourly allowance as workspace
+  invitations, so a long list may have to wait a little.
+
 Invite links are token-authenticated and can be revoked: **Close** an
 interview and its invite links stop working (you'll be asked to confirm).
 Closing is permanent — a closed interview can't issue new invites, so create

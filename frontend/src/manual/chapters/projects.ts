@@ -235,9 +235,23 @@ sign-ins) and **Sign out**.
 
 Project membership is managed in **Settings → Access** inside the project:
 
-- **Add a member by email.** The person must already have an OpenV account —
-  if no account exists for that email you'll see a message asking them to sign
-  up first.
+- **Add a member by email.** Someone who already has an OpenV account joins
+  straight away. Someone who has none is **invited**: OpenV emails them an
+  invitation to the workspace that also opens this project, at the role you
+  chose, and they join both when they accept it (see *Inviting someone who
+  has no account yet* in *Workspace settings & teams*).
+  - Inviting someone new brings them into the workspace and takes a seat
+    there, so only a **workspace admin** can do it. A project owner who is
+    not one is asked to have an admin invite the person first.
+  - Invite them as an editor, reviewer or viewer; make them an owner once
+    they have joined.
+  - Someone who already has an invitation to the workspace keeps it, and it
+    opens this project too; a pending admin invitation stays an admin one.
+  - If the server has no email set up, the invitation link is shown once
+    under the form for you to send.
+  - On a workspace on the stable channel this arrives with its next stable
+    release; until then an address with no account is refused, with a
+    message asking them to sign up first.
 - Each member has a **role** — **viewer**, **reviewer**, **editor**, or
   **owner** (the add form defaults to editor; whoever creates a project
   becomes its owner) — you can change it from the members table, and members
@@ -246,7 +260,8 @@ Project membership is managed in **Settings → Access** inside the project:
   status or a setting.
 - **Team access** grants a whole workspace team access to the project at once,
   with a role per grant. Teams themselves are defined in Workspace settings —
-  see *Workspace settings & teams*.
+  see *Workspace settings & teams*. Everyone in the team is notified when it
+  is given the project, or a new role on it, and when its access is removed.
 
 ## Share links
 

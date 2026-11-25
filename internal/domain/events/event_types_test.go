@@ -54,6 +54,10 @@ var pinnedEventTypes = []pinnedConst{
 	{"ProjectMemberAdded", ProjectMemberAdded, "project.member_added"},
 	{"ProjectMemberRoleChanged", ProjectMemberRoleChanged, "project.member_role_changed"},
 	{"ProjectMemberRemoved", ProjectMemberRemoved, "project.member_removed"},
+	{"OrgTeamMemberAdded", OrgTeamMemberAdded, "org.team_member_added"},
+	{"OrgTeamMemberRemoved", OrgTeamMemberRemoved, "org.team_member_removed"},
+	{"ProjectTeamAccessGranted", ProjectTeamAccessGranted, "project.team_access_granted"},
+	{"ProjectTeamAccessRevoked", ProjectTeamAccessRevoked, "project.team_access_revoked"},
 }
 
 // pinnedActors lists the package's actor constants; user and agent actors
@@ -63,7 +67,7 @@ var pinnedActors = []pinnedConst{
 }
 
 // pinnedEventTypeCount is the size of the vocabulary the refactor plan names.
-const pinnedEventTypeCount = 28
+const pinnedEventTypeCount = 32
 
 // TestEventTypesArePinned checks each pinned constant's value against its
 // literal, and that the package declares no constant the lists leave out.

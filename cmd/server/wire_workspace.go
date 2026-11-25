@@ -53,7 +53,9 @@ func (a *app) workspace() {
 	// Workspace invitations (REQ-95): the only way into a workspace for
 	// someone with no account, and the prerequisite for closing self-service
 	// registration below.
-	a.invitationService = invitations.NewDefaultService(a.invitationRepo, a.orgService)
+	// An invitation can also open projects (email-invites), joined through
+	// the project memberships once the workspace has been.
+	a.invitationService = invitations.NewDefaultService(a.invitationRepo, a.orgService).SetProjectMembers(a.memberService)
 	a.workerKeyService = workerkeys.NewDefaultService(a.workerKeyRepo)
 	a.workerKeyService.SetPairingRepository(a.workerKeyRepo)
 	a.hostedWorkerService = hostedworkers.NewDefaultService(a.hostedWorkerRepo)

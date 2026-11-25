@@ -150,7 +150,7 @@ SECTION_KEYS = {
     ('guided-wizard', 'starting-resuming-modifying'): ['guided.session'],
     ('guided-wizard', 'the-eight-steps'): ['guided.steps'],
     ('interviews', 'creating-an-interview'): ['interviews.create'],
-    ('interviews', 'sharing-invite-links'): ['interviews.invite'],
+    ('interviews', 'sharing-invite-links'): ['interviews.invite', 'interviews.email-invite'],
     ('interviews', 'reviewing-sessions'): ['interviews.sessions'],
     # overview.links was the Quick links section, which the merged Overview
     # replaced; the key stays, on the section that took its place.

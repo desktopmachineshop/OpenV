@@ -90,6 +90,7 @@ var Registry = []Feature{
 	// What's new list it, and the create itself is unconditional.
 	{Key: FeatureKeyProjects, ShippedIn: "0.36.0", Summary: "Create a project with a runner key: scripts, and AI clients connected through the openv MCP server's new create_project tool, make projects and file them under a parent"},
 	{Key: FeatureProjectCovers, ShippedIn: "0.37.0", Summary: "Give a project a cover photo from its Overview, and see each project's photo on its card in All projects"},
+	{Key: FeatureEmailInvites, ShippedIn: "0.38.0", Summary: "Email an interview invite straight to the person you want to hear from, and add someone with no account to a project: OpenV emails them an invitation that opens the project once they join"},
 	{Key: FeatureGoogleAIStudio, ShippedIn: "0.38.0", Summary: "Google AI Studio as an agent provider: paste a Gemini API key from AI Studio into workspace settings and agents run on it in every project, with no Google sign-in"},
 }
 
@@ -370,6 +371,15 @@ const (
 	// All projects. The server stores and serves covers either way; the key
 	// gates the interface.
 	FeatureProjectCovers = "project-covers"
+	// FeatureEmailInvites is invitations OpenV emails from a project: an
+	// interview invite sent to an address (the email field of POST
+	// /interviews/{id}/invites), and a project member added by an address
+	// with no account, which becomes a workspace invitation that grants the
+	// project on acceptance (POST /projects/{id}/members answering 202).
+	// Both are gated on the project's workspace; with the key off an
+	// interview invite is a link to copy and an unknown address is refused,
+	// as before.
+	FeatureEmailInvites = "email-invites"
 	// FeatureGoogleAIStudio is the google-api agent provider, offered as
 	// Google AI Studio: agents run on the workspace's AI Studio (Gemini API)
 	// key whatever the project's agent auth. Like antigravity-cli it gates

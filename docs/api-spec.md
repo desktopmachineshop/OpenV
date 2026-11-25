@@ -378,7 +378,7 @@ their own project, workers pass within their org, a workspace key up to
 | POST | `/api/v1/auth/link` | Confirm the pending link with the account's password `{password}`: the provider joins the account's sign-in methods, so later sign-ins through it go straight in; the password keeps working, and the account keeps its name and picture. Answers the user and sets the session cookie, like `POST /auth/login`, and marks the address verified (the provider asserted it). `401` wrong password (the link stays live); `404` no live link (unknown, spent or expired); `429` throttled like a password sign-in | open |
 | GET | `/api/v1/users` | List users (for member pickers) | user |
 | GET | `/api/v1/projects/{id}/members` | List project members | viewer |
-| POST | `/api/v1/projects/{id}/members` | Add an existing account `{email, role}` (`viewer`, `reviewer`, `editor` or `owner`) → `201` with no body; `404` when no account has the address (they must sign up first), `400` for another role. Adding a member again sets the role, as `PUT` does | owner |
+| POST | `/api/v1/projects/{id}/members` | Add an existing account `{email, role}` (`viewer`, `reviewer`, `editor` or `owner`) → `201` with no body; `400` for another role. Adding a member again sets the role, as `PUT` does. An address no account has: with `email-invites` on, a workspace admin (who also owns the project) invites it to the project's workspace with the project attached → `202` with `{invitation, link, emailed, reason?}` as `POST /orgs/{id}/invitations` answers, the invitation's `projects` listing what it opens; a pending invitation for the address keeps its workspace role and gains the project. `403` for an owner who is not a workspace admin, `400` for the `owner` role (invite, then promote), and the seat and rate limits of an invitation. With the key off, `404` (they must sign up first) | owner |
 | PUT | `/api/v1/projects/{id}/members/{userId}` | Change member role `{role}` → `204`; `400` for a role not on the ladder | owner |
 | DELETE | `/api/v1/projects/{id}/members/{userId}` | Remove member → `204` | owner |
 
@@ -410,11 +410,11 @@ their own project, workers pass within their org, a workspace key up to
 | POST | `/api/v1/orgs/{id}/teams` | Create people-team `{name, description?}` → `201`; `400` for a name it refuses, `403` `limit_reached` while the plan lacks the `teams` flag | org admin |
 | PUT | `/api/v1/org-teams/{id}` | Rename/edit team `{name?, description?}`; a key left out is left as it was | org admin |
 | DELETE | `/api/v1/org-teams/{id}` | Delete team | org admin |
-| POST | `/api/v1/org-teams/{id}/members/{userId}` | Add user to team | org admin |
-| DELETE | `/api/v1/org-teams/{id}/members/{userId}` | Remove user from team | org admin |
+| POST | `/api/v1/org-teams/{id}/members/{userId}` | Add user to team; publishes `org.team_member_added` `{user_id, team_id, team_name}` unless they were in it already | org admin |
+| DELETE | `/api/v1/org-teams/{id}/members/{userId}` | Remove user from team; publishes `org.team_member_removed` when they were in it | org admin |
 | GET | `/api/v1/projects/{id}/team-access` | List team grants on a project | viewer |
-| PUT | `/api/v1/projects/{id}/team-access` | Grant/update a team's project role `{org_team_id, role}` → `201` with no body: `400` for a team of another workspace or a role not on the ladder, `403` `limit_reached` while the plan lacks the `teams` flag, `404` `team not found` for one no row has or of a workspace the caller is no member of | owner |
-| DELETE | `/api/v1/projects/{id}/team-access/{teamId}` | Revoke a team grant → `204` | owner |
+| PUT | `/api/v1/projects/{id}/team-access` | Grant/update a team's project role `{org_team_id, role}` → `201` with no body: `400` for a team of another workspace or a role not on the ladder, `403` `limit_reached` while the plan lacks the `teams` flag, `404` `team not found` for one no row has or of a workspace the caller is no member of. Publishes `project.team_access_granted` `{team_id, team_name, role, member_ids}` unless the team held that role already | owner |
+| DELETE | `/api/v1/projects/{id}/team-access/{teamId}` | Revoke a team grant → `204`; publishes `project.team_access_revoked` `{team_id, team_name, member_ids}` when the team held one | owner |
 | GET | `/api/v1/orgs/{id}/quality-rules` | Workspace requirement quality rules (house style every project inherits) | org member |
 | PUT | `/api/v1/orgs/{id}/quality-rules` | Set the house style; an empty body clears it back to the platform defaults | org admin |
 | GET | `/api/v1/orgs/{id}/logo` | The workspace logo image (served as its stored type, `Content-Disposition: inline`); `404` when none is set | org member |
@@ -1389,7 +1389,7 @@ when the next `message` arrives.
 | GET | `/api/v1/projects/{id}/interviews` | List interviews | viewer |
 | POST | `/api/v1/interviews/{id}/close` | Close interview | editor |
 | PUT | `/api/v1/interviews/{id}/persona` | Link/unlink a persona artifact (`persona_artifact_id`: `400` for an artifact of another project or one that is no persona, `400` `persona artifact not found` for one no row has or in a project the caller cannot reach) | editor |
-| POST | `/api/v1/interviews/{id}/invites` | Mint an invite link `{invitee_label, expires_at?}` → `201 {invite, token, path}`, the token returned once. Refused `403` for a proposal-mode agent run, as is the interview | editor |
+| POST | `/api/v1/interviews/{id}/invites` | Mint an invite link `{invitee_label, expires_at?, email?}` → `201 {invite, token, path}`, the token returned once. With `email` (`email-invites`), the link is also mailed to that bare address, the invite is labelled with it when `invitee_label` is empty, and the answer adds `emailed` (false when the server has no mailer); `400` for an address it cannot send to, `403` while the key is off, `429` past the per-account invitation budget. Refused `403` for a proposal-mode agent run, as is the interview | editor |
 | GET | `/api/v1/interviews/{id}/invites` | List invites | viewer |
 | POST | `/api/v1/interview-invites/{id}/revoke` | Revoke invite | editor |
 | GET | `/api/v1/interviews/{id}/sessions` | List participant sessions | viewer |

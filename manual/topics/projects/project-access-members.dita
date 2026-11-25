@@ -8,9 +8,17 @@
   </prolog>
   <conbody>
     <ul>
-      <li><b>Add a member by email.</b> The person must already have an OpenV account — if no account exists for that email you'll see a message asking them to sign up first.</li>
+      <li><b>Add a member by email.</b> Someone who already has an OpenV account joins straight away. Someone who has none is <b>invited</b>: OpenV emails them an invitation to the workspace that also opens this project, at the role you chose, and they join both when they accept it (see <i>Inviting someone who has no account yet</i> in <i>Workspace settings &amp; teams</i>).
+        <ul>
+          <li>Inviting someone new brings them into the workspace and takes a seat there, so only a <b>workspace admin</b> can do it. A project owner who is not one is asked to have an admin invite the person first.</li>
+          <li>Invite them as an editor, reviewer or viewer; make them an owner once they have joined.</li>
+          <li>Someone who already has an invitation to the workspace keeps it, and it opens this project too; a pending admin invitation stays an admin one.</li>
+          <li>If the server has no email set up, the invitation link is shown once under the form for you to send.</li>
+          <li>On a workspace on the stable channel this arrives with its next stable release; until then an address with no account is refused, with a message asking them to sign up first.</li>
+        </ul>
+      </li>
       <li>Each member has a <b>role</b> — <b>viewer</b>, <b>reviewer</b>, <b>editor</b>, or <b>owner</b> (the add form defaults to editor; whoever creates a project becomes its owner) — you can change it from the members table, and members can be removed. A <b>reviewer</b> reads everything a viewer reads and adds notes, comments and mentions, but cannot change the text, the links, a status or a setting.</li>
-      <li><b>Team access</b> grants a whole workspace team access to the project at once, with a role per grant. Teams themselves are defined in Workspace settings — see <i>Workspace settings &amp; teams</i>.</li>
+      <li><b>Team access</b> grants a whole workspace team access to the project at once, with a role per grant. Teams themselves are defined in Workspace settings — see <i>Workspace settings &amp; teams</i>. Everyone in the team is notified when it is given the project, or a new role on it, and when its access is removed.</li>
     </ul>
   </conbody>
 </concept>

@@ -668,6 +668,16 @@ table oauth_tokens rows 0
   index oauth_tokens_access_hash_key CREATE UNIQUE INDEX oauth_tokens_access_hash_key ON public.oauth_tokens USING btree (access_hash)
   index oauth_tokens_pkey CREATE UNIQUE INDEX oauth_tokens_pkey ON public.oauth_tokens USING btree (id)
   index oauth_tokens_refresh_hash_key CREATE UNIQUE INDEX oauth_tokens_refresh_hash_key ON public.oauth_tokens USING btree (refresh_hash)
+table org_invitation_projects rows 0
+  column invitation_id uuid NOT NULL
+  column project_id uuid NOT NULL
+  column role character varying(32) NOT NULL
+  column created_at timestamp with time zone NOT NULL DEFAULT now()
+  constraint org_invitation_projects_invitation_id_fkey FOREIGN KEY (invitation_id) REFERENCES org_invitations(id) ON DELETE CASCADE
+  constraint org_invitation_projects_pkey PRIMARY KEY (invitation_id, project_id)
+  constraint org_invitation_projects_project_id_fkey FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  index idx_org_invitation_projects_project CREATE INDEX idx_org_invitation_projects_project ON public.org_invitation_projects USING btree (project_id)
+  index org_invitation_projects_pkey CREATE UNIQUE INDEX org_invitation_projects_pkey ON public.org_invitation_projects USING btree (invitation_id, project_id)
 table org_invitations rows 0
   column id uuid NOT NULL
   column org_id uuid NOT NULL
@@ -1141,7 +1151,7 @@ table saved_searches rows 0
   index idx_saved_searches_org_scope CREATE INDEX idx_saved_searches_org_scope ON public.saved_searches USING btree (org_id, scope)
   index idx_saved_searches_owner_name CREATE UNIQUE INDEX idx_saved_searches_owner_name ON public.saved_searches USING btree (user_id, org_id, scope, name)
   index saved_searches_pkey CREATE UNIQUE INDEX saved_searches_pkey ON public.saved_searches USING btree (id)
-table schema_migrations rows 91
+table schema_migrations rows 92
   column version integer NOT NULL
   column name text NOT NULL
   column applied_at timestamp with time zone NOT NULL DEFAULT now()
@@ -1518,3 +1528,4 @@ ledger 0088 plan_sizing
 ledger 0089 plan_milestone_links
 ledger 0090 joined_baselines
 ledger 0091 project_covers
+ledger 0092 invitation_projects

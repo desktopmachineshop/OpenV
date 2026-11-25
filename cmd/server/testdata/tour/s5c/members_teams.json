@@ -1533,7 +1533,18 @@
       "content_length": 0,
       "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "org.team_member_added",
+          "actor": "user:<owner>",
+          "entity": "<m>",
+          "payload": {
+            "team_id": "string \"<t>\"",
+            "team_name": "string \"Tour Reviewers and Approvers\"",
+            "user_id": "string \"<m>\""
+          }
+        }
+      ]
     },
     {
       "n": 47,
@@ -1571,7 +1582,18 @@
       "content_length": 0,
       "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "org.team_member_added",
+          "actor": "user:<owner>",
+          "entity": "<a2>",
+          "payload": {
+            "team_id": "string \"<t>\"",
+            "team_name": "string \"Tour Reviewers and Approvers\"",
+            "user_id": "string \"<a2>\""
+          }
+        }
+      ]
     },
     {
       "n": 49,
@@ -1784,7 +1806,18 @@
       "content_length": null,
       "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "org.team_member_removed",
+          "actor": "user:<owner>",
+          "entity": "<a2>",
+          "payload": {
+            "team_id": "string \"<t>\"",
+            "team_name": "string \"Tour Reviewers and Approvers\"",
+            "user_id": "string \"<a2>\""
+          }
+        }
+      ]
     },
     {
       "n": 56,
@@ -2007,21 +2040,50 @@
         ],
         "body": "{\"email\":\"tour-invitee@example.com\",\"role\":\"viewer\"}"
       },
-      "status": 404,
-      "content_type": "application/json",
+      "status": 202,
+      "content_type": "text/plain; charset=utf-8",
       "headers": [],
       "security_headers": "standard",
-      "content_length": 64,
+      "content_length": "<varies>",
       "kind": "json",
       "body": [
-        "{\"error\":\"no user with that email — they must sign up first\"}"
+        "{\"invitation\":{\"id\":\"<uuid:1>\",\"org_id\":\"<w>\",\"email\":\"tour-invitee@example.com\",\"role\":\"member\",\"invited_by\":\"<owner>\",\"expires_at\":\"<time>\",\"created_at\":\"<time@step 63>\",\"org_name\":\"Tour Workshop\",\"invited_by_name\":\"Tour Owner\",\"projects\":[{\"project_id\":\"<p>\",\"role\":\"viewer\",\"project_name\":\"Tour Plant\"}]},\"link\":\"http://localhost:3000/login?invite=<hex64:2>\",\"emailed\":false}"
       ],
       "trailing_newline": true,
       "parsed": {
-        "error": "no user with that email — they must sign up first"
+        "invitation": {
+          "id": "<uuid:1>",
+          "org_id": "<w>",
+          "email": "tour-invitee@example.com",
+          "role": "member",
+          "invited_by": "<owner>",
+          "expires_at": "<time>",
+          "created_at": "<time@step 63>",
+          "org_name": "Tour Workshop",
+          "invited_by_name": "Tour Owner",
+          "projects": [
+            {
+              "project_id": "<p>",
+              "role": "viewer",
+              "project_name": "Tour Plant"
+            }
+          ]
+        },
+        "link": "http://localhost:3000/login?invite=<hex64:2>",
+        "emailed": false
       },
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "org.invitation_sent",
+          "actor": "user:<owner>",
+          "entity": "<uuid:1>",
+          "payload": {
+            "email": "string \"tour-invitee@example.com\"",
+            "role": "string \"member\""
+          }
+        }
+      ]
     },
     {
       "n": 64,
@@ -2625,7 +2687,20 @@
       "content_length": 0,
       "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "project.team_access_granted",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<t>",
+          "payload": {
+            "member_ids": "array[string] [\"<m>\"]",
+            "role": "string \"editor\"",
+            "team_id": "string \"<t>\"",
+            "team_name": "string \"Tour Reviewers and Approvers\""
+          }
+        }
+      ]
     },
     {
       "n": 83,
@@ -2648,7 +2723,20 @@
       "content_length": 0,
       "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "project.team_access_granted",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<t2>",
+          "payload": {
+            "member_ids": "array[] []",
+            "role": "string \"viewer\"",
+            "team_id": "string \"<t2>\"",
+            "team_name": "string \"Tour Authors\""
+          }
+        }
+      ]
     },
     {
       "n": 84,
@@ -2671,7 +2759,20 @@
       "content_length": 0,
       "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "project.team_access_granted",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<t>",
+          "payload": {
+            "member_ids": "array[string] [\"<m>\"]",
+            "role": "string \"reviewer\"",
+            "team_id": "string \"<t>\"",
+            "team_name": "string \"Tour Reviewers and Approvers\""
+          }
+        }
+      ]
     },
     {
       "n": 85,
@@ -2946,7 +3047,19 @@
       "content_length": null,
       "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "project.team_access_revoked",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<t2>",
+          "payload": {
+            "member_ids": "array[] []",
+            "team_id": "string \"<t2>\"",
+            "team_name": "string \"Tour Authors\""
+          }
+        }
+      ]
     },
     {
       "n": 94,
@@ -3052,7 +3165,20 @@
       "content_length": 0,
       "kind": "empty",
       "gzip": "not sent: a write is sent once, without Accept-Encoding",
-      "events": []
+      "events": [
+        {
+          "type": "project.team_access_granted",
+          "actor": "user:<owner>",
+          "project": "<p>",
+          "entity": "<t2>",
+          "payload": {
+            "member_ids": "array[] []",
+            "role": "string \"viewer\"",
+            "team_id": "string \"<t2>\"",
+            "team_name": "string \"Tour Authors\""
+          }
+        }
+      ]
     },
     {
       "n": 99,

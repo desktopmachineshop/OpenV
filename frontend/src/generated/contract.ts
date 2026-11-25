@@ -67,6 +67,7 @@ export const FEATURE_KEYS = [
   'joined-baselines',
   'key-projects',
   'project-covers',
+  'email-invites',
   'google-ai-studio',
 ] as const;
 export type FeatureKey = (typeof FEATURE_KEYS)[number];
@@ -104,6 +105,10 @@ export const DOMAIN_EVENT_TYPES = [
   'project.member_added',
   'project.member_role_changed',
   'project.member_removed',
+  'org.team_member_added',
+  'org.team_member_removed',
+  'project.team_access_granted',
+  'project.team_access_revoked',
 ] as const;
 export type DomainEventType = (typeof DOMAIN_EVENT_TYPES)[number];
 

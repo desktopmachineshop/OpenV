@@ -95,6 +95,19 @@ func scanInvitations(rows *sql.Rows) ([]*invitations.Invitation, error) {
 // other query, so the caller gets the id that survived and the display names
 // the invitation email needs without a second round trip.
 func (r *InvitationRepository) Replace(inv *invitations.Invitation) error {
+	// An expired row about to be reused keeps its id, and with it the
+	// projects it once offered; those lapsed with it, so they are cleared
+	// first. A still-pending row keeps its projects: re-inviting is a
+	// resend, and the projects offered are part of what is resent.
+	if _, err := r.db.Exec(`
+		DELETE FROM org_invitation_projects
+		WHERE invitation_id IN (
+			SELECT id FROM org_invitations
+			WHERE org_id = $1 AND email = $2 AND accepted_at IS NULL AND expires_at <= $3
+		)
+	`, inv.OrgID, invitationEmail(inv.Email), time.Now()); err != nil && !malformedID(err) {
+		return err
+	}
 	stored, err := scanInvitation(r.db.QueryRow(`
 		WITH upserted AS (
 			INSERT INTO org_invitations (id, org_id, email, role, token_hash, invited_by, expires_at, accepted_at, created_at, last_emailed_at)
@@ -228,4 +241,43 @@ func (r *InvitationRepository) Delete(id string) error {
 func (r *InvitationRepository) DeleteExpired(before time.Time) error {
 	_, err := r.db.Exec(`DELETE FROM org_invitations WHERE accepted_at IS NULL AND expires_at < $1`, before)
 	return err
+}
+
+// AddProjectGrant records a project the invitation opens, or changes the
+// role of one it already does.
+func (r *InvitationRepository) AddProjectGrant(invitationID, projectID, role string) error {
+	_, err := r.db.Exec(`
+		INSERT INTO org_invitation_projects (invitation_id, project_id, role)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (invitation_id, project_id) DO UPDATE SET role = EXCLUDED.role
+	`, invitationID, projectID, role)
+	return err
+}
+
+// ListProjectGrants returns the projects an invitation opens with their
+// names, oldest grant first (then by project id); an empty list when none.
+func (r *InvitationRepository) ListProjectGrants(invitationID string) ([]invitations.ProjectGrant, error) {
+	rows, err := r.db.Query(`
+		SELECT g.project_id, g.role, COALESCE(p.name, '')
+		FROM org_invitation_projects g
+		LEFT JOIN projects p ON p.id = g.project_id
+		WHERE g.invitation_id = $1
+		ORDER BY g.created_at, g.project_id
+	`, invitationID)
+	if malformedID(err) {
+		return []invitations.ProjectGrant{}, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []invitations.ProjectGrant{}
+	for rows.Next() {
+		var g invitations.ProjectGrant
+		if err := rows.Scan(&g.ProjectID, &g.Role, &g.ProjectName); err != nil {
+			return nil, err
+		}
+		out = append(out, g)
+	}
+	return out, rows.Err()
 }

@@ -18,6 +18,25 @@ type memRepo struct {
 	markErr  error
 	clearErr error
 	cleared  []string
+	grants   map[string][]ProjectGrant // invitation id -> its projects
+}
+
+func (m *memRepo) AddProjectGrant(invitationID, projectID, role string) error {
+	if m.grants == nil {
+		m.grants = map[string][]ProjectGrant{}
+	}
+	for i, g := range m.grants[invitationID] {
+		if g.ProjectID == projectID {
+			m.grants[invitationID][i].Role = role
+			return nil
+		}
+	}
+	m.grants[invitationID] = append(m.grants[invitationID], ProjectGrant{ProjectID: projectID, Role: role, ProjectName: "Project " + projectID})
+	return nil
+}
+
+func (m *memRepo) ListProjectGrants(invitationID string) ([]ProjectGrant, error) {
+	return append([]ProjectGrant{}, m.grants[invitationID]...), nil
 }
 
 func newMemRepo() *memRepo { return &memRepo{rows: map[string]*Invitation{}} }
@@ -680,5 +699,93 @@ func TestAcceptTokenForEmailChecksTheAddress(t *testing.T) {
 	}
 	if len(members.added) != 1 || members.added[0] != "org-1:user-1:admin" {
 		t.Errorf("memberships = %v", members.added)
+	}
+}
+
+// memProjects records project memberships an acceptance writes.
+type memProjects struct {
+	roles  map[string]string // "projectID:userID" -> role
+	refuse map[string]error
+}
+
+func (m *memProjects) RoleFor(projectID, userID string) (string, error) {
+	return m.roles[projectID+":"+userID], nil
+}
+
+func (m *memProjects) AddMember(projectID, userID, role string) error {
+	if err := m.refuse[projectID]; err != nil {
+		return err
+	}
+	m.roles[projectID+":"+userID] = role
+	return nil
+}
+
+// An invitation that carries projects joins them on acceptance, after the
+// workspace, without touching a role the account already holds on one, and
+// a project it cannot join does not cost the workspace membership.
+func TestAcceptanceJoinsTheInvitationsProjects(t *testing.T) {
+	svc, _, members := newTestService()
+	projects := &memProjects{roles: map[string]string{"p-held:u-1": "owner"}, refuse: map[string]error{"p-gone": errors.New("project not found")}}
+	svc.SetProjectMembers(projects)
+
+	inv, token, err := svc.Create("org-1", "pat@example.com", "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range []string{"p-new", "p-held", "p-gone"} {
+		if _, err := svc.GrantProject(inv.ID, p, "editor"); err != nil {
+			t.Fatalf("GrantProject %s: %v", p, err)
+		}
+	}
+	// Granting the same project again re-roles it rather than adding a row.
+	grants, err := svc.GrantProject(inv.ID, "p-new", "viewer")
+	if err != nil || len(grants) != 3 {
+		t.Fatalf("GrantProject: %d grants, %v; want 3", len(grants), err)
+	}
+	// A resend names the projects already offered.
+	resent, resentToken, err := svc.Create("org-1", "pat@example.com", "", nil)
+	if err != nil || len(resent.Projects) != 3 {
+		t.Fatalf("resend: %+v, %v; want its 3 projects", resent, err)
+	}
+	token = resentToken
+
+	looked, err := svc.Lookup(token)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(looked.Projects) != 3 {
+		t.Fatalf("Lookup shows %d projects, want 3", len(looked.Projects))
+	}
+
+	acc, err := svc.AcceptTokenForEmail(token, "pat@example.com", "u-1")
+	if err != nil {
+		t.Fatalf("accept: %v", err)
+	}
+	if len(members.added) != 1 {
+		t.Fatalf("workspace memberships = %v, want one", members.added)
+	}
+	if len(acc.Projects) != 1 || acc.Projects[0].ProjectID != "p-new" || acc.Projects[0].Role != "viewer" {
+		t.Fatalf("joined = %+v, want only p-new as viewer", acc.Projects)
+	}
+	if projects.roles["p-held:u-1"] != "owner" {
+		t.Errorf("an existing project role was changed to %q", projects.roles["p-held:u-1"])
+	}
+}
+
+// A project can be added only to a live invitation.
+func TestGrantProjectNeedsAPendingInvitation(t *testing.T) {
+	svc, _, _ := newTestService()
+	if _, err := svc.GrantProject("no-such", "p-1", "editor"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("unknown invitation: err = %v, want ErrNotFound", err)
+	}
+	inv, token, err := svc.Create("org-1", "pat@example.com", "", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.AcceptTokenForEmail(token, "pat@example.com", "u-1"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.GrantProject(inv.ID, "p-1", "editor"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("accepted invitation: err = %v, want ErrNotFound", err)
 	}
 }

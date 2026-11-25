@@ -69,7 +69,13 @@ func (n *Notifier) handleMembership(e domainevents.Event) bool {
 		domainevents.OrgInvitationAccepted,
 		domainevents.ProjectMemberAdded,
 		domainevents.ProjectMemberRoleChanged,
-		domainevents.ProjectMemberRemoved:
+		domainevents.ProjectMemberRemoved,
+		domainevents.OrgTeamMemberAdded,
+		domainevents.OrgTeamMemberRemoved:
+	case domainevents.ProjectTeamAccessGranted,
+		domainevents.ProjectTeamAccessRevoked:
+		n.handleTeamAccess(e)
+		return true
 	default:
 		return false
 	}
@@ -116,6 +122,9 @@ func membershipRef(e domainevents.Event, subject string) map[string]interface{} 
 	if e.ProjectID != "" {
 		ref["kind"] = "project_membership"
 		ref["project_id"] = e.ProjectID
+	} else if teamID := payloadString(e, "team_id"); teamID != "" {
+		ref["kind"] = "team_membership"
+		ref["team_id"] = teamID
 	}
 	return ref
 }
@@ -157,8 +166,77 @@ func accessMessage(e domainevents.Event) (title, body string, ok bool) {
 		}
 		return "You were removed from a project",
 			"You no longer have access to this project.", true
+	case domainevents.OrgTeamMemberAdded:
+		return "You were added to a team",
+			fmt.Sprintf("You are now in %s in this workspace, and can open every project the team has access to.", teamWord(e)), true
+	case domainevents.OrgTeamMemberRemoved:
+		return "You were removed from a team",
+			fmt.Sprintf("You are no longer in %s. Projects you could open only through the team are closed to you now.", teamWord(e)), true
 	}
 	return "", "", false
+}
+
+// handleTeamAccess tells everyone in a team that the team gained or lost a
+// project. A grant to a team is a grant to each of its members, so each of
+// them hears about it exactly as a person added to the project would; the
+// workspace's admins are not told, as for any project-level change. The
+// member who made the change is skipped by deliver.
+func (n *Notifier) handleTeamAccess(e domainevents.Event) {
+	var title, body string
+	switch e.EventType {
+	case domainevents.ProjectTeamAccessGranted:
+		title = "Your team has access to a project"
+		body = fmt.Sprintf("%s now has %s access to this project, and you are in that team.",
+			upperFirst(teamWord(e)), payloadString(e, "role"))
+	case domainevents.ProjectTeamAccessRevoked:
+		title = "Your team's access to a project ended"
+		body = fmt.Sprintf("%s no longer has access to this project. Any access you were given yourself stays.",
+			upperFirst(teamWord(e)))
+	default:
+		return
+	}
+	for _, userID := range payloadStrings(e, "member_ids") {
+		n.deliver(e, userID, notifications.TypeAccessChanged, title, body, membershipRef(e, userID))
+	}
+}
+
+// teamWord names the event's team for a sentence: "the Design team" when
+// the name does not already say team, "a team" when there is no name.
+func teamWord(e domainevents.Event) string {
+	name := strings.TrimSpace(memberText(payloadString(e, "team_name")))
+	if name == "" {
+		return "a team"
+	}
+	if strings.HasSuffix(strings.ToLower(name), "team") {
+		return "the " + name
+	}
+	return "the " + name + " team"
+}
+
+// upperFirst capitalizes a sentence's first letter.
+func upperFirst(s string) string {
+	if s == "" {
+		return s
+	}
+	return strings.ToUpper(s[:1]) + s[1:]
+}
+
+// payloadStrings reads a list of strings from a payload: []string as a
+// handler publishes it, or []interface{} as it reads back from storage.
+func payloadStrings(e domainevents.Event, key string) []string {
+	switch v := e.Payload[key].(type) {
+	case []string:
+		return v
+	case []interface{}:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok && s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	}
+	return nil
 }
 
 // adminMessage is what the workspace's admins read. Project-level changes are
